@@ -47,9 +47,24 @@ rejected. The lock is enforced by `tests/technology-lock.test.ts`.
 
 ```bash
 npm install
-npm run validate     # format check + typecheck + tests + build
-npm run agent:demo   # run the end-to-end agent demo
+npm run validate     # format + both typechecks + tests + both builds
+npm run dev          # workstation UI preview → http://127.0.0.1:5173
+npm run agent:demo   # run the end-to-end agent demo (backend)
 ```
+
+## Frontend (Phase 3.2)
+
+The workstation interface lives in `web/`: React 19 + Vite + Tailwind v4 with
+Radix primitives, Zustand UI state and Framer Motion presets. It ships the
+application shell (sidebar, topbar, workspace), a design token system, ten
+reusable primitives and five prototype pages — Dashboard, AI Workspace, Academy,
+Trading Lab and Settings — rendered from mock data that is typed against the
+backend view models.
+
+Nothing on those screens is connected: there is no model provider, no database,
+no realtime link and no market feed, and every page says so. There is no order or
+execution affordance anywhere, and a test fails the build if one is ever added.
+See [frontend-foundation.md](./docs/frontend-foundation.md).
 
 ## Safety
 

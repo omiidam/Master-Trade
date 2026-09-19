@@ -125,6 +125,15 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     constraint: 'No navigation label or control may match FORBIDDEN_UI_CONTROL.',
   },
   {
+    id: 'DEC-FE-5-MOTION',
+    area: 'frontend.ui',
+    choice:
+      'Framer Motion behind the presets in web/src/design/motion.ts; every animation is disabled under prefers-reduced-motion',
+    status: 'locked',
+    adr: ['ADR-0020-ui-motion-framer-motion.md'],
+    constraint: 'No information may be conveyed by motion alone.',
+  },
+  {
     id: 'DEC-FE-4-CHARTING',
     area: 'frontend.charting',
     choice:

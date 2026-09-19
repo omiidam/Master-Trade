@@ -7,19 +7,19 @@ training-only: no live trading, no broker execution, no automatic rule activatio
 This document is the top-level map. Each layer has its own document; ADRs record
 why the decisions were made.
 
-| Area                                         | Document                                                 |
-| -------------------------------------------- | -------------------------------------------------------- |
-| **Technology decisions / architecture lock** | **[technology-decisions.md](./technology-decisions.md)** |
-| Desktop shell, frontend, view models         | [desktop-and-frontend.md](./desktop-and-frontend.md)     |
-| API layer, contracts, auth/authz             | [api-auth.md](./api-auth.md)                             |
-| AI layer, prompts, LLM abstraction           | [ai-and-llm.md](./ai-and-llm.md)                         |
-| Database, entities, migrations, file storage | [database-and-storage.md](./database-and-storage.md)     |
-| Background jobs, WebSocket layer             | [jobs-and-realtime.md](./jobs-and-realtime.md)           |
-| Market-data abstraction                      | [market-data.md](./market-data.md)                       |
-| Vector memory                                | [vector-memory.md](./vector-memory.md)                   |
-| Logging, audit, observability                | [observability.md](./observability.md)                   |
-| Risks, trade-offs, deferred work             | [risks-and-deferred.md](./risks-and-deferred.md)         |
-| Architecture Decision Records                | [adr/](./adr/)                                           |
+| Area | Document |
+| -------------------------------------------- | -------------------------------------------------------- || **Technology decisions / architecture lock** | **[technology-decisions.md](./technology-decisions.md)** |
+| Frontend implementation (shell, UI library) | [frontend-foundation.md](./frontend-foundation.md) |
+| Desktop shell, frontend, view models | [desktop-and-frontend.md](./desktop-and-frontend.md) |
+| API layer, contracts, auth/authz | [api-auth.md](./api-auth.md) |
+| AI layer, prompts, LLM abstraction | [ai-and-llm.md](./ai-and-llm.md) |
+| Database, entities, migrations, file storage | [database-and-storage.md](./database-and-storage.md) |
+| Background jobs, WebSocket layer | [jobs-and-realtime.md](./jobs-and-realtime.md) |
+| Market-data abstraction | [market-data.md](./market-data.md) |
+| Vector memory | [vector-memory.md](./vector-memory.md) |
+| Logging, audit, observability | [observability.md](./observability.md) |
+| Risks, trade-offs, deferred work | [risks-and-deferred.md](./risks-and-deferred.md) |
+| Architecture Decision Records | [adr/](./adr/) |
 
 ## 1. High-level architecture
 
@@ -291,3 +291,13 @@ No dependency was installed in Phase 3.1; the lock is documentation plus data
 structures plus tests. Phase 1/2 safety gates (`assertSafeConfig`,
 `assertNoHardlineOperations`, approval workflow, UI-control check, provenance
 rules) are unchanged and still enforced.
+
+## 11. Frontend foundation (Phase 3.2)
+
+`web/` now contains a running React workstation interface — shell (sidebar,
+topbar, workspace), design token system, ten-primitive component library and five
+prototype pages — built on the locked stack and driven by mock data that is
+**typed against the backend view models**. No backend, AI, permission or safety
+module was modified, and no endpoint, model or feed is connected: every screen
+says so. Details, guardrails and remaining accessibility gaps:
+[frontend-foundation.md](./frontend-foundation.md).

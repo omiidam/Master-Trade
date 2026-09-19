@@ -19,11 +19,16 @@
 ## Commands
 
 ```bash
-npm install          # setup
-npm run validate     # format + typecheck + test + build
+npm install          # setup (backend + frontend dev dependencies)
+npm run validate     # format + typecheck + typecheck:web + test + build + build:web
+npm run dev          # workstation UI preview → http://127.0.0.1:5173
 npm test             # tests only
 npm run agent:demo   # end-to-end demo after build
 ```
+
+The frontend (`web/`) shares one package with the backend but has its own
+typecheck (`web/tsconfig.json`, DOM lib + `react-jsx`) and its own build target,
+so a UI regression cannot hide behind a green backend build.
 
 ## Documentation map
 
@@ -59,7 +64,10 @@ These are enforced by tests and must stay green on every push:
 - `assertArchitectureLock()` proves every technology area is decided, every
   cited ADR exists, and no experimental technology or opaque agent framework is
   a core dependency;
-- no module outside `src/llm/providers/**` imports a provider SDK.
+- no module outside `src/llm/providers/**` imports a provider SDK;
+- the frontend exposes the five required pages, no navigation label or control
+  accessible name matches `FORBIDDEN_UI_CONTROL`, every design token referenced
+  exists in the theme, and the preview identifies itself as a preview.
 
 ## Commit style
 

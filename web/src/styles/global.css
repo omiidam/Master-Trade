@@ -1,0 +1,200 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens — "Workstation Dark".
+ * Declared once here (Tailwind v4 `@theme` emits them as CSS custom properties)
+ * and inventoried in web/src/design/tokens.ts. Values are semantic, never
+ * literal-at-the-call-site: a component asks for `--color-surface`, not a hex.
+ */
+@theme {
+  /* Surfaces */
+  --color-bg: #05070b;
+  --color-bg-elevated: #080c12;
+  --color-surface: #0b1017;
+  --color-surface-raised: #101823;
+  --color-surface-sunken: #070a0f;
+
+  /* Borders and text */
+  --color-border: #1b2430;
+  --color-border-strong: #2a3644;
+  --color-text: #e9eef6;
+  --color-text-muted: #8d9aad;
+  --color-text-faint: #5c6879;
+
+  /* Brand + states */
+  --color-primary: #35d6a4;
+  --color-primary-strong: #17b98a;
+  --color-primary-fg: #04120d;
+  --color-primary-soft: #0f2a23;
+  --color-info: #6ea8fe;
+  --color-info-soft: #111f36;
+  --color-success: #3ddc97;
+  --color-warning: #f5b544;
+  --color-warning-soft: #2c2110;
+  --color-danger: #f87171;
+  --color-danger-soft: #2b1417;
+  --color-ai: #a78bfa;
+  --color-ai-soft: #1d1733;
+  --color-focus: #59e0b8;
+
+  /* Epistemic labels (docs/architecture.md § 7) */
+  --color-fact: #8ab4f8;
+  --color-analysis: #35d6a4;
+  --color-hypothesis: #f5b544;
+  --color-uncertainty: #a78bfa;
+
+  /* Market-data provenance (docs/market-data.md) */
+  --color-provenance-synthetic: #f5b544;
+  --color-provenance-historical: #6ea8fe;
+  --color-provenance-live: #f87171;
+
+  /* Typography */
+  --font-sans:
+    'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Noto Sans', sans-serif;
+  --font-mono:
+    'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
+  --text-caption: 0.6875rem;
+  --text-body: 0.875rem;
+  --text-title: 1.0625rem;
+
+  /* Radii */
+  --radius-control: 0.5rem;
+  --radius-panel: 0.875rem;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.02), 0 18px 40px -28px rgb(0 0 0 / 0.9);
+  --shadow-popover: 0 26px 60px -24px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.03);
+  --shadow-glow: 0 0 0 1px rgb(53 214 164 / 0.25), 0 12px 40px -18px rgb(53 214 164 / 0.35);
+
+  /* Motion */
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --duration-slow: 340ms;
+  --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layering */
+  --z-shell: 10;
+  --z-overlay: 40;
+  --z-modal: 60;
+  --z-tooltip: 80;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-bg);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-bg);
+    background-image:
+      radial-gradient(1100px 620px at 12% -10%, rgb(53 214 164 / 0.09), transparent 60%),
+      radial-gradient(900px 520px at 100% 0%, rgb(167 139 250 / 0.07), transparent 62%),
+      radial-gradient(1200px 700px at 50% 120%, rgb(110 168 254 / 0.06), transparent 60%),
+      linear-gradient(180deg, var(--color-bg) 0%, #04060a 100%);
+    background-attachment: fixed;
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Faint engineering grid: reads as a workstation, not a marketing page. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.022) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.022) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(1200px 800px at 30% 0%, black, transparent 85%);
+    z-index: 0;
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-primary-fg);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: var(--radius-pill);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a4859;
+    background-clip: content-box;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.011em;
+  }
+
+  /* Every animation in the app must be suppressible. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Numeric readouts: tabular figures so columns of numbers line up. */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .panel-gradient {
+    background-image: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.025) 0%,
+      rgb(255 255 255 / 0) 55%
+    );
+  }
+
+  .glass {
+    background-color: color-mix(in srgb, var(--color-surface) 82%, transparent);
+    backdrop-filter: blur(14px);
+  }
+}

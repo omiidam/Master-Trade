@@ -31,8 +31,8 @@ the alternatives that were deliberately turned down.
 | [0015](./ADR-0015-validation-zod-single-source.md)          | Validation: Zod as the single source of truth, Fastify validation disabled  | `DEC-BE-4-VALIDATION` | Accepted |
 | [0016](./ADR-0016-persistence-driver-and-orm.md)            | Persistence: better-sqlite3 + Drizzle, SQLite local / PostgreSQL production | `DEC-DB-1·2·3`        | Accepted |
 | [0017](./ADR-0017-realtime-websocket-transport.md)          | Real-time: WebSocket over the existing event bus                            | `DEC-RT-1-WEBSOCKET`  | Accepted |
-| [0018](./ADR-0018-durable-db-backed-job-queue.md)           | Jobs: durable database-backed queue with in-process workers                 | `DEC-JOBS-1-QUEUE`    | Accepted |
-| [0019](./ADR-0019-llm-adapters-not-frameworks.md)           | LLM: adapters behind our interfaces; no agent framework                     | `DEC-AI-1·2·3`        | Accepted |
+| [0018](./ADR-0018-durable-db-backed-job-queue.md)           | Jobs: durable database-backed queue with in-process workers                 | `DEC-JOBS-1-QUEUE`    | Accepted |     | [0019](./ADR-0019-llm-adapters-not-frameworks.md) | LLM: adapters behind our interfaces; no agent framework | `DEC-AI-1·2·3` | Accepted |
+| [0020](./ADR-0020-ui-motion-framer-motion.md)               | UI motion: Framer Motion with reduced-motion presets                        | `DEC-FE-5-MOTION`     | Accepted |
 
 The machine-readable form of this lock is `src/core/architectureLock.ts` and it
 is enforced by `tests/technology-lock.test.ts`. Every decision id above also

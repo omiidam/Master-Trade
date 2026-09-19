@@ -1,5 +1,12 @@
 # Desktop Application & Frontend
 
+> **Implementation status (Phase 3.2):** the frontend foundation described in
+> section 2 is now implemented in `web/` — shell, design tokens, component library
+> and five prototype pages on mock data. See
+> [frontend-foundation.md](./frontend-foundation.md) for the structure, the tested
+> guardrails and what remains unwired. The desktop shell (section 1) is still a
+> contract + decision, not a build.
+
 ## 1. Desktop technology evaluation
 
 The requirement is a desktop application for one learner, running for months,

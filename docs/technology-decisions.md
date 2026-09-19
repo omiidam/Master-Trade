@@ -27,6 +27,7 @@ Phase 1/2 invariants are unchanged and remain authoritative:
 | Frontend state        | TanStack Query v5 (async) + Zustand v5 (UI state)                                       | `DEC-FE-2-STATE`         | [0011](./adr/ADR-0011-frontend-state-tanstack-query-zustand.md)                                          |
 | UI system             | Tailwind CSS v4 + Radix primitives (vendored shadcn-style) + lucide-react               | `DEC-FE-3-UI-SYSTEM`     | [0012](./adr/ADR-0012-ui-system-tailwind-radix.md)                                                       |
 | Charting              | TradingView Lightweight Charts behind an internal `ChartAdapter`                        | `DEC-FE-4-CHARTING`      | [0013](./adr/ADR-0013-charting-lightweight-charts.md)                                                    |
+| UI motion             | Framer Motion with reduced-motion presets; motion never carries information             | `DEC-FE-5-MOTION`        | [0020](./adr/ADR-0020-ui-motion-framer-motion.md)                                                        |
 | Backend runtime       | Node.js 22 LTS (Node 20 compatibility lane stays in CI)                                 | `DEC-BE-1-RUNTIME`       | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                        |
 | Backend framework     | Fastify 5, loopback-only, plugin lifecycle hooks                                        | `DEC-BE-2-FRAMEWORK`     | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                        |
 | API architecture      | Typed contracts in `src/api/contracts.ts`; Fastify is an adapter over the same pipeline | `DEC-BE-3-API`           | [0002](./adr/ADR-0002-modular-monolith.md), [0014](./adr/ADR-0014-backend-runtime-fastify.md)            |
@@ -118,6 +119,17 @@ without the memory profile of an SVG chart library. The adapter:
 Rejected: [ADR-0013](./adr/ADR-0013-charting-lightweight-charts.md) (Recharts,
 Apache ECharts, Chart.js, Highcharts, raw D3). The adapter boundary keeps a
 future chart replacement a one-file change.
+
+### 1.6 Motion — `DEC-FE-5-MOTION`
+
+**Framer Motion**, used only through the presets in `web/src/design/motion.ts`
+(page transitions, overlays, list reinforcement). Components consult
+`useReducedMotion()` and drop their transitions when it is set, and the CSS layer
+neutralizes durations under `prefers-reduced-motion` as a second line of defence.
+Motion is presentation only: nothing in the interface may depend on an animation
+completing to be understood. Rejected alternatives (CSS-only, react-spring, GSAP,
+Motion One, Radix data-state styling):
+[ADR-0020](./adr/ADR-0020-ui-motion-framer-motion.md).
 
 ### 1.5 Screens and contracts
 
@@ -468,3 +480,31 @@ in-memory-only `setInterval`).
 
 Process rule: a locked decision changes only by adding an ADR that supersedes the
 previous one, updating `LOCKED_DECISIONS` and this document in the same commit.
+
+## 11. Phase 3.2 status against this lock
+
+The frontend foundation is implemented on the locked stack (see
+[frontend-foundation.md](./frontend-foundation.md)):
+
+| Locked choice      | Status in Phase 3.2                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| React 19 + Vite 6  | installed; `vite.config.ts` (root = `web/`) and `web/tsconfig.json`                             |
+| Tailwind CSS v4    | installed via `@tailwindcss/vite`; theme tokens in `web/src/styles/global.css`                  |
+| Radix primitives   | installed for Modal, Tooltip and Tabs                                                           |
+| Zustand            | installed; `web/src/store/ui.ts` holds UI state only                                            |
+| Framer Motion      | installed; presets in `web/src/design/motion.ts`                                                |
+| lucide-react       | installed; icon set for shell and cards                                                         |
+| TanStack Query     | **not installed yet** — deferred until there are real requests to cache (no fake fetches added) |
+| Lightweight Charts | **not installed yet** — `ChartAdapter` ships an SVG placeholder behind the final props contract |
+
+Two deliberate deviations, both narrowing rather than widening scope:
+
+1. **No data-fetching library yet.** With no backend endpoint to call, adding
+   TanStack Query would be an unexercised dependency; the lock stands, the
+   installation waits for the API adapter.
+2. **Chart adapter before chart library.** `ChartAdapter` already enforces the
+   two invariants that matter (mandatory provenance label, no trading
+   affordance) so Phase 3.3 only swaps the rendering body.
+
+Everything else in the lock (backend, database, AI, desktop, realtime, jobs) is
+untouched by Phase 3.2 and still governs the next phase.
