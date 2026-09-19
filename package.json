@@ -1,6 +1,6 @@
 {
   "name": "master-trade",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Master Trade — Trading Training Agent: Model + typed deterministic Tools + versioned Instructions. Training-only, no live trading.",
   "private": true,
   "type": "module",

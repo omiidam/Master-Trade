@@ -14,7 +14,9 @@ const TRANSITIONS: Record<AgentState, AgentState[]> = {
   LOADING: ['READY'],
   READY: ['RUNNING'],
   RUNNING: ['RESPONDING', 'BLOCKED'],
-  RESPONDING: ['IDLE'],
+  // A safety/permission failure can surface while responding too: a tool the
+  // model referenced may not exist or may be denied. Blocking must stay legal.
+  RESPONDING: ['IDLE', 'BLOCKED'],
   BLOCKED: ['IDLE'],
 };
 
