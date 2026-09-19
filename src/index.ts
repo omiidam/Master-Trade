@@ -26,7 +26,6 @@ export * from './llm/provider.js';
 export * from './auth/model.js';
 export * from './api/contracts.js';
 export * from './marketdata/provider.js';
-export * from './db/schema.js';
 export * from './storage/files.js';
 export * from './jobs/queue.js';
 export * from './realtime/events.js';
@@ -48,3 +47,8 @@ export * from './api/schemas.js';
 export * from './auth/sessions.js';
 export * from './agent/service.js';
 export * from './config/loader.js';
+
+/* Phase 3.4: database foundation — schema, dialects, migrations, ownership and
+   the repositories. `./db/index.js` opens nothing on import: `openDatabase()`
+   is the only function that touches a driver. */
+export * from './db/index.js';

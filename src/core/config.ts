@@ -135,7 +135,7 @@ export interface AppConfig {
 export const DEFAULT_CONFIG: AppConfig = {
   appName: 'master-trade',
   /** Keep in step with package.json: the health endpoint reports this. */
-  version: '0.3.0',
+  version: '0.4.0',
   mode: 'training',
   api: {
     version: 'v1',

@@ -42,6 +42,14 @@ the alternatives that were deliberately turned down.
 | [0021](./ADR-0021-single-request-pipeline.md)  | One request pipeline for every route; honest 501s for unimplemented ones    | `DEC-BE-5-PIPELINE`      | Accepted |
 | [0022](./ADR-0022-local-api-trust-boundary.md) | Local API trust boundary: loopback, per-launch shell token, hashed sessions | `DEC-DESKTOP-2-SECURITY` | Accepted |
 
+## Phase 3.4 — database foundation
+
+| ADR                                                          | Decision                                                                             | Decision id(s)                          | Status                                            |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------ | --------------------------------------- | ------------------------------------------------- |
+| [0023](./ADR-0023-repository-boundary-and-data-ownership.md) | Repository boundary + declared, validated data ownership                             | `DEC-DB-4-REPOSITORIES`                 | Accepted                                          |
+| [0024](./ADR-0024-generated-migrations-and-ledger.md)        | Migrations generated from the schema, checksummed ledger, refuse instead of guessing | `DEC-DB-3-MIGRATIONS`                   | Accepted                                          |
+| [0025](./ADR-0025-sqlite-driver-and-dialects.md)             | Driver becomes `node:sqlite`; one dialect serves SQLite and PostgreSQL               | `DEC-DB-1-LOCAL`, `DEC-DB-2-PRODUCTION` | Accepted (supersedes the driver half of ADR-0016) |
+
 The machine-readable form of this lock is `src/core/architectureLock.ts` and it
 is enforced by `tests/technology-lock.test.ts`. Every decision id above also
 appears in [technology-decisions.md](../technology-decisions.md).

@@ -5,3 +5,9 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Local SQLite database and its WAL sidecars: runtime state, never committed.
+data/
+*.db
+*.db-wal
+*.db-shm

@@ -23,6 +23,7 @@ import type { AgentService } from '../agent/service.js';
 import { defaultToolRegistry } from '../tools/index.js';
 import { assertApiCatalogue } from '../api/contracts.js';
 import { check, type HealthCheck } from './health.js';
+import { databaseStatus } from '../db/index.js';
 
 export interface HealthCheckDeps {
   config: AppConfig;
@@ -120,10 +121,17 @@ export function defaultHealthChecks(deps: HealthCheckDeps): HealthCheck[] {
       detail: `Event bus ready (${deps.eventBus.subscriberCount()} subscriber(s), lastSeq=${deps.eventBus.lastSeq()}); WebSocket transport is not mounted yet.`,
     })),
 
-    check('database.sqlite', false, () => ({
-      status: 'degraded',
-      detail: `Configured for ${config.database.engine} at ${config.database.file}, but no driver/repositories are wired in this phase.`,
-    })),
+    check('database.sqlite', false, () => {
+      // Phase 3.4 wired the schema, migrations and repositories, but the server
+      // does not open a database handle yet: readiness reports what is actually
+      // true (driver availability) rather than claiming a connection it has not
+      // made.
+      const status = databaseStatus(config);
+      return {
+        status: status.driverAvailable ? 'degraded' : 'fail',
+        detail: `${status.detail}. Schema, migrations and repositories are implemented; the server does not open a handle in this phase.`,
+      };
+    }),
 
     check('storage.files', false, () => ({
       status: 'degraded',

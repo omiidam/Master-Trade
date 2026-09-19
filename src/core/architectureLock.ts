@@ -36,6 +36,7 @@ export const LOCK_AREAS = [
   'database.local',
   'database.production',
   'database.migrations',
+  'database.repositories',
   'ai.abstraction',
   'ai.gateway',
   'ai.providerIndependence',
@@ -188,27 +189,44 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     id: 'DEC-DB-1-LOCAL',
     area: 'database.local',
     choice:
-      'SQLite via better-sqlite3 in WAL mode, database file under the OS app-data directory, foreign keys and busy_timeout enabled',
+      'SQLite via node:sqlite in WAL mode with foreign keys and busy_timeout enabled, database file under the OS app-data directory',
     status: 'locked',
-    adr: ['ADR-0003-sqlite-first.md', 'ADR-0016-persistence-driver-and-orm.md'],
-    constraint: 'No secrets and no raw file bytes are ever stored in the database.',
+    adr: [
+      'ADR-0003-sqlite-first.md',
+      'ADR-0016-persistence-driver-and-orm.md',
+      'ADR-0025-sqlite-driver-and-dialects.md',
+    ],
+    constraint:
+      'No secrets and no raw file bytes are ever stored in the database; better-sqlite3 remains the documented fallback driver if a prebuilt binary makes it preferable.',
   },
   {
     id: 'DEC-DB-2-PRODUCTION',
     area: 'database.production',
     choice:
-      'PostgreSQL 16 behind the same Drizzle schema and the same repository interfaces (hosted multi-user deployment only; not built in Phase 3)',
-    status: 'deferred',
-    adr: ['ADR-0016-persistence-driver-and-orm.md'],
+      'PostgreSQL behind the same schema declarations, migrations and repositories, reached through the postgres dialect and an injected client (the pg driver is added when a server exists)',
+    status: 'locked-with-fallback',
+    adr: ['ADR-0016-persistence-driver-and-orm.md', 'ADR-0025-sqlite-driver-and-dialects.md'],
+    constraint:
+      'Production mode may not fork the domain: it changes the dialect and the driver, never the repositories.',
   },
   {
     id: 'DEC-DB-3-MIGRATIONS',
     area: 'database.migrations',
     choice:
-      'drizzle-kit generated, numbered, forward-only migrations validated by validateMigrations() and recorded in schema_migrations',
+      'Numbered, forward-only, checksummed migrations generated from the schema declarations and recorded in schema_migrations, which refuses drift, a tampered migration and a newer database',
     status: 'locked',
-    adr: ['ADR-0003-sqlite-first.md', 'ADR-0016-persistence-driver-and-orm.md'],
+    adr: ['ADR-0003-sqlite-first.md', 'ADR-0024-generated-migrations-and-ledger.md'],
     constraint: 'Destructive changes require the documented two-step migration.',
+  },
+  {
+    id: 'DEC-DB-4-REPOSITORIES',
+    area: 'database.repositories',
+    choice:
+      'Business logic depends on repository interfaces over a SqlExecutor port; SQL and driver imports exist only under src/db, and every table has exactly one owner repository',
+    status: 'locked',
+    adr: ['ADR-0023-repository-boundary-and-data-ownership.md'],
+    constraint:
+      'No module outside src/db may write SQL or import a database driver (enforced by test); the audit trail is append-only.',
   },
   {
     id: 'DEC-AI-1-ABSTRACTION',

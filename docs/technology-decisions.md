@@ -21,28 +21,29 @@ Phase 1/2 invariants are unchanged and remain authoritative:
 
 ## 0. Locked stack at a glance
 
-| Area                  | Decision                                                                                | Decision id              | ADR(s)                                                                                                   |
-| --------------------- | --------------------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Frontend framework    | React 19 + TypeScript (strict) bundled by Vite 6                                        | `DEC-FE-1-FRAMEWORK`     | [0010](./adr/ADR-0010-frontend-framework-react-vite.md)                                                  |
-| Frontend state        | TanStack Query v5 (async) + Zustand v5 (UI state)                                       | `DEC-FE-2-STATE`         | [0011](./adr/ADR-0011-frontend-state-tanstack-query-zustand.md)                                          |
-| UI system             | Tailwind CSS v4 + Radix primitives (vendored shadcn-style) + lucide-react               | `DEC-FE-3-UI-SYSTEM`     | [0012](./adr/ADR-0012-ui-system-tailwind-radix.md)                                                       |
-| Charting              | TradingView Lightweight Charts behind an internal `ChartAdapter`                        | `DEC-FE-4-CHARTING`      | [0013](./adr/ADR-0013-charting-lightweight-charts.md)                                                    |
-| UI motion             | Framer Motion with reduced-motion presets; motion never carries information             | `DEC-FE-5-MOTION`        | [0020](./adr/ADR-0020-ui-motion-framer-motion.md)                                                        |
-| Backend runtime       | Node.js 22 LTS (Node 20 compatibility lane stays in CI)                                 | `DEC-BE-1-RUNTIME`       | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                        |
-| Backend framework     | Fastify 5, loopback-only, plugin lifecycle hooks                                        | `DEC-BE-2-FRAMEWORK`     | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                        |
-| API architecture      | Typed contracts in `src/api/contracts.ts`; Fastify is an adapter over the same pipeline | `DEC-BE-3-API`           | [0002](./adr/ADR-0002-modular-monolith.md), [0014](./adr/ADR-0014-backend-runtime-fastify.md)            |
-| Validation            | Zod schemas as the single validator; Fastify body validation disabled                   | `DEC-BE-4-VALIDATION`    | [0015](./adr/ADR-0015-validation-zod-single-source.md)                                                   |
-| Request pipeline      | One `preHandler` pipeline per catalogue route; coverage asserted at boot                | `DEC-BE-5-PIPELINE`      | [0021](./adr/ADR-0021-single-request-pipeline.md)                                                        |
-| Database — local      | SQLite (better-sqlite3), WAL, file in OS app-data dir                                   | `DEC-DB-1-LOCAL`         | [0003](./adr/ADR-0003-sqlite-first.md), [0016](./adr/ADR-0016-persistence-driver-and-orm.md)             |
-| Database — production | PostgreSQL 16 behind the same Drizzle schema and repositories (deferred)                | `DEC-DB-2-PRODUCTION`    | [0016](./adr/ADR-0016-persistence-driver-and-orm.md)                                                     |
-| Migrations            | drizzle-kit generated, numbered, forward-only, validated by `validateMigrations()`      | `DEC-DB-3-MIGRATIONS`    | [0003](./adr/ADR-0003-sqlite-first.md), [0016](./adr/ADR-0016-persistence-driver-and-orm.md)             |
-| AI abstraction        | `LlmProvider` interface; adapters only in `src/llm/providers/`                          | `DEC-AI-1-ABSTRACTION`   | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md) |
-| AI gateway            | Existing `LlmGateway`: fallback, retry, timeout, streaming, token/cost, budget          | `DEC-AI-2-GATEWAY`       | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md) |
-| Provider independence | Import-boundary test confines provider SDKs to `src/llm/providers/**`                   | `DEC-AI-3-INDEPENDENCE`  | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md) |
-| Desktop runtime       | Tauri 2 shell + TypeScript backend as bundled Node sidecar on loopback                  | `DEC-DESKTOP-1-RUNTIME`  | [0001](./adr/ADR-0001-desktop-shell-tauri.md)                                                            |
-| Desktop security      | Loopback-only + per-launch bearer token, keychain-only secrets, capability allow-list   | `DEC-DESKTOP-2-SECURITY` | [0001](./adr/ADR-0001-desktop-shell-tauri.md), [0007](./adr/ADR-0007-deny-by-default-auth.md)            |
-| Realtime              | WebSocket at `/ws` (`@fastify/websocket`) over the existing `EventBus`                  | `DEC-RT-1-WEBSOCKET`     | [0017](./adr/ADR-0017-realtime-websocket-transport.md)                                                   |
-| Background jobs       | Durable DB-backed queue, in-process workers, claim + lease, dead-letter                 | `DEC-JOBS-1-QUEUE`       | [0018](./adr/ADR-0018-durable-db-backed-job-queue.md)                                                    |
+| Area                  | Decision                                                                                | Decision id              | ADR(s)                                                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Frontend framework    | React 19 + TypeScript (strict) bundled by Vite 6                                        | `DEC-FE-1-FRAMEWORK`     | [0010](./adr/ADR-0010-frontend-framework-react-vite.md)                                                    |
+| Frontend state        | TanStack Query v5 (async) + Zustand v5 (UI state)                                       | `DEC-FE-2-STATE`         | [0011](./adr/ADR-0011-frontend-state-tanstack-query-zustand.md)                                            |
+| UI system             | Tailwind CSS v4 + Radix primitives (vendored shadcn-style) + lucide-react               | `DEC-FE-3-UI-SYSTEM`     | [0012](./adr/ADR-0012-ui-system-tailwind-radix.md)                                                         |
+| Charting              | TradingView Lightweight Charts behind an internal `ChartAdapter`                        | `DEC-FE-4-CHARTING`      | [0013](./adr/ADR-0013-charting-lightweight-charts.md)                                                      |
+| UI motion             | Framer Motion with reduced-motion presets; motion never carries information             | `DEC-FE-5-MOTION`        | [0020](./adr/ADR-0020-ui-motion-framer-motion.md)                                                          |
+| Backend runtime       | Node.js 22 LTS (Node 20 compatibility lane stays in CI)                                 | `DEC-BE-1-RUNTIME`       | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
+| Backend framework     | Fastify 5, loopback-only, plugin lifecycle hooks                                        | `DEC-BE-2-FRAMEWORK`     | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
+| API architecture      | Typed contracts in `src/api/contracts.ts`; Fastify is an adapter over the same pipeline | `DEC-BE-3-API`           | [0002](./adr/ADR-0002-modular-monolith.md), [0014](./adr/ADR-0014-backend-runtime-fastify.md)              |
+| Validation            | Zod schemas as the single validator; Fastify body validation disabled                   | `DEC-BE-4-VALIDATION`    | [0015](./adr/ADR-0015-validation-zod-single-source.md)                                                     |
+| Request pipeline      | One `preHandler` pipeline per catalogue route; coverage asserted at boot                | `DEC-BE-5-PIPELINE`      | [0021](./adr/ADR-0021-single-request-pipeline.md)                                                          |
+| Database — local      | SQLite via `node:sqlite`, WAL, foreign keys on, file in OS app-data dir                 | `DEC-DB-1-LOCAL`         | [0003](./adr/ADR-0003-sqlite-first.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md)               |
+| Database — production | PostgreSQL behind one declaration set + dialect, driver injected (not installed yet)    | `DEC-DB-2-PRODUCTION`    | [0016](./adr/ADR-0016-persistence-driver-and-orm.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md) |
+| Migrations            | Generated from the schema, numbered, forward-only, checksummed, drift refuses at boot   | `DEC-DB-3-MIGRATIONS`    | [0024](./adr/ADR-0024-generated-migrations-and-ledger.md)                                                  |
+| Data access           | Repository boundary over a `SqlExecutor` port; one owner repository per table           | `DEC-DB-4-REPOSITORIES`  | [0023](./adr/ADR-0023-repository-boundary-and-data-ownership.md)                                           |
+| AI abstraction        | `LlmProvider` interface; adapters only in `src/llm/providers/`                          | `DEC-AI-1-ABSTRACTION`   | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
+| AI gateway            | Existing `LlmGateway`: fallback, retry, timeout, streaming, token/cost, budget          | `DEC-AI-2-GATEWAY`       | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
+| Provider independence | Import-boundary test confines provider SDKs to `src/llm/providers/**`                   | `DEC-AI-3-INDEPENDENCE`  | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
+| Desktop runtime       | Tauri 2 shell + TypeScript backend as bundled Node sidecar on loopback                  | `DEC-DESKTOP-1-RUNTIME`  | [0001](./adr/ADR-0001-desktop-shell-tauri.md)                                                              |
+| Desktop security      | Loopback-only + per-launch bearer token, keychain-only secrets, capability allow-list   | `DEC-DESKTOP-2-SECURITY` | [0001](./adr/ADR-0001-desktop-shell-tauri.md), [0007](./adr/ADR-0007-deny-by-default-auth.md)              |
+| Realtime              | WebSocket at `/ws` (`@fastify/websocket`) over the existing `EventBus`                  | `DEC-RT-1-WEBSOCKET`     | [0017](./adr/ADR-0017-realtime-websocket-transport.md)                                                     |
+| Background jobs       | Durable DB-backed queue, in-process workers, claim + lease, dead-letter                 | `DEC-JOBS-1-QUEUE`       | [0018](./adr/ADR-0018-durable-db-backed-job-queue.md)                                                      |
 
 Everything else in Phase 1/2 — error codes, provenance vocabulary, redaction,
 retry primitives, approval workflow, vector memory, market-data normalization,
@@ -244,8 +245,11 @@ Persistence, hosted providers, `/ws` and durable workers are still deferred.
 
 ### 3.1 Local mode (primary) — `DEC-DB-1-LOCAL`
 
-**SQLite via `better-sqlite3`** (synchronous, embedded, no server, no native
-service to install), with:
+**SQLite via `node:sqlite`** — the engine built into Node, synchronous, embedded,
+no server and no native build step. Amended in Phase 3.4: `better-sqlite3` had no
+prebuilt binary for the current Node ABI and fell back to compiling against Visual
+Studio, which is exactly risk R15 ([ADR-0025](./adr/ADR-0025-sqlite-driver-and-dialects.md));
+it remains the documented fallback driver behind the same port. With:
 
 - `journal_mode = WAL` (readers do not block the writer — required once workers
   and the UI read concurrently);

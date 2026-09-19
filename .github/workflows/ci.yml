@@ -9,7 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [20, 22]
+        # 22.5+ is required for `node:sqlite` (the local database driver, ADR-0025).
+        # The 24 lane exercises the database suites; on a 22 build without the
+        # built-in enabled they skip with a recorded reason instead of failing.
+        node: [22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
