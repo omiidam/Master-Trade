@@ -1,0 +1,105 @@
+/**
+ * Error handling for the HTTP surface.
+ *
+ * Every failure leaves the process through this one path, so the invariants are
+ * enforced once:
+ *   - the response is always the typed envelope (`{ok:false,error,correlationId}`);
+ *   - the body carries a stable code and a safe message — never a stack trace,
+ *     never a raw provider payload, never the original thrown value;
+ *   - the status comes from `ERROR_STATUS` (src/core/errors.ts), defined once;
+ *   - the failure is logged with the correlation id, and the log redacts secrets.
+ */
+
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { CORRELATION_ID_HEADER, errorResponse, type ApiResponse } from '../api/contracts.js';
+import { AppError, toAppError, type ErrorCode } from '../core/errors.js';
+import { ids } from '../core/ids.js';
+import type { Logger } from '../core/logging.js';
+
+export interface HttpFailure {
+  status: number;
+  code: ErrorCode;
+  response: ApiResponse<never>;
+  /** Safe, non-sensitive message for logs. */
+  logMessage: string;
+}
+
+/** Transport-level failures Fastify raises before any handler runs. */
+function mapTransportError(statusCode: number, message: string): AppError | null {
+  switch (statusCode) {
+    case 413:
+      return new AppError('VALIDATION_FAILED', 'Request body exceeds the configured limit.');
+    case 415:
+      return new AppError('VALIDATION_FAILED', 'Unsupported content type; send application/json.');
+    case 400:
+      return new AppError('VALIDATION_FAILED', `Malformed request: ${message}`);
+    default:
+      return null;
+  }
+}
+
+export function toHttpFailure(error: unknown, correlationId: string): HttpFailure {
+  const statusCode = (error as { statusCode?: unknown } | null)?.statusCode;
+  const mapped =
+    typeof statusCode === 'number'
+      ? mapTransportError(statusCode, (error as Error).message ?? '')
+      : null;
+  const appError = mapped ?? toAppError(error);
+  return {
+    status: appError.status,
+    code: appError.code,
+    response: errorResponse(appError, correlationId),
+    logMessage: appError.message,
+  };
+}
+
+export function correlationIdFor(request: FastifyRequest): string {
+  const header = request.headers[CORRELATION_ID_HEADER];
+  const raw = Array.isArray(header) ? header[0] : header;
+  if (raw && /^[A-Za-z0-9._:-]{1,128}$/.test(raw)) return raw;
+  return request.mt?.correlationId ?? ids.correlationId();
+}
+
+/**
+ * Install the process-wide error and 404 handlers. Called once, at server
+ * construction, so no route can opt out of it.
+ */
+export function installErrorHandlers(app: FastifyInstance, deps: { logger: Logger }): void {
+  app.setErrorHandler((error, request, reply: FastifyReply) => {
+    const correlationId = request.mt?.correlationId ?? correlationIdFor(request);
+    const failure = toHttpFailure(error, correlationId);
+
+    deps.logger.error(
+      'request failed',
+      {
+        code: failure.code,
+        status: failure.status,
+        routeId: request.mt?.route.id ?? 'unmatched',
+        principalId: request.mt?.principal?.id ?? null,
+        detail: failure.logMessage,
+      },
+      'http.request.failed',
+    );
+
+    // The reply body is built from the typed error, never from the thrown value.
+    return reply
+      .code(failure.status)
+      .header(CORRELATION_ID_HEADER, correlationId)
+      .send(failure.response);
+  });
+
+  app.setNotFoundHandler((request, reply: FastifyReply) => {
+    const correlationId = correlationIdFor(request);
+    const failure = toHttpFailure(
+      new AppError(
+        'NOT_FOUND',
+        `No route for ${request.method} ${request.url.split('?')[0] ?? ''}`,
+      ),
+      correlationId,
+    );
+    return reply
+      .code(failure.status)
+      .header(CORRELATION_ID_HEADER, correlationId)
+      .send(failure.response);
+  });
+}

@@ -30,6 +30,13 @@ export interface ApiConfig {
   port: number;
   requestTimeoutMs: number;
   maxBodyBytes: number;
+  /**
+   * Per-launch token the desktop shell injects into its own requests, so another
+   * local process cannot talk to the API (DEC-DESKTOP-2-SECURITY).
+   */
+  shellToken: SecretRef | null;
+  /** Requests from outside the loopback interface are refused. Not a setting. */
+  enforceLoopback: true;
 }
 
 export interface LlmEndpointConfig {
@@ -127,7 +134,8 @@ export interface AppConfig {
 
 export const DEFAULT_CONFIG: AppConfig = {
   appName: 'master-trade',
-  version: '0.2.0',
+  /** Keep in step with package.json: the health endpoint reports this. */
+  version: '0.3.0',
   mode: 'training',
   api: {
     version: 'v1',
@@ -135,6 +143,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     port: 4317,
     requestTimeoutMs: 30_000,
     maxBodyBytes: 2_000_000,
+    shellToken: null,
+    enforceLoopback: true,
   },
   ai: {
     primary: {
@@ -203,8 +213,22 @@ export function resolveConfig(overrides: ConfigOverrides = {}): AppConfig {
  * could reach live trading, execution, sensitive storage or unredacted logs,
  * the process refuses to start.
  */
+/** Hosts the API may bind. Loopback-only is a guarantee, not a preference. */
+const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
+  '127.0.0.1',
+  '::1',
+  'localhost',
+  '::ffff:127.0.0.1',
+]);
+
 export function assertSafeConfig(config: AppConfig): void {
   const violations: string[] = [];
+  if (!LOOPBACK_HOSTS.has(config.api.host.trim().toLowerCase())) {
+    violations.push(`api.host must be a loopback address (received ${config.api.host})`);
+  }
+  if (config.api.enforceLoopback !== true) {
+    violations.push('api.enforceLoopback must be true');
+  }
   if (config.safety.liveTradingEnabled) violations.push('safety.liveTradingEnabled must be false');
   if (config.safety.brokerExecutionEnabled) {
     violations.push('safety.brokerExecutionEnabled must be false');

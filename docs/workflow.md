@@ -23,8 +23,15 @@ npm install          # setup (backend + frontend dev dependencies)
 npm run validate     # format + typecheck + typecheck:web + test + build + build:web
 npm run dev          # workstation UI preview → http://127.0.0.1:5173
 npm test             # tests only
+npm run api          # HTTP API after build → http://127.0.0.1:4317 (loopback only)
 npm run agent:demo   # end-to-end demo after build
 ```
+
+A backend change is smoke-tested against a real socket, not only `app.inject()`:
+`npm run build && npm run api`, then `curl http://127.0.0.1:4317/v1/health` and
+`curl http://127.0.0.1:4317/v1/health/ready`. Readiness is expected to answer
+`degraded` until persistence, providers and realtime land — that is the honest
+state, not a failure.
 
 The frontend (`web/`) shares one package with the backend but has its own
 typecheck (`web/tsconfig.json`, DOM lib + `react-jsx`) and its own build target,
@@ -67,7 +74,15 @@ These are enforced by tests and must stay green on every push:
 - no module outside `src/llm/providers/**` imports a provider SDK;
 - the frontend exposes the five required pages, no navigation label or control
   accessible name matches `FORBIDDEN_UI_CONTROL`, every design token referenced
-  exists in the theme, and the preview identifies itself as a preview.
+  exists in the theme, and the preview identifies itself as a preview;
+- no route is registered outside the request pipeline, every catalogue route is
+  registered, and no anonymous route is a write (`assertRouteCoverage()`,
+  `assertApiCatalogue()` — both run at server start-up, not only in tests);
+- authorization runs before body validation, an invalid bearer token is always
+  `401` (even on a public route), and an approval-gated operation is `451`
+  before it can reach its handler;
+- configuration refuses to start on an unsafe value, and a session token never
+  appears in a log record.
 
 ## Commit style
 

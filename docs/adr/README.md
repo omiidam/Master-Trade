@@ -31,8 +31,16 @@ the alternatives that were deliberately turned down.
 | [0015](./ADR-0015-validation-zod-single-source.md)          | Validation: Zod as the single source of truth, Fastify validation disabled  | `DEC-BE-4-VALIDATION` | Accepted |
 | [0016](./ADR-0016-persistence-driver-and-orm.md)            | Persistence: better-sqlite3 + Drizzle, SQLite local / PostgreSQL production | `DEC-DB-1·2·3`        | Accepted |
 | [0017](./ADR-0017-realtime-websocket-transport.md)          | Real-time: WebSocket over the existing event bus                            | `DEC-RT-1-WEBSOCKET`  | Accepted |
-| [0018](./ADR-0018-durable-db-backed-job-queue.md)           | Jobs: durable database-backed queue with in-process workers                 | `DEC-JOBS-1-QUEUE`    | Accepted |     | [0019](./ADR-0019-llm-adapters-not-frameworks.md) | LLM: adapters behind our interfaces; no agent framework | `DEC-AI-1·2·3` | Accepted |
+| [0018](./ADR-0018-durable-db-backed-job-queue.md)           | Jobs: durable database-backed queue with in-process workers                 | `DEC-JOBS-1-QUEUE`    | Accepted |
+| [0019](./ADR-0019-llm-adapters-not-frameworks.md)           | LLM: adapters behind our interfaces; no agent framework                     | `DEC-AI-1·2·3`        | Accepted |
 | [0020](./ADR-0020-ui-motion-framer-motion.md)               | UI motion: Framer Motion with reduced-motion presets                        | `DEC-FE-5-MOTION`     | Accepted |
+
+## Phase 3.3 — backend foundation
+
+| ADR                                            | Decision                                                                    | Decision id(s)           | Status   |
+| ---------------------------------------------- | --------------------------------------------------------------------------- | ------------------------ | -------- |
+| [0021](./ADR-0021-single-request-pipeline.md)  | One request pipeline for every route; honest 501s for unimplemented ones    | `DEC-BE-5-PIPELINE`      | Accepted |
+| [0022](./ADR-0022-local-api-trust-boundary.md) | Local API trust boundary: loopback, per-launch shell token, hashed sessions | `DEC-DESKTOP-2-SECURITY` | Accepted |
 
 The machine-readable form of this lock is `src/core/architectureLock.ts` and it
 is enforced by `tests/technology-lock.test.ts`. Every decision id above also

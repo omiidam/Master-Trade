@@ -49,6 +49,7 @@ rejected. The lock is enforced by `tests/technology-lock.test.ts`.
 npm install
 npm run validate     # format + both typechecks + tests + both builds
 npm run dev          # workstation UI preview → http://127.0.0.1:5173
+npm run build && npm run api   # HTTP API on http://127.0.0.1:4317 (loopback only)
 npm run agent:demo   # run the end-to-end agent demo (backend)
 ```
 
@@ -65,6 +66,26 @@ Nothing on those screens is connected: there is no model provider, no database,
 no realtime link and no market feed, and every page says so. There is no order or
 execution affordance anywhere, and a test fails the build if one is ever added.
 See [frontend-foundation.md](./docs/frontend-foundation.md).
+
+## Backend (Phase 3.3)
+
+`src/server/**` mounts the typed API contracts on Fastify 5 — loopback only, Zod
+as the sole validator, one error handler, structured request logging, hashed
+sessions and environment-driven configuration that refuses to start on an unsafe
+setting. Six catalogue routes are registered behind one required pipeline; three
+answer an authorized `501` naming the capability they are waiting for
+(`lesson.complete`, `rule.propose`, `rule.activate` — the last one approval-gated,
+so it is `451` first).
+
+```bash
+npm run build && npm run api
+curl http://127.0.0.1:4317/v1/health          # liveness
+curl http://127.0.0.1:4317/v1/health/ready    # readiness: degraded, and says why
+```
+
+No persistence, no hosted model provider, no `/ws` and no job workers yet;
+readiness reports each of those as `degraded` rather than pretending otherwise.
+See [backend-foundation.md](./docs/backend-foundation.md).
 
 ## Safety
 

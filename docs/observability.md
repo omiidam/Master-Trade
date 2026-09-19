@@ -50,6 +50,15 @@ context assembly, tool calls, memory writes, jobs, real-time events and log
 records. `audit_records.correlation_id` and `messages.correlation_id` are
 indexed, so "show me everything that happened for this click" is one query.
 
+On the HTTP surface (Phase 3.3) the id is taken from `x-correlation-id` when it
+is safe to echo, from the in-process envelope otherwise, and minted locally as a
+fallback; it is returned in the response body and in the `x-correlation-id`
+header alike, so a client can correlate a failure without parsing logs. The
+server emits one structured line per request (`http.request.completed` with
+method, route id, status, duration) plus `http.request.rejected` /`http.request.failed`
+with the typed code — never a body, a query string or a header. See
+[backend-foundation.md § 8](./backend-foundation.md).
+
 ## 4. Agent events, tool calls, provenance
 
 | Signal           | Where                                              | Contains                                       |

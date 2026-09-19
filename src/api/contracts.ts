@@ -3,16 +3,42 @@
  *
  * The API layer is the only place where untrusted input becomes typed input.
  * Every route declares its version, the operation it needs, whether
- * authentication is required and a body validator. Nothing reaches the backend
- * without passing through `validateEnvelope` and `guardRoute`.
+ * authentication is required, and validators for body, path parameters and query.
+ * Nothing reaches the backend without passing through `validateEnvelope` and
+ * `guardRoute`.
+ *
+ * Body validation is Zod (`./schemas.ts`, ADR-0015): one schema per payload, with
+ * the static type inferred from it. Fastify's own schema validation is disabled
+ * in the server so exactly one validator decides.
  */
 
 import { authorize, type OperationId, type Principal } from '../auth/model.js';
 import { ERROR_STATUS, toAppError, type ErrorCode } from '../core/errors.js';
+import {
+  agentChatBodySchema,
+  emptyBodySchema,
+  lessonCompleteBodySchema,
+  lessonParamsSchema,
+  proposalParamsSchema,
+  readinessQuerySchema,
+  ruleActivateBodySchema,
+  ruleProposeBodySchema,
+  zodValidator,
+  type AgentChatBody,
+  type LessonCompleteBody,
+  type ReadinessQuery,
+  type RuleActivateBody,
+  type RuleProposeBody,
+} from './schemas.js';
 
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 export type ApiVersion = 'v1';
 export const API_VERSION: ApiVersion = 'v1';
+export const API_PATH_PREFIX = `/${API_VERSION}`;
+
+/** Header a client may use instead of the path prefix to name its version. */
+export const API_VERSION_HEADER = 'x-api-version';
+export const CORRELATION_ID_HEADER = 'x-correlation-id';
 
 export interface ApiEnvelope<TBody = unknown> {
   version: ApiVersion;
@@ -32,6 +58,10 @@ export interface ApiRoute<TBody, TData> {
   auth: 'required' | 'anonymous';
   summary: string;
   validateBody(raw: unknown): ValidationResult<TBody>;
+  /** Path parameters, when the route has any. */
+  validateParams?(raw: unknown): ValidationResult<Record<string, string>>;
+  /** Query string, when the route accepts one. */
+  validateQuery?(raw: unknown): ValidationResult<Record<string, unknown>>;
   /** Response shape marker; never executed, only typed. */
   readonly responseType?: TData;
 }
@@ -68,6 +98,11 @@ export function readString(
   return { value: raw, issue: null };
 }
 
+/**
+ * Envelope validation stays an explicit function rather than a schema: it is a
+ * *version gate* (unknown versions are rejected, never best-effort interpreted)
+ * and it must run before any body schema is chosen.
+ */
 export function validateEnvelope(raw: unknown): ValidationResult<ApiEnvelope> {
   const record = asRecord(raw);
   if (!record) return { ok: false, issues: ['payload must be a JSON object'] };
@@ -91,29 +126,20 @@ export function validateEnvelope(raw: unknown): ValidationResult<ApiEnvelope> {
   };
 }
 
+/** True when a payload looks like an API envelope rather than a bare body. */
+export function isEnvelopeShaped(raw: unknown): boolean {
+  const record = asRecord(raw);
+  return record !== null && 'routeId' in record && 'version' in record;
+}
+
 /* ------------------------------------------------------------------ */
 /* Route catalogue (v1)                                                */
 /* ------------------------------------------------------------------ */
-
-export interface AgentChatBody {
-  message: string;
-  conversationId?: string;
-}
 
 export interface AgentChatData {
   reply: string;
   epistemicKind: string;
   correlationId: string;
-}
-
-export interface LessonCompleteBody {
-  lessonId: string;
-  score?: number;
-}
-
-export interface RuleProposeBody {
-  ruleText: string;
-  hypothesis: string;
 }
 
 const agentChatRoute: ApiRoute<AgentChatBody, AgentChatData> = {
@@ -124,19 +150,7 @@ const agentChatRoute: ApiRoute<AgentChatBody, AgentChatData> = {
   operation: 'agent.chat',
   auth: 'required',
   summary: 'Send a message to the training agent.',
-  validateBody(raw) {
-    const record = asRecord(raw);
-    if (!record) return { ok: false, issues: ['body must be a JSON object'] };
-    const issues: string[] = [];
-    const message = readString(record, 'message', { required: true, maxLength: 8_000 });
-    if (message.issue) issues.push(message.issue);
-    const conversationId = readString(record, 'conversationId', { maxLength: 128 });
-    if (conversationId.issue) issues.push(conversationId.issue);
-    if (issues.length > 0) return { ok: false, issues };
-    const value: AgentChatBody = { message: message.value as string };
-    if (conversationId.value !== undefined) value.conversationId = conversationId.value;
-    return { ok: true, value };
-  },
+  validateBody: zodValidator(agentChatBodySchema),
 };
 
 const lessonCompleteRoute: ApiRoute<LessonCompleteBody, { lessonId: string }> = {
@@ -147,21 +161,8 @@ const lessonCompleteRoute: ApiRoute<LessonCompleteBody, { lessonId: string }> = 
   operation: 'lesson.complete',
   auth: 'required',
   summary: 'Record lesson completion for the authenticated learner.',
-  validateBody(raw) {
-    const record = asRecord(raw);
-    if (!record) return { ok: false, issues: ['body must be a JSON object'] };
-    const lessonId = readString(record, 'lessonId', { required: true, maxLength: 128 });
-    if (lessonId.issue) return { ok: false, issues: [lessonId.issue] };
-    const value: LessonCompleteBody = { lessonId: lessonId.value as string };
-    const score = record.score;
-    if (score !== undefined) {
-      if (typeof score !== 'number' || score < 0 || score > 100) {
-        return { ok: false, issues: ['score must be a number between 0 and 100'] };
-      }
-      value.score = score;
-    }
-    return { ok: true, value };
-  },
+  validateBody: zodValidator(lessonCompleteBodySchema),
+  validateParams: zodValidator(lessonParamsSchema),
 };
 
 const ruleProposeRoute: ApiRoute<RuleProposeBody, { proposalId: string }> = {
@@ -172,23 +173,10 @@ const ruleProposeRoute: ApiRoute<RuleProposeBody, { proposalId: string }> = {
   operation: 'rule.propose',
   auth: 'required',
   summary: 'Propose a new trading rule (never activated automatically).',
-  validateBody(raw) {
-    const record = asRecord(raw);
-    if (!record) return { ok: false, issues: ['body must be a JSON object'] };
-    const issues: string[] = [];
-    const ruleText = readString(record, 'ruleText', { required: true, maxLength: 4_000 });
-    if (ruleText.issue) issues.push(ruleText.issue);
-    const hypothesis = readString(record, 'hypothesis', { required: true, maxLength: 4_000 });
-    if (hypothesis.issue) issues.push(hypothesis.issue);
-    if (issues.length > 0) return { ok: false, issues };
-    return {
-      ok: true,
-      value: { ruleText: ruleText.value as string, hypothesis: hypothesis.value as string },
-    };
-  },
+  validateBody: zodValidator(ruleProposeBodySchema),
 };
 
-const ruleActivateRoute: ApiRoute<{ proposalId: string }, { status: string }> = {
+const ruleActivateRoute: ApiRoute<RuleActivateBody, { status: string }> = {
   id: 'rule.activate',
   method: 'POST',
   path: '/v1/rules/proposals/:proposalId/activate',
@@ -196,16 +184,11 @@ const ruleActivateRoute: ApiRoute<{ proposalId: string }, { status: string }> = 
   operation: 'rule.activate',
   auth: 'required',
   summary: 'Activate a rule. Requires a recorded human approval.',
-  validateBody(raw) {
-    const record = asRecord(raw);
-    if (!record) return { ok: false, issues: ['body must be a JSON object'] };
-    const proposalId = readString(record, 'proposalId', { required: true, maxLength: 128 });
-    if (proposalId.issue) return { ok: false, issues: [proposalId.issue] };
-    return { ok: true, value: { proposalId: proposalId.value as string } };
-  },
+  validateBody: zodValidator(ruleActivateBodySchema),
+  validateParams: zodValidator(proposalParamsSchema),
 };
 
-const healthRoute: ApiRoute<undefined, { status: string }> = {
+const healthRoute: ApiRoute<Record<string, unknown> | undefined, { status: string }> = {
   id: 'system.health',
   method: 'GET',
   path: '/v1/health',
@@ -213,15 +196,31 @@ const healthRoute: ApiRoute<undefined, { status: string }> = {
   operation: 'settings.read',
   auth: 'anonymous',
   summary: 'Liveness probe (no protected data).',
-  validateBody(raw) {
-    return raw === undefined || raw === null || asRecord(raw) !== null
-      ? { ok: true, value: undefined }
-      : { ok: false, issues: ['body must be an object or empty'] };
-  },
+  validateBody: zodValidator(emptyBodySchema),
 };
+
+const readinessRoute: ApiRoute<
+  Record<string, unknown> | undefined,
+  { overall: string; checks: { name: string; status: string }[] }
+> = {
+  id: 'system.readiness',
+  method: 'GET',
+  path: '/v1/health/ready',
+  version: API_VERSION,
+  operation: 'settings.read',
+  auth: 'anonymous',
+  summary: 'Readiness probe. Details require an authenticated principal.',
+  validateBody: zodValidator(emptyBodySchema),
+  validateQuery: zodValidator(readinessQuerySchema) as (
+    raw: unknown,
+  ) => ValidationResult<Record<string, unknown>>,
+};
+
+export type ReadinessRouteQuery = ReadinessQuery;
 
 export const API_ROUTES: readonly AnyApiRoute[] = [
   healthRoute,
+  readinessRoute,
   agentChatRoute,
   lessonCompleteRoute,
   ruleProposeRoute,
@@ -230,6 +229,40 @@ export const API_ROUTES: readonly AnyApiRoute[] = [
 
 export function findRoute(id: string): AnyApiRoute | undefined {
   return API_ROUTES.find((route) => route.id === id);
+}
+
+export function findRouteByPath(method: HttpMethod, url: string): AnyApiRoute | undefined {
+  const path = url.split('?')[0] ?? url;
+  return API_ROUTES.find((route) => {
+    if (route.method !== method) return false;
+    const routeParts = route.path.split('/').filter(Boolean);
+    const urlParts = path.split('/').filter(Boolean);
+    if (routeParts.length !== urlParts.length) return false;
+    return routeParts.every(
+      (part, index) => part.startsWith(':') || part === (urlParts[index] ?? ''),
+    );
+  });
+}
+
+/**
+ * Structural checks on the catalogue. Called at server start-up so a mistake in
+ * routing or versioning is a boot failure, not an incident.
+ */
+export function assertApiCatalogue(): void {
+  const ids = new Set<string>();
+  for (const route of API_ROUTES) {
+    if (ids.has(route.id)) throw new Error(`Duplicate route id: ${route.id}`);
+    ids.add(route.id);
+    if (route.version !== API_VERSION) {
+      throw new Error(`Route ${route.id} declares version ${route.version}`);
+    }
+    if (!route.path.startsWith(`${API_PATH_PREFIX}/`)) {
+      throw new Error(`Route ${route.id} must be versioned under ${API_PATH_PREFIX}`);
+    }
+    if (route.auth === 'anonymous' && route.method !== 'GET') {
+      throw new Error(`Route ${route.id} is anonymous but not read-only`);
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ */

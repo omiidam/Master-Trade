@@ -17,6 +17,7 @@ export type ErrorCode =
   | 'TIMEOUT'
   | 'BUDGET_EXCEEDED'
   | 'POLICY_VIOLATION'
+  | 'NOT_IMPLEMENTED'
   | 'INTERNAL';
 
 /** Stable mapping: one code -> one status, defined once. */
@@ -31,6 +32,7 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   POLICY_VIOLATION: 451,
   TIMEOUT: 504,
   PROVIDER_UNAVAILABLE: 503,
+  NOT_IMPLEMENTED: 501,
   INTERNAL: 500,
 };
 

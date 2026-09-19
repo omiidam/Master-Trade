@@ -41,3 +41,10 @@ export * from './frontend/viewModels.js';
 
 /* Phase 3.1: technology lock (decisions, not dependencies) */
 export * from './core/architectureLock.js';
+
+/* Phase 3.3: validation + authentication surfaces (the HTTP server lives in
+   ./server/index.js so backend entry points do not load Fastify). */
+export * from './api/schemas.js';
+export * from './auth/sessions.js';
+export * from './agent/service.js';
+export * from './config/loader.js';

@@ -256,9 +256,10 @@ Implemented (types + behaviour + tests):
 - approval workflow, rule registry, context assembly, desktop host, view models
 - Phase 1 model/tools/instructions separation and safety gates, still enforced
 
-Deferred intentionally: real LLM providers, real market-data providers,
-SQLite driver and repositories, durable job scheduler, WebSocket transport
-server, embedding provider (remote), full curriculum content, backtesting.
+Phase 3.3 mounted this on HTTP (see § 12). Deferred intentionally: real LLM
+providers, real market-data providers, SQLite driver and repositories, durable
+job scheduler, WebSocket transport server, embedding provider (remote), full
+curriculum content, backtesting.
 
 See [risks-and-deferred.md](./risks-and-deferred.md) for the trade-offs and the
 recommended Phase 3.
@@ -301,3 +302,33 @@ prototype pages — built on the locked stack and driven by mock data that is
 module was modified, and no endpoint, model or feed is connected: every screen
 says so. Details, guardrails and remaining accessibility gaps:
 [frontend-foundation.md](./frontend-foundation.md).
+
+## 12. Backend foundation (Phase 3.3)
+
+`src/server/**` mounts the Phase 2 API contract layer on Fastify 5, loopback
+only, with Zod as the sole validator:
+
+```
+version gate → access policy (loopback + shell token) → envelope unwrap
+             → authentication → authorization → approval gate
+             → validation → path/body agreement → handler
+```
+
+- The pipeline is a `preHandler` **generated for every catalogue route**, and
+  start-up asserts coverage: a route without the pipeline, or a catalogue route
+  missing from the server, is a boot failure ([ADR-0021](./adr/ADR-0021-single-request-pipeline.md)).
+- Routes whose capability does not exist yet are registered anyway and answer an
+  authenticated, authorized `501` naming what is missing — including the
+  approval-gated `rule.activate`, which is refused with `451` **before** it can
+  reach that 501.
+- One error handler maps every failure through the typed `ERROR_STATUS` table;
+  one logging path emits one structured line per request with the route id and
+  correlation id; readiness re-asserts the safety invariants at runtime and
+  reports every unbuilt layer as `degraded` rather than `ok`.
+- Configuration is environment-driven with refusal rules, `SecretRef`-only
+  secrets and a redacted `describeConfig()` for the owner-only readiness view.
+
+No trading capability was added, no permission was relaxed, and the Model /
+Tools / Instructions separation plus the approval gates are untouched. Details:
+[backend-foundation.md](./backend-foundation.md),
+[ADR-0022](./adr/ADR-0022-local-api-trust-boundary.md).

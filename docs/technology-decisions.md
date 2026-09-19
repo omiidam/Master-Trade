@@ -32,6 +32,7 @@ Phase 1/2 invariants are unchanged and remain authoritative:
 | Backend framework     | Fastify 5, loopback-only, plugin lifecycle hooks                                        | `DEC-BE-2-FRAMEWORK`     | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                        |
 | API architecture      | Typed contracts in `src/api/contracts.ts`; Fastify is an adapter over the same pipeline | `DEC-BE-3-API`           | [0002](./adr/ADR-0002-modular-monolith.md), [0014](./adr/ADR-0014-backend-runtime-fastify.md)            |
 | Validation            | Zod schemas as the single validator; Fastify body validation disabled                   | `DEC-BE-4-VALIDATION`    | [0015](./adr/ADR-0015-validation-zod-single-source.md)                                                   |
+| Request pipeline      | One `preHandler` pipeline per catalogue route; coverage asserted at boot                | `DEC-BE-5-PIPELINE`      | [0021](./adr/ADR-0021-single-request-pipeline.md)                                                        |
 | Database — local      | SQLite (better-sqlite3), WAL, file in OS app-data dir                                   | `DEC-DB-1-LOCAL`         | [0003](./adr/ADR-0003-sqlite-first.md), [0016](./adr/ADR-0016-persistence-driver-and-orm.md)             |
 | Database — production | PostgreSQL 16 behind the same Drizzle schema and repositories (deferred)                | `DEC-DB-2-PRODUCTION`    | [0016](./adr/ADR-0016-persistence-driver-and-orm.md)                                                     |
 | Migrations            | drizzle-kit generated, numbered, forward-only, validated by `validateMigrations()`      | `DEC-DB-3-MIGRATIONS`    | [0003](./adr/ADR-0003-sqlite-first.md), [0016](./adr/ADR-0016-persistence-driver-and-orm.md)             |
@@ -205,6 +206,40 @@ inferred into TypeScript types.
 Rejected: [ADR-0015](./adr/ADR-0015-validation-zod-single-source.md)
 (Ajv/JSON Schema only, TypeBox, io-ts, hand-rolled guards).
 
+### 2.5 Request pipeline — `DEC-BE-5-PIPELINE`
+
+Phase 3.3 turned § 2.3's diagram into a middleware rather than a convention:
+
+```
+version gate → access policy (loopback + shell token) → envelope unwrap
+             → authentication → authorization → approval gate
+             → params/query/body validation → path/body agreement → handler
+```
+
+- Routes are **generated** from `API_ROUTES` and all of them carry the same
+  `preHandler`; `assertRouteCoverage()` fails start-up if a registered route
+  lacks it or a catalogue route is missing. A bypass is a boot failure.
+- Authorization runs **before** body validation, so an unauthenticated caller
+  learns nothing about which fields the server would accept.
+- Routes whose capability does not exist yet are registered anyway and answer
+  `501 NOT_IMPLEMENTED` with the missing capability named, through the full
+  pipeline: one code path per request, and the frontend can distinguish
+  _unimplemented_ from _forbidden_.
+
+Rejected: [ADR-0021](./adr/ADR-0021-single-request-pipeline.md) (guard called
+per handler, global-only hook, validation before authorization, omitting pending
+routes, unauthenticated 501s).
+
+### 2.6 Implementation status — Phase 3.3
+
+`src/server/**` implements this section on the locked stack, using the
+`DEC-DESKTOP-2-SECURITY` boundary from § 5.2 as behaviour rather than intent
+([backend-foundation.md](./backend-foundation.md), [ADR-0022](./adr/ADR-0022-local-api-trust-boundary.md)):
+six catalogue routes, three implemented, Zod-only validation, one error handler,
+structured request logging, environment-driven config with refusal rules, and
+liveness/readiness checks that re-assert the safety invariants at runtime.
+Persistence, hosted providers, `/ws` and durable workers are still deferred.
+
 ## 3. Database
 
 ### 3.1 Local mode (primary) — `DEC-DB-1-LOCAL`
@@ -364,6 +399,12 @@ API surface).
 | Execution             | No shell or API capability for broker connection, order placement or live trading — absent, not merely disabled |
 | Offline               | Lessons, review, deterministic tools and synthetic data work offline; only real LLM/data calls need network     |
 
+Phase 3.3 implemented the first four rows as behaviour — loopback refusal,
+per-launch shell token, hashed session tokens and fail-closed configuration —
+rejecting Unix sockets, query-parameter tokens, raw-token storage, cookies and
+mTLS ([ADR-0022](./adr/ADR-0022-local-api-trust-boundary.md)). The CSP, updater
+and capability allow-list remain shell work.
+
 ## 6. Real-time layer
 
 ### 6.1 Strategy — `DEC-RT-1-WEBSOCKET`
@@ -508,3 +549,26 @@ Two deliberate deviations, both narrowing rather than widening scope:
 
 Everything else in the lock (backend, database, AI, desktop, realtime, jobs) is
 untouched by Phase 3.2 and still governs the next phase.
+
+## 12. Phase 3.3 status against this lock
+
+The backend foundation is implemented on the locked stack (see
+[backend-foundation.md](./backend-foundation.md)):
+
+| Locked choice            | Status in Phase 3.3                                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Node 22 + Fastify 5      | installed; `src/server/**`, bound to `127.0.0.1:4317`, graceful shutdown                                    |
+| Fastify as an adapter    | routes generated from `API_ROUTES`; both transports share one pipeline                                      |
+| Zod as sole validator    | `src/api/schemas.ts` (strict objects); Fastify validation disabled; envelope check stays explicit           |
+| `DEC-BE-5-PIPELINE`      | implemented and asserted at boot (`assertRouteCoverage`, `assertApiCatalogue`)                              |
+| `DEC-DESKTOP-2-SECURITY` | implemented: loopback refusal, shell token, hashed sessions, `assertSafeConfig` re-checked before listening |
+| Structured logging       | Pino sink + our request/agent lines; redaction asserted by test                                             |
+| better-sqlite3 + Drizzle | **not installed yet** — nothing persists in this phase; health reports the database as `degraded`           |
+| Hosted LLM adapters      | **not installed yet** — the scripted adapter answers; readiness says so                                     |
+| WebSocket `/ws`          | **not mounted yet** — the bus and auth model are ready; health reports it as `degraded`                     |
+| Durable job workers      | **not started yet** — the in-process queue contract and its health check exist                              |
+
+No locked decision was changed and no experimental technology was introduced.
+Readiness deliberately reports `degraded` for every unbuilt layer instead of
+claiming `ok`, which is the same honesty rule the frontend applies with its
+`Preview · mock data` badge.

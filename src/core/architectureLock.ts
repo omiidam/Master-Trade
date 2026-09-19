@@ -175,6 +175,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     constraint: 'Untrusted input is parsed only in src/api; everything downstream is typed.',
   },
   {
+    id: 'DEC-BE-5-PIPELINE',
+    area: 'backend.api',
+    choice:
+      'Every catalogue route is registered behind one preHandler pipeline (version → access → envelope → authN → authZ → approval → validation); coverage is asserted at start-up and unimplemented routes answer 501 through the same pipeline',
+    status: 'locked',
+    adr: ['ADR-0021-single-request-pipeline.md'],
+    constraint:
+      'No route may be registered outside the pipeline, and authorization must run before body validation.',
+  },
+  {
     id: 'DEC-DB-1-LOCAL',
     area: 'database.local',
     choice:
@@ -241,7 +251,11 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     choice:
       'Loopback-only bind with a per-launch bearer token handshake, keychain-only secrets, capability allow-list, CSP without remote origins',
     status: 'locked',
-    adr: ['ADR-0001-desktop-shell-tauri.md', 'ADR-0007-deny-by-default-auth.md'],
+    adr: [
+      'ADR-0001-desktop-shell-tauri.md',
+      'ADR-0007-deny-by-default-auth.md',
+      'ADR-0022-local-api-trust-boundary.md',
+    ],
     constraint:
       'No shell or API capability exists for broker connection, order placement or live trading.',
   },
