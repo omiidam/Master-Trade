@@ -38,3 +38,6 @@ export * from './agent/proposals.js';
 export * from './agent/context.js';
 export * from './desktop/host.js';
 export * from './frontend/viewModels.js';
+
+/* Phase 3.1: technology lock (decisions, not dependencies) */
+export * from './core/architectureLock.js';

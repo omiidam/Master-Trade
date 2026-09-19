@@ -25,14 +25,24 @@ npm test             # tests only
 npm run agent:demo   # end-to-end demo after build
 ```
 
-## Documentation map (Phase 2)
+## Documentation map
 
 `docs/architecture.md` is the entry point; each layer has its own document and
 every significant decision has an ADR in `docs/adr/`.
 
-New architectural decision? Add an ADR with context, decision and consequences.
-Changed behaviour of a layer? Update that layer's document in the same commit —
-documentation drift is treated as a defect, not a chore.
+New architectural decision? Add an ADR with context, decision, **alternatives
+rejected and why**, and consequences. Changed behaviour of a layer? Update that
+layer's document in the same commit — documentation drift is treated as a defect,
+not a chore.
+
+### Locked technology decisions (Phase 3.1)
+
+`docs/technology-decisions.md` is the official stack baseline and
+`src/core/architectureLock.ts` is its machine-readable twin. A locked decision
+changes **only** by adding an ADR that supersedes the previous one and updating
+both the lock module and the document in the same commit; the lock test fails
+otherwise. Nothing in Phase 3.1 installed a dependency — libraries named in the
+lock become `package.json` entries only when Phase 3.2 uses them for real.
 
 ## Architectural invariants
 
@@ -45,7 +55,11 @@ These are enforced by tests and must stay green on every push:
 - a model referencing a denied capability is `BLOCKED`;
 - no UI navigation label matches `FORBIDDEN_UI_CONTROL`;
 - a rule cannot activate without an approved human approval;
-- model-authored memory can never be promoted to trusted knowledge by automation.
+- model-authored memory can never be promoted to trusted knowledge by automation;
+- `assertArchitectureLock()` proves every technology area is decided, every
+  cited ADR exists, and no experimental technology or opaque agent framework is
+  a core dependency;
+- no module outside `src/llm/providers/**` imports a provider SDK.
 
 ## Commit style
 

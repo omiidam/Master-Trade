@@ -27,6 +27,22 @@ matrix, data-flow diagrams, security boundaries — plus per-layer documents
 vector-memory, observability, desktop-and-frontend, risks-and-deferred) and
 [ADRs](./docs/adr/).
 
+## Technology baseline (locked, Phase 3.1)
+
+| Layer    | Locked choice                                                                                              |
+| -------- | ---------------------------------------------------------------------------------------------------------- |
+| Frontend | React 19 + Vite 6 · TanStack Query + Zustand · Tailwind + Radix · Lightweight Charts (adapter)             |
+| Backend  | Node.js 22 LTS · Fastify 5 as an adapter over the typed contracts · Zod as sole validator                  |
+| Database | SQLite (better-sqlite3, WAL) + Drizzle migrations; PostgreSQL 16 deferred for hosted mode                  |
+| AI       | `LlmProvider` adapters (OpenAI, Anthropic, local OpenAI-compatible) behind our gateway; no agent framework |
+| Desktop  | Tauri 2 shell + Node sidecar on loopback, per-launch bearer token, keychain-only secrets                   |
+| Realtime | WebSocket `/ws` over the existing event bus                                                                |
+| Jobs     | Durable database-backed queue with in-process workers, atomic claim + lease, dead-letter                   |
+
+See [docs/technology-decisions.md](./docs/technology-decisions.md) for the
+rationale and [ADR-0010…0019](./docs/adr/) for every alternative that was
+rejected. The lock is enforced by `tests/technology-lock.test.ts`.
+
 ## Quick start
 
 ```bash

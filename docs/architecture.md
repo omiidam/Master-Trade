@@ -7,18 +7,19 @@ training-only: no live trading, no broker execution, no automatic rule activatio
 This document is the top-level map. Each layer has its own document; ADRs record
 why the decisions were made.
 
-| Area                                         | Document                                             |
-| -------------------------------------------- | ---------------------------------------------------- |
-| Desktop shell, frontend, view models         | [desktop-and-frontend.md](./desktop-and-frontend.md) |
-| API layer, contracts, auth/authz             | [api-auth.md](./api-auth.md)                         |
-| AI layer, prompts, LLM abstraction           | [ai-and-llm.md](./ai-and-llm.md)                     |
-| Database, entities, migrations, file storage | [database-and-storage.md](./database-and-storage.md) |
-| Background jobs, WebSocket layer             | [jobs-and-realtime.md](./jobs-and-realtime.md)       |
-| Market-data abstraction                      | [market-data.md](./market-data.md)                   |
-| Vector memory                                | [vector-memory.md](./vector-memory.md)               |
-| Logging, audit, observability                | [observability.md](./observability.md)               |
-| Risks, trade-offs, deferred work             | [risks-and-deferred.md](./risks-and-deferred.md)     |
-| Architecture Decision Records                | [adr/](./adr/)                                       |
+| Area                                         | Document                                                 |
+| -------------------------------------------- | -------------------------------------------------------- |
+| **Technology decisions / architecture lock** | **[technology-decisions.md](./technology-decisions.md)** |
+| Desktop shell, frontend, view models         | [desktop-and-frontend.md](./desktop-and-frontend.md)     |
+| API layer, contracts, auth/authz             | [api-auth.md](./api-auth.md)                             |
+| AI layer, prompts, LLM abstraction           | [ai-and-llm.md](./ai-and-llm.md)                         |
+| Database, entities, migrations, file storage | [database-and-storage.md](./database-and-storage.md)     |
+| Background jobs, WebSocket layer             | [jobs-and-realtime.md](./jobs-and-realtime.md)           |
+| Market-data abstraction                      | [market-data.md](./market-data.md)                       |
+| Vector memory                                | [vector-memory.md](./vector-memory.md)                   |
+| Logging, audit, observability                | [observability.md](./observability.md)                   |
+| Risks, trade-offs, deferred work             | [risks-and-deferred.md](./risks-and-deferred.md)         |
+| Architecture Decision Records                | [adr/](./adr/)                                           |
 
 ## 1. High-level architecture
 
@@ -261,3 +262,32 @@ server, embedding provider (remote), full curriculum content, backtesting.
 
 See [risks-and-deferred.md](./risks-and-deferred.md) for the trade-offs and the
 recommended Phase 3.
+
+## 10. Technology lock (Phase 3.1)
+
+Phase 3.1 added no behaviour: it decided _which technologies_ implement the
+boundaries above and froze that decision set so Phase 3.2 cannot start on an
+undocumented stack.
+
+| Layer    | Locked implementation                                                                                               |
+| -------- | ------------------------------------------------------------------------------------------------------------------- |
+| Frontend | React 19 + Vite 6, TanStack Query + Zustand, Tailwind + Radix, Lightweight Charts via adapter                       |
+| Backend  | Node.js 22 LTS + Fastify 5 as an adapter over `src/api/contracts.ts`, Zod as sole validator                         |
+| Database | better-sqlite3 (WAL, app-data dir) + Drizzle; PostgreSQL 16 deferred for hosted mode                                |
+| AI       | `LlmProvider` adapters (OpenAI, Anthropic, local OpenAI-compatible) behind the existing gateway; no agent framework |
+| Desktop  | Tauri 2 shell + Node sidecar on loopback with a per-launch bearer token and keychain secrets                        |
+| Realtime | WebSocket `/ws` (`@fastify/websocket`) over the existing `EventBus`                                                 |
+| Jobs     | Durable database-backed queue, in-process workers, atomic claim + lease, dead-letter                                |
+
+- Decisions and rationale: [technology-decisions.md](./technology-decisions.md)
+- Machine-readable lock: `src/core/architectureLock.ts` (`LOCKED_DECISIONS`)
+- Enforcement: `tests/technology-lock.test.ts` — every area answered, every ADR
+  present, no experimental technology as a core dependency, and provider SDK
+  imports confined to `src/llm/providers/**`.
+- Alternatives rejected for each choice are recorded in
+  [ADR-0010…ADR-0019](./adr/README.md).
+
+No dependency was installed in Phase 3.1; the lock is documentation plus data
+structures plus tests. Phase 1/2 safety gates (`assertSafeConfig`,
+`assertNoHardlineOperations`, approval workflow, UI-control check, provenance
+rules) are unchanged and still enforced.
