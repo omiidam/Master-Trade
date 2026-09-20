@@ -306,7 +306,7 @@ export function DashboardPage() {
             severity="info"
             title="Preview data"
             description="This dashboard is not connected to the backend. Progress, metrics and charts are illustrative and typed against the final view models."
-            code="PREVIEW_NOTICE"
+            code="PREVIEW_FIXTURE"
             action={
               <span className="inline-flex items-center gap-1.5 text-caption">
                 <Info size={13} aria-hidden />

@@ -305,7 +305,7 @@ export function MemoryPage() {
             severity="info"
             title="Not a connected knowledge base"
             description={MEMORY_PREVIEW_NOTICE}
-            code="PREVIEW_NOTICE"
+            code="PREVIEW_FIXTURE"
             action={
               <span className="text-caption">
                 The vector store, embedding provider and repositories exist in the backend; this

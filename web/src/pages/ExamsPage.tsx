@@ -272,7 +272,7 @@ export function ExamsPage() {
             severity="info"
             title="Preview assessment data"
             description={EXAM_PREVIEW_NOTICE}
-            code="PREVIEW_NOTICE"
+            code="PREVIEW_FIXTURE"
             action={
               <span className="text-caption">
                 The exam runner, rubric grader and attempt store arrive with the API adapter; the
@@ -439,7 +439,7 @@ export function ExamsPage() {
             severity="info"
             title="Not a stored history"
             description="These attempts are illustrative. The `exam_attempts` table and its repository exist in the backend, but nothing writes to them from this interface yet."
-            code="PREVIEW_NOTICE"
+            code="PREVIEW_FIXTURE"
           />
         </TabPanel>
 
