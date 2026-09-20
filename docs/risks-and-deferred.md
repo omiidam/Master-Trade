@@ -303,3 +303,26 @@ authenticated socket → a real event and a real job in the Activity page.
 - The first real job handlers (`dataset.process`, `embedding.generate`) with
   idempotency tested against a re-enqueued duplicate.
 - Server-side rate-limit and backpressure tuning for a browser that reconnects often.
+
+## 5. Phase 3.10 — final architecture validation (complete)
+
+A read-only architecture audit across frontend, backend, database, AI, desktop,
+realtime/jobs, testing, Git and documentation, followed by `npm run validate`
+end to end. One genuine code-level defect was found and fixed; no architecture
+was changed and no test was weakened.
+
+**Fixed** — `tests/jobs-persistence.test.ts` opened a real SQLite file in every
+test with no driver guard, so on a runtime without `node:sqlite` (Node < 22.5, or
+a 22.x build before 22.13 where the module is still behind `--experimental-sqlite`)
+all twelve tests would have **failed** with `PROVIDER_UNAVAILABLE`, while the two
+sibling database suites (`database.test.ts`, `repositories.test.ts`) skip with a
+recorded reason. The guard those suites use is now applied here too, so the
+`ci.yml` promise ("on a 22 build without the built-in enabled they skip … instead
+of failing") is true for every DB suite. On a supported runtime the tests run exactly
+as before.
+
+**Status** — all green: `format:check`, `typecheck`, `typecheck:web`, **368 tests
+in 27 files** (0 skipped, 0 todo), `build`, `build:web`, and 22 desktop checks
+with 0 errors and 1 warning (the updater placeholder signing key, a release-time
+prerequisite, not a code defect). No secrets are tracked; `.env*` and `data/` are
+gitignored.

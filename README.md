@@ -85,7 +85,7 @@ one is ever added. See [frontend-foundation.md](./docs/frontend-foundation.md) a
 `src/server/**` mounts the typed API contracts on Fastify 5 — loopback only, Zod
 as the sole validator, one error handler, structured request logging, hashed
 sessions and environment-driven configuration that refuses to start on an unsafe
-setting. Six catalogue routes are registered behind one required pipeline; three
+setting. Nine catalogue routes are registered behind one required pipeline; three
 answer an authorized `501` naming the capability they are waiting for
 (`lesson.complete`, `rule.propose`, `rule.activate` — the last one approval-gated,
 so it is `451` first).
@@ -96,8 +96,11 @@ curl http://127.0.0.1:4317/v1/health          # liveness
 curl http://127.0.0.1:4317/v1/health/ready    # readiness: degraded, and says why
 ```
 
-No persistence, no hosted model provider, no `/ws` and no job workers yet;
-readiness reports each of those as `degraded` rather than pretending otherwise.
+This section describes the server as Phase 3.3 left it. Persistence (3.4), a
+hosted model provider (3.5), `/ws` and the job workers (3.7) landed in the phases
+below; the routes that still have no handler (`lesson.complete`, `rule.propose`,
+`rule.activate`) answer an authorized `501`, and readiness reports any capability
+that is absent as `degraded` rather than pretending otherwise.
 See [backend-foundation.md](./docs/backend-foundation.md).
 
 ## Database (Phase 3.4)

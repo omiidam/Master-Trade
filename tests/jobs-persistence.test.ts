@@ -6,13 +6,22 @@ import type { Principal } from '../src/auth/model.js';
 import type { Repositories } from '../src/db/repositories/index.js';
 import { SqliteJobStore } from '../src/jobs/sqliteStore.js';
 
-import { openDatabase, type DatabaseHandle } from '../src/db/index.js';
+import { openDatabase, sqliteDriverInfo, type DatabaseHandle } from '../src/db/index.js';
 import { resolveConfig } from '../src/core/config.js';
 import { JobQueue, type JobStatusEvent } from '../src/jobs/queue.js';
 import { JobService } from '../src/jobs/service.js';
 import { JobWorkerPool } from '../src/jobs/worker.js';
 
 const FIXED_NOW = Date.parse('2026-09-20T09:00:00.000Z');
+
+// Every test here opens a real on-disk database, so they require the `node:sqlite`
+// driver (Node ≥ 22.5, unflagged from 22.13). On a runtime without it the suite
+// skips with a recorded reason rather than failing — the same guard
+// `database.test.ts` and `repositories.test.ts` use, so an unsupported Node build
+// does not turn a portability limit into a red CI lane. Where the driver exists
+// these run exactly as before.
+const driver = sqliteDriverInfo();
+const withDatabase = driver.available ? it : it.skip;
 
 const owner: Principal = {
   id: 'u_owner',
@@ -78,7 +87,7 @@ async function newFile(): Promise<string> {
 }
 
 describe('durable job store', () => {
-  it('reports itself as durable and keeps the queue across a restart', async () => {
+  withDatabase('reports itself as durable and keeps the queue across a restart', async () => {
     const file = await newFile();
     const first = await openStack(file);
     expect(first.store.durable).toBe(true);
@@ -109,7 +118,7 @@ describe('durable job store', () => {
     await second.handle.close();
   });
 
-  it('prevents a duplicate job through the unique idempotency key', async () => {
+  withDatabase('prevents a duplicate job through the unique idempotency key', async () => {
     const file = await newFile();
     const stack = await openStack(file);
     const input = {
@@ -133,7 +142,7 @@ describe('durable job store', () => {
     await reopened.handle.close();
   });
 
-  it('claims atomically: two claims never take the same job', async () => {
+  withDatabase('claims atomically: two claims never take the same job', async () => {
     const stack = await openStack(await newFile());
     await stack.queue.enqueue({
       kind: 'report.generate',
@@ -152,7 +161,7 @@ describe('durable job store', () => {
     await stack.handle.close();
   });
 
-  it('reclaims a job whose worker died, using the lease', async () => {
+  withDatabase('reclaims a job whose worker died, using the lease', async () => {
     // Expiry is decided against the database's clock — the same one every process
     // shares — so the clock is what the test ages, not the store.
     const clock = { at: FIXED_NOW };
@@ -179,7 +188,7 @@ describe('durable job store', () => {
     await stack.handle.close();
   });
 
-  it('records progress in transient scratch, and survives losing it', async () => {
+  withDatabase('records progress in transient scratch, and survives losing it', async () => {
     // The repository clock is the one that decides when scratch has expired, so
     // ageing it is how a 24h TTL is tested in microseconds.
     const clock = { at: FIXED_NOW };
@@ -209,30 +218,33 @@ describe('durable job store', () => {
     await stack.handle.close();
   });
 
-  it('cancels across processes: the recorded status is what stops the worker', async () => {
-    const file = await newFile();
-    const workerStack = await openStack(file);
-    const { job } = await workerStack.queue.enqueue({
-      kind: 'dataset.process',
-      idempotencyKey: 'ds_2',
-      correlationId: 'cor_1',
-      principal: owner,
-    });
+  withDatabase(
+    'cancels across processes: the recorded status is what stops the worker',
+    async () => {
+      const file = await newFile();
+      const workerStack = await openStack(file);
+      const { job } = await workerStack.queue.enqueue({
+        kind: 'dataset.process',
+        idempotencyKey: 'ds_2',
+        correlationId: 'cor_1',
+        principal: owner,
+      });
 
-    // A second connection to the same database stands in for another process.
-    const controller = await openStack(file);
-    await controller.queue.cancel(job.id, owner);
+      // A second connection to the same database stands in for another process.
+      const controller = await openStack(file);
+      await controller.queue.cancel(job.id, owner);
 
-    // The worker's own queue sees the cancellation without being told.
-    expect(await workerStack.queue.get(job.id)).toMatchObject({ status: 'cancelled' });
-    workerStack.queue.register('dataset.process', async () => ({}));
-    await workerStack.queue.runOnce();
-    expect((await workerStack.queue.get(job.id))?.status).toBe('cancelled');
-    await workerStack.handle.close();
-    await controller.handle.close();
-  });
+      // The worker's own queue sees the cancellation without being told.
+      expect(await workerStack.queue.get(job.id)).toMatchObject({ status: 'cancelled' });
+      workerStack.queue.register('dataset.process', async () => ({}));
+      await workerStack.queue.runOnce();
+      expect((await workerStack.queue.get(job.id))?.status).toBe('cancelled');
+      await workerStack.handle.close();
+      await controller.handle.close();
+    },
+  );
 
-  it('renews a lease so a slow job is not reclaimed by its own queue', async () => {
+  withDatabase('renews a lease so a slow job is not reclaimed by its own queue', async () => {
     const stack = await openStack(await newFile());
     const { job } = await stack.queue.enqueue({
       kind: 'backtest.run',
@@ -249,7 +261,7 @@ describe('durable job store', () => {
     await stack.handle.close();
   });
 
-  it('summarizes the queue from the database', async () => {
+  withDatabase('summarizes the queue from the database', async () => {
     const stack = await openStack(await newFile());
     stack.queue.register('report.generate', async () => {
       throw new Error('boom');
@@ -273,7 +285,7 @@ describe('durable job store', () => {
     await stack.handle.close();
   });
 
-  it('runs a durable queue through the worker pool end to end', async () => {
+  withDatabase('runs a durable queue through the worker pool end to end', async () => {
     const stack = await openStack(await newFile());
     const done: string[] = [];
     stack.queue.register('memory.index', async (job) => {
@@ -299,7 +311,7 @@ describe('durable job store', () => {
 });
 
 describe('job service over the durable store', () => {
-  it('audits enqueue and cancel, and publishes status events', async () => {
+  withDatabase('audits enqueue and cancel, and publishes status events', async () => {
     const stack = await openStack(await newFile());
     const published: JobStatusEvent[] = [];
     const service = new JobService({
@@ -349,28 +361,31 @@ describe('job service over the durable store', () => {
     await stack.handle.close();
   });
 
-  it('denies reads and cancels without the operation, and reports permission denied', async () => {
-    const stack = await openStack(await newFile());
-    const service = new JobService({ queue: stack.queue });
-    const student: Principal = { ...owner, id: 'u_student', roles: ['student'] };
-    const { job } = await service.enqueue({
-      kind: 'report.generate',
-      idempotencyKey: 'report_2',
-      correlationId: 'cor_1',
-      principal: owner,
-    });
+  withDatabase(
+    'denies reads and cancels without the operation, and reports permission denied',
+    async () => {
+      const stack = await openStack(await newFile());
+      const service = new JobService({ queue: stack.queue });
+      const student: Principal = { ...owner, id: 'u_student', roles: ['student'] };
+      const { job } = await service.enqueue({
+        kind: 'report.generate',
+        idempotencyKey: 'report_2',
+        correlationId: 'cor_1',
+        principal: owner,
+      });
 
-    // A student may read progress but not cancel infrastructure work.
-    await expect(service.get(job.id, student)).resolves.toMatchObject({ id: job.id });
-    await expect(service.cancel(job.id, student, 'cor_3')).rejects.toMatchObject({
-      code: 'FORBIDDEN',
-    });
-    await expect(service.list({}, null)).rejects.toMatchObject({ code: 'UNAUTHENTICATED' });
-    expect((await stack.queue.get(job.id))?.status).toBe('queued');
-    await stack.handle.close();
-  });
+      // A student may read progress but not cancel infrastructure work.
+      await expect(service.get(job.id, student)).resolves.toMatchObject({ id: job.id });
+      await expect(service.cancel(job.id, student, 'cor_3')).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(service.list({}, null)).rejects.toMatchObject({ code: 'UNAUTHENTICATED' });
+      expect((await stack.queue.get(job.id))?.status).toBe('queued');
+      await stack.handle.close();
+    },
+  );
 
-  it('surfaces progress and attempts in the view the API returns', async () => {
+  withDatabase('surfaces progress and attempts in the view the API returns', async () => {
     const stack = await openStack(await newFile());
     const service = new JobService({ queue: stack.queue });
     const { job } = await service.enqueue({
