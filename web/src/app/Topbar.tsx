@@ -1,10 +1,12 @@
-import { Bell, Languages, Monitor, Search, ShieldCheck, WifiOff } from 'lucide-react';
+import { Bell, Languages, Monitor, Search, ShieldCheck } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button, IconButton } from '../components/Button';
 import { Input } from '../components/Input';
 import { Tooltip } from '../components/Tooltip';
+import { ConnectionStatus } from '../components/realtime/ConnectionStatus';
 import { findNavSection, PREVIEW_NOTICE } from '../config/navigation';
 import { useShellStatus } from '../desktop/useShellStatus';
+import { useRealtimeStore } from '../realtime/store.js';
 import { useUiStore } from '../store/ui';
 
 /**
@@ -22,6 +24,12 @@ export function Topbar() {
   const openAbout = useUiStore((state) => state.setAboutDialogOpen);
   const section = findNavSection(page);
   const shell = useShellStatus();
+  const setPage = useUiStore((state) => state.setPage);
+  // The real state of the event stream, on every page: the chip is the same control
+  // the Activity page leads with, so "live" in the topbar means the same thing.
+  const streamState = useRealtimeStore((state) => state.state);
+  const streamSnapshot = useRealtimeStore((state) => state.snapshot);
+  const notices = useRealtimeStore((state) => state.notifications.length);
 
   // Where this page is running is stated, never implied: in a browser there is no
   // keychain, no offline cache and no local API, and the shell says which of those
@@ -73,10 +81,19 @@ export function Topbar() {
           </Badge>
         </Tooltip>
 
-        <Tooltip content="No real-time connection in this phase (WebSocket transport is not mounted yet).">
-          <Badge tone="neutral" icon={<WifiOff size={12} aria-hidden />}>
-            Offline
-          </Badge>
+        <Tooltip
+          content={
+            streamSnapshot?.detail ??
+            'The event stream has not been opened in this page yet; the Activity page connects.'
+          }
+        >
+          <button
+            type="button"
+            onClick={() => setPage('activity')}
+            className="rounded-[var(--radius-pill)]"
+          >
+            <ConnectionStatus state={streamState} detail={streamSnapshot?.detail} compact />
+          </button>
         </Tooltip>
 
         <div className="relative hidden xl:block">
@@ -111,13 +128,26 @@ export function Topbar() {
           </IconButton>
         </Tooltip>
 
-        <Tooltip content="Notifications and job events arrive with the realtime layer.">
-          <IconButton label="Notifications" variant="secondary" className="relative">
+        <Tooltip
+          content={
+            notices === 0
+              ? 'No notices yet: open Activity to watch the event stream and the background-task queue.'
+              : `${notices} notice(s) in this session — open Activity to read them.`
+          }
+        >
+          <IconButton
+            label="Notifications and background tasks"
+            variant="secondary"
+            className="relative"
+            onClick={() => setPage('activity')}
+          >
             <Bell size={16} aria-hidden />
-            <span
-              aria-hidden
-              className="absolute end-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-warning"
-            />
+            {notices > 0 ? (
+              <span
+                aria-hidden
+                className="absolute end-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-warning"
+              />
+            ) : null}
           </IconButton>
         </Tooltip>
 

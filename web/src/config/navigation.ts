@@ -9,9 +9,10 @@
  *
  * Phase note: the backend NAV_ITEMS sections (`conversation`, `academy`,
  * `dashboard`, `notifications`, `logs`, `settings`) map onto these ids once the
- * API adapter lands. `memory`, `exams`, `research` and `lab` have no backend
- * capability yet — they are study surfaces, not trading surfaces, and every one
- * of them is read-only.
+ * API adapter lands; `activity` is the Phase 3.7 surface for `logs` +
+ * `notifications` (the event stream and the background-task queue). `memory`,
+ * `exams`, `research` and `lab` have no backend capability yet — they are study
+ * surfaces, not trading surfaces, and every one of them is read-only.
  */
 
 export const APP_PAGE_IDS = [
@@ -22,6 +23,7 @@ export const APP_PAGE_IDS = [
   'academy',
   'exams',
   'lab',
+  'activity',
   'settings',
 ] as const;
 
@@ -109,6 +111,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     description: 'Review practice setups and deterministic risk math (read-only)',
     icon: 'flask',
     group: 'workspace',
+  },
+  {
+    id: 'activity',
+    label: 'Activity',
+    description:
+      'The live event stream and the background-task queue, with their provenance and their failures',
+    icon: 'activity',
+    group: 'system',
   },
   {
     id: 'settings',

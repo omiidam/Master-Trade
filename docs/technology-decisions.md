@@ -46,7 +46,10 @@ Phase 1/2 invariants are unchanged and remain authoritative:
 | Desktop lifecycle     | Fixed launch plan, per-launch token, health-gated window, bounded restarts              | `DEC-DESKTOP-4-LIFECYCLE`    | [0030](./adr/ADR-0030-sidecar-supervision-fixed-port.md)                                                   |
 | Desktop config        | App-data directory, one strict schema shared with Rust, credentials refused             | `DEC-DESKTOP-5-CONFIG`       | [0031](./adr/ADR-0031-desktop-config-appdata-keychain.md)                                                  |
 | Realtime              | WebSocket at `/ws` (`@fastify/websocket`) over the existing `EventBus`                  | `DEC-RT-1-WEBSOCKET`         | [0017](./adr/ADR-0017-realtime-websocket-transport.md)                                                     |
+| Realtime contracts    | Versioned event contracts, deny-by-default audiences, auth + subscribe in one frame     | `DEC-RT-2-PROTOCOL`          | [0032](./adr/ADR-0032-versioned-event-contracts-deny-by-default.md)                                        |
 | Background jobs       | Durable DB-backed queue, in-process workers, claim + lease, dead-letter                 | `DEC-JOBS-1-QUEUE`           | [0018](./adr/ADR-0018-durable-db-backed-job-queue.md)                                                      |
+| Job storage           | `JobStore` port: in-memory or SQLite over `jobs`; Redis only as an adapter              | `DEC-JOBS-2-STORE`           | [0033](./adr/ADR-0033-job-store-port-sqlite-first.md)                                                      |
+| Interface states      | Loading, empty and error designed per surface, rendered with the real components        | `DEC-FE-8-STATES`            | [0034](./adr/ADR-0034-loading-empty-error-are-designed-states.md)                                          |
 
 Everything else in Phase 1/2 — error codes, provenance vocabulary, redaction,
 retry primitives, approval workflow, vector memory, market-data normalization,
@@ -427,7 +430,20 @@ and capability allow-list remain shell work.
 
 ## 6. Real-time layer
 
-### 6.1 Strategy — `DEC-RT-1-WEBSOCKET`
+### 6.1 Strategy — `DEC-RT-1-WEBSOCKET`, implemented under `DEC-RT-2-PROTOCOL`
+
+**Implemented in Phase 3.7.** The transport above is built, and the wire policy on
+top of it is a contract registry: every event declares a strict payload schema, a
+schema version, an audience, an internal flag and its permitted publishers, and
+delivery is deny-by-default. A frame is validated on both sides — the server before
+it becomes an event, the client before anything is rendered. The token, the protocol
+version, the resume sequence and the subscription travel together in the first
+frame, which is what makes a reconnect atomic. Internal events are never serialized
+to a client, and a payload whose keys look like credentials is refused rather than
+filtered. See [realtime-and-jobs.md](./realtime-and-jobs.md) § 1–3 and
+[ADR-0032](./adr/ADR-0032-versioned-event-contracts-deny-by-default.md).
+
+### 6.2 Strategy — `DEC-RT-1-WEBSOCKET`
 
 **One WebSocket endpoint at `/ws`** (`@fastify/websocket`, `ws` underneath) on
 the same loopback server, fed by the Phase 2 `EventBus`. The bus already owns
@@ -464,7 +480,19 @@ SSE, gRPC streaming, Redis pub/sub).
 
 ## 7. Background jobs
 
-### 7.1 Strategy — `DEC-JOBS-1-QUEUE`
+### 7.1 Strategy — `DEC-JOBS-1-QUEUE`, storage under `DEC-JOBS-2-STORE`
+
+**Implemented in Phase 3.7.** The engine talks to a `JobStore` port with two
+implementations: in-memory (which reports itself as non-durable) and SQLite over the
+existing `jobs` table plus TTL'd `job_scratch` for progress. Idempotency, leases,
+atomic claim and the status vocabulary come from `PlatformRepository`; cancellation is
+the row's status, so it crosses processes. The worker pool enforces per-kind
+concurrency, renews leases and drains on shutdown. A Redis/BullMQ backend would be a
+third implementation of the same port, never a local requirement. See
+[realtime-and-jobs.md](./realtime-and-jobs.md) § 4–5 and
+[ADR-0033](./adr/ADR-0033-job-store-port-sqlite-first.md).
+
+### 7.2 Strategy — `DEC-JOBS-1-QUEUE`
 
 **A durable, database-backed queue with in-process workers** — no external
 broker, consistent with the modular monolith ([ADR-0002](./adr/ADR-0002-modular-monolith.md)).

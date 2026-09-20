@@ -56,6 +56,28 @@ export const proposalParamsSchema = z.strictObject({
   proposalId: identifier,
 });
 
+/** Background jobs (Phase 3.7). */
+export const jobParamsSchema = z.strictObject({
+  jobId: identifier,
+});
+
+/**
+ * `GET /v1/jobs` filters. `limit` is bounded: the queue is long-lived, so an
+ * unbounded read is a way to make the server do unbounded work.
+ */
+export const jobListQuerySchema = z.strictObject({
+  kind: z.string().trim().min(1).max(120).optional(),
+  status: z
+    .enum(['queued', 'running', 'succeeded', 'failed', 'dead-letter', 'cancelled'])
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+/** `POST /v1/jobs/:jobId/cancel`. A reason is optional but recorded when given. */
+export const jobCancelBodySchema = z.strictObject({
+  reason: z.string().trim().max(500).optional(),
+});
+
 /**
  * Query parameters. `verbose=1` asks for health details and is only honoured for
  * an authenticated principal — anything else is answered with the coarse form.
@@ -72,6 +94,9 @@ export type LessonCompleteBody = z.infer<typeof lessonCompleteBodySchema>;
 export type RuleProposeBody = z.infer<typeof ruleProposeBodySchema>;
 export type RuleActivateBody = z.infer<typeof ruleActivateBodySchema>;
 export type ReadinessQuery = z.infer<typeof readinessQuerySchema>;
+export type JobParams = z.infer<typeof jobParamsSchema>;
+export type JobListQuery = z.infer<typeof jobListQuerySchema>;
+export type JobCancelBody = z.infer<typeof jobCancelBodySchema>;
 
 /** Safe, stable text for one validation issue: `field: reason`. */
 export function formatIssue(issue: { path: readonly PropertyKey[]; message: string }): string {

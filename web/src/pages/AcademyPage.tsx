@@ -10,6 +10,8 @@ import {
   Section,
 } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
+import { InterfaceStatesPanel } from '../components/InterfaceStates';
+import { Reveal } from '../components/Reveal';
 import { TabPanel, Tabs } from '../components/Tabs';
 import { Tooltip } from '../components/Tooltip';
 import { Grid, Workspace } from '../app/Workspace';
@@ -133,50 +135,66 @@ export function AcademyPage() {
             description="Each module lists its focus areas. Locked modules unlock when prerequisites are complete."
           >
             <ol className="space-y-3">
-              {mockCurriculum.map((module) => (
+              {mockCurriculum.map((module, index) => (
                 <li key={module.id}>
-                  <Card interactive className={cn(module.status === 'locked' && 'opacity-70')}>
-                    <CardHeader>
-                      <div className="flex items-start gap-3">
-                        <span
-                          aria-hidden
-                          className="num grid h-8 w-8 shrink-0 place-items-center rounded-[var(--radius-control)] border border-border bg-surface-sunken text-caption text-text-muted"
-                        >
-                          {module.month}
-                        </span>
-                        <div>
-                          <CardTitle className="text-body">{module.title}</CardTitle>
-                          <CardDescription>{module.summary}</CardDescription>
+                  {/* Modules reveal in order, so the six-month shape reads as a
+                      sequence rather than appearing all at once. */}
+                  <Reveal index={index}>
+                    <Card interactive className={cn(module.status === 'locked' && 'opacity-70')}>
+                      <CardHeader>
+                        <div className="flex items-start gap-3">
+                          <span
+                            aria-hidden
+                            className="num grid h-8 w-8 shrink-0 place-items-center rounded-[var(--radius-control)] border border-border bg-surface-sunken text-caption text-text-muted"
+                          >
+                            {module.month}
+                          </span>
+                          <div>
+                            <CardTitle className="text-body">{module.title}</CardTitle>
+                            <CardDescription>{module.summary}</CardDescription>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge tone={STATUS_TONE[module.status]} dot={module.status !== 'locked'}>
-                          {module.status}
-                        </Badge>
-                        {module.status === 'locked' ? (
-                          <Tooltip content="Unlocks when prerequisite lessons are complete.">
-                            <span className="text-text-faint" aria-label="Locked">
-                              <Lock size={14} aria-hidden />
-                            </span>
-                          </Tooltip>
-                        ) : null}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex flex-wrap items-center gap-2">
-                      {module.focus.map((focus) => (
-                        <Badge key={focus} tone="outline">
-                          {focus}
-                        </Badge>
-                      ))}
-                      <span className="num ms-auto text-caption text-text-faint">
-                        {module.lessons} lessons
-                      </span>
-                    </CardContent>
-                  </Card>
+                        <div className="flex items-center gap-2">
+                          <Badge tone={STATUS_TONE[module.status]} dot={module.status !== 'locked'}>
+                            {module.status}
+                          </Badge>
+                          {module.status === 'locked' ? (
+                            <Tooltip content="Unlocks when prerequisite lessons are complete.">
+                              <span className="text-text-faint" aria-label="Locked">
+                                <Lock size={14} aria-hidden />
+                              </span>
+                            </Tooltip>
+                          ) : null}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex flex-wrap items-center gap-2">
+                        {module.focus.map((focus) => (
+                          <Badge key={focus} tone="outline">
+                            {focus}
+                          </Badge>
+                        ))}
+                        <span className="num ms-auto text-caption text-text-faint">
+                          {module.lessons} lessons
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </Reveal>
                 </li>
               ))}
             </ol>
           </Section>
+
+          <InterfaceStatesPanel
+            states={['loading', 'error']}
+            title="States this curriculum surface owes you"
+            description="The module list is static in this preview. These are the two states it will use once lessons are read from the backend; the empty case is shown in the Examinations tab."
+            loadingTitle="Reading the curriculum"
+            loadingDescription="Module skeletons hold the layout while the curriculum is read, so unlocked and locked cards do not shift position."
+            errorTitle="Curriculum could not be read"
+            errorDescription="A failed read is reported with its typed code instead of an empty list, because an empty curriculum and an unreadable one demand different actions."
+            errorCode="PROVIDER_UNAVAILABLE"
+            hint="Progress is recorded per lesson against the real curriculum when the persistence slice lands; nothing here is inferred from time spent."
+          />
         </TabPanel>
 
         <TabPanel value="lessons" className="space-y-3">

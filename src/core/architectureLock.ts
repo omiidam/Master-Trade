@@ -322,6 +322,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     constraint: 'Events with an empty audience are internal and are never serialized to a client.',
   },
   {
+    id: 'DEC-RT-2-PROTOCOL',
+    area: 'realtime.transport',
+    choice:
+      'Versioned event contracts with deny-by-default audiences, auth+subscription in the first frame, and client-side validation of every inbound frame',
+    status: 'locked',
+    adr: ['ADR-0032-versioned-event-contracts-deny-by-default.md'],
+    constraint:
+      'An internal event is never serialized to a client, and a payload that looks like it carries a credential is refused rather than stripped.',
+  },
+  {
     id: 'DEC-JOBS-1-QUEUE',
     area: 'jobs.queue',
     choice:
@@ -329,6 +339,26 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     status: 'locked',
     adr: ['ADR-0018-durable-db-backed-job-queue.md'],
     constraint: 'Approval-gated job kinds cannot be enqueued without a recorded human approval.',
+  },
+  {
+    id: 'DEC-JOBS-2-STORE',
+    area: 'jobs.queue',
+    choice:
+      'JobStore port with an in-memory implementation and a SQLite one over the jobs table; a Redis/BullMQ backend would be a third implementation, never a local requirement',
+    status: 'locked',
+    adr: ['ADR-0033-job-store-port-sqlite-first.md'],
+    constraint:
+      'Queue guarantees (idempotency, cancellation, durability) are store obligations, so an in-memory store must report itself as non-durable.',
+  },
+  {
+    id: 'DEC-FE-8-STATES',
+    area: 'frontend.ui',
+    choice:
+      'Loading, empty and error are designed states rendered with the real components; each surface carries only the states it can reach',
+    status: 'locked',
+    adr: ['ADR-0034-loading-empty-error-are-designed-states.md'],
+    constraint:
+      'No placeholder number stands in for a value that has not been read, and mock data is rendered only where it is labelled.',
   },
 ];
 

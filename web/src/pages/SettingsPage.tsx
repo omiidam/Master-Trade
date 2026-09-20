@@ -13,6 +13,7 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import { ReadOnlyValue } from '../components/Input';
+import { InterfaceStatesPanel } from '../components/InterfaceStates';
 import { TabPanel, Tabs } from '../components/Tabs';
 import { Tooltip } from '../components/Tooltip';
 import { Grid, Workspace } from '../app/Workspace';
@@ -396,10 +397,12 @@ export function SettingsPage() {
               <div>
                 <CardTitle className="text-body">Background jobs</CardTitle>
                 <CardDescription>
-                  Queue states as they will appear once the worker loop is durable
+                  Queue states. The durable worker loop exists; the Activity page reads the real
+                  queue whenever a session is available, and shows these fixtures only when it is
+                  not.
                 </CardDescription>
               </div>
-              <Badge tone="neutral">mock</Badge>
+              <Badge tone="outline">sample rows</Badge>
             </CardHeader>
             <CardContent className="divide-y divide-border">
               {mockSystemStatus.jobs.map((job) => (
@@ -424,7 +427,11 @@ export function SettingsPage() {
                   value="v1"
                   hint="Breaking changes add a version."
                 />
-                <ReadOnlyValue label="Realtime path" value="/ws" hint="Transport is Phase 3.3." />
+                <ReadOnlyValue
+                  label="Realtime path"
+                  value="/ws"
+                  hint="Authenticated WebSocket, loopback only. The Activity page opens it when a session exists."
+                />
                 <ReadOnlyValue label="Audit retention" value="365 days" />
               </CardContent>
             </Card>
@@ -441,6 +448,20 @@ export function SettingsPage() {
               </CardContent>
             </Card>
           </Grid>
+
+          <InterfaceStatesPanel
+            states={['loading', 'empty', 'error']}
+            title="Interface states, all three"
+            description="Every data surface in this workstation owes you these three. They are the real components, shown empty: no placeholder number stands in for a value that has not been read."
+            loadingTitle="Reading configuration"
+            loadingDescription="A skeleton holds the layout while settings are read from disk or from the shell, so nothing jumps when they arrive."
+            emptyTitle="Nothing configured yet"
+            emptyDescription="A fresh install has no providers and no stored references; that is a normal state and says so rather than showing an error."
+            errorTitle="Configuration could not be read"
+            errorDescription="A failed read reports its typed code, and a retry is offered only when retrying can succeed — never for a refused credential."
+            errorCode="UNAUTHENTICATED"
+            hint="A state is only shown when a surface can actually reach it; adding a fourth state here would mean adding a behaviour, not a picture."
+          />
         </TabPanel>
       </Tabs>
     </Workspace>

@@ -49,6 +49,12 @@ export type { TooltipProps } from './Tooltip';
 export { ProvenanceBanner } from './ProvenanceBanner';
 export type { ProvenanceBannerProps } from './ProvenanceBanner';
 
+export { Reveal, RevealList } from './Reveal';
+export type { RevealListProps, RevealProps } from './Reveal';
+
+export { InterfaceStatesPanel } from './InterfaceStates';
+export type { InterfaceStateId, InterfaceStatesPanelProps } from './InterfaceStates';
+
 export { ChartAdapter } from './charts/ChartAdapter';
 export type { ChartAdapterProps, ChartBar } from './charts/ChartAdapter';
 export { Sparkline } from './charts/Sparkline';
@@ -117,3 +123,33 @@ export type { MetricsPanelProps, ResearchMetrics } from './research/MetricsPanel
 
 export { ReportViewer } from './research/ReportViewer';
 export type { ReportSectionInput, ReportViewerProps } from './research/ReportViewer';
+
+/* Realtime + background tasks -------------------------------------------- */
+
+export { ConnectionStatus, CONNECTION_PRESENTATION } from './realtime/ConnectionStatus';
+export type { ConnectionStatusProps, ConnectionTone } from './realtime/ConnectionStatus';
+
+export { JobStatusCard } from './realtime/JobStatusCard';
+export type { JobStatusCardProps } from './realtime/JobStatusCard';
+
+export { JobProgressIndicator, progressPercent } from './realtime/JobProgressIndicator';
+export type { JobProgress, JobProgressIndicatorProps } from './realtime/JobProgressIndicator';
+
+export { AgentActivityFeed } from './realtime/AgentActivityFeed';
+export type { ActivityEntryInput, AgentActivityFeedProps } from './realtime/AgentActivityFeed';
+
+export { BackgroundTaskPanel } from './realtime/BackgroundTaskPanel';
+export type { BackgroundTaskPanelProps } from './realtime/BackgroundTaskPanel';
+
+export { RealtimeNotification } from './realtime/RealtimeNotification';
+export type {
+  NotificationInput,
+  NotificationLevel,
+  RealtimeNotificationProps,
+} from './realtime/RealtimeNotification';
+
+export { RetryState } from './realtime/RetryState';
+export type { RetryKind, RetryStateProps } from './realtime/RetryState';
+
+export { CancelTaskControl } from './realtime/CancelTaskControl';
+export type { CancelTaskControlProps } from './realtime/CancelTaskControl';

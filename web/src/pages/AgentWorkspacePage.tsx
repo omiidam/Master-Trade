@@ -17,7 +17,9 @@ import { Badge, EpistemicBadge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import { ErrorState } from '../components/ErrorState';
+import { InterfaceStatesPanel } from '../components/InterfaceStates';
 import { Field, ReadOnlyValue, Textarea } from '../components/Input';
+import { Reveal } from '../components/Reveal';
 import { Tooltip } from '../components/Tooltip';
 import { Workspace } from '../app/Workspace';
 import {
@@ -73,52 +75,64 @@ export function AgentWorkspacePage() {
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
-              {mockConversation.map((message) => {
+              {mockConversation.map((message, index) => {
                 const isAgent = message.role === 'agent';
                 return (
-                  <article
-                    key={message.id}
-                    className={
-                      isAgent
-                        ? 'rounded-[var(--radius-panel)] border border-border bg-surface-sunken p-3.5'
-                        : 'rounded-[var(--radius-panel)] border border-[#1b2c49] bg-info-soft/60 p-3.5'
-                    }
-                  >
-                    <header className="flex flex-wrap items-center gap-2">
-                      <span
-                        aria-hidden
-                        className={
-                          isAgent
-                            ? 'grid h-6 w-6 place-items-center rounded-full bg-ai-soft text-ai'
-                            : 'grid h-6 w-6 place-items-center rounded-full bg-info-soft text-info'
-                        }
-                      >
-                        {isAgent ? <Bot size={13} /> : <User size={13} />}
-                      </span>
-                      <span className="text-caption font-medium text-text">
-                        {isAgent ? 'Training agent' : 'You'}
-                      </span>
-                      <EpistemicBadge kind={message.epistemicKind} />
-                      <span className="num ms-auto text-caption text-text-faint">
-                        {formatTimestamp(message.createdAt)}
-                      </span>
-                    </header>
-                    <p className="mt-2 text-body leading-relaxed text-text">{message.text}</p>
-                    {message.sources.length > 0 ? (
-                      <footer className="mt-2 flex flex-wrap items-center gap-1.5">
-                        <span className="text-caption text-text-faint">Sources</span>
-                        {message.sources.map((source) => (
-                          <Badge key={source} tone="outline">
-                            {source}
-                          </Badge>
-                        ))}
-                      </footer>
-                    ) : null}
-                  </article>
+                  <Reveal key={message.id} index={index}>
+                    <article
+                      className={
+                        isAgent
+                          ? 'rounded-[var(--radius-panel)] border border-border bg-surface-sunken p-3.5'
+                          : 'rounded-[var(--radius-panel)] border border-[#1b2c49] bg-info-soft/60 p-3.5'
+                      }
+                    >
+                      <header className="flex flex-wrap items-center gap-2">
+                        <span
+                          aria-hidden
+                          className={
+                            isAgent
+                              ? 'grid h-6 w-6 place-items-center rounded-full bg-ai-soft text-ai'
+                              : 'grid h-6 w-6 place-items-center rounded-full bg-info-soft text-info'
+                          }
+                        >
+                          {isAgent ? <Bot size={13} /> : <User size={13} />}
+                        </span>
+                        <span className="text-caption font-medium text-text">
+                          {isAgent ? 'Training agent' : 'You'}
+                        </span>
+                        <EpistemicBadge kind={message.epistemicKind} />
+                        <span className="num ms-auto text-caption text-text-faint">
+                          {formatTimestamp(message.createdAt)}
+                        </span>
+                      </header>
+                      <p className="mt-2 text-body leading-relaxed text-text">{message.text}</p>
+                      {message.sources.length > 0 ? (
+                        <footer className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <span className="text-caption text-text-faint">Sources</span>
+                          {message.sources.map((source) => (
+                            <Badge key={source} tone="outline">
+                              {source}
+                            </Badge>
+                          ))}
+                        </footer>
+                      ) : null}
+                    </article>
+                  </Reveal>
                 );
               })}
             </CardContent>
           </Card>
+
+          <InterfaceStatesPanel
+            states={['loading', 'empty']}
+            title="States a turn goes through"
+            description="A turn is a round trip with a provider that may be slow, and a conversation can simply be new. Both are shown here as the real components the wired version will use."
+            loadingTitle="Waiting for a structured answer"
+            loadingDescription="While a turn is in flight the answer area holds its shape; no partial sentence is rendered, because a half-arrived claim can read as a finished one."
+            emptyTitle="This conversation has no turns yet"
+            emptyDescription="A new conversation says so, and what it will show: statements labelled fact, analysis, hypothesis or uncertainty, each with its sources."
+            hint="Chain-of-thought is never displayed, requested or stored — the answer is a structured summary or a failed turn."
+          />
 
           <Card>
             <CardContent className="space-y-3">

@@ -66,6 +66,14 @@ the alternatives that were deliberately turned down.
 | [0030](./ADR-0030-sidecar-supervision-fixed-port.md)  | Fixed launch plan, fixed loopback port, per-launch token, proven readiness, bounded restarts        | `DEC-DESKTOP-4-LIFECYCLE`    | Accepted |
 | [0031](./ADR-0031-desktop-config-appdata-keychain.md) | Config in the OS app-data directory, strict schema compared with Rust, credentials only in keychain | `DEC-DESKTOP-5-CONFIG`       | Accepted |
 
+## Phase 3.7 — realtime, background jobs, preview prototype
+
+| ADR                                                             | Decision                                                                               | Decision id(s)      | Status   |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------- | -------- |
+| [0032](./ADR-0032-versioned-event-contracts-deny-by-default.md) | Versioned event contracts; deny-by-default audiences; auth + subscription in one frame | `DEC-RT-2-PROTOCOL` | Accepted |
+| [0033](./ADR-0033-job-store-port-sqlite-first.md)               | A `JobStore` port, SQLite first; Redis/BullMQ only ever as an adapter                  | `DEC-JOBS-2-STORE`  | Accepted |
+| [0034](./ADR-0034-loading-empty-error-are-designed-states.md)   | Loading, empty and error are designed states, shown with the real components           | `DEC-FE-8-STATES`   | Accepted |
+
 The machine-readable form of this lock is `src/core/architectureLock.ts` and it
 is enforced by `tests/technology-lock.test.ts`. Every decision id above also
 appears in [technology-decisions.md](../technology-decisions.md).

@@ -1,0 +1,211 @@
+/**
+ * Frontend HTTP client for the local API.
+ *
+ * Small on purpose, and typed against the backend's own contracts rather than a
+ * hand-written copy: the envelope, the error codes and the version header all come
+ * from `src/api/contracts.ts` and `src/core/errors.ts`. When the server changes a
+ * code, this file stops compiling — which is the point.
+ *
+ * Three rules it keeps:
+ *
+ *   1. **Credentials travel in headers, never in a URL.** The session token goes in
+ *      `Authorization: Bearer`, the per-launch shell token in the header the access
+ *      policy names. A token in a query string ends up in logs (ADR-0022).
+ *   2. **A failure is typed.** Every non-2xx answer — and every transport failure —
+ *      becomes an `ApiError` carrying the server's own error code, so the UI can say
+ *      *why* ("your session is not authorized for this") instead of "request failed".
+ *   3. **Nothing here executes trading.** The only routes this client knows are job
+ *      status, job cancellation and readiness. There is no order route to call, and
+ *      `POST /v1/jobs` does not exist: enqueueing background work stays server-side.
+ */
+
+import {
+  API_PATH_PREFIX,
+  API_VERSION,
+  CORRELATION_ID_HEADER,
+  type ApiErrorBody,
+  type ApiResponse,
+} from '../../../src/api/contracts.js';
+import { ERROR_STATUS, type ErrorCode } from '../../../src/core/errors.js';
+import { IdFactory } from '../../../src/core/ids.js';
+import { SHELL_TOKEN_HEADER } from '../../../src/core/headers.js';
+import type { JobView } from '../../../src/jobs/service.js';
+
+/** Where the API is, and what may talk to it. */
+export interface ApiConnection {
+  baseUrl: string;
+  token: string;
+  /** Present only inside the desktop shell, where the sidecar is token-gated. */
+  shellToken?: string | null;
+}
+
+export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'dead-letter' | 'cancelled';
+
+export interface JobListFilter {
+  kind?: string;
+  status?: JobStatus;
+  limit?: number;
+}
+
+/** What `GET /v1/jobs` returns: the client may watch and cancel, never enqueue. */
+export interface JobListData {
+  jobs: JobView[];
+  summary?: Record<string, number>;
+  note?: string;
+}
+
+export interface JobCancelData extends JobView {
+  reason?: string | null;
+}
+
+/** Raised for any failed request. `code` is the server's code, or a local one. */
+export class ApiError extends Error {
+  readonly code: ErrorCode;
+  readonly status: number;
+  readonly correlationId: string;
+  readonly details: Record<string, unknown> | undefined;
+
+  constructor(input: {
+    code: ErrorCode;
+    message: string;
+    status: number;
+    correlationId: string;
+    details?: Record<string, unknown>;
+  }) {
+    super(input.message);
+    this.name = 'ApiError';
+    this.code = input.code;
+    this.status = input.status;
+    this.correlationId = input.correlationId;
+    this.details = input.details;
+  }
+
+  /** Retrying may help: timeouts, throttling and unavailability do; a 401 does not. */
+  get retryable(): boolean {
+    return this.status === 429 || this.status >= 500;
+  }
+
+  /** A message safe to render: the server's text, plus what the client can add. */
+  describe(): string {
+    switch (this.code) {
+      case 'UNAUTHENTICATED':
+        return 'The local API did not accept this session. Sign in again to read job status.';
+      case 'FORBIDDEN':
+        return 'This session is not authorized for that action, so it was not performed.';
+      case 'NOT_FOUND':
+        return 'That job is no longer in the queue.';
+      case 'PROVIDER_UNAVAILABLE':
+        return 'The local API is not answering. It may still be starting.';
+      case 'NOT_IMPLEMENTED':
+        return 'The backend reports this capability as not implemented yet.';
+      default:
+        return this.message;
+    }
+  }
+}
+
+interface ApiClientDeps {
+  fetch?: typeof fetch;
+  idFactory?: IdFactory;
+  /** Set when the caller already knows the shell token for this launch. */
+  shellToken?: string | null;
+}
+
+export class ApiClient {
+  private readonly connection: ApiConnection;
+  private readonly fetchImpl: typeof fetch;
+  private readonly ids: IdFactory;
+
+  constructor(connection: ApiConnection, deps: ApiClientDeps = {}) {
+    this.connection = connection;
+    this.fetchImpl = deps.fetch ?? globalThis.fetch.bind(globalThis);
+    this.ids = deps.idFactory ?? new IdFactory({ prefix: 'ui' });
+  }
+
+  /** Readiness, unauthenticated by design. Used to tell "down" from "not allowed". */
+  async readiness(): Promise<{ status: string } & Record<string, unknown>> {
+    return this.request<{ status: string } & Record<string, unknown>>('GET', '/v1/health');
+  }
+
+  async listJobs(filter: JobListFilter = {}): Promise<JobListData> {
+    const query = new URLSearchParams();
+    if (filter.kind !== undefined) query.set('kind', filter.kind);
+    if (filter.status !== undefined) query.set('status', filter.status);
+    if (filter.limit !== undefined) query.set('limit', String(filter.limit));
+    const suffix = query.size > 0 ? `?${query.toString()}` : '';
+    return this.request<JobListData>('GET', `/v1/jobs${suffix}`);
+  }
+
+  async getJob(jobId: string): Promise<JobView> {
+    return this.request<JobView>('GET', `/v1/jobs/${encodeURIComponent(jobId)}`);
+  }
+
+  /**
+   * Cancel a job. The server checks `job.cancel` on the principal and writes an
+   * audit record; the client's only job is to send the request and report what
+   * came back — including a refusal, which is a normal outcome, not an error to
+   * hide.
+   */
+  async cancelJob(jobId: string, reason?: string): Promise<JobCancelData> {
+    return this.request<JobCancelData>('POST', `/v1/jobs/${encodeURIComponent(jobId)}/cancel`, {
+      body: reason === undefined ? {} : { reason },
+    });
+  }
+
+  /** One request, one typed outcome. */
+  private async request<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    options: { body?: unknown } = {},
+  ): Promise<T> {
+    const correlationId = this.ids.correlationId();
+    const headers: Record<string, string> = {
+      authorization: `Bearer ${this.connection.token}`,
+      [CORRELATION_ID_HEADER]: correlationId,
+      'x-api-version': API_VERSION,
+      accept: 'application/json',
+    };
+    if (options.body !== undefined) headers['content-type'] = 'application/json';
+    if (this.connection.shellToken) headers[SHELL_TOKEN_HEADER] = this.connection.shellToken;
+
+    let response: Response;
+    try {
+      response = await this.fetchImpl(`${this.connection.baseUrl}${path}`, {
+        method,
+        headers,
+        ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+      });
+    } catch (error) {
+      // The API may simply not be running yet; that is unavailability, not a bug in
+      // the request, and says so.
+      throw new ApiError({
+        code: 'PROVIDER_UNAVAILABLE',
+        message: error instanceof Error ? error.message : 'The local API could not be reached.',
+        status: ERROR_STATUS.PROVIDER_UNAVAILABLE,
+        correlationId,
+      });
+    }
+
+    let envelope: ApiResponse<T> | null = null;
+    try {
+      envelope = (await response.json()) as ApiResponse<T>;
+    } catch {
+      envelope = null;
+    }
+
+    if (envelope && envelope.ok) return envelope.data;
+
+    const body: ApiErrorBody | undefined = envelope?.error;
+    const code: ErrorCode =
+      body?.code ?? (response.status === 401 ? 'UNAUTHENTICATED' : 'INTERNAL');
+    throw new ApiError({
+      code,
+      message: body?.message ?? `The API answered ${response.status} without a typed error.`,
+      status: response.status,
+      correlationId: envelope?.correlationId ?? correlationId,
+      ...(body?.details === undefined ? {} : { details: body.details }),
+    });
+  }
+}
+
+export { API_PATH_PREFIX, API_VERSION };

@@ -28,8 +28,15 @@ import type { AppConfig, SecretRef } from '../core/config.js';
 import { assertSafeConfig } from '../core/config.js';
 import { ids, IdFactory } from '../core/ids.js';
 import { loadInstructions } from '../instructions/loader.js';
-import { JobQueue } from '../jobs/queue.js';
+import { JobQueue, type JobStatusEvent } from '../jobs/queue.js';
+import { JobService } from '../jobs/service.js';
+import { SqliteJobStore } from '../jobs/sqliteStore.js';
+import { InMemoryJobStore, type JobStore } from '../jobs/store.js';
+import { JobWorkerPool } from '../jobs/worker.js';
+import type { Repositories } from '../db/repositories/index.js';
 import { EventBus } from '../realtime/events.js';
+import { RealtimeHub, type RealtimeLimits } from '../realtime/hub.js';
+import { registerRealtimeTransport, REALTIME_ROUTE } from '../realtime/ws.js';
 import { loadConfigFromEnv, resolveSecretFromEnv } from '../config/loader.js';
 import type { LogSink, Logger } from '../core/logging.js';
 import { createAccessPolicy } from './access.js';
@@ -40,8 +47,10 @@ import { installErrorHandlers } from './errors.js';
 import { logRequestCompleted, createLogging, type ServerLogging } from './logging.js';
 import { agentChatHandler } from './handlers/agent.js';
 import { healthHandler, readinessHandler } from './handlers/health.js';
+import { jobCancelHandler, jobGetHandler, jobListHandler } from './handlers/jobs.js';
 import {
   assertRouteCoverage,
+  assertSocketCoverage,
   registerRoutes,
   routeEntries,
   trackRegisteredRoutes,
@@ -66,6 +75,17 @@ export interface ServerDeps {
   now?: () => number;
   resolveSecret?: (ref: SecretRef) => string | null;
   llmProviders?: readonly string[];
+  /** Job store. Defaults to in-memory; pass a durable store for restart safety. */
+  jobStore?: JobStore;
+  /**
+   * Repositories, when a database handle is open. Supplying them is what makes
+   * jobs durable and job actions auditable; without them the server says so.
+   */
+  repositories?: Repositories;
+  /** Start the background worker loop with the server. Off in tests by default. */
+  startWorkers?: boolean;
+  /** Realtime limits, so a test can shorten the authentication deadline. */
+  realtimeLimits?: Partial<RealtimeLimits>;
 }
 
 export interface ServerInstance {
@@ -77,7 +97,10 @@ export interface ServerInstance {
   sessions: SessionService;
   approvals: ApprovalWorkflow;
   jobs: JobQueue;
+  jobService: JobService;
+  workers: JobWorkerPool;
   eventBus: EventBus;
+  realtime: RealtimeHub;
   agent: AgentService;
   routes: readonly RouteEntry[];
   bootWarnings: readonly string[];
@@ -133,7 +156,6 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     deps.sessions ??
     new SessionService({ ttlMinutes: config.auth.sessionTtlMinutes, now: deps.now });
   const approvals = deps.approvals ?? new ApprovalWorkflow({ now: deps.now });
-  const jobs = deps.jobs ?? new JobQueue({ now: deps.now });
   const eventBus =
     deps.eventBus ??
     new EventBus({
@@ -143,11 +165,70 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
           ? undefined
           : () => new Date((deps.now as () => number)()).toISOString(),
     });
+
+  // Durable when a database handle exists, in-process otherwise. The distinction
+  // is reported by the health check rather than hidden: "jobs survive a restart"
+  // is either true for this deployment or it is not.
+  const jobStore: JobStore =
+    deps.jobStore ??
+    (deps.repositories === undefined
+      ? new InMemoryJobStore(deps.now)
+      : new SqliteJobStore(deps.repositories.platform, deps.now));
+  const jobs = deps.jobs ?? new JobQueue({ store: jobStore, now: deps.now });
+
+  const jobService = new JobService({
+    queue: jobs,
+    logger,
+    events: {
+      publish: (event: JobStatusEvent) => publishJobStatus(eventBus, event, logger),
+    },
+    ...(deps.repositories === undefined
+      ? {}
+      : {
+          audit: {
+            append: async (record) => {
+              await (deps.repositories as Repositories).audit.append({
+                correlationId: record.correlationId,
+                actor: record.actor,
+                event: record.event,
+                severity: record.severity,
+                payload: record.payload,
+              });
+            },
+          },
+        }),
+  });
+
+  const workers = new JobWorkerPool({
+    queue: jobs,
+    logger,
+    ...(deps.now === undefined ? {} : { sleep: () => Promise.resolve() }),
+  });
+
+  const realtime = new RealtimeHub({
+    bus: eventBus,
+    sessions,
+    logger,
+    ...(deps.now === undefined ? {} : { now: deps.now }),
+    ...(deps.realtimeLimits === undefined ? {} : { limits: deps.realtimeLimits }),
+  });
+
   const agent = deps.agent ?? new AgentService();
   const llmProviders = deps.llmProviders ?? ['scripted'];
 
   const health = new HealthRegistry(
-    defaultHealthChecks({ config, sessions, jobs, eventBus, agent, llmProviders }),
+    defaultHealthChecks({
+      config,
+      sessions,
+      jobs,
+      eventBus,
+      agent,
+      llmProviders,
+      workers,
+      realtime,
+      jobStoreKind: jobStore.kind,
+      durableJobs: jobStore.durable,
+    }),
     { now: deps.now, startedAt: deps.now === undefined ? undefined : deps.now() },
   );
 
@@ -202,11 +283,29 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
   const handlers: Record<string, AnyHandler> = {
     'system.health': healthHandler(health, config),
     'system.readiness': readinessHandler(health, config),
-    'agent.chat': agentChatHandler(agent),
+    'agent.chat': agentChatHandler(agent, eventBus),
+    'job.list': jobListHandler(jobService) as AnyHandler,
+    'job.get': jobGetHandler(jobService) as AnyHandler,
+    'job.cancel': jobCancelHandler(jobService) as AnyHandler,
   };
 
   registerRoutes(app, { handlers, pipeline });
+
   assertRouteCoverage(tracked);
+
+  // The socket route is mounted by its own transport (a WebSocket is not an HTTP
+  // route) inside a plugin that must load the WebSocket plugin first, so its
+  // coverage is proven when the instance is ready — the first moment the route is
+  // guaranteed to exist.
+  registerRealtimeTransport({
+    app,
+    hub: realtime,
+    access,
+    ...(deps.logger === undefined ? {} : { logger: deps.logger }),
+  });
+  app.addHook('onReady', async () => {
+    assertSocketCoverage(tracked);
+  });
 
   const warnings = bootWarnings(config);
   logger.info(
@@ -225,6 +324,8 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
   );
   for (const warning of warnings) logger.warn(warning, {}, 'server.boot.warning');
 
+  if (deps.startWorkers === true) workers.start();
+
   return {
     app,
     config,
@@ -234,12 +335,60 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     sessions,
     approvals,
     jobs,
+    jobService,
+    workers,
     eventBus,
+    realtime,
     agent,
     routes: routeEntries(handlers),
     bootWarnings: warnings,
     close: async () => {
+      // Order matters: stop taking work, let in-flight handlers finish, close the
+      // sockets with "going away", then let Fastify close the server.
+      const stillRunning = await workers.stop();
+      if (stillRunning > 0) {
+        logger.warn(
+          'job handlers were still running at shutdown',
+          { stillRunning },
+          'jobs.shutdown.drain.timeout',
+        );
+      }
+      realtime.closeAll('the server is shutting down');
       await app.close();
     },
   };
+}
+
+/**
+ * Map a job status change onto the event bus.
+ *
+ * The source is `job` with the job's own id, so a client can tell a job event from
+ * an agent event and trace it back. `job.status` is system-published only: the
+ * contract refuses a role publisher, so nothing in the request path can forge one.
+ */
+function publishJobStatus(bus: EventBus, event: JobStatusEvent, logger: Logger): void {
+  try {
+    bus.publish({
+      type: 'job.status',
+      source: { kind: 'job', id: event.jobId },
+      ...(event.correlationId === null ? {} : { correlationId: event.correlationId }),
+      payload: {
+        jobId: event.jobId,
+        kind: event.kind,
+        status: event.status,
+        attempts: event.attempts,
+        maxAttempts: event.maxAttempts,
+        ...(event.progress === undefined ? {} : { progress: event.progress }),
+        ...(event.error === undefined ? {} : { error: event.error.slice(0, 1_000) }),
+      },
+    });
+  } catch (error) {
+    // A rejected event must be visible, never silent: it means the contract and
+    // the producer have drifted apart.
+    logger.error(
+      'refused to publish a job status event',
+      { jobId: event.jobId, status: event.status, message: (error as Error).message },
+      'realtime.publish.refused',
+    );
+  }
 }

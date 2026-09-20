@@ -66,6 +66,7 @@ describe('frontend shell', () => {
       'academy',
       'exams',
       'lab',
+      'activity',
       'settings',
     ]);
     for (const section of NAV_SECTIONS) {

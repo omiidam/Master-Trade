@@ -238,3 +238,68 @@ placeholders, and the updater's signing key is a placeholder reported as a warni
 
 **Next:** build the shell on a machine with a toolchain, then run the first real
 end-to-end: window → handshake → authenticated API call → agent turn.
+
+### 4.7 Phase 3.7 — realtime, background jobs and the preview prototype
+
+**Complete.** Event contracts with deny-by-default audiences, an authenticated
+WebSocket transport, a durable job queue behind a port, job status/cancel routes, the
+frontend realtime client and store, eight reusable realtime components, the Activity
+page, and a preview prototype that carries loading/empty/error states through every
+product surface. `docs/realtime-and-jobs.md` and `docs/preview-prototype.md` are the
+implemented state; ADR-0032, ADR-0033 and ADR-0034 record why.
+
+**Five real defects this phase exposed,** four of them found by tests written for it
+and one by the shell verifier:
+
+1. **The client reused the wrong retry policy.** `shouldReconnect` in the protocol
+   module answers the _server's_ question and treats `1001 going away` as final, so a
+   client that imported it refused to reconnect after a server restart — the one case
+   where reconnecting always helps.
+2. **The heartbeat could never fail.** `scheduleHeartbeat()` cleared the
+   `awaitingPong` flag on entry, and the timer callback calls it right after sending a
+   ping: the flag was erased before the next tick could check it, so a silent socket
+   looked healthy forever.
+3. **A WebSocket route registered before the plugin's hook never upgraded.** The
+   socket route is now registered inside a plugin that first awaits
+   `@fastify/websocket`, because `websocket: true` is understood only once that hook
+   exists. A route compiled earlier hangs the client.
+4. **Internal events were deliverable client-side.** The bus refuses to give an
+   internal event an audience, but the client had no matching check; it now refuses
+   `internal` types explicitly, because "unreachable" is the assumption that leaks.
+5. **Three stale doc/typing drifts:** the durable `jobs` SQL mentioned in a comment
+   tripped the "no SQL outside `src/db`" invariant, an unused `JobListQuery` import,
+   and an unused `JobQueue.sleep` option left behind when the worker pool took over
+   sleeping.
+
+**Known limitations, in priority order:**
+
+- **A WebView cannot present the shell token on a socket upgrade.** The access policy
+  reads upgrade headers, and a browser `WebSocket` cannot set them. Streaming inside a
+  token-gated sidecar therefore needs one of: the socket opened from Rust, an
+  exception scoped to loopback + authenticated session, or a socket-specific token
+  path onto the first-frame authentication that already exists. Until then, realtime
+  is exercised by `tests/realtime-ws.test.ts` (in-process, real upgrades) rather than
+  from the browser.
+- **No session is issued yet.** Sessions are created, hashed and verified, but the
+  login/local-issuance slice that hands one to the shell has not landed, so the
+  Activity page reports `no-session` instead of connecting. This is the single
+  blocking item between the built realtime layer and a live browser feed.
+- **No `backtest.run` handler**, deliberately: the kind exists with its approval gate
+  and no implementation, so a capability that does not exist cannot run.
+- **No job enqueue over HTTP**, by design; enqueueing stays a server-side act.
+- **No streaming of model output.** A turn is one structured summary, so
+  `agent.message` arrives whole; `stream()` and mid-turn cancellation need an
+  interface change and a real provider.
+- **A job with no handler dead-letters immediately** rather than retrying, which is
+  correct for a configuration error and means a missing handler is visible in the
+  queue summary instead of buried in backoff.
+
+**Next:** the session/issuance slice, then the live path — window → session →
+authenticated socket → a real event and a real job in the Activity page.
+
+### 4.8 Phase 3.8 candidates
+
+- Market-data and vector-memory providers behind their existing interfaces.
+- The first real job handlers (`dataset.process`, `embedding.generate`) with
+  idempotency tested against a re-enqueued duplicate.
+- Server-side rate-limit and backpressure tuning for a browser that reconnects often.

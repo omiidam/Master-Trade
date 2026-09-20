@@ -333,6 +333,22 @@ export class PlatformRepository {
     return updated;
   }
 
+  /**
+   * Dead-letter a job without retrying it. For failures a retry cannot fix — a
+   * kind with no registered handler — retrying would spend the attempt budget to
+   * reach the same result and delay the visible misconfiguration.
+   */
+  async deadLetterJob(id: string, error: string): Promise<JobRow> {
+    const updated = await this.jobs.update(id, {
+      status: 'dead-letter',
+      error: error.slice(0, 2_000),
+      lease_until: null,
+      updated_at: this.iso(),
+    });
+    if (!updated) throw new AppError('NOT_FOUND', `Job ${id} was not found`);
+    return updated;
+  }
+
   /** Return jobs whose worker died to the queue. */
   async reclaimExpired(limit = 50): Promise<JobRow[]> {
     const at = this.iso();
@@ -358,6 +374,35 @@ export class PlatformRepository {
 
   jobsByStatus(status: JobStatus, limit = 200): Promise<JobRow[]> {
     return this.jobs.findMany({ status }, { orderBy: 'created_at', direction: 'asc', limit });
+  }
+
+  /** Job list for the queue view: newest first, optionally filtered. */
+  listJobs(filter: { kind?: string; status?: JobStatus; limit?: number } = {}): Promise<JobRow[]> {
+    return this.jobs.findMany(
+      {
+        ...(filter.kind === undefined ? {} : { kind: filter.kind }),
+        ...(filter.status === undefined ? {} : { status: filter.status }),
+      },
+      { orderBy: 'created_at', direction: 'desc', limit: filter.limit ?? 200 },
+    );
+  }
+
+  /**
+   * Push a running job's lease forward. A worker that renews is never reclaimed by
+   * its own queue, so `reclaimExpired` only ever means "the worker is gone".
+   */
+  async renewJobLease(id: string, leaseMs: number): Promise<JobRow> {
+    const job = await this.jobs.findById(id);
+    if (!job) throw new AppError('NOT_FOUND', `Job ${id} was not found`);
+    // Renewing a job that is no longer running must not resurrect it: a cancelled
+    // or finished job keeps its terminal state.
+    if (job.status !== 'running') return job;
+    const updated = await this.jobs.update(id, {
+      lease_until: this.iso(this.now() + leaseMs),
+      updated_at: this.iso(),
+    });
+    if (!updated) throw new AppError('INTERNAL', 'Lease renewal did not persist');
+    return updated;
   }
 
   async cancelJob(id: string): Promise<JobRow> {

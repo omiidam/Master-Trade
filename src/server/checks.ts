@@ -18,6 +18,8 @@ import { assertSafeConfig } from '../core/config.js';
 import { loadInstructions } from '../instructions/loader.js';
 import { MODEL_PRICES } from '../llm/pricing.js';
 import type { JobQueue } from '../jobs/queue.js';
+import type { JobWorkerPool } from '../jobs/worker.js';
+import type { RealtimeHub } from '../realtime/hub.js';
 import type { EventBus } from '../realtime/events.js';
 import type { SessionService } from '../auth/sessions.js';
 import type { AgentService } from '../agent/service.js';
@@ -30,6 +32,11 @@ export interface HealthCheckDeps {
   config: AppConfig;
   sessions: SessionService;
   jobs: JobQueue;
+  workers: JobWorkerPool;
+  realtime: RealtimeHub;
+  /** Store identity and durability, reported rather than assumed. */
+  jobStoreKind: string;
+  durableJobs: boolean;
   eventBus: EventBus;
   agent: AgentService;
   /** Provider ids registered with the LLM gateway (usually just 'scripted'). */
@@ -103,24 +110,41 @@ export function defaultHealthChecks(deps: HealthCheckDeps): HealthCheck[] {
     })),
 
     check('jobs.queue', false, () => {
-      const jobs = deps.jobs.list();
-      const byStatus = jobs.reduce<Record<string, number>>((acc, job) => {
-        acc[job.status] = (acc[job.status] ?? 0) + 1;
-        return acc;
-      }, {});
-      const summary = Object.entries(byStatus)
-        .map(([status, count]) => `${status}=${count}`)
-        .join(' ');
+      // "Durable" is the difference between "a restart loses queued work" and not,
+      // so it is stated rather than implied. The counts come from the store, which
+      // is the same source the queue view reads.
+      const detail = `${deps.jobStoreKind} store (${deps.durableJobs ? 'survives restart' : 'in-process only: queued work is lost on restart'})`;
+      return { status: deps.durableJobs ? 'ok' : 'degraded', detail };
+    }),
+
+    check('jobs.workers', false, () => {
+      const snapshot = deps.workers.snapshot();
+      if (!snapshot.started) {
+        return {
+          status: 'degraded',
+          detail:
+            'Worker loop is not started in this process; the queue accepts work and this process does not execute it.',
+        };
+      }
       return {
-        status: 'degraded',
-        detail: `In-process queue only (${summary || 'empty'}); durable workers arrive with the persistence slice.`,
+        status: 'ok',
+        detail: `ticks=${snapshot.ticks} claimed=${snapshot.claimed} inFlight=${snapshot.inFlight} reclaimed=${snapshot.reclaimed}`,
       };
     }),
 
     check('realtime.bus', false, () => ({
-      status: 'degraded',
-      detail: `Event bus ready (${deps.eventBus.subscriberCount()} subscriber(s), lastSeq=${deps.eventBus.lastSeq()}); WebSocket transport is not mounted yet.`,
+      status: 'ok',
+      detail: `Event bus ready (${deps.eventBus.subscriberCount()} subscriber(s), lastSeq=${deps.eventBus.lastSeq()}, dropped=${deps.eventBus.droppedCount()}).`,
     })),
+
+    check('realtime.transport', false, () => {
+      const connections = deps.realtime.connectionCount();
+      const limits = deps.realtime.limits();
+      return {
+        status: 'ok',
+        detail: `WebSocket mounted at ${config.realtime.path}: ${connections}/${limits.maxConnections} connection(s), authenticated subscriptions only (deny-by-default per event contract).`,
+      };
+    }),
 
     check('database.sqlite', false, () => {
       // Phase 3.4 wired the schema, migrations and repositories, but the server

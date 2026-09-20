@@ -27,6 +27,10 @@ import {
   type AgentChatBody,
   type LessonCompleteBody,
   type ReadinessQuery,
+  jobCancelBodySchema,
+  jobListQuerySchema,
+  jobParamsSchema,
+  type JobCancelBody,
   type RuleActivateBody,
   type RuleProposeBody,
 } from './schemas.js';
@@ -188,6 +192,65 @@ const ruleActivateRoute: ApiRoute<RuleActivateBody, { status: string }> = {
   validateParams: zodValidator(proposalParamsSchema),
 };
 
+export interface JobViewData {
+  id: string;
+  kind: string;
+  status: string;
+  attempts: number;
+  maxAttempts: number;
+  progress: { current: number; total: number; label?: string } | null;
+  progressPercent: number | null;
+  progressUnit: string;
+  correlationId: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+  cancellable: boolean;
+}
+
+/**
+ * Job routes. They expose *status*, never the ability to start arbitrary work: a
+ * client can watch and cancel, and enqueueing stays a server-side act with its own
+ * operation and approval gate (there is no `POST /v1/jobs`).
+ */
+const jobListRoute: ApiRoute<Record<string, unknown> | undefined, { jobs: JobViewData[] }> = {
+  id: 'job.list',
+  method: 'GET',
+  path: '/v1/jobs',
+  version: API_VERSION,
+  operation: 'job.read',
+  auth: 'required',
+  summary: 'List background jobs visible to the authenticated principal.',
+  validateBody: zodValidator(emptyBodySchema),
+  validateQuery: zodValidator(jobListQuerySchema) as (
+    raw: unknown,
+  ) => ValidationResult<Record<string, unknown>>,
+};
+
+const jobGetRoute: ApiRoute<Record<string, unknown> | undefined, JobViewData> = {
+  id: 'job.get',
+  method: 'GET',
+  path: '/v1/jobs/:jobId',
+  version: API_VERSION,
+  operation: 'job.read',
+  auth: 'required',
+  summary: 'Read one background job, including its progress and last error.',
+  validateBody: zodValidator(emptyBodySchema),
+  validateParams: zodValidator(jobParamsSchema),
+};
+
+const jobCancelRoute: ApiRoute<JobCancelBody, JobViewData> = {
+  id: 'job.cancel',
+  method: 'POST',
+  path: '/v1/jobs/:jobId/cancel',
+  version: API_VERSION,
+  operation: 'job.cancel',
+  auth: 'required',
+  summary: 'Cancel a queued or running job. Audit-recorded.',
+  validateBody: zodValidator(jobCancelBodySchema),
+  validateParams: zodValidator(jobParamsSchema),
+};
+
 const healthRoute: ApiRoute<Record<string, unknown> | undefined, { status: string }> = {
   id: 'system.health',
   method: 'GET',
@@ -225,6 +288,29 @@ export const API_ROUTES: readonly AnyApiRoute[] = [
   lessonCompleteRoute,
   ruleProposeRoute,
   ruleActivateRoute,
+  jobListRoute,
+  jobGetRoute,
+  jobCancelRoute,
+] as const;
+
+/**
+ * The WebSocket route, described here so route coverage and the API catalogue
+ * agree about what is mounted even though its transport is not HTTP.
+ */
+export interface ApiSocketRoute {
+  id: string;
+  path: string;
+  operation: OperationId;
+  summary: string;
+}
+
+export const SOCKET_ROUTES: readonly ApiSocketRoute[] = [
+  {
+    id: 'system.realtime',
+    path: '/ws',
+    operation: 'realtime.connect',
+    summary: 'Authenticated real-time event stream (WebSocket).',
+  },
 ] as const;
 
 export function findRoute(id: string): AnyApiRoute | undefined {

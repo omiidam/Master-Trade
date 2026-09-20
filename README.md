@@ -36,8 +36,8 @@ risks-and-deferred) and [ADRs](./docs/adr/).
 | Database | SQLite (WAL) + generated migrations; PostgreSQL 16 deferred for hosted mode; driver behind a port                                    |
 | AI       | `LlmProvider` adapters (OpenAI, Anthropic, local OpenAI-compatible) behind our gateway; no agent framework                           |
 | Desktop  | Tauri 2 shell + Node sidecar on loopback, per-launch bearer token, keychain-only secrets; WebView holds no `shell:`/`fs:` permission |
-| Realtime | WebSocket `/ws` over the existing event bus                                                                                          |
-| Jobs     | Durable database-backed queue with in-process workers, atomic claim + lease, dead-letter                                             |
+| Realtime | WebSocket `/ws` over the existing event bus, versioned contracts, deny-by-default audiences                                          |
+| Jobs     | Durable database-backed queue with in-process workers, atomic claim + lease, dead-letter, `JobStore` port                            |
 
 See [docs/technology-decisions.md](./docs/technology-decisions.md) for the
 rationale and [ADR-0010…0019](./docs/adr/) for every alternative that was
@@ -65,10 +65,20 @@ is typed against the backend view models.
 Phase 3.4 added the Memory, Exams and Research surfaces (15 module components)
 and four Dashboard overview widgets, on the same tokens and primitives.
 
-Nothing on those screens is connected: there is no model provider, no database,
-no realtime link and no market feed, and every page says so. There is no order or
-execution affordance anywhere, and a test fails the build if one is ever added.
-See [frontend-foundation.md](./docs/frontend-foundation.md).
+Phase 3.7 added the **Activity** page (the live event stream and the
+background-task queue) and a preview pass that carries loading, empty and error
+states through every product surface, with motion presets that honour
+`prefers-reduced-motion`.
+
+Most screens are still rendered from mock data, and they say so: the topbar badge,
+the panel labels and the fixture notices all name it, and a test fails the build if
+a fixture ever reaches the live store. Activity is the exception in the honest
+direction — it reads the real queue and opens the real socket whenever a session
+exists, and reports exactly why when one does not.
+
+There is no order or execution affordance anywhere, and a test fails the build if
+one is ever added. See [frontend-foundation.md](./docs/frontend-foundation.md) and
+[preview-prototype.md](./docs/preview-prototype.md).
 
 ## Backend (Phase 3.3)
 
@@ -170,6 +180,26 @@ The shell is **source-complete and policy-verified, not compiled** — there is 
 Rust toolchain in this environment. The verifier prints what that leaves
 uncovered. See [desktop-shell.md](./docs/desktop-shell.md) for the development
 guide and [ADR-0029…0031](./docs/adr/).
+
+## Realtime and background jobs (Phase 3.7)
+
+`src/realtime/**` holds versioned event contracts (strict payload schema, schema
+version, audience, internal flag, publisher allow-list) over an authenticated
+WebSocket at `/ws`, plus the hub that owns sessions, subscriptions, heartbeats,
+rate limits and backpressure. `src/jobs/**` holds the queue engine — idempotency,
+timeouts, cooperative cancellation, retry with backoff, dead-letter, progress —
+behind a `JobStore` port with an in-memory implementation and a SQLite one over the
+existing `jobs` table, so jobs survive a restart without Redis being a local
+requirement. `GET /v1/jobs` and `POST /v1/jobs/:jobId/cancel` expose watch-and-stop;
+there is no enqueue route.
+
+The frontend client is framework-free (`web/src/realtime/client.ts`) and validates
+every inbound frame: stale events are dropped by sequence, unknown and internal
+types are refused, and a replay gap is reported rather than hidden.
+
+See [realtime-and-jobs.md](./docs/realtime-and-jobs.md) and
+[ADR-0032](./docs/adr/ADR-0032-versioned-event-contracts-deny-by-default.md),
+[ADR-0033](./docs/adr/ADR-0033-job-store-port-sqlite-first.md).
 
 ## Safety
 

@@ -5,7 +5,9 @@ import { Button } from '../components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import { ChartAdapter } from '../components/charts/ChartAdapter';
 import { EmptyState } from '../components/EmptyState';
+import { InterfaceStatesPanel } from '../components/InterfaceStates';
 import { Field, Input } from '../components/Input';
+import { Reveal } from '../components/Reveal';
 import { TabPanel, Tabs } from '../components/Tabs';
 import { Tooltip } from '../components/Tooltip';
 import { Grid, Workspace } from '../app/Workspace';
@@ -76,48 +78,50 @@ export function TradingLabPage() {
           </Card>
 
           <Grid columns={3}>
-            {mockLabSetups.map((setup) => (
-              <Card key={setup.id}>
-                <CardHeader>
-                  <div>
-                    <CardTitle className="text-body">{setup.title}</CardTitle>
-                    <CardDescription className="flex flex-wrap gap-1.5 pt-1">
-                      {setup.tags.map((tag) => (
-                        <Badge key={tag} tone="outline">
-                          {tag}
-                        </Badge>
+            {mockLabSetups.map((setup, index) => (
+              <Reveal key={setup.id} index={index}>
+                <Card>
+                  <CardHeader>
+                    <div>
+                      <CardTitle className="text-body">{setup.title}</CardTitle>
+                      <CardDescription className="flex flex-wrap gap-1.5 pt-1">
+                        {setup.tags.map((tag) => (
+                          <Badge key={tag} tone="outline">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </CardDescription>
+                    </div>
+                    <Badge tone={SETUP_TONE[setup.status]} dot={setup.status !== 'draft'}>
+                      {setup.status}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <ul className="space-y-1.5">
+                      {setup.checklist.map((item) => (
+                        <li key={item.label} className="flex items-center gap-2 text-caption">
+                          <span
+                            aria-hidden
+                            className={cn(
+                              'grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border',
+                              item.done
+                                ? 'border-primary bg-primary-soft text-primary'
+                                : 'border-border-strong text-transparent',
+                            )}
+                          >
+                            <Check size={11} />
+                          </span>
+                          <span className={item.done ? 'text-text-muted' : 'text-text-faint'}>
+                            {item.label}
+                          </span>
+                          <span className="sr-only">{item.done ? 'done' : 'not done'}</span>
+                        </li>
                       ))}
-                    </CardDescription>
-                  </div>
-                  <Badge tone={SETUP_TONE[setup.status]} dot={setup.status !== 'draft'}>
-                    {setup.status}
-                  </Badge>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <ul className="space-y-1.5">
-                    {setup.checklist.map((item) => (
-                      <li key={item.label} className="flex items-center gap-2 text-caption">
-                        <span
-                          aria-hidden
-                          className={cn(
-                            'grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border',
-                            item.done
-                              ? 'border-primary bg-primary-soft text-primary'
-                              : 'border-border-strong text-transparent',
-                          )}
-                        >
-                          <Check size={11} />
-                        </span>
-                        <span className={item.done ? 'text-text-muted' : 'text-text-faint'}>
-                          {item.label}
-                        </span>
-                        <span className="sr-only">{item.done ? 'done' : 'not done'}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="text-caption text-text-faint">{setup.note}</p>
-                </CardContent>
-              </Card>
+                    </ul>
+                    <p className="text-caption text-text-faint">{setup.note}</p>
+                  </CardContent>
+                </Card>
+              </Reveal>
             ))}
           </Grid>
           <p className="text-caption text-text-faint">{MOCK_DATA_NOTICE}</p>
@@ -184,6 +188,18 @@ export function TradingLabPage() {
               </CardContent>
             </Card>
           </Grid>
+
+          <InterfaceStatesPanel
+            states={['loading', 'error']}
+            title="States around a tool call"
+            description="A tool call is a round trip. These are the two states that follow it; the empty pre-call state is the panel above."
+            loadingTitle="Running the deterministic tool"
+            loadingDescription="A pending tool shows the tool's name and inputs, never a provisional number — a number that later changes is worse than a spinner."
+            errorTitle="The tool call failed"
+            errorDescription="A refusal or a failure is shown with its typed code: a denied operation and an unavailable tool are different answers and must not read the same."
+            errorCode="FORBIDDEN"
+            hint="No button on this page can arm anything: the application has no order path, so a risk figure can only ever inform a study decision."
+          />
         </TabPanel>
 
         <TabPanel value="rules" className="space-y-4">

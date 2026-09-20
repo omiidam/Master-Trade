@@ -20,9 +20,11 @@ import {
   API_ROUTES,
   API_VERSION,
   CORRELATION_ID_HEADER,
+  SOCKET_ROUTES,
   errorResponse,
   okResponse,
   type AnyApiRoute,
+  type ApiSocketRoute,
 } from '../api/contracts.js';
 import { AppError, PolicyViolationError } from '../core/errors.js';
 import { runRequestPipeline, type PipelineDeps } from './authorization.js';
@@ -117,6 +119,36 @@ export function assertRouteCoverage(
       `Catalogue routes are missing from the server: ${missing.map((route) => route.id).join(', ')}`,
       { missing: missing.map((route) => route.id) },
     );
+  }
+}
+
+/**
+ * Coverage for socket routes, asserted when the instance is **ready**.
+ *
+ * A WebSocket route is mounted inside a plugin that must load the WebSocket
+ * plugin first, so it cannot be checked synchronously the way an HTTP route can.
+ * The two properties are the same ones that matter: the route exists, and it
+ * carries the pipeline marker — a socket that skipped the access gate would be an
+ * unauthenticated way into the API.
+ */
+export function assertSocketCoverage(
+  tracked: readonly TrackedRoute[],
+  socketRoutes: readonly ApiSocketRoute[] = SOCKET_ROUTES,
+): void {
+  for (const route of socketRoutes) {
+    const entry = tracked.find((trackedRoute) => trackedRoute.url === route.path);
+    if (!entry) {
+      throw new PolicyViolationError(
+        `Socket route ${route.id} is missing from the server: nothing is listening at ${route.path}`,
+        { missing: route.id, path: route.path },
+      );
+    }
+    if (!entry.pipelined) {
+      throw new PolicyViolationError(
+        `Socket route ${route.id} is registered without the pipeline marker: it would bypass the access gate`,
+        { routeId: route.id, path: route.path },
+      );
+    }
   }
 }
 

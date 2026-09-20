@@ -14,9 +14,13 @@
 
 import type { AppConfig, SecretRef } from '../core/config.js';
 import { AppError, PolicyViolationError } from '../core/errors.js';
+import { SHELL_TOKEN_HEADER } from '../core/headers.js';
 import { constantTimeEquals } from '../auth/sessions.js';
 
-export const SHELL_TOKEN_HEADER = 'x-master-trade-shell-token';
+// Re-exported so existing callers keep one import site; the constant itself lives
+// in `core/headers.ts`, which a browser bundle can import without dragging in the
+// session service's Node crypto.
+export { SHELL_TOKEN_HEADER };
 
 export type HeaderBag = Record<string, string | string[] | undefined>;
 
