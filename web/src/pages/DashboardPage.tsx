@@ -18,6 +18,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  Section,
 } from '../components/Card';
 import { ChartAdapter } from '../components/charts/ChartAdapter';
 import { Sparkline } from '../components/charts/Sparkline';
@@ -35,7 +36,11 @@ import {
   mockSeries,
   mockStudyMetrics,
 } from '../mock/data';
-import { formatRelative, formatTimestamp } from '../lib/format';
+import { mockScoreEvolution, summariseExamProgress } from '../mock/exams';
+import { memoryStatus, mockKnowledge, mockKnowledgeGrowth } from '../mock/memory';
+import { summariseResearch } from '../mock/research';
+import { useUiStore } from '../store/ui';
+import { formatPercent, formatRelative, formatTimestamp } from '../lib/format';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -46,11 +51,25 @@ const TABS = [
 export function DashboardPage() {
   const [tab, setTab] = useState<string>('overview');
   const [loading, setLoading] = useState(true);
+  const setPage = useUiStore((state) => state.setPage);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 900);
     return () => clearTimeout(timer);
   }, []);
+
+  /** Module roll-ups for the overview widgets, derived from the mock rows only. */
+  const examProgress = summariseExamProgress();
+  const researchProgress = summariseResearch();
+  const verifiedRecords = mockKnowledge.filter(
+    (record) => memoryStatus(record) === 'verified',
+  ).length;
+  const verifiedShare = formatPercent((verifiedRecords / mockKnowledge.length) * 100, 0);
+  const growthTotal = (point: (typeof mockKnowledgeGrowth)[number] | undefined) =>
+    point === undefined ? 0 : point.verified + point.pending + point.unverified;
+  const latestGrowth = growthTotal(mockKnowledgeGrowth[mockKnowledgeGrowth.length - 1]);
+  const previousGrowth = growthTotal(mockKnowledgeGrowth[mockKnowledgeGrowth.length - 2]);
+  const addedThisMonth = Math.max(latestGrowth - previousGrowth, 0);
 
   return (
     <Workspace
@@ -163,6 +182,125 @@ export function DashboardPage() {
               </CardContent>
             </Card>
           </Grid>
+
+          <Section
+            title="Knowledge, assessment and research"
+            description="Roll-ups from the product modules. Each figure is illustrative and each card states what it cannot tell you."
+          >
+            <Grid columns={4}>
+              <Card>
+                <CardHeader>
+                  <div>
+                    <CardTitle className="text-body">Knowledge mastery</CardTitle>
+                    <CardDescription>
+                      {verifiedRecords} of {mockKnowledge.length} records verified
+                    </CardDescription>
+                  </div>
+                  <Badge tone="primary">{verifiedShare}</Badge>
+                </CardHeader>
+                <CardContent className="flex items-end justify-between gap-3">
+                  <span className="num text-[1.5rem] leading-none font-semibold text-text">
+                    {verifiedShare}
+                  </span>
+                  <Sparkline
+                    values={mockKnowledgeGrowth.map((point) => point.verified)}
+                    width={72}
+                    height={20}
+                  />
+                </CardContent>
+                <CardFooter className="text-caption text-text-faint">
+                  <span>Verified means a human or tool checked it.</span>
+                  <Button size="sm" variant="ghost" onClick={() => setPage('memory')}>
+                    Open memory
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div>
+                    <CardTitle className="text-body">Exam performance</CardTitle>
+                    <CardDescription>
+                      {examProgress.passed} passed of {examProgress.attempted} attempted
+                    </CardDescription>
+                  </div>
+                  <Badge tone="info">{examProgress.attempts} attempts</Badge>
+                </CardHeader>
+                <CardContent className="flex items-end justify-between gap-3">
+                  <span className="num text-[1.5rem] leading-none font-semibold text-text">
+                    {examProgress.averageBest === null
+                      ? '—'
+                      : formatPercent(examProgress.averageBest, 1)}
+                  </span>
+                  <Sparkline
+                    values={mockScoreEvolution.map((point) => point.score)}
+                    width={72}
+                    height={20}
+                    tone="info"
+                  />
+                </CardContent>
+                <CardFooter className="text-caption text-text-faint">
+                  <span>Rubric-scored, never model-judged.</span>
+                  <Button size="sm" variant="ghost" onClick={() => setPage('exams')}>
+                    Open exams
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div>
+                    <CardTitle className="text-body">Memory growth</CardTitle>
+                    <CardDescription>Records added in the last month</CardDescription>
+                  </div>
+                  <Badge tone="neutral">+{addedThisMonth}</Badge>
+                </CardHeader>
+                <CardContent className="flex items-end justify-between gap-3">
+                  <span className="num text-[1.5rem] leading-none font-semibold text-text">
+                    {latestGrowth}
+                  </span>
+                  <Sparkline
+                    values={mockKnowledgeGrowth.map(
+                      (point) => point.verified + point.pending + point.unverified,
+                    )}
+                    width={72}
+                    height={20}
+                    tone="ai"
+                  />
+                </CardContent>
+                <CardFooter className="text-caption text-text-faint">
+                  <span>Growth is not mastery: unverified rows still count.</span>
+                  <Button size="sm" variant="ghost" onClick={() => setPage('memory')}>
+                    Open history
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div>
+                    <CardTitle className="text-body">Research progress</CardTitle>
+                    <CardDescription>
+                      {researchProgress.complete} complete · {researchProgress.active} running
+                    </CardDescription>
+                  </div>
+                  <Badge tone="warning">{researchProgress.pendingDecisions} pending</Badge>
+                </CardHeader>
+                <CardContent className="flex items-end justify-between gap-3">
+                  <span className="num text-[1.5rem] leading-none font-semibold text-text">
+                    {researchProgress.evaluatedTrades}
+                  </span>
+                  <span className="text-caption text-text-faint">trades evaluated</span>
+                </CardContent>
+                <CardFooter className="text-caption text-text-faint">
+                  <span>A result never activates a rule by itself.</span>
+                  <Button size="sm" variant="ghost" onClick={() => setPage('research')}>
+                    Open research
+                  </Button>
+                </CardFooter>
+              </Card>
+            </Grid>
+          </Section>
 
           <ErrorState
             severity="info"

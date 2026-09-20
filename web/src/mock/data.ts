@@ -17,13 +17,18 @@
 import type {
   ConversationMessageView,
   DashboardView,
-  ExamView,
   LessonView,
   NotificationView,
   ProgressView,
   SystemStatusView,
 } from '../../../src/frontend/viewModels.js';
 import type { EpistemicKind } from '../../../src/types.js';
+
+/**
+ * The assessment rows live with the Exams module (`./exams.js`) so the Academy
+ * compact list and the Exams page cannot disagree about a score.
+ */
+export { mockExamViews as mockExams } from './exams.js';
 
 export const MOCK_DATA_NOTICE =
   'Illustrative data for layout review. Nothing on this screen is connected to a backend, a model or a market feed.';
@@ -137,12 +142,6 @@ export const mockLessons: readonly LessonView[] = [
     status: 'locked',
     prerequisites: ['l-risk-03'],
   },
-];
-
-export const mockExams: readonly ExamView[] = [
-  { id: 'e-risk-01', lessonId: 'l-risk-01', questionCount: 12, bestScore: 91 },
-  { id: 'e-risk-02', lessonId: 'l-risk-02', questionCount: 15, bestScore: 74 },
-  { id: 'e-risk-03', lessonId: 'l-risk-03', questionCount: 10, bestScore: null },
 ];
 
 /* ------------------------------------------------------------------ */

@@ -1,8 +1,11 @@
 import {
   Activity,
+  BrainCircuit,
+  ClipboardCheck,
   FlaskConical,
   Gauge,
   GraduationCap,
+  Microscope,
   PanelLeft,
   Settings as SettingsIcon,
   ShieldCheck,
@@ -21,7 +24,10 @@ import { useUiStore } from '../store/ui';
 const ICONS: Record<NavIconName, ReactNode> = {
   gauge: <Gauge size={17} aria-hidden />,
   sparkles: <Sparkles size={17} aria-hidden />,
+  brain: <BrainCircuit size={17} aria-hidden />,
+  microscope: <Microscope size={17} aria-hidden />,
   graduation: <GraduationCap size={17} aria-hidden />,
+  clipboard: <ClipboardCheck size={17} aria-hidden />,
   flask: <FlaskConical size={17} aria-hidden />,
   settings: <SettingsIcon size={17} aria-hidden />,
   shield: <ShieldCheck size={17} aria-hidden />,

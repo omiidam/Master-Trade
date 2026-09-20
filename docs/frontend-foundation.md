@@ -1,9 +1,13 @@
 # Frontend Foundation (Phase 3.2)
 
 Interface foundation and product preview for the Master Trade workstation:
-application shell, design token system, reusable component library and five
+application shell, design token system, reusable component library and eight
 prototype pages. **No backend, AI, permission or safety code was changed**, and
 nothing on these screens is connected to a model, a database or a market feed.
+
+Phase 3.2 shipped the shell and the first five pages; [Phase 3.4](#9-phase-34--product-modules)
+extended it with the Exams, Memory and Research modules on the same tokens and
+primitives.
 
 Stack and rationale: [technology-decisions.md](./technology-decisions.md)
 (React 19 + Vite 6, Tailwind v4 + Radix, Zustand, Framer Motion).
@@ -17,14 +21,21 @@ web/
     ├── App.tsx                # page switch + dialogs + <html dir> mirroring
     ├── app/                   # shell: AppShell, Sidebar, Topbar, Workspace, dialogs
     ├── components/            # component library (10 primitives + charts)
+    │   ├── exams/             # ExamCard, QuestionPanel, AnswerOption, ProgressIndicator,
+    │   │                      #   ScoreCard, MistakeAnalysisCard
+    │   ├── memory/            # MemoryCard, KnowledgeSearch, TrustBadge, SourceIndicator,
+    │   │                      #   MemoryTimeline
+    │   └── research/          # ResearchCard, ExperimentTimeline, MetricsPanel, ReportViewer
     ├── config/navigation.ts   # page ids, labels, groups (validated by tests)
     ├── design/
     │   ├── tokens.ts          # token inventory (machine-checkable)
     │   ├── motion.ts          # Framer Motion presets
     │   └── ...
     ├── lib/                   # cn, format helpers, useMediaQuery
-    ├── mock/data.ts           # clearly-labelled preview data, typed against backend view models
-    ├── pages/                 # Dashboard, AI Workspace, Academy, Trading Lab, Settings
+    ├── mock/                  # data.ts + exams.ts/memory.ts/research.ts — clearly-labelled
+    │                          #   preview data, typed against backend view models
+    ├── pages/                 # Dashboard, AI Workspace, Memory, Research, Academy,
+    │                          #   Exams, Trading Lab, Settings
     ├── store/ui.ts            # Zustand: UI state only
     └── styles/global.css      # Tailwind v4 @theme tokens + base layer
 ```
@@ -89,6 +100,12 @@ already owns the two guarantees that must survive the swap to Lightweight Charts
 interactive order affordance. Charts are forced LTR inside an RTL interface
 because financial time series read left-to-right.
 
+Phase 3.4 added fifteen module components in three folders (`exams/`, `memory/`,
+`research/`), all exported from the same barrel and built from the primitives
+above. None of them fetches data or computes a metric: they render typed mock
+records and carry the trust/provenance labels their records declare
+([§ 9](#9-phase-34--product-modules)).
+
 ## 3. Application shell
 
 ```
@@ -120,9 +137,12 @@ because financial time series read left-to-right.
 
 | Page             | Contents                                                                                                                                    | Honesty markers                                                  |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **Dashboard**    | study metrics with sparklines, training equity chart, activity log, loading/empty/error state gallery                                       | read-only badge, preview alert, provenance banner                |
+| **Dashboard**    | study metrics with sparklines, training equity chart, activity log, loading/empty/error state gallery, four module overview widgets (§ 9)   | read-only badge, preview alert, provenance banner                |
 | **AI Workspace** | contract-typed conversation with epistemic labels and sources, disabled composer, run-context panel, tool-request path, rule-proposal flow  | `PROVIDER_UNAVAILABLE` banner, "no model provider is configured" |
+| **Memory**       | knowledge dashboard, search, category filters, memory cards with trust and source, timeline, growth series                                  | "not a connected knowledge base" notice, `SourceIndicator`       |
+| **Research**     | research dashboard, active experiments, experiment detail, metrics panel, timeline, report viewer                                           | metrics labelled synthetic or absent; never "active"             |
 | **Academy**      | six-month curriculum with unlock states, lesson list with prerequisites, examination cards                                                  | "exam runner is not part of this phase" empty state              |
+| **Exams**        | assessment overview, current assessment card, available exams, categories, progress, history, score evolution, mistake analysis             | answer key withheld, "no runner is connected" notice             |
 | **Trading Lab**  | practice chart, setup review checklists, risk-calculator shell, rule-proposal approval flow                                                 | read-only + "execution impossible" badges, inert tool result     |
 | **Settings**     | direction and density controls, theme tokens, provider rows with keychain references, safety posture, budget, jobs, configuration read-outs | secrets shown as references only, safety flags as assertions     |
 
@@ -166,13 +186,26 @@ conversation stream.
    disk;
 5. the preview identifies itself as a preview with mock data.
 
+`tests/frontend-modules.test.ts` extends that over the Phase 3.4 modules: the
+fifteen module components ship through the barrel; the three pages and the three
+navigation entries exist and pass the execution-control check; every module page
+uses a shared preview notice; each declared state (six exam states, four memory
+states, five experiment states) is exercised by the sample data; the answer key is
+withheld on every question; `unverified` never renders as a fact; a
+`model`-authored record can never be `authoritative`.
+
 ## 7. Deliberately not built in this phase
 
 - No data fetching (TanStack Query waits for real endpoints).
 - No persistence, no sessions, no auth wiring.
 - No realtime connection; the `Offline` badge is accurate.
 - No real charts (adapter placeholder only).
-- No exam runner, no lesson content authoring, no search.
+- No exam runner (the Exams page renders assessments, not a live attempt loop).
+- No lesson content authoring.
+- Memory search filters the in-memory sample; there is no index, no embedding call
+  and no persistence.
+- No backtest engine behind the Research metrics — every metric is labelled either
+  `synthetic` or `none`.
 - No Tauri packaging, no desktop shell — that is the next desktop milestone.
 
 ## 8. Commands
@@ -181,7 +214,67 @@ conversation stream.
 npm run dev            # Vite dev server, http://127.0.0.1:5173 (strictPort)
 npm run typecheck      # backend + shared contracts
 npm run typecheck:web  # the React app
-npm run test           # 86 tests incl. the frontend shell invariants
+npm run test           # 189 tests incl. the frontend shell + module invariants
 npm run build:web      # production frontend bundle → web/dist
 npm run validate       # format + both typechecks + tests + both builds
 ```
+
+## 9. Phase 3.4 — product modules
+
+Three product surfaces the Phase 3.2 shell left out, built on the same tokens,
+primitives and honesty rules. **Frontend only**: no backend, AI, permission or
+safety module was touched, and no execution affordance was introduced.
+
+### Exams
+
+- **Page** `ExamsPage.tsx`: progress summary (attempted / passed / locked /
+  in-progress / attempts), current-assessment card, available exams, categories,
+  exam history, score evolution and mistake analysis.
+- **Components** `ExamCard`, `QuestionPanel`, `AnswerOption`,
+  `ProgressIndicator`, `ScoreCard`, `MistakeAnalysisCard`.
+- **States** available, in-progress, completed, failed, locked (plus empty and
+  loading), each exercised by the sample data and asserted by tests.
+- **Honesty** every question carries `answerKeyWithheld: true` and a `rubricRef`
+  into Academy; scoring is described as rubric-based and not connected. A `void`
+  attempt never contributes a point to the score-evolution series.
+
+### Memory
+
+- **Page** `MemoryPage.tsx`: knowledge dashboard, search, categories, memory
+  cards, verification status, provenance and confidence.
+- **Components** `MemoryCard`, `KnowledgeSearch`, `TrustBadge`, `SourceIndicator`,
+  `MemoryTimeline`.
+- **States / categories** verified, pending-review, archived, unverified across
+  Trading Concepts, Market Rules, Personal Mistakes, Research Notes, Agent
+  Learnings.
+- **Honesty** the epistemic label is derived from the record's trust level via
+  `contextKindForTrust()` (never set locally on a card), a `model`-authored
+  record is forced `unverified`, `authoritative` requires a human source, and
+  archived/pending coexist with trust rather than overriding it.
+
+### Research
+
+- **Page** `ResearchPage.tsx`: research dashboard, active experiments, experiment
+  detail, metrics, timeline and findings.
+- **Components** `ResearchCard`, `ExperimentTimeline`, `MetricsPanel`,
+  `ReportViewer`.
+- **Metrics** sample size, win rate, average R, max drawdown, confidence level —
+  each rendered only when `metricsSource === 'synthetic'`, and shown as _absent_
+  otherwise. Nothing is presented as a measured or live result.
+- **Honesty** no experiment can be labelled "active" (the vocabulary check
+  forbids it), a rule adoption is `awaiting-approval` with an `approvalRef`, and
+  every report states its limitations.
+
+### Dashboard integration
+
+`DashboardPage.tsx` gained four overview widgets built from the same module data —
+Knowledge Mastery, Exam Performance, Memory Growth and Research Progress — so the
+landing page reflects the whole product, not only the study metrics.
+
+### Data
+
+`web/src/mock/exams.ts`, `memory.ts` and `research.ts` hold the typed sample
+records (compiled under the backend `tsconfig` too, so contract drift fails the
+build). Each derives its summary figures from its own rows — `summariseExamProgress`,
+`memoryStatus`, `summariseResearch` — rather than duplicating counts, and the
+tests assert the derivation agrees with the rows.

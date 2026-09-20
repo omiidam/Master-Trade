@@ -9,16 +9,36 @@
  *
  * Phase note: the backend NAV_ITEMS sections (`conversation`, `academy`,
  * `dashboard`, `notifications`, `logs`, `settings`) map onto these ids once the
- * API adapter lands. `lab` has no backend capability yet — it is a training
- * surface, not a trading surface, and must stay read-only.
+ * API adapter lands. `memory`, `exams`, `research` and `lab` have no backend
+ * capability yet — they are study surfaces, not trading surfaces, and every one
+ * of them is read-only.
  */
 
-export const APP_PAGE_IDS = ['dashboard', 'agent', 'academy', 'lab', 'settings'] as const;
+export const APP_PAGE_IDS = [
+  'dashboard',
+  'agent',
+  'memory',
+  'research',
+  'academy',
+  'exams',
+  'lab',
+  'settings',
+] as const;
 
 export type AppPageId = (typeof APP_PAGE_IDS)[number];
 
 export type NavIconName =
-  'gauge' | 'sparkles' | 'graduation' | 'flask' | 'settings' | 'shield' | 'activity' | 'bell';
+  | 'gauge'
+  | 'sparkles'
+  | 'brain'
+  | 'microscope'
+  | 'graduation'
+  | 'clipboard'
+  | 'flask'
+  | 'settings'
+  | 'shield'
+  | 'activity'
+  | 'bell';
 
 export type NavGroupId = 'workspace' | 'learning' | 'system';
 
@@ -56,10 +76,31 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     group: 'workspace',
   },
   {
+    id: 'memory',
+    label: 'Memory',
+    description: 'What the agent may use, with a source and a trust state for every claim',
+    icon: 'brain',
+    group: 'workspace',
+  },
+  {
+    id: 'research',
+    label: 'Research',
+    description: 'Experiments that test a proposed rule against evidence; adoption needs approval',
+    icon: 'microscope',
+    group: 'workspace',
+  },
+  {
     id: 'academy',
     label: 'Academy',
-    description: 'Curriculum, lessons and examinations across six months',
+    description: 'Curriculum and lessons across six months',
     icon: 'graduation',
+    group: 'learning',
+  },
+  {
+    id: 'exams',
+    label: 'Exams',
+    description: 'Assessments, rubric scoring and mistake review',
+    icon: 'clipboard',
     group: 'learning',
   },
   {

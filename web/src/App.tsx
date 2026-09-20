@@ -7,6 +7,9 @@ import type { AppPageId } from './config/navigation';
 import { AcademyPage } from './pages/AcademyPage';
 import { AgentWorkspacePage } from './pages/AgentWorkspacePage';
 import { DashboardPage } from './pages/DashboardPage';
+import { ExamsPage } from './pages/ExamsPage';
+import { MemoryPage } from './pages/MemoryPage';
+import { ResearchPage } from './pages/ResearchPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TradingLabPage } from './pages/TradingLabPage';
 import { useUiStore } from './store/ui';
@@ -17,8 +20,14 @@ function renderPage(page: AppPageId) {
       return <DashboardPage />;
     case 'agent':
       return <AgentWorkspacePage />;
+    case 'memory':
+      return <MemoryPage />;
+    case 'research':
+      return <ResearchPage />;
     case 'academy':
       return <AcademyPage />;
+    case 'exams':
+      return <ExamsPage />;
     case 'lab':
       return <TradingLabPage />;
     case 'settings':

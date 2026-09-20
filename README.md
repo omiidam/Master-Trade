@@ -33,7 +33,7 @@ vector-memory, observability, desktop-and-frontend, risks-and-deferred) and
 | -------- | ---------------------------------------------------------------------------------------------------------- |
 | Frontend | React 19 + Vite 6 · TanStack Query + Zustand · Tailwind + Radix · Lightweight Charts (adapter)             |
 | Backend  | Node.js 22 LTS · Fastify 5 as an adapter over the typed contracts · Zod as sole validator                  |
-| Database | SQLite (better-sqlite3, WAL) + Drizzle migrations; PostgreSQL 16 deferred for hosted mode                  |
+| Database | SQLite (WAL) + generated migrations; PostgreSQL 16 deferred for hosted mode; driver behind a port          |
 | AI       | `LlmProvider` adapters (OpenAI, Anthropic, local OpenAI-compatible) behind our gateway; no agent framework |
 | Desktop  | Tauri 2 shell + Node sidecar on loopback, per-launch bearer token, keychain-only secrets                   |
 | Realtime | WebSocket `/ws` over the existing event bus                                                                |
@@ -53,14 +53,17 @@ npm run build && npm run api   # HTTP API on http://127.0.0.1:4317 (loopback onl
 npm run agent:demo   # run the end-to-end agent demo (backend)
 ```
 
-## Frontend (Phase 3.2)
+## Frontend (Phase 3.2, modules in Phase 3.4)
 
 The workstation interface lives in `web/`: React 19 + Vite + Tailwind v4 with
 Radix primitives, Zustand UI state and Framer Motion presets. It ships the
 application shell (sidebar, topbar, workspace), a design token system, ten
-reusable primitives and five prototype pages — Dashboard, AI Workspace, Academy,
-Trading Lab and Settings — rendered from mock data that is typed against the
-backend view models.
+reusable primitives and eight prototype pages — Dashboard, AI Workspace, Memory,
+Research, Academy, Exams, Trading Lab and Settings — rendered from mock data that
+is typed against the backend view models.
+
+Phase 3.4 added the Memory, Exams and Research surfaces (15 module components)
+and four Dashboard overview widgets, on the same tokens and primitives.
 
 Nothing on those screens is connected: there is no model provider, no database,
 no realtime link and no market feed, and every page says so. There is no order or
@@ -86,6 +89,29 @@ curl http://127.0.0.1:4317/v1/health/ready    # readiness: degraded, and says wh
 No persistence, no hosted model provider, no `/ws` and no job workers yet;
 readiness reports each of those as `degraded` rather than pretending otherwise.
 See [backend-foundation.md](./docs/backend-foundation.md).
+
+## Database (Phase 3.4)
+
+`src/db/**` gives both engines one schema and one repository surface: a
+driver-agnostic DDL layer, an async-only executor port (so no repository knows
+which engine it talks to), a generated/ledgered migration runner, eight
+repositories and machine-readable data-ownership rules. SQLite (WAL, in the OS
+app-data directory) is the local mode; PostgreSQL is the deferred production
+mode. `better-sqlite3` was rejected at install (no prebuilt binary for this Node
+ABI, no toolchain) — the driver port keeps that reversible.
+
+```bash
+npm run db:migrate     # apply pending migrations to the local database
+npm run db:status      # show applied / pending migrations
+```
+
+```bash
+npm run build && npm run api
+curl http://127.0.0.1:4317/v1/health/ready    # readiness reflects the database
+```
+
+See [database-and-storage.md](./docs/database-and-storage.md) and
+[ADR-0023…0025](./docs/adr/).
 
 ## Safety
 

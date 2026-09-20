@@ -22,6 +22,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "web/src/config/**/*.ts",
-    "web/src/design/**/*.ts"
+    "web/src/design/**/*.ts",
+    "web/src/mock/**/*.ts"
   ]
 }

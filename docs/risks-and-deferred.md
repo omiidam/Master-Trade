@@ -60,9 +60,9 @@
 | Real-time               | WebSocket server + auth handshake, backpressure, durable cursor resume                                                                                                      |
 | Market data             | real historical provider, CSV import, corporate-action handling, tick storage/retention                                                                                     |
 | Vector memory           | remote embeddings, ANN index, re-embedding migration job, retrieval-quality evaluation                                                                                      |
-| Education               | full 6-month curriculum content, exam authoring tooling, spaced-repetition scheduling                                                                                       |
-| Evaluation              | rubric-based grading, longitudinal skill model, model-quality benchmarks                                                                                                    |
-| Backtesting             | deterministic backtest engine (behind `backtest.run`, approval-gated)                                                                                                       |
+| Education               | full 6-month curriculum content, exam authoring tooling, spaced-repetition scheduling, a live exam runner (the Exams page renders assessments only)                         |
+| Evaluation              | rubric-based grading wired to the exam surface, longitudinal skill model, model-quality benchmarks                                                                          |
+| Backtesting             | deterministic backtest engine (behind `backtest.run`, approval-gated); Research metrics stay labelled `synthetic`/`none` until it exists                                    |
 | Security                | secret scanning in CI, signed desktop builds, dependency audit policy                                                                                                       |
 | Experimental technology | Menai (pure deterministic compute), Agen (orchestration ideas), Vercel Zero (capability/diagnostics inspiration), AXON (auditability/provenance influence) — none installed |
 
@@ -131,3 +131,28 @@ CORS/bridge packaging. Item 2 of the Phase 3.2 list above is now half complete �
 the server exists; wiring TanStack Query to it does not.
 
 **Next:** persistence slice (item 1), then the frontend against real endpoints.
+
+### 4.4 Phase 3.4 — database architecture and product modules
+
+**Done — database foundation.** `src/db/**` gives both engines one schema and one
+repository surface: a driver-agnostic DDL layer (`dialect.ts`, `ddl.ts`), an
+async-only `executor` port so a repository never knows which engine it talks to,
+a generated/ledgered migration runner, eight repositories (identity, academy,
+memory, governance, audit, platform, market data, agent) and machine-readable data
+ownership rules. SQLite (node:sqlite, WAL) is the local mode; PostgreSQL the
+deferred production mode. `better-sqlite3` was rejected at install: no prebuilt
+binary for the installed Node ABI and no MSVC toolchain here — a driver port keeps
+that reversible ([database-and-storage.md](./database-and-storage.md),
+[ADR-0023](./adr/ADR-0023-repository-boundary-and-data-ownership.md),
+[ADR-0024](./adr/ADR-0024-generated-migrations-and-ledger.md),
+[ADR-0025](./adr/ADR-0025-sqlite-driver-and-dialects.md)).
+
+**Done — product modules.** Three frontend surfaces the Phase 3.2 shell omitted —
+Exams, Memory and Research — plus four Dashboard overview widgets, built entirely
+from the existing tokens and primitives with typed mock data. No backend, AI,
+permission or safety code changed; no execution affordance added; every state,
+trust rule and metric-source rule is asserted by `tests/frontend-modules.test.ts`
+([frontend-foundation.md](./frontend-foundation.md) § 9).
+
+**Next:** persistence wiring (repositories → server → UI), then one real LLM
+provider (Phase 3.5 AI infrastructure).

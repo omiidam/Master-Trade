@@ -576,3 +576,25 @@ No locked decision was changed and no experimental technology was introduced.
 Readiness deliberately reports `degraded` for every unbuilt layer instead of
 claiming `ok`, which is the same honesty rule the frontend applies with its
 `Preview · mock data` badge.
+
+## 13. Phase 3.4 status against this lock
+
+The database foundation and three product modules are implemented on the locked
+stack (see [database-and-storage.md](./database-and-storage.md) and
+[frontend-foundation.md](./frontend-foundation.md) § 9):
+
+| Locked choice           | Status in Phase 3.4                                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| SQLite local mode       | implemented over `node:sqlite` (WAL, app-data directory) behind the executor port; `better-sqlite3` remains the documented fallback |
+| PostgreSQL production   | **still deferred** — the same schema/DDL generator and repositories target it; the driver is not installed                          |
+| Generated migrations    | implemented (`db:migrate`, `db:status`) with an applied-migrations ledger, changing only by appending                               |
+| Repository boundary     | implemented — eight repositories; no SQL or driver import outside `src/db` (asserted by test)                                       |
+| Data ownership rules    | implemented as machine-readable rules (`src/db/ownership.ts`, `audit`)                                                              |
+| Frontend stack          | unchanged — the modules use the existing tokens and primitives only; no new dependency added                                        |
+| TanStack Query / charts | **still not installed** — the module surfaces render typed mock data, nothing fetches                                               |
+
+One locked decision was amended rather than superseded: the SQLite driver moved
+to the Node built-in because the better-sqlite3 install failed on this platform
+(exactly risk R15), and the driver port keeps the swap reversible
+([ADR-0025](./adr/ADR-0025-sqlite-driver-and-dialects.md)). No experimental
+technology was introduced.

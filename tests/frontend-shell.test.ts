@@ -58,7 +58,16 @@ function controlNames(source: string): string[] {
 describe('frontend shell', () => {
   it('exposes exactly the required workspace pages', () => {
     expect(NAV_SECTIONS.map((section) => section.id)).toEqual([...APP_PAGE_IDS]);
-    expect(APP_PAGE_IDS).toEqual(['dashboard', 'agent', 'academy', 'lab', 'settings']);
+    expect(APP_PAGE_IDS).toEqual([
+      'dashboard',
+      'agent',
+      'memory',
+      'research',
+      'academy',
+      'exams',
+      'lab',
+      'settings',
+    ]);
     for (const section of NAV_SECTIONS) {
       expect(section.label.length).toBeGreaterThan(0);
       expect(section.description.length).toBeGreaterThan(0);
