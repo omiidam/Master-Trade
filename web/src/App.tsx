@@ -9,6 +9,7 @@ import { ActivityPage } from './pages/ActivityPage';
 import { AgentWorkspacePage } from './pages/AgentWorkspacePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ExamsPage } from './pages/ExamsPage';
+import { JournalPage } from './pages/JournalPage';
 import { MemoryPage } from './pages/MemoryPage';
 import { ResearchPage } from './pages/ResearchPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -26,6 +27,8 @@ function renderPage(page: AppPageId) {
       return <MemoryPage />;
     case 'research':
       return <ResearchPage />;
+    case 'journal':
+      return <JournalPage />;
     case 'academy':
       return <AcademyPage />;
     case 'exams':

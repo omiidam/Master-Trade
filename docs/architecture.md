@@ -10,6 +10,7 @@ why the decisions were made.
 | Area | Document |
 | -------------------------------------------- | -------------------------------------------------------- || **Technology decisions / architecture lock** | **[technology-decisions.md](./technology-decisions.md)** |
 | Frontend implementation (shell, UI library) | [frontend-foundation.md](./frontend-foundation.md) |
+| Trading journal module | [journal.md](./journal.md) |
 | Desktop shell, frontend, view models | [desktop-and-frontend.md](./desktop-and-frontend.md) |
 | API layer, contracts, auth/authz | [api-auth.md](./api-auth.md) |
 | AI layer, prompts, LLM abstraction | [ai-and-llm.md](./ai-and-llm.md) |
@@ -341,7 +342,10 @@ prototype pages — built on the locked stack and driven by mock data that is
 **typed against the backend view models**. No backend, AI, permission or safety
 module was modified, and no endpoint, model or feed is connected: every screen
 says so. Details, guardrails and remaining accessibility gaps:
-[frontend-foundation.md](./frontend-foundation.md).
+[frontend-foundation.md](./frontend-foundation.md). The trading journal — one sidebar
+entry with seven internal sections, and the record rules it enforces — is
+[journal.md](./journal.md); it introduces no new boundary, reads no store, and
+computes nothing the engine owns.
 
 ## 12. Backend foundation (Phase 3.3)
 

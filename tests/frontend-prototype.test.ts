@@ -20,6 +20,7 @@ const PRODUCT_PAGES = [
   'MemoryPage',
   'ExamsPage',
   'ResearchPage',
+  'JournalPage',
   'SettingsPage',
   'ActivityPage',
 ] as const;
@@ -68,7 +69,13 @@ describe('preview prototype', () => {
     expect(states).toMatch(/import \{ ErrorState \}/);
 
     // Pages that had no failure surface before the prototype phase now have one.
-    for (const page of ['AcademyPage', 'TradingLabPage', 'AgentWorkspacePage', 'SettingsPage']) {
+    for (const page of [
+      'AcademyPage',
+      'TradingLabPage',
+      'AgentWorkspacePage',
+      'SettingsPage',
+      'JournalPage',
+    ]) {
       expect(source(`pages/${page}.tsx`), `${page} lost its state coverage`).toContain(
         'InterfaceStatesPanel',
       );

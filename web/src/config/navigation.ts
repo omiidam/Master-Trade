@@ -11,8 +11,12 @@
  * `dashboard`, `notifications`, `logs`, `settings`) map onto these ids once the
  * API adapter lands; `activity` is the Phase 3.7 surface for `logs` +
  * `notifications` (the event stream and the background-task queue). `memory`,
- * `exams`, `research` and `lab` have no backend capability yet — they are study
- * surfaces, not trading surfaces, and every one of them is read-only.
+ * `exams`, `research`, `lab` and `journal` have no backend capability yet — they
+ * are study surfaces, not trading surfaces, and every one of them is read-only.
+ *
+ * `journal` is deliberately ONE navigation entry. Its sections (overview, trade
+ * history, add trade, trade details, analytics, calendar, reviews) are internal
+ * tabs, so the sidebar never grows a sub-tree for it.
  */
 
 export const APP_PAGE_IDS = [
@@ -20,6 +24,7 @@ export const APP_PAGE_IDS = [
   'agent',
   'memory',
   'research',
+  'journal',
   'academy',
   'exams',
   'lab',
@@ -34,6 +39,7 @@ export type NavIconName =
   | 'sparkles'
   | 'brain'
   | 'microscope'
+  | 'journal'
   | 'graduation'
   | 'clipboard'
   | 'flask'
@@ -89,6 +95,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: 'Research',
     description: 'Experiments that test a proposed rule against evidence; adoption needs approval',
     icon: 'microscope',
+    group: 'workspace',
+  },
+  {
+    id: 'journal',
+    label: 'Journal',
+    description:
+      'Record what you actually did: setups, risk, rule compliance, mistakes and the lesson taken from each trade',
+    icon: 'journal',
     group: 'workspace',
   },
   {

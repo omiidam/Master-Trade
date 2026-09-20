@@ -124,6 +124,57 @@ export type { MetricsPanelProps, ResearchMetrics } from './research/MetricsPanel
 export { ReportViewer } from './research/ReportViewer';
 export type { ReportSectionInput, ReportViewerProps } from './research/ReportViewer';
 
+/* Trading journal ------------------------------------------------------- */
+
+export {
+  AIReviewPanel,
+  AIReviewStateGallery,
+  AnalyticsPanel,
+  CHART_TONE_VAR,
+  ChartToolbar,
+  ChecklistField,
+  DEFAULT_VISIBLE_COLUMNS,
+  DirectionBadge,
+  FullscreenChartViewer,
+  FormSection,
+  JournalCalendar,
+  JournalStatCard,
+  JournalTabPanel,
+  JournalTabs,
+  LoadingState,
+  MetricBar,
+  MistakeTag,
+  PerformanceChart,
+  PsychologyScale,
+  RMultipleIndicator,
+  RiskSummary,
+  RuleComplianceBadge,
+  ScreenshotGallery,
+  SetupBadge,
+  TRADE_COLUMNS,
+  TradeFilters,
+  TradeForm,
+  TradeRow,
+  TradeTable,
+  TradeTimeline,
+} from './journal';
+export type {
+  ChartAnnotation,
+  ChartLevel,
+  ChartMarker,
+  ChartSeriesInput,
+  ChartToolbarProps,
+  ChartTone,
+  JournalStatCardProps,
+  JournalTabItem,
+  MistakeTagProps,
+  PerformanceChartProps,
+  TradeColumnId,
+  TradeFormValues,
+  TradeRowProps,
+  TradeTableProps,
+} from './journal';
+
 /* Realtime + background tasks -------------------------------------------- */
 
 export { ConnectionStatus, CONNECTION_PRESENTATION } from './realtime/ConnectionStatus';

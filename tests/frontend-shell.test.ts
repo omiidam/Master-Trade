@@ -63,6 +63,7 @@ describe('frontend shell', () => {
       'agent',
       'memory',
       'research',
+      'journal',
       'academy',
       'exams',
       'lab',
