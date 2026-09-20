@@ -18,5 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - run: npm install
+      # `npm ci` installs exactly the committed lockfile and fails on drift, so a
+      # dependency cannot change under CI without the lockfile changing with it.
+      - run: npm ci
       - run: npm run validate
