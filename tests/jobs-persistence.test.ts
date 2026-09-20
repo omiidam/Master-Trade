@@ -2,14 +2,14 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { Principal } from '../src/auth/model.js';
+import type { Principal } from '../packages/shared/src/auth/model.js';
 import type { Repositories } from '../src/db/repositories/index.js';
 import { SqliteJobStore } from '../src/jobs/sqliteStore.js';
 
 import { openDatabase, sqliteDriverInfo, type DatabaseHandle } from '../src/db/index.js';
 import { resolveConfig } from '../src/core/config.js';
-import { JobQueue, type JobStatusEvent } from '../src/jobs/queue.js';
-import { JobService } from '../src/jobs/service.js';
+import { JobQueue, type JobStatusEvent } from '../packages/shared/src/jobs/queue.js';
+import { JobService } from '../packages/shared/src/jobs/service.js';
 import { JobWorkerPool } from '../src/jobs/worker.js';
 
 const FIXED_NOW = Date.parse('2026-09-20T09:00:00.000Z');

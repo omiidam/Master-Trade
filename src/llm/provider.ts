@@ -15,9 +15,14 @@
  * what it spent against the budget.
  */
 
-import { AppError, toAppError } from '../core/errors.js';
-import type { Logger } from '../core/logging.js';
-import { DEFAULT_RETRY_POLICY, withRetry, withTimeout, type RetryPolicy } from '../core/retry.js';
+import { AppError, toAppError } from '../../packages/shared/src/core/errors.js';
+import type { Logger } from '../../packages/shared/src/core/logging.js';
+import {
+  DEFAULT_RETRY_POLICY,
+  withRetry,
+  withTimeout,
+  type RetryPolicy,
+} from '../../packages/shared/src/core/retry.js';
 import { priceUsage } from './pricing.js';
 
 export type LlmProviderId = 'scripted' | 'openai' | 'anthropic' | 'local-openai-compatible';

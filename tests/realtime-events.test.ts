@@ -13,7 +13,7 @@ import {
   mayPublish,
   validateEventPayload,
   type RealtimeEventType,
-} from '../src/realtime/contracts.js';
+} from '../packages/shared/src/realtime/contracts.js';
 import {
   EventBus,
   assertReplayContinuity,
@@ -21,9 +21,9 @@ import {
   resolveAudience,
   type PublishReceipt,
   type RealtimeEvent,
-} from '../src/realtime/events.js';
-import { PolicyViolationError } from '../src/core/errors.js';
-import type { Principal } from '../src/auth/model.js';
+} from '../packages/shared/src/realtime/events.js';
+import { PolicyViolationError } from '../packages/shared/src/core/errors.js';
+import type { Principal } from '../packages/shared/src/auth/model.js';
 
 const principal = (roles: Principal['roles'], id = 'u1'): Principal => ({
   id,

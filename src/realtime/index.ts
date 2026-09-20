@@ -27,7 +27,7 @@ export {
   type EventSourceKind,
   type EventValidation,
   type RealtimeEventType,
-} from './contracts.js';
+} from '../../packages/shared/src/realtime/contracts.js';
 export {
   EventBus,
   assertOrdered,
@@ -40,7 +40,7 @@ export {
   type PublishInput,
   type PublishReceipt,
   type RealtimeEvent,
-} from './events.js';
+} from '../../packages/shared/src/realtime/events.js';
 export {
   DEFAULT_REALTIME_LIMITS,
   RealtimeConnection,
@@ -63,5 +63,5 @@ export {
   type ClientFrame,
   type CloseCode,
   type ServerFrame,
-} from './protocol.js';
+} from '../../packages/shared/src/realtime/protocol.js';
 export { REALTIME_ROUTE, registerRealtimeTransport, type RealtimeTransportOptions } from './ws.js';

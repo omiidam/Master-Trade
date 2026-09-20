@@ -6,7 +6,7 @@ import {
   sqliteDriverInfo,
   type Repositories,
 } from '../src/db/index.js';
-import { PolicyViolationError } from '../src/core/errors.js';
+import { PolicyViolationError } from '../packages/shared/src/core/errors.js';
 import { hashToken } from '../src/auth/sessions.js';
 
 const driver = sqliteDriverInfo();

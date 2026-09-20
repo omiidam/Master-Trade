@@ -18,7 +18,7 @@
  * No dependency is installed by this module: it is data plus a validator.
  */
 
-import { PolicyViolationError } from './errors.js';
+import { PolicyViolationError } from '../../packages/shared/src/core/errors.js';
 
 /**
  * The required decision areas. Phase 3.1 must answer all of them; a missing

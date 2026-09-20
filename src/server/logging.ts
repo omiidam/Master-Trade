@@ -10,7 +10,12 @@
 
 import { pino, type DestinationStream, type Logger as PinoLogger } from 'pino';
 import type { AppConfig } from '../core/config.js';
-import { MemoryLogSink, Logger, type LogRecord, type LogSink } from '../core/logging.js';
+import {
+  MemoryLogSink,
+  Logger,
+  type LogRecord,
+  type LogSink,
+} from '../../packages/shared/src/core/logging.js';
 
 /** Header names pino must strip even if a record is built by hand. */
 export const PINO_REDACT_PATHS = [

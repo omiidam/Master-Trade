@@ -8,8 +8,8 @@
  * background job can activate a rule on its own.
  */
 
-import { AppError, PolicyViolationError } from '../core/errors.js';
-import type { Provenance } from '../core/provenance.js';
+import { AppError, PolicyViolationError } from '../../packages/shared/src/core/errors.js';
+import type { Provenance } from '../../packages/shared/src/core/provenance.js';
 import type { ApprovalWorkflow } from './approval.js';
 
 export type RuleStatus =

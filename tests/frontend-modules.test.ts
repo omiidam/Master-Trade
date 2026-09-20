@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { contextKindForTrust, TRUST_ORDER } from '../src/core/provenance.js';
-import { assertNoExecutionControls } from '../src/frontend/viewModels.js';
+import { contextKindForTrust, TRUST_ORDER } from '../packages/shared/src/core/provenance.js';
+import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 import { NAV_SECTIONS } from '../web/src/config/navigation.js';
 import {
   EXAM_STATE_LABEL,

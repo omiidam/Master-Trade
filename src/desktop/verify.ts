@@ -26,7 +26,7 @@ import {
   missingRequiredPermissions,
   parseCapabilityFile,
 } from './capabilities.js';
-import { SHELL_COMMANDS } from './ipc.js';
+import { SHELL_COMMANDS } from '../../packages/shared/src/desktop/ipc.js';
 import { DESKTOP_API_PORT } from './sidecar.js';
 import { DEFAULT_DESKTOP_CONFIG } from './config.js';
 import { DEFAULT_CONFIG } from '../core/config.js';

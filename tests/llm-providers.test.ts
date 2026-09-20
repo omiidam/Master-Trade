@@ -6,7 +6,7 @@ import {
   readProviderMessage,
   type FetchLike,
 } from '../src/llm/providers/index.js';
-import { AppError } from '../src/core/errors.js';
+import { AppError } from '../packages/shared/src/core/errors.js';
 import type { LlmRequest } from '../src/llm/provider.js';
 
 const request = (overrides: Partial<LlmRequest> = {}): LlmRequest => ({

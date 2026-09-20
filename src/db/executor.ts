@@ -18,7 +18,7 @@
  * hand-writes column coercion and both engines agree on booleans and JSON.
  */
 
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import { decodeValue, encodeValue, type SqlDialect, type SqlValue } from './dialect.js';
 import type { EntityDefinition, TableName } from './schema.js';
 

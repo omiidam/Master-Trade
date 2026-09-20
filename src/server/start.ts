@@ -9,7 +9,7 @@
  */
 
 import { pathToFileURL } from 'node:url';
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import { createServer, type ServerDeps } from './app.js';
 
 export async function startServer(deps: ServerDeps = {}) {

@@ -17,19 +17,19 @@
     "skipLibCheck": true,
     "noEmit": true,
     "paths": {
-      "@shared/api/contracts": ["../src/api/contracts.js"],
-      "@shared/core/errors": ["../src/core/errors.js"],
-      "@shared/core/headers": ["../src/core/headers.js"],
-      "@shared/core/ids": ["../src/core/ids.js"],
-      "@shared/core/provenance": ["../src/core/provenance.js"],
-      "@shared/desktop/ipc": ["../src/desktop/ipc.js"],
-      "@shared/frontend/viewModels": ["../src/frontend/viewModels.js"],
-      "@shared/jobs/service": ["../src/jobs/service.js"],
-      "@shared/marketdata/provider": ["../src/marketdata/provider.js"],
-      "@shared/realtime/contracts": ["../src/realtime/contracts.js"],
-      "@shared/realtime/events": ["../src/realtime/events.js"],
-      "@shared/realtime/protocol": ["../src/realtime/protocol.js"],
-      "@shared/types": ["../src/types.js"]
+      "@shared/api/contracts": ["../packages/shared/src/api/contracts.js"],
+      "@shared/core/errors": ["../packages/shared/src/core/errors.js"],
+      "@shared/core/headers": ["../packages/shared/src/core/headers.js"],
+      "@shared/core/ids": ["../packages/shared/src/core/ids.js"],
+      "@shared/core/provenance": ["../packages/shared/src/core/provenance.js"],
+      "@shared/desktop/ipc": ["../packages/shared/src/desktop/ipc.js"],
+      "@shared/frontend/viewModels": ["../packages/shared/src/frontend/viewModels.js"],
+      "@shared/jobs/service": ["../packages/shared/src/jobs/service.js"],
+      "@shared/marketdata/provider": ["../packages/shared/src/marketdata/provider.js"],
+      "@shared/realtime/contracts": ["../packages/shared/src/realtime/contracts.js"],
+      "@shared/realtime/events": ["../packages/shared/src/realtime/events.js"],
+      "@shared/realtime/protocol": ["../packages/shared/src/realtime/protocol.js"],
+      "@shared/types": ["../packages/shared/src/types.js"]
     }
   },
   "include": ["src", "../vite.config.ts"]

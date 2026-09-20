@@ -239,11 +239,10 @@ master-trade/
 Dependency direction: `api → agent → (llm, tools, vector, marketdata, auth,
 core)`; `core` depends on nothing above it. No module imports `api`.
 
-The frontend is a second boundary in the same package. The edge is `web → src` and
-never the reverse. Phase 4.1 assessed whether that should become an npm-workspace
-monorepo and decided **not to migrate now**: the shared surface already existed as a
-path depth, the install topology that just broke on the VPS (`@tailwindcss/oxide`,
-`c92fa9c`) is sensitive to workspace hoisting, and the target
+The frontend is a second boundary. Phase 4.1 assessed whether the project should
+become an npm-workspace monorepo and decided **not to migrate now**: the shared surface
+already existed as a path depth, the install topology that just broke on the VPS
+(`@tailwindcss/oxide`, `c92fa9c`) is sensitive to workspace hoisting, and the target
 `packages/trading-engine` would be nearly empty.
 
 Phase 4.2 implemented the decision's first step with **no directory change**: the
@@ -251,8 +250,16 @@ frontend imports backend code only through 13 exact `@shared/*` names, declared 
 `config/sharedSurface.ts`, mirrored in both tsconfigs and used by the Vite and Vitest
 resolvers. Exact-match means `@shared/db/sqlite` or `@shared/server/app` do not
 resolve, so the compiler and the bundler — not just a test — refuse a frontend import
-that reaches backend internals. See [monorepo.md](./monorepo.md) and
-[ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md); enforced by
+that reaches backend internals.
+
+Phase 4.3 executed step 2: that surface is now the physical, source-only package
+**`packages/shared`**, holding a closed **22-module** set (the 13 declared entries plus
+the 9 modules they transitively need). Two genuine consumers use it — the frontend
+through `@shared/*`, and the backend through relative paths, because Node cannot execute
+a TypeScript specifier at runtime. The package imports nothing outside itself, and
+`npm ci` with the committed lockfile is still the only install path (no workspaces yet).
+See [monorepo.md](./monorepo.md), [ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md)
+and [ADR-0036](./adr/ADR-0036-extract-shared-package-source-only.md); enforced by
 `tests/monorepo-boundary.test.ts`.
 
 ## 9. Implementation status (Phase 2)

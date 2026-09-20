@@ -20,8 +20,8 @@
  */
 
 import { z } from 'zod';
-import { AppError } from '../core/errors.js';
-import type { DesktopPlatform } from './host.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
+import type { DesktopPlatform } from '../../packages/shared/src/desktop/host.js';
 
 export const DESKTOP_CONFIG_VERSION = 1;
 export const DESKTOP_CONFIG_FILE = 'config.json';

@@ -5,16 +5,20 @@ import {
   validateBars,
   syntheticProvider,
   type MarketDataRequest,
-} from '../src/marketdata/provider.js';
-import type { Bar } from '../src/types.js';
-import { PolicyViolationError } from '../src/core/errors.js';
+} from '../packages/shared/src/marketdata/provider.js';
+import type { Bar } from '../packages/shared/src/types.js';
+import { PolicyViolationError } from '../packages/shared/src/core/errors.js';
 import {
   InMemoryVectorMemory,
   hashEmbeddingProvider,
   cosineSimilarity,
   embedText,
 } from '../src/vector/memory.js';
-import { contextKindForTrust, modelProvenance, toolProvenance } from '../src/core/provenance.js';
+import {
+  contextKindForTrust,
+  modelProvenance,
+  toolProvenance,
+} from '../packages/shared/src/core/provenance.js';
 
 const request = (provenance: MarketDataRequest['provenance'] = 'synthetic'): MarketDataRequest => ({
   symbol: normalizeSymbol(' aapl '),

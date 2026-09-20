@@ -12,8 +12,8 @@
  *     learner's record is what they are paying attention to.
  */
 
-import { AppError } from '../../core/errors.js';
-import { ids } from '../../core/ids.js';
+import { AppError } from '../../../packages/shared/src/core/errors.js';
+import { ids } from '../../../packages/shared/src/core/ids.js';
 import type { SqlExecutor } from '../executor.js';
 import { Table } from '../table.js';
 import type { Owner } from '../ownership.js';

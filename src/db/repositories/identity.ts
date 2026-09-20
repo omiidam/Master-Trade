@@ -15,13 +15,13 @@
  *      Phase 1) and an untokened session row is not representable.
  */
 
-import { AppError, PolicyViolationError } from '../../core/errors.js';
-import { ids } from '../../core/ids.js';
+import { AppError, PolicyViolationError } from '../../../packages/shared/src/core/errors.js';
+import { ids } from '../../../packages/shared/src/core/ids.js';
 import type { SqlExecutor } from '../executor.js';
 import { Table } from '../table.js';
 import type { Owner } from '../ownership.js';
 import type { TableName } from '../schema.js';
-import type { Role } from '../../auth/model.js';
+import type { Role } from '../../../packages/shared/src/auth/model.js';
 
 export const OWNER: Owner = 'identity';
 export const OWNED_TABLES: readonly TableName[] = ['users', 'credentials', 'sessions'];

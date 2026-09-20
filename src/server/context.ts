@@ -7,9 +7,9 @@
  * bound to the correlation id. Handlers receive validated input only.
  */
 
-import type { AnyApiRoute } from '../api/contracts.js';
-import type { Principal } from '../auth/model.js';
-import type { Logger } from '../core/logging.js';
+import type { AnyApiRoute } from '../../packages/shared/src/api/contracts.js';
+import type { Principal } from '../../packages/shared/src/auth/model.js';
+import type { Logger } from '../../packages/shared/src/core/logging.js';
 
 export interface RequestInput {
   /** Validated body — never raw, never unknown. */

@@ -25,12 +25,16 @@
 
 import type { FastifyInstance } from 'fastify';
 import websocket from '@fastify/websocket';
-import { AppError } from '../core/errors.js';
-import type { Logger } from '../core/logging.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
+import type { Logger } from '../../packages/shared/src/core/logging.js';
 import type { AccessPolicy } from '../server/access.js';
 import { bearerToken } from '../auth/sessions.js';
 import type { RealtimeHub, RealtimeLimits, RealtimeTransport } from './hub.js';
-import { CLOSE_CODES, REALTIME_PROTOCOL_VERSION, REALTIME_SUBPROTOCOL } from './protocol.js';
+import {
+  CLOSE_CODES,
+  REALTIME_PROTOCOL_VERSION,
+  REALTIME_SUBPROTOCOL,
+} from '../../packages/shared/src/realtime/protocol.js';
 
 /** The socket route, named so route coverage and tests can refer to it. */
 export const REALTIME_ROUTE = {

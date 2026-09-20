@@ -6,10 +6,10 @@
  * produced it, so the client can never present model text as a tool result.
  */
 
-import type { AgentChatBody } from '../../api/schemas.js';
+import type { AgentChatBody } from '../../../packages/shared/src/api/schemas.js';
 import type { AgentService, AgentTurn } from '../../agent/service.js';
-import type { EventBus } from '../../realtime/events.js';
-import type { Logger } from '../../core/logging.js';
+import type { EventBus } from '../../../packages/shared/src/realtime/events.js';
+import type { Logger } from '../../../packages/shared/src/core/logging.js';
 import type { RouteHandler } from '../context.js';
 
 export interface AgentChatResponseData {

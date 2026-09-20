@@ -24,7 +24,7 @@
  *     by a persistent foreign key, and is deleted on a schedule.
  */
 
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import { SCHEMA, type EntityDefinition, type TableName } from './schema.js';
 
 /** Bounded context that owns a table. Matches the repository file name. */

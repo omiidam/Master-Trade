@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { AppError } from '../src/core/errors.js';
-import type { Principal } from '../src/auth/model.js';
+import { AppError } from '../packages/shared/src/core/errors.js';
+import type { Principal } from '../packages/shared/src/auth/model.js';
 import {
   JOB_DEFINITIONS,
   JobQueue,
   assertJobDefinitions,
   type JobStatusEvent,
-} from '../src/jobs/queue.js';
-import { InMemoryJobStore } from '../src/jobs/store.js';
+} from '../packages/shared/src/jobs/queue.js';
+import { InMemoryJobStore } from '../packages/shared/src/jobs/store.js';
 import { JobWorkerPool } from '../src/jobs/worker.js';
-import { JOB_KINDS, isJobKind } from '../src/jobs/vocabulary.js';
+import { JOB_KINDS, isJobKind } from '../packages/shared/src/jobs/vocabulary.js';
 
 const principal = (roles: Principal['roles'], id = 'u1'): Principal => ({
   id,

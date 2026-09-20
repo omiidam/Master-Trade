@@ -11,8 +11,8 @@
  * retrieved but never presented as fact.
  */
 
-import type { EpistemicKind } from '../types.js';
-import { AppError, PolicyViolationError } from '../core/errors.js';
+import type { EpistemicKind } from '../../packages/shared/src/types.js';
+import { AppError, PolicyViolationError } from '../../packages/shared/src/core/errors.js';
 import {
   TRUST_ORDER,
   contextKindForTrust,
@@ -20,7 +20,7 @@ import {
   type Provenance,
   type TrustLevel,
   type TrustVerifier,
-} from '../core/provenance.js';
+} from '../../packages/shared/src/core/provenance.js';
 
 export type MemoryRecordType =
   | 'lesson-note'

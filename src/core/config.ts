@@ -7,13 +7,13 @@
  * config object can be logged, exported and committed without leaking keys.
  */
 
-import type { OperatingMode, SafetyProfile } from '../types.js';
-import { DEFAULT_SAFETY_PROFILE } from '../types.js';
-import { PolicyViolationError } from './errors.js';
-import type { LogLevel } from './logging.js';
+import type { OperatingMode, SafetyProfile } from '../../packages/shared/src/types.js';
+import { DEFAULT_SAFETY_PROFILE } from '../../packages/shared/src/types.js';
+import { PolicyViolationError } from '../../packages/shared/src/core/errors.js';
+import type { LogLevel } from '../../packages/shared/src/core/logging.js';
 import type { LlmProviderId } from '../llm/provider.js';
-import type { DataProvenance } from '../marketdata/provider.js';
-import { DEFAULT_RETRY_POLICY, type RetryPolicy } from './retry.js';
+import type { DataProvenance } from '../../packages/shared/src/marketdata/provider.js';
+import { DEFAULT_RETRY_POLICY, type RetryPolicy } from '../../packages/shared/src/core/retry.js';
 
 /** A pointer to a secret, never the secret itself. */
 export interface SecretRef {

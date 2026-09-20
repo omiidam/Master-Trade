@@ -1,10 +1,10 @@
 /**
  * Database CLI.
  *
- *   node dist/db/cli.js migrate    — apply pending migrations
- *   node dist/db/cli.js status     — show the migration plan without changing anything
- *   node dist/db/cli.js ownership  — print the data ownership rules
- *   node dist/db/cli.js schema     — print the declared tables and their owners
+ *   node dist/src/db/cli.js migrate    — apply pending migrations
+ *   node dist/src/db/cli.js status     — show the migration plan without changing anything
+ *   node dist/src/db/cli.js ownership  — print the data ownership rules
+ *   node dist/src/db/cli.js schema     — print the declared tables and their owners
  *
  * It is the operator's window into the database foundation: the same code path the
  * application uses (`openDatabase`), so "it worked in the CLI" means the server
@@ -14,7 +14,7 @@
 
 import { loadConfigFromEnv } from '../config/loader.js';
 import { DEFAULT_CONFIG } from '../core/config.js';
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import {
   assertDatabaseFoundation,
   databaseStatus,

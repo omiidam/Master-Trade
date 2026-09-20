@@ -13,8 +13,8 @@
  */
 
 import type { AppConfig, SecretRef } from '../core/config.js';
-import { AppError, PolicyViolationError } from '../core/errors.js';
-import { SHELL_TOKEN_HEADER } from '../core/headers.js';
+import { AppError, PolicyViolationError } from '../../packages/shared/src/core/errors.js';
+import { SHELL_TOKEN_HEADER } from '../../packages/shared/src/core/headers.js';
 import { constantTimeEquals } from '../auth/sessions.js';
 
 // Re-exported so existing callers keep one import site; the constant itself lives

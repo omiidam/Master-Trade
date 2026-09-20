@@ -13,7 +13,7 @@ import {
   OUTPUT_CONTRACT,
   type StructuredSummary,
 } from '../src/llm/summary.js';
-import { contextKindForTrust, toolProvenance } from '../src/core/provenance.js';
+import { contextKindForTrust, toolProvenance } from '../packages/shared/src/core/provenance.js';
 import { Orchestrator } from '../src/agent/orchestrator.js';
 import { scriptedAsyncModelAdapter, createLlmModelAdapter } from '../src/agent/asyncModel.js';
 import { AgentService } from '../src/agent/service.js';
@@ -21,9 +21,9 @@ import { InMemoryStore } from '../src/memory/store.js';
 import { defaultToolRegistry } from '../src/tools/index.js';
 import { loadInstructions, renderInstructions } from '../src/instructions/loader.js';
 import { createAiGateway } from '../src/llm/registry.js';
-import { DEFAULT_SAFETY_PROFILE } from '../src/types.js';
+import { DEFAULT_SAFETY_PROFILE } from '../packages/shared/src/types.js';
 import { ToolRegistry, type Tool } from '../src/tools/framework.js';
-import { AppError } from '../src/core/errors.js';
+import { AppError } from '../packages/shared/src/core/errors.js';
 
 const instructions = renderInstructions(loadInstructions());
 

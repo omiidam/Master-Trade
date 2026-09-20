@@ -21,8 +21,8 @@
  */
 
 import type { SecretRef } from '../core/config.js';
-import type { Logger } from '../core/logging.js';
-import type { RetryPolicy } from '../core/retry.js';
+import type { Logger } from '../../packages/shared/src/core/logging.js';
+import type { RetryPolicy } from '../../packages/shared/src/core/retry.js';
 import { findPrice } from './pricing.js';
 import {
   LlmGateway,

@@ -17,8 +17,8 @@
  * them (at zero, because nothing is called).
  */
 
-import { AppError } from '../../core/errors.js';
-import type { EpistemicKind } from '../../types.js';
+import { AppError } from '../../../packages/shared/src/core/errors.js';
+import type { EpistemicKind } from '../../../packages/shared/src/types.js';
 import {
   EMPTY_TOKEN_USAGE,
   type LlmFinishReason,

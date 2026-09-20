@@ -6,7 +6,7 @@
  * the interface is the future persistence seam.
  */
 
-import type { EpistemicKind, ModelStatement } from '../types.js';
+import type { EpistemicKind, ModelStatement } from '../../packages/shared/src/types.js';
 import type { ToolDescriptor } from '../tools/framework.js';
 
 export type MemoryOrigin =

@@ -5,7 +5,7 @@ import { loadInstructions, renderInstructions } from '../src/instructions/loader
 import { AgentLifecycle } from '../src/agent/lifecycle.js';
 import { Orchestrator, scriptedModelAdapter } from '../src/agent/orchestrator.js';
 import { defaultToolRegistry } from '../src/tools/index.js';
-import { DEFAULT_SAFETY_PROFILE } from '../src/types.js';
+import { DEFAULT_SAFETY_PROFILE } from '../packages/shared/src/types.js';
 
 const makeOrchestrator = () =>
   new Orchestrator({

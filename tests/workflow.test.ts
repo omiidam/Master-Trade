@@ -3,9 +3,9 @@ import { ApprovalWorkflow } from '../src/agent/approval.js';
 import { RuleRegistry } from '../src/agent/proposals.js';
 import { assembleContext, sectionsFromMemory, section } from '../src/agent/context.js';
 import { InMemoryVectorMemory } from '../src/vector/memory.js';
-import { modelProvenance, toolProvenance } from '../src/core/provenance.js';
-import { PolicyViolationError } from '../src/core/errors.js';
-import type { Principal } from '../src/auth/model.js';
+import { modelProvenance, toolProvenance } from '../packages/shared/src/core/provenance.js';
+import { PolicyViolationError } from '../packages/shared/src/core/errors.js';
+import type { Principal } from '../packages/shared/src/auth/model.js';
 
 const principal = (roles: Principal['roles'], id: string): Principal => ({
   id,

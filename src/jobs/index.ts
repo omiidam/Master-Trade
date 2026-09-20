@@ -14,7 +14,7 @@ export {
   type JobProgress,
   type JobRecord,
   type JobStore,
-} from './store.js';
+} from '../../packages/shared/src/jobs/store.js';
 export {
   JOB_DEFINITIONS,
   JobQueue,
@@ -27,7 +27,7 @@ export {
   type JobQueueOptions,
   type JobQueueStatus,
   type JobStatusEvent,
-} from './queue.js';
+} from '../../packages/shared/src/jobs/queue.js';
 export { JobWorkerPool, type WorkerPoolOptions, type WorkerPoolSnapshot } from './worker.js';
 export { SqliteJobStore } from './sqliteStore.js';
 export {
@@ -37,7 +37,7 @@ export {
   type JobEventSink,
   type JobServiceOptions,
   type JobView,
-} from './service.js';
+} from '../../packages/shared/src/jobs/service.js';
 export {
   HARDLINE_JOB_PATTERN,
   JOB_KINDS,
@@ -47,4 +47,4 @@ export {
   isTerminal,
   type JobKind,
   type JobStatus,
-} from './vocabulary.js';
+} from '../../packages/shared/src/jobs/vocabulary.js';

@@ -18,9 +18,13 @@
  */
 
 import type { AppConfig } from '../core/config.js';
-import { AppError, PolicyViolationError, toAppError } from '../core/errors.js';
-import { IdFactory, type CorrelationId } from '../core/ids.js';
-import type { Logger } from '../core/logging.js';
+import {
+  AppError,
+  PolicyViolationError,
+  toAppError,
+} from '../../packages/shared/src/core/errors.js';
+import { IdFactory, type CorrelationId } from '../../packages/shared/src/core/ids.js';
+import type { Logger } from '../../packages/shared/src/core/logging.js';
 import {
   API_VERSION,
   API_VERSION_HEADER,
@@ -29,7 +33,7 @@ import {
   isEnvelopeShaped,
   validateEnvelope,
   type AnyApiRoute,
-} from '../api/contracts.js';
+} from '../../packages/shared/src/api/contracts.js';
 import { bearerToken, type SessionService } from '../auth/sessions.js';
 import { headerValue, SHELL_TOKEN_HEADER, type AccessPolicy, type HeaderBag } from './access.js';
 import { denyAllApprovals, type ApprovalGate } from './approval.js';

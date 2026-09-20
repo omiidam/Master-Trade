@@ -16,7 +16,7 @@
  */
 
 import { z } from 'zod';
-import { PolicyViolationError, AppError } from '../core/errors.js';
+import { PolicyViolationError, AppError } from '../../packages/shared/src/core/errors.js';
 import {
   DEFAULT_CONFIG,
   resolveConfig,

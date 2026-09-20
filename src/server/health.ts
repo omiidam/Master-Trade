@@ -13,7 +13,7 @@
  *     state of a phase where persistence and providers are not wired yet.
  */
 
-import { redactString } from '../core/logging.js';
+import { redactString } from '../../packages/shared/src/core/logging.js';
 
 export type HealthStatus = 'ok' | 'degraded' | 'fail';
 

@@ -19,7 +19,7 @@
  * behind a caller's back.
  */
 
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import { DIALECTS, type SqlDialect, type SqlValue } from './dialect.js';
 import type { SqlExecutor, SqlParams, SqlRow } from './executor.js';
 

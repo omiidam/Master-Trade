@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createAiGateway, DEFAULT_BASE_URLS, SCRIPTED_ENDPOINT } from '../src/llm/registry.js';
 import { scriptedLlmProvider, type FetchLike } from '../src/llm/providers/index.js';
-import { DEFAULT_RETRY_POLICY } from '../src/core/retry.js';
+import { DEFAULT_RETRY_POLICY } from '../packages/shared/src/core/retry.js';
 import { secretFromEnv, secretFromKeychain } from '../src/core/config.js';
-import { AppError } from '../src/core/errors.js';
+import { AppError } from '../packages/shared/src/core/errors.js';
 
 const settings = (
   overrides: Partial<Parameters<typeof createAiGateway>[0]> = {},

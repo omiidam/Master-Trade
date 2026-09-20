@@ -11,7 +11,7 @@ import {
   decisionsByArea,
   validateArchitectureLock,
 } from '../src/core/architectureLock.js';
-import { PolicyViolationError } from '../src/core/errors.js';
+import { PolicyViolationError } from '../packages/shared/src/core/errors.js';
 
 const root = process.cwd();
 const adrDir = join(root, 'docs', 'adr');

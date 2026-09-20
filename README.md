@@ -82,6 +82,14 @@ one is ever added. See [frontend-foundation.md](./docs/frontend-foundation.md) a
 
 ## Backend (Phase 3.3)
 
+> **Layout note (Phase 4.3).** The contract types both sides depend on — the API
+> envelope, error codes, correlation ids, provenance, the realtime wire protocol, the job
+> view contract, the desktop IPC surface and the view models — now live in the physical
+> package **`packages/shared`** (22 modules), not under `src/`. The backend resolves it by
+> relative path and the frontend by `@shared/*`; the build root is the repository root, so
+> compiled output is `dist/src/**` and `dist/packages/shared/src/**`. See
+> [monorepo.md](./docs/monorepo.md) and [ADR-0036](./docs/adr/ADR-0036-extract-shared-package-source-only.md).
+
 `src/server/**` mounts the typed API contracts on Fastify 5 — loopback only, Zod
 as the sole validator, one error handler, structured request logging, hashed
 sessions and environment-driven configuration that refuses to start on an unsafe
@@ -186,14 +194,15 @@ guide and [ADR-0029…0031](./docs/adr/).
 
 ## Realtime and background jobs (Phase 3.7)
 
-`src/realtime/**` holds versioned event contracts (strict payload schema, schema
-version, audience, internal flag, publisher allow-list) over an authenticated
-WebSocket at `/ws`, plus the hub that owns sessions, subscriptions, heartbeats,
-rate limits and backpressure. `src/jobs/**` holds the queue engine — idempotency,
-timeouts, cooperative cancellation, retry with backoff, dead-letter, progress —
-behind a `JobStore` port with an in-memory implementation and a SQLite one over the
-existing `jobs` table, so jobs survive a restart without Redis being a local
-requirement. `GET /v1/jobs` and `POST /v1/jobs/:jobId/cancel` expose watch-and-stop;
+The versioned event contracts (strict payload schema, schema version, audience,
+internal flag, publisher allow-list) live in `packages/shared/src/realtime/**`, and
+`src/realtime/**` holds the hub that owns sessions, subscriptions, heartbeats, rate
+limits and backpressure over an authenticated WebSocket at `/ws`. The queue engine —
+idempotency, timeouts, cooperative cancellation, retry with backoff, dead-letter,
+progress — sits in `packages/shared/src/jobs/**` behind a `JobStore` port, with an
+in-memory implementation and a SQLite one over the existing `jobs` table, and the
+persistence adapters stay in `src/jobs/**`. Jobs therefore survive a restart without
+Redis being a local requirement. `GET /v1/jobs` and `POST /v1/jobs/:jobId/cancel` expose watch-and-stop;
 there is no enqueue route.
 
 The frontend client is framework-free (`web/src/realtime/client.ts`) and validates

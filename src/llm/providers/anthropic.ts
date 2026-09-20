@@ -13,7 +13,7 @@
  * contract in `../summary.js` is what surfaces, and it carries no deliberation.
  */
 
-import { AppError } from '../../core/errors.js';
+import { AppError } from '../../../packages/shared/src/core/errors.js';
 import {
   EMPTY_TOKEN_USAGE,
   type LlmMessage,

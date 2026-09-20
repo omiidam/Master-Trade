@@ -18,7 +18,7 @@
  *     forwarded; it is the one field that comes from outside the system.
  */
 
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import type { ContextSection } from '../agent/context.js';
 import type { LlmMessage } from './provider.js';
 import { OUTPUT_CONTRACT } from './summary.js';

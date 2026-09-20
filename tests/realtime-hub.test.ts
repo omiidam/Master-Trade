@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SessionService } from '../src/auth/sessions.js';
-import { EventBus } from '../src/realtime/events.js';
+import { EventBus } from '../packages/shared/src/realtime/events.js';
 import {
   DEFAULT_REALTIME_LIMITS,
   RealtimeHub,
@@ -12,8 +12,8 @@ import {
   CLOSE_CODES,
   REALTIME_PROTOCOL_VERSION,
   serializeFrame,
-} from '../src/realtime/protocol.js';
-import type { Role } from '../src/auth/model.js';
+} from '../packages/shared/src/realtime/protocol.js';
+import type { Role } from '../packages/shared/src/auth/model.js';
 
 /** A transport that records what it was sent, with no socket involved. */
 class FakeTransport implements RealtimeTransport {

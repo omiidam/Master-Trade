@@ -33,20 +33,20 @@
  *     away with code 1001, so clients reconnect rather than treat it as a crash.
  */
 
-import type { Principal, Role } from '../auth/model.js';
-import { requireOperation } from '../auth/model.js';
+import type { Principal, Role } from '../../packages/shared/src/auth/model.js';
+import { requireOperation } from '../../packages/shared/src/auth/model.js';
 import type { SessionService } from '../auth/sessions.js';
-import { AppError, PolicyViolationError } from '../core/errors.js';
-import type { Logger } from '../core/logging.js';
-import { SlidingWindowRateLimiter } from '../core/rateLimit.js';
-import { ids } from '../core/ids.js';
+import { AppError, PolicyViolationError } from '../../packages/shared/src/core/errors.js';
+import type { Logger } from '../../packages/shared/src/core/logging.js';
+import { SlidingWindowRateLimiter } from '../../packages/shared/src/core/rateLimit.js';
+import { ids } from '../../packages/shared/src/core/ids.js';
 import {
   contractFor,
   eventTypes as allEventTypes,
   isRealtimeEventType,
   type RealtimeEventType,
-} from './contracts.js';
-import { EventBus } from './events.js';
+} from '../../packages/shared/src/realtime/contracts.js';
+import { EventBus } from '../../packages/shared/src/realtime/events.js';
 import {
   CLOSE_CODES,
   parseClientFrame,
@@ -54,7 +54,7 @@ import {
   serializeFrame,
   type ClientFrame,
   type ServerFrame,
-} from './protocol.js';
+} from '../../packages/shared/src/realtime/protocol.js';
 
 export interface RealtimeTransport {
   /** Send one serialized frame. Must not throw when the socket is already gone. */
@@ -410,7 +410,9 @@ export class RealtimeConnection {
     this.send({ t: 'unsubscribed', types: removed });
   }
 
-  private onEvent(event: import('./events.js').RealtimeEvent): void {
+  private onEvent(
+    event: import('../../packages/shared/src/realtime/events.js').RealtimeEvent,
+  ): void {
     if (this.connectionState !== 'open') return;
     // Deny-by-default applies to delivery as well as to audience: a connection
     // receives only what it explicitly asked for, and a connection that asked for

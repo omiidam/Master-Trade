@@ -77,8 +77,8 @@ console.log('Master Trade — packaging the desktop sidecar\n');
 // 1. The compiled backend. `npm run build` is the same command CI runs.
 console.log('1/5  building the backend (tsc)');
 run('npm', ['run', 'build'], { shell: process.platform === 'win32' });
-if (!existsSync(join(buildDir, 'server', 'start.js'))) {
-  problems.push('dist/server/start.js is missing after the build');
+if (!existsSync(join(buildDir, 'src', 'server', 'start.js'))) {
+  problems.push('dist/src/server/start.js is missing after the build');
 }
 
 // 2. One CommonJS file. Node's SEA entry point must be CommonJS, and this project
@@ -91,7 +91,7 @@ if (has('npx', ['--no-install', 'esbuild', '--version'])) {
     [
       '--no-install',
       'esbuild',
-      join(buildDir, 'server', 'start.js'),
+      join(buildDir, 'src', 'server', 'start.js'),
       '--bundle',
       '--platform=node',
       '--target=node22',
@@ -105,7 +105,7 @@ if (has('npx', ['--no-install', 'esbuild', '--version'])) {
   );
 } else {
   problems.push(
-    'esbuild is not installed. Run `npm install --save-dev esbuild`, or bundle dist/server/start.js to CommonJS with the tool of your choice and place it at dist/sidecar/master-trade-api.cjs',
+    'esbuild is not installed. Run `npm install --save-dev esbuild`, or bundle dist/src/server/start.js to CommonJS with the tool of your choice and place it at dist/sidecar/master-trade-api.cjs',
   );
 }
 

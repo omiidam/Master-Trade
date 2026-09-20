@@ -24,8 +24,8 @@
  */
 
 import type { JobRow, PlatformRepository } from '../db/repositories/platform.js';
-import type { JobProgress, JobRecord, JobStore } from './store.js';
-import type { JobStatus } from './vocabulary.js';
+import type { JobProgress, JobRecord, JobStore } from '../../packages/shared/src/jobs/store.js';
+import type { JobStatus } from '../../packages/shared/src/jobs/vocabulary.js';
 
 /** Long enough to observe, short enough to be pruned without regret. */
 const PROGRESS_TTL_MS = 24 * 60 * 60 * 1_000;

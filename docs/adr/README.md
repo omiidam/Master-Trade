@@ -89,3 +89,16 @@ mapping, the benefits that do **not** require moving directories, the
 install-topology risk that motivated deferral, and the trigger conditions — is in
 [monorepo-assessment.md](../monorepo-assessment.md). The boundary it declares is
 enforced by `tests/monorepo-boundary.test.ts`.
+
+## Phase 4.3 — `packages/shared` extraction
+
+| ADR                                                      | Decision                                                                                                                                                                           | Decision id(s)              | Status   |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | -------- |
+| [0036](./ADR-0036-extract-shared-package-source-only.md) | Extract the 22-file shared closure into a physical, source-only `packages/shared`: backend resolves it by relative path, frontend by `@shared/*`, no npm workspaces, no build step | `DEC-REPO-2-EXTRACT-SHARED` | Accepted |
+
+**Path note:** ADRs and module documents written before Phase 4.3 name the modules
+that have since moved — for example `src/core/errors.ts`, `src/types.ts`,
+`src/api/contracts.ts`, `src/realtime/contracts.ts`, `src/jobs/service.ts` and
+`src/desktop/ipc.ts` now live under `packages/shared/src/`. Those documents are kept
+as records of the phase that wrote them and are **not** rewritten. For the current
+layout, read [monorepo.md](../monorepo.md).

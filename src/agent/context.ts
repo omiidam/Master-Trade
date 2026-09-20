@@ -10,9 +10,13 @@
  *   - unverified memory is labelled as uncertainty, never as fact.
  */
 
-import { AppError } from '../core/errors.js';
-import { contextKindForTrust, type Provenance, type TrustLevel } from '../core/provenance.js';
-import type { EpistemicKind } from '../types.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
+import {
+  contextKindForTrust,
+  type Provenance,
+  type TrustLevel,
+} from '../../packages/shared/src/core/provenance.js';
+import type { EpistemicKind } from '../../packages/shared/src/types.js';
 import type { RankedMemory } from '../vector/memory.js';
 
 export type ContextSource = 'instructions' | 'memory' | 'conversation' | 'market-data' | 'tools';

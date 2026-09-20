@@ -16,7 +16,7 @@
  * `value` or `status` cannot collide with a keyword on either engine.
  */
 
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import type { SqlDialect, SqlValue } from './dialect.js';
 import type { EntityDefinition, TableName } from './schema.js';
 import { entityFor } from './schema.js';

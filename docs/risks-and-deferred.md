@@ -448,3 +448,45 @@ applied automatically.
 
 **Enforced instead:** `npm run audit:prod` plus a CI step, so a production-scope
 advisory fails the build while dev-toolchain noise does not block unrelated work.
+
+## 9. `packages/shared` extraction (Phase 4.3 — completed)
+
+Executed ADR-0035 step 2 as a physical package. Full record:
+[ADR-0036](./adr/ADR-0036-extract-shared-package-source-only.md); current layout:
+[monorepo.md](./monorepo.md).
+
+**§7's prediction above was wrong, and the correction is the substance of this phase.**
+It said the extraction would be "source-only ... no consumer import changes" because
+"every consumer already imports one of 13 exact names". Two measurement errors:
+
+1. **The surface is not 13 leaf modules.** `src/api/contracts.ts` imports `../auth/model.js`
+   and `./schemas.js`; `jobs/service.ts` imports `queue.js`/`vocabulary.js`/`core/logging.js`;
+   `marketdata/provider.ts` imports `core/rateLimit.js`/`core/retry.js`. The real closure is
+   **22 files**, and **91 files needed rewriting — 217 specifiers**. Only the _frontend's_
+   29 imports were unchanged.
+2. **`@shared/*` cannot be the backend's specifier.** It resolves only as a Vite/tsc alias;
+   compiled Node ESM cannot execute a `.ts` specifier, and Node disables type-stripping for
+   files under `node_modules`. The backend must use relative paths.
+
+**Non-obvious cost found:** `tsconfig.build.json` had no `rootDir`, so TypeScript inferred
+it from `src/` and emitted `dist/server/start.js`. Adding `packages/shared/src` moved the
+inferred root, shifting every output to `dist/src/…`. Updated consumers: 7 `package.json`
+scripts, `scripts/build-sidecar.mjs`, `src/desktop/cli.ts`. **`tauri.conf.json` needed no
+change** (`web/` and `src-tauri/` did not move) — better than the assessment predicted.
+
+**Deliberately not done:** no npm workspaces, so `npm ci` with the committed lockfile stays
+the single install path and the optional-dependency hoisting surface behind the
+`@tailwindcss/oxide` failure (`c92fa9c`) is unchanged. Both facts are asserted by test.
+
+**Good news the audit produced:** all 22 modules are pure — no `node:*`, Fastify, pino or
+database-driver imports anywhere in the closure — so the package is genuinely
+frontend-safe rather than merely convenient. `jobs/store.ts` imports nothing at all.
+
+**Status** — all green: `format:check`, `typecheck`, `typecheck:web`, **390 tests in 29
+files** (0 skipped, 0 todo), `build`, `build:web`, and 22 desktop checks with 0 errors and
+1 warning (the updater placeholder signing key). The boundary suite grew from 15 to 19
+tests, and now additionally asserts that the package's `exports` equal the declared
+surface, that the package is closed, and that the backend is a real consumer.
+
+**Deferred, with triggers (ADR-0035 §6 unchanged):** `apps/web` + `apps/api`, npm
+workspaces, a built `@master-trade/shared`, and the other four packages.

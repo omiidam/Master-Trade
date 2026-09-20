@@ -1,4 +1,4 @@
-export * from './types.js';
+export * from '../packages/shared/src/types.js';
 
 /* Phase 1 core: model / tools / instructions */
 export * from './tools/framework.js';
@@ -13,22 +13,22 @@ export * from './agent/orchestrator.js';
 export * from './evaluation/index.js';
 
 /* Phase 2 platform: core primitives */
-export * from './core/errors.js';
-export * from './core/provenance.js';
-export * from './core/ids.js';
-export * from './core/logging.js';
-export * from './core/retry.js';
-export * from './core/rateLimit.js';
+export * from '../packages/shared/src/core/errors.js';
+export * from '../packages/shared/src/core/provenance.js';
+export * from '../packages/shared/src/core/ids.js';
+export * from '../packages/shared/src/core/logging.js';
+export * from '../packages/shared/src/core/retry.js';
+export * from '../packages/shared/src/core/rateLimit.js';
 export * from './core/config.js';
 
 /* Phase 2 platform: layers */
 export * from './llm/index.js';
-export * from './auth/model.js';
-export * from './api/contracts.js';
-export * from './marketdata/provider.js';
+export * from '../packages/shared/src/auth/model.js';
+export * from '../packages/shared/src/api/contracts.js';
+export * from '../packages/shared/src/marketdata/provider.js';
 export * from './storage/files.js';
-export * from './jobs/queue.js';
-export * from './realtime/events.js';
+export * from '../packages/shared/src/jobs/queue.js';
+export * from '../packages/shared/src/realtime/events.js';
 export * from './vector/memory.js';
 
 /* Phase 2 platform: agent workflows + clients */
@@ -40,15 +40,15 @@ export * from './agent/context.js';
    gateway come from ./llm/index.js above; this adds the async model adapter that
    turns a provider response into the structured summary the agent may use. */
 export * from './agent/asyncModel.js';
-export * from './desktop/host.js';
-export * from './frontend/viewModels.js';
+export * from '../packages/shared/src/desktop/host.js';
+export * from '../packages/shared/src/frontend/viewModels.js';
 
 /* Phase 3.1: technology lock (decisions, not dependencies) */
 export * from './core/architectureLock.js';
 
 /* Phase 3.3: validation + authentication surfaces (the HTTP server lives in
    ./server/index.js so backend entry points do not load Fastify). */
-export * from './api/schemas.js';
+export * from '../packages/shared/src/api/schemas.js';
 export * from './auth/sessions.js';
 export * from './agent/service.js';
 export * from './config/loader.js';

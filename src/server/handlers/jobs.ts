@@ -12,9 +12,9 @@
  * not need and will not add silently.
  */
 
-import type { JobCancelBody, JobListQuery } from '../../api/schemas.js';
-import type { JobService, JobView } from '../../jobs/service.js';
-import type { JobStatus } from '../../jobs/vocabulary.js';
+import type { JobCancelBody, JobListQuery } from '../../../packages/shared/src/api/schemas.js';
+import type { JobService, JobView } from '../../../packages/shared/src/jobs/service.js';
+import type { JobStatus } from '../../../packages/shared/src/jobs/vocabulary.js';
 import type { RouteHandler } from '../context.js';
 
 export interface JobListResponseData {

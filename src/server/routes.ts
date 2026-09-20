@@ -25,8 +25,8 @@ import {
   okResponse,
   type AnyApiRoute,
   type ApiSocketRoute,
-} from '../api/contracts.js';
-import { AppError, PolicyViolationError } from '../core/errors.js';
+} from '../../packages/shared/src/api/contracts.js';
+import { AppError, PolicyViolationError } from '../../packages/shared/src/core/errors.js';
 import { runRequestPipeline, type PipelineDeps } from './authorization.js';
 import { requireRequestContext, type HandlerResult, type RouteHandler } from './context.js';
 

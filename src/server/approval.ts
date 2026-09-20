@@ -9,7 +9,7 @@
  */
 
 import type { ApprovalWorkflow } from '../agent/approval.js';
-import type { OperationId } from '../auth/model.js';
+import type { OperationId } from '../../packages/shared/src/auth/model.js';
 
 export interface ApprovalVerificationInput {
   operation: OperationId;

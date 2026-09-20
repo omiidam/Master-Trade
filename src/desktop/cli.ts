@@ -15,8 +15,10 @@ import { verifyDesktopShell } from './verify.js';
 import { capabilityMatrix } from './capabilities.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-// dist/desktop/cli.js -> the repository root is two levels up.
-const root = resolve(here, '..', '..');
+// dist/src/desktop/cli.js -> the repository root is three levels up.
+// (Phase 4.3: the build root became the repository root so that `packages/shared`
+// can be compiled alongside `src/` — see ADR-0035 step 2.)
+const root = resolve(here, '..', '..', '..');
 
 const report = await verifyDesktopShell({ root });
 

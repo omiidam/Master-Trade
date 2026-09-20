@@ -22,7 +22,7 @@
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import { DIALECTS, type SqlDialect, type SqlValue } from './dialect.js';
 import type { SqlExecutor, SqlParams, SqlRow } from './executor.js';
 

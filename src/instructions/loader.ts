@@ -6,7 +6,7 @@
  * Changing instructions = new version, never an in-place edit.
  */
 
-import { DEFAULT_SAFETY_PROFILE, type SafetyProfile } from '../types.js';
+import { DEFAULT_SAFETY_PROFILE, type SafetyProfile } from '../../packages/shared/src/types.js';
 
 export interface InstructionModule {
   id: string;

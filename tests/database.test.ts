@@ -36,7 +36,7 @@ import {
 import { encodeValue, decodeValue } from '../src/db/dialect.js';
 import { openInMemorySqlite } from '../src/db/sqlite.js';
 import { openPostgres, type PgQueryable } from '../src/db/postgres.js';
-import { PolicyViolationError } from '../src/core/errors.js';
+import { PolicyViolationError } from '../packages/shared/src/core/errors.js';
 
 const driver = sqliteDriverInfo();
 const withDatabase = driver.available ? it : it.skip;

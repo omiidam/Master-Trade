@@ -8,9 +8,9 @@ import {
   type LlmUsage,
 } from '../src/llm/provider.js';
 import { findPrice, MODEL_PRICES, priceUsage } from '../src/llm/pricing.js';
-import { AppError } from '../src/core/errors.js';
-import { MemoryLogSink, Logger } from '../src/core/logging.js';
-import { DEFAULT_RETRY_POLICY } from '../src/core/retry.js';
+import { AppError } from '../packages/shared/src/core/errors.js';
+import { MemoryLogSink, Logger } from '../packages/shared/src/core/logging.js';
+import { DEFAULT_RETRY_POLICY } from '../packages/shared/src/core/retry.js';
 
 const usage = (overrides: Partial<LlmUsage> = {}): LlmUsage => ({
   promptTokens: 0,

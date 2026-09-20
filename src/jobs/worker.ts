@@ -22,9 +22,13 @@
  * calls `start()`.
  */
 
-import type { Logger } from '../core/logging.js';
-import { JOB_DEFINITIONS, type JobQueue, type JobKind } from './queue.js';
-import type { JobRecord } from './store.js';
+import type { Logger } from '../../packages/shared/src/core/logging.js';
+import {
+  JOB_DEFINITIONS,
+  type JobQueue,
+  type JobKind,
+} from '../../packages/shared/src/jobs/queue.js';
+import type { JobRecord } from '../../packages/shared/src/jobs/store.js';
 
 export interface WorkerPoolOptions {
   queue: JobQueue;

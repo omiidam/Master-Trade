@@ -10,7 +10,7 @@ import {
   unsafeEnvFlags,
 } from '../src/config/loader.js';
 import { DEFAULT_CONFIG, resolveConfig } from '../src/core/config.js';
-import { AppError, PolicyViolationError } from '../src/core/errors.js';
+import { AppError, PolicyViolationError } from '../packages/shared/src/core/errors.js';
 
 describe('configuration management', () => {
   it('resolves the documented defaults with an empty environment', () => {

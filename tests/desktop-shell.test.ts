@@ -21,7 +21,7 @@ import {
   SHELL_COMMANDS,
   SHELL_PROTOCOL_VERSION,
   type InvokeFn,
-} from '../src/desktop/ipc.js';
+} from '../packages/shared/src/desktop/ipc.js';
 import {
   DEFAULT_DESKTOP_CONFIG,
   appDataDir,
@@ -45,7 +45,7 @@ import {
   type SidecarPlan,
 } from '../src/desktop/sidecar.js';
 import { verifyDesktopShell } from '../src/desktop/verify.js';
-import { AppError } from '../src/core/errors.js';
+import { AppError } from '../packages/shared/src/core/errors.js';
 
 const root = process.cwd();
 

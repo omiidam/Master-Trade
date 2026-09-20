@@ -1,170 +1,171 @@
-# Monorepo Foundation (Phase 4.2)
+# Monorepo Foundation — current state
 
-**Status:** Step 1 of [ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md)
-is implemented — the frontend/backend boundary is now a **declared, compiler-and-bundler
-enforced contract** (`@shared/*`). The directory layout has **not** changed: nothing was
-moved, no workspace was configured, no dependency was added.
+**Status:** Steps 1 and 2 of [ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md)
+are done. The frontend/backend boundary is a **declared contract** (Phase 4.2, `@shared/*`),
+and as of **Phase 4.3** that surface is the physical, source-only package
+**`packages/shared`** ([ADR-0036](./adr/ADR-0036-extract-shared-package-source-only.md)).
 
-Read [monorepo-assessment.md](./monorepo-assessment.md) first for the analysis. This
-document covers what was built, how it is enforced, and how to continue.
+This is the **current-state reference** for the repository layout. ADRs and module
+documents written before Phase 4.3 keep naming the pre-move paths; they are records of
+the phase that wrote them and are deliberately not rewritten.
 
-## 1. Why a boundary before a layout
+Read [monorepo-assessment.md](./monorepo-assessment.md) first for the original analysis.
 
-Phase 4.1 found the shared surface `packages/shared` would hold **already existed** —
-as 18 frontend files importing backend source through relative paths up to four
-levels deep (`../../../../src/marketdata/provider.js`). The migration's _benefit_
-(explicit, enforceable boundaries) did not require the migration's _risk_ (moving
-108 backend files, 81 frontend files, the Tauri build chain, and every test import,
-while changing npm's optional-dependency hoisting — the exact mechanism behind the
-`@tailwindcss/oxide` failure fixed in `c92fa9c`).
+## 1. What moved, and what did not
 
-So Phase 4.2 delivered the benefit without the risk: the boundary is now named.
+`packages/shared` now holds a **closed 22-module set** — the 13 declared surface entries
+plus the 9 modules they transitively need. Fourteen modules moved out of `src/`:
+`api/schemas`, `auth/model`, `core/logging`, `core/rateLimit`, `core/retry`,
+`desktop/host`, `jobs/queue`, `jobs/store`, `jobs/vocabulary` were the ones ADR-0035 did
+not know about, because it read the surface as 13 leaves rather than the root of an
+import graph.
+
+The subpath layout is preserved (`src/api/contracts.ts` →
+`packages/shared/src/api/contracts.ts`), so the moved modules' own internal imports stayed
+valid and the move was a pure `git mv` of a closed set.
+
+**Nothing else moved.** `web/` is still `web/`, the Rust shell is still `src-tauri/`, the
+tests are still `tests/`, and every other backend module is still under `src/`.
+`apps/{desktop,web,api}` and `packages/{ui,database,ai,market-data,trading-engine}` remain
+inert placeholders awaiting an ADR-0035 trigger.
 
 ## 2. The boundary: `@shared/*`
 
-The frontend no longer contains a single relative path into `src/`. It imports the
-declared surface by name:
+The frontend contains **no relative path into backend code**. It imports the declared
+surface by name, and those 29 imports did not change in Phase 4.3 — only their targets in
+`config/sharedSurface.ts` did. That is the claim ADR-0035 made; Phase 4.3 was the first
+phase able to verify it.
 
-```ts
-// before  — a path depth, not a contract
-import type { JobView } from '../../../src/jobs/service.js';
-// after
-import type { JobView } from '@shared/jobs/service';
-```
+**13 declared entries** (exact-match, never a directory prefix):
 
-**13 modules** make up the declared surface:
+| Specifier                     | Module in the package                        | Used by the frontend for          |
+| ----------------------------- | -------------------------------------------- | --------------------------------- |
+| `@shared/api/contracts`       | `packages/shared/src/api/contracts.ts`       | route ids, envelopes, error codes |
+| `@shared/core/errors`         | `packages/shared/src/core/errors.ts`         | `ERROR_STATUS`, error codes       |
+| `@shared/core/headers`        | `packages/shared/src/core/headers.ts`        | the shell-token header name       |
+| `@shared/core/ids`            | `packages/shared/src/core/ids.ts`            | correlation ids                   |
+| `@shared/core/provenance`     | `packages/shared/src/core/provenance.ts`     | provenance sources, labels        |
+| `@shared/desktop/ipc`         | `packages/shared/src/desktop/ipc.ts`         | the Rust command surface          |
+| `@shared/frontend/viewModels` | `packages/shared/src/frontend/viewModels.ts` | view models + UI invariants       |
+| `@shared/jobs/service`        | `packages/shared/src/jobs/service.ts`        | the job view contract             |
+| `@shared/marketdata/provider` | `packages/shared/src/marketdata/provider.ts` | `DataProvenance`                  |
+| `@shared/realtime/contracts`  | `packages/shared/src/realtime/contracts.ts`  | event names, payload schemas      |
+| `@shared/realtime/events`     | `packages/shared/src/realtime/events.ts`     | the event envelope                |
+| `@shared/realtime/protocol`   | `packages/shared/src/realtime/protocol.ts`   | the WebSocket wire protocol       |
+| `@shared/types`               | `packages/shared/src/types.ts`               | `EpistemicKind`, shared types     |
 
-| Specifier                     | Backend module               | What the frontend uses it for     |
-| ----------------------------- | ---------------------------- | --------------------------------- |
-| `@shared/api/contracts`       | `src/api/contracts.ts`       | route ids, envelopes, error codes |
-| `@shared/core/errors`         | `src/core/errors.ts`         | `ERROR_STATUS`, error codes       |
-| `@shared/core/headers`        | `src/core/headers.ts`        | the shell-token header name       |
-| `@shared/core/ids`            | `src/core/ids.ts`            | correlation ids                   |
-| `@shared/core/provenance`     | `src/core/provenance.ts`     | provenance sources, labels        |
-| `@shared/desktop/ipc`         | `src/desktop/ipc.ts`         | the Rust command surface          |
-| `@shared/frontend/viewModels` | `src/frontend/viewModels.ts` | view models + UI invariants       |
-| `@shared/jobs/service`        | `src/jobs/service.ts`        | the job view contract             |
-| `@shared/marketdata/provider` | `src/marketdata/provider.ts` | `DataProvenance`                  |
-| `@shared/realtime/contracts`  | `src/realtime/contracts.ts`  | event names and payload schemas   |
-| `@shared/realtime/events`     | `src/realtime/events.ts`     | the event envelope                |
-| `@shared/realtime/protocol`   | `src/realtime/protocol.ts`   | the WebSocket wire protocol       |
-| `@shared/types`               | `src/types.ts`               | `EpistemicKind`, shared types     |
+`@shared/db/sqlite`, `@shared/server/app`, `@shared/jobs/queue` and bare `@shared` have
+**no resolver entry**, so they fail to type-check _and_ to bundle.
 
-The mapping is **exact-match, not a directory prefix**. `@shared/db/sqlite`,
-`@shared/server/app` and `@shared/jobs/queue` do not resolve — at typecheck time
-_and_ at bundle time. The boundary is enforced by the toolchain, not only by a test.
+`config/sharedSurface.ts` remains the **one list**, consumed by `vite.config.ts` and
+`vitest.config.ts` and mirrored literally in both tsconfigs (TypeScript `paths` cannot
+read a module). `tests/monorepo-boundary.test.ts` asserts all mirrors agree.
 
-**One list, three consumers.** `config/sharedSurface.ts` holds the map; it is not
-duplicated anywhere.
-
-| Consumer            | How it reads the surface                                                      |
-| ------------------- | ----------------------------------------------------------------------------- |
-| `vite.config.ts`    | `sharedAlias(root)` → `resolve.alias` (Vite does not read TypeScript `paths`) |
-| `vitest.config.ts`  | the same `sharedAlias(root)`                                                  |
-| `tsconfig.json`     | a literal `paths` mirror (targets `./src/…js`, required by `NodeNext`)        |
-| `web/tsconfig.json` | a literal `paths` mirror (`../src/…js`, `moduleResolution: bundler`)          |
-
-Vitest needs the alias for a reason worth naming: several suites import frontend
-modules directly (`tests/realtime-client.test.ts` → `web/src/realtime/client.ts`), and
-those modules cross the boundary. A mapping that exists only in the bundle config would
-make the boundary work in production and fail in CI.
-
-`config/sharedSurface.ts` cannot be reduced to two places, because TypeScript `paths`
-cannot read a module. `tests/monorepo-boundary.test.ts` therefore asserts that the two
-tsconfig blocks agree with the shared map on every specifier and every target, and that
-neither bundler config inlines its own copy.
-
-No plugin was added: the alias is a plain resolver map, not a dependency.
-
-## 3. Target structure (not yet populated)
+## 3. How each side resolves it
 
 ```
-apps/                        packages/
-├── desktop/                 ├── ui/
-├── web/                     ├── database/
-└── api/                     ├── ai/
-                             ├── market-data/
-                             ├── trading-engine/
-                             └── shared/
+frontend   web/src/**  ──@shared/*──▶  config/sharedSurface.ts  ──▶ packages/shared/src/**
+backend    src/**      ──relative──▶   packages/shared/src/**      (Node cannot run a .ts specifier)
 ```
 
-These directories exist as **documentation markers only**. Each holds a README
-stating what will move there and which trigger fires it. There is deliberately
-**no `package.json` inside them** and **no `workspaces` field** in the root
-`package.json`, so npm does not treat them as packages and nothing can be
-accidentally imported from them. `tests/monorepo-boundary.test.ts` asserts both.
+The asymmetry is forced, not chosen. `@shared/*` exists only because it is a Vite/tsc
+alias; the compiled backend is plain Node ESM, which cannot execute a `.ts` specifier, and
+Node disables type-stripping for files inside `node_modules`. Of the three things that
+_do_ resolve at runtime — a relative path, a built `node_modules` package, or a
+`#`-prefixed subpath — only the relative path preserves "source-only, no build step", which
+is what ADR-0035 required.
 
-Where things live **today**, unchanged: backend in `src/`, frontend in `web/`,
-shell in `src-tauri/`, tests in `tests/`, docs in `docs/`.
+So the backend's shared-module specifiers are relative:
+`src/server/errors.ts` imports `../../packages/shared/src/core/errors.js`. **This is
+longer than the old `../core/errors.js`; the cost is accepted and recorded in ADR-0036.**
 
-## 4. Dependency direction (the rule that must hold)
+## 4. Dependency direction (the rules that must hold)
 
 ```
-web/src/**  ──@shared/*──▶  src/**   (13 declared modules only)
-src/**      ──✗──▶  web/**           (never; asserted)
-web/src/**  ──✗──▶  src/{db,server,auth,jobs/queue,jobs/store}   (internals, never)
+packages/shared  ──✗──▶  src/** , web/** , src-tauri/**
+web/src/**       ──@shared/*──▶  packages/shared/**   (13 declared entries only)
+src/**           ──relative──▶   packages/shared/**
+src/**           ──✗──▶  web/**                        (never; asserted)
+web/src/**       ──✗──▶  src/{db,server,auth,jobs/queue,jobs/store}   (internals, never)
 ```
 
-`apps/*` will consume `packages/*`; `packages/*` never import an app. That is the
-same rule, one level up, and it is what the declared surface pre-encodes.
+`apps/*` will consume `packages/*`; `packages/*` never import an app.
 
-## 5. Migration boundaries — what may and may not move
+## 5. Build and install topology
 
-**May move (when the trigger fires):** the 13 shared modules, whole backend modules
-(`src/db` → `packages/database`, `src/llm`+`src/agent`+`src/vector` → `packages/ai`,
-`src/marketdata` → `packages/market-data`, the frontend component set → `packages/ui`).
+**Build.** `tsconfig.build.json` now sets `rootDir: "."` and includes
+`packages/shared/src/**/*.ts`, so output is:
+
+```
+dist/src/**                      ← the backend
+dist/packages/shared/src/**      ← the shared package
+```
+
+That move was the non-obvious cost. The previous config let TypeScript infer `rootDir`
+from `src/`, which is why the entry point used to be `dist/server/start.js`. Consumers
+updated in Phase 4.3: 7 `package.json` scripts, `scripts/build-sidecar.mjs`, and
+`src/desktop/cli.ts`'s repository-root computation. **`tauri.conf.json` needed no
+change**, because `web/` and `src-tauri/` did not move.
+
+**Install.** `packages/shared` carries a real manifest — `name`, `private: true`, and an
+`exports` map mirroring the declared surface — but is deliberately **not** an npm
+workspace. `npm ci` with the committed lockfile remains the single install path, so the
+optional-dependency hoisting surface behind the `@tailwindcss/oxide` failure (`c92fa9c`)
+is unchanged. Both facts are asserted.
+
+## 6. What may move next, and what may not
+
+**May move (when a trigger fires):** `src/db` → `packages/database`, `src/llm` +
+`src/agent` + `src/vector` → `packages/ai`, `src/marketdata` → `packages/market-data`,
+the frontend component set → `packages/ui`, and `web/` → `apps/web`, `src/` → `apps/api`.
 
 **Must not move without a separate, reviewed change:**
 
-- `src-tauri/**` — the Rust shell and `scripts/build-sidecar.mjs` hardcode
-  `../web/dist` and `dist/server/start.js`; the sidecar cannot be built here (no Rust
+- `src-tauri/**` — the shell and `scripts/build-sidecar.mjs` hardcode `../web/dist` and
+  the `dist/src/server/start.js` path; the sidecar cannot be built here (no Rust
   toolchain), so a move cannot be verified.
-- `tests/**` — 28 suites import `../src/…`; `technology-lock.test.ts` reads
-  `process.cwd()/src/**` directly.
-- The `@shared` mapping itself, without updating all three mirrors at once.
+- The `@shared` mapping and the package's `exports` map, without updating all three
+  mirrors at once.
+- `packages/shared`'s closure — the package must stay closed, or it stops being a package.
 
-## 6. Current limitations
+## 7. Current limitations
 
-1. **`@shared` is a name over `src/`, not a package.** There is no `packages/shared`
-   yet; the alias points into `src/`. It makes the boundary _stable and enforceable_,
-   not _physically separate_.
-2. **No workspace tooling.** Deliberate (ADR-0035): `npm ci` with the committed
-   lockfile remains the single install path.
-3. **The placeholder directories are inert.** They cannot be built, imported or
-   installed; they are a map, not a package set.
-4. **The frontend still reads backend source**, so the two typecheck configs must
-   both carry the `paths` mapping. A published package would need a build step.
-5. **`node:sqlite` portability is unchanged** — no impact from this work.
+1. **The backend's specifiers are longer.** The physical package cost 217 rewrites into
+   `../../packages/shared/src/…`. A built package with one specifier everywhere remains
+   available later; the `exports` map is already in place for it.
+2. **No workspace tooling.** Deliberate — install topology is frozen for now.
+3. **Five placeholder directories are inert.** They cannot be built, imported or installed.
+4. **The frontend still reads source, not a built artifact**, so both tsconfigs must carry
+   the `paths` mapping.
+5. **`node:sqlite` portability is unchanged.** `packages/shared` contains no database code
+   by construction: the closure is pure, with no `node:*`, Fastify or driver imports.
 
-## 7. Next step (Phase 4.3 candidate)
+## 8. Next step (Phase 4.4 candidate)
 
-Per ADR-0035, the next action is **not** the full migration. It is:
+Per ADR-0035, the next action is **not** the full migration. Options, in order of
+justification:
 
-**Extract `packages/shared` only — source-only, no build step.** With the alias in
-place this is mechanical: create `packages/shared/` with a real `package.json`, move
-the 13 modules into it, and repoint the alias target from `src/…` to `packages/shared/…`.
-Because every consumer already imports one of 13 exact specifiers, no consumer import
-changes — which is precisely the point of doing Step 1 first.
+1. **Wire `packages/shared` as an npm workspace + built package** — only if the longer
+   backend specifiers prove to be real friction, and only with a clean Ubuntu install
+   re-verifying the native engine first.
+2. **Extract `packages/market-data`** if a trigger fires.
+3. **`apps/web` + `apps/api`** when a trigger fires.
 
-Split `packages/database`, `packages/ai`, `packages/market-data`, `packages/ui` and
-`packages/trading-engine` only when a trigger from §6 of the assessment fires (a
-second consumer, independent packaging, or non-Rust sidecar build steps).
+## 9. How it is enforced
 
-## 8. How it is enforced
+`tests/monorepo-boundary.test.ts` (19 tests) asserts:
 
-`tests/monorepo-boundary.test.ts` (14 tests) asserts:
-
-- the dependency direction is one-way (nothing in `src/` imports `web/`);
-- no frontend file reaches into `src/` by relative path — the boundary is only `@shared/*`;
-- every `@shared/*` specifier used in the frontend is on the declared surface, and no
-  declared module is dead (every one is actually consumed);
-- both tsconfig `paths` blocks contain **exactly** the shared map's 13 specifiers and
-  agree on every target file, and every target exists;
-- both bundler configs import the shared map instead of inlining literals;
-- the surface contains no backend internals, and internal or unknown specifiers
-  (`@shared/db/sqlite`, `@shared/server/app`, bare `@shared`) have **no resolver entry**,
-  so they fail to build rather than quietly resolving;
-- `apps/` and `packages/` contain no `package.json` and the root package declares no
-  `workspaces` (no accidental half-migration);
-- the placeholder READMEs exist and say what they are;
-- the assessment, ADR-0035 and this document exist and are cross-referenced.
+- dependency direction is one-way, and no frontend file reaches into `src/` relatively;
+- every `@shared/*` specifier used is declared, and no declared entry is dead;
+- both tsconfig `paths` blocks contain exactly the surface's 13 entries and agree on every
+  target, and both bundler configs read the shared map rather than inlining literals;
+- the surface contains no backend internals, and internal/unknown specifiers have **no**
+  resolver entry;
+- **`packages/shared` carries a manifest whose `exports` are exactly the declared
+  surface**;
+- **the package is closed** — no module inside it imports a file outside it, and the full
+  closure is present;
+- **the backend consumes it too**, so it has two genuine consumers;
+- **no npm workspaces**, so the install topology cannot drift by accident;
+- the remaining placeholder directories hold no `package.json` and say what they are;
+- the assessment, ADR-0035, ADR-0036 and this document exist and are cross-referenced.

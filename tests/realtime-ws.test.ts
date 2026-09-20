@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { createServer, type ServerDeps, type ServerInstance } from '../src/server/index.js';
-import { API_ROUTES, SOCKET_ROUTES } from '../src/api/contracts.js';
-import { MemoryLogSink } from '../src/core/logging.js';
+import { API_ROUTES, SOCKET_ROUTES } from '../packages/shared/src/api/contracts.js';
+import { MemoryLogSink } from '../packages/shared/src/core/logging.js';
 import { DEFAULT_CONFIG, resolveConfig, type ConfigOverrides } from '../src/core/config.js';
-import { CLOSE_CODES, REALTIME_SUBPROTOCOL } from '../src/realtime/protocol.js';
+import { CLOSE_CODES, REALTIME_SUBPROTOCOL } from '../packages/shared/src/realtime/protocol.js';
 import { REALTIME_ROUTE } from '../src/realtime/ws.js';
 import { SHELL_TOKEN_HEADER } from '../src/server/access.js';
 

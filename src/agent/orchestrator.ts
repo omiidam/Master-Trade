@@ -10,7 +10,7 @@ import { AgentLifecycle } from './lifecycle.js';
 import type { ContextSection } from './context.js';
 import { section } from './context.js';
 import type { AsyncModelAdapter, ToolRequest } from './asyncModel.js';
-import { toAppError } from '../core/errors.js';
+import { toAppError } from '../../packages/shared/src/core/errors.js';
 import type { AnyTool, ToolRegistry } from '../tools/framework.js';
 import type { ToolResult } from '../tools/framework.js';
 import { checkPermission, PHASE1_PERMISSIONS, type Subject } from '../permissions/model.js';
@@ -18,7 +18,11 @@ import type { InstructionSet } from '../instructions/loader.js';
 import { renderInstructions } from '../instructions/loader.js';
 import type { MemoryStore } from '../memory/store.js';
 import type { StructuredSummary } from '../llm/summary.js';
-import type { EpistemicKind, ModelStatement, SafetyProfile } from '../types.js';
+import type {
+  EpistemicKind,
+  ModelStatement,
+  SafetyProfile,
+} from '../../packages/shared/src/types.js';
 
 /** The reasoning component. Phase 1: scripted; later: real LLM. */
 export interface ModelAdapter {

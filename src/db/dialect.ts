@@ -22,7 +22,7 @@
  * both engines are fully testable without a server or a native module.
  */
 
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import type { ColumnDef, ColumnType } from './schema.js';
 
 export type DialectId = 'sqlite' | 'postgres';

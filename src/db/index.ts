@@ -14,7 +14,7 @@
 
 import { resolve } from 'node:path';
 import type { AppConfig } from '../core/config.js';
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import { MIGRATIONS } from './migrations/index.js';
 import { validateMigrationRegistry } from './migrations/index.js';
 import { assertDatabaseInvariants } from './ownership.js';

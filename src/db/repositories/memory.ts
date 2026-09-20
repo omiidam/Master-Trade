@@ -22,8 +22,8 @@
  * is a re-embedding job rather than a rewrite of the memory records.
  */
 
-import { AppError, PolicyViolationError } from '../../core/errors.js';
-import { ids } from '../../core/ids.js';
+import { AppError, PolicyViolationError } from '../../../packages/shared/src/core/errors.js';
+import { ids } from '../../../packages/shared/src/core/ids.js';
 import type { SqlExecutor } from '../executor.js';
 import { Table } from '../table.js';
 import type { Owner } from '../ownership.js';

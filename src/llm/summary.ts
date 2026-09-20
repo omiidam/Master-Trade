@@ -24,8 +24,8 @@
  * with it.
  */
 
-import { AppError } from '../core/errors.js';
-import type { EpistemicKind } from '../types.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
+import type { EpistemicKind } from '../../packages/shared/src/types.js';
 import type { LlmToolCall } from './provider.js';
 
 export const EPISTEMIC_KINDS: readonly EpistemicKind[] = [

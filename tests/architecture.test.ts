@@ -12,25 +12,34 @@ import {
   type Tool,
 } from '../src/index.js';
 import { DEFAULT_CONFIG, resolveConfig, assertSafeConfig } from '../src/core/config.js';
-import { ERROR_STATUS, PolicyViolationError, toAppError } from '../src/core/errors.js';
+import {
+  ERROR_STATUS,
+  PolicyViolationError,
+  toAppError,
+} from '../packages/shared/src/core/errors.js';
 import {
   ALL_OPERATION_IDS,
   OPERATIONS,
   assertNoHardlineOperations,
   authorize,
   type Principal,
-} from '../src/auth/model.js';
-import { API_ROUTES, findRoute, guardRoute, validateEnvelope } from '../src/api/contracts.js';
+} from '../packages/shared/src/auth/model.js';
+import {
+  API_ROUTES,
+  findRoute,
+  guardRoute,
+  validateEnvelope,
+} from '../packages/shared/src/api/contracts.js';
 import {
   NAV_ITEMS,
   assertNoExecutionControls,
   provenanceLabel,
-} from '../src/frontend/viewModels.js';
+} from '../packages/shared/src/frontend/viewModels.js';
 import {
   assertDesktopHost,
   memoryDesktopHost,
   listMissingCapabilities,
-} from '../src/desktop/host.js';
+} from '../packages/shared/src/desktop/host.js';
 
 const principal = (roles: Principal['roles'], id = 'user_1'): Principal => ({
   id,

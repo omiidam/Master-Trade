@@ -3,8 +3,9 @@
   "compilerOptions": {
     "noEmit": false,
     "outDir": "dist",
-    "declaration": true
+    "declaration": true,
+    "rootDir": "."
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "packages/shared/src/**/*.ts"],
   "exclude": ["tests/**/*.ts"]
 }

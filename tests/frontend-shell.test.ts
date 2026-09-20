@@ -14,7 +14,7 @@ import {
   THEME,
   TOKEN_GROUPS,
 } from '../web/src/design/tokens.js';
-import { assertNoExecutionControls } from '../src/frontend/viewModels.js';
+import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 
 const root = process.cwd();
 const web = join(root, 'web');

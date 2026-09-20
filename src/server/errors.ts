@@ -11,10 +11,14 @@
  */
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { CORRELATION_ID_HEADER, errorResponse, type ApiResponse } from '../api/contracts.js';
-import { AppError, toAppError, type ErrorCode } from '../core/errors.js';
-import { ids } from '../core/ids.js';
-import type { Logger } from '../core/logging.js';
+import {
+  CORRELATION_ID_HEADER,
+  errorResponse,
+  type ApiResponse,
+} from '../../packages/shared/src/api/contracts.js';
+import { AppError, toAppError, type ErrorCode } from '../../packages/shared/src/core/errors.js';
+import { ids } from '../../packages/shared/src/core/ids.js';
+import type { Logger } from '../../packages/shared/src/core/logging.js';
 
 export interface HttpFailure {
   status: number;

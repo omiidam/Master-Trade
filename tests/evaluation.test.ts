@@ -4,7 +4,7 @@ import { Orchestrator } from '../src/agent/orchestrator.js';
 import { defaultToolRegistry } from '../src/tools/index.js';
 import { loadInstructions } from '../src/instructions/loader.js';
 import { scriptedModelAdapter } from '../src/agent/orchestrator.js';
-import { DEFAULT_SAFETY_PROFILE } from '../src/types.js';
+import { DEFAULT_SAFETY_PROFILE } from '../packages/shared/src/types.js';
 import { evaluate } from '../src/evaluation/harness.js';
 
 describe('evaluation harness', () => {

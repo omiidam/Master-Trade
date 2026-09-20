@@ -12,7 +12,7 @@
  */
 
 import type { AppConfig } from '../../core/config.js';
-import { AppError } from '../../core/errors.js';
+import { AppError } from '../../../packages/shared/src/core/errors.js';
 import { describeConfig, type ConfigSummary } from '../../config/loader.js';
 import type { RouteHandler } from '../context.js';
 import type { HealthRegistry, HealthStatus } from '../health.js';

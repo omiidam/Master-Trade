@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { InMemoryJobStore } from '../src/jobs/store.js';
-import { JOB_DEFINITIONS, JobQueue } from '../src/jobs/queue.js';
+import { InMemoryJobStore } from '../packages/shared/src/jobs/store.js';
+import { JOB_DEFINITIONS, JobQueue } from '../packages/shared/src/jobs/queue.js';
 import {
   EventBus,
   assertOrdered,
   missingSequences,
   type RealtimeEvent,
-} from '../src/realtime/events.js';
-import { AppError, PolicyViolationError } from '../src/core/errors.js';
-import { backoffDelay, withRetry } from '../src/core/retry.js';
-import { SlidingWindowRateLimiter, rateLimitPolicyFrom } from '../src/core/rateLimit.js';
-import type { Principal } from '../src/auth/model.js';
+} from '../packages/shared/src/realtime/events.js';
+import { AppError, PolicyViolationError } from '../packages/shared/src/core/errors.js';
+import { backoffDelay, withRetry } from '../packages/shared/src/core/retry.js';
+import {
+  SlidingWindowRateLimiter,
+  rateLimitPolicyFrom,
+} from '../packages/shared/src/core/rateLimit.js';
+import type { Principal } from '../packages/shared/src/auth/model.js';
 
 export const principal = (roles: Principal['roles'], id = 'u1'): Principal => ({
   id,

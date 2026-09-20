@@ -16,9 +16,9 @@
  *   4. Evaluations are append-only: a re-run adds evidence, it never rewrites it.
  */
 
-import { AppError, PolicyViolationError } from '../../core/errors.js';
-import { ids } from '../../core/ids.js';
-import { OPERATIONS, type OperationId } from '../../auth/model.js';
+import { AppError, PolicyViolationError } from '../../../packages/shared/src/core/errors.js';
+import { ids } from '../../../packages/shared/src/core/ids.js';
+import { OPERATIONS, type OperationId } from '../../../packages/shared/src/auth/model.js';
 import type { SqlExecutor } from '../executor.js';
 import { Table } from '../table.js';
 import type { Owner } from '../ownership.js';

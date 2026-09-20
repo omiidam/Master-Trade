@@ -9,7 +9,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { PolicyViolationError } from '../core/errors.js';
+import { PolicyViolationError } from '../../packages/shared/src/core/errors.js';
 
 export type FileCategory = 'document' | 'dataset' | 'chart-image' | 'report-export' | 'attachment';
 

@@ -15,8 +15,11 @@ import { SHARED_SURFACE, sharedAlias } from '../config/sharedSurface.js';
  *      not an accident of path depth;
  *   3. the contract is mirrored in three places (both tsconfigs and the Vite
  *      resolver) and they cannot drift apart;
- *   4. the target `apps/` and `packages/` directories are documentation markers,
- *      not half-built packages — no `package.json`, no npm workspaces.
+ *   4. `packages/shared` is a **physical, self-contained package** (Phase 4.3) whose
+ *      manifest exports exactly the declared surface, holding the full transitive
+ *      closure and importing nothing outside itself;
+ *   5. the *remaining* target directories are still documentation markers, and npm
+ *      workspaces are still absent, so the install topology cannot drift by accident.
  *
  * Adding a module to the surface is a deliberate four-file edit (this list, both
  * tsconfigs, the Vite map). That friction is the point: it forces the question
@@ -32,10 +35,9 @@ const root = process.cwd();
  */
 const DECLARED_SPECIFIERS: Readonly<Record<string, string>> = SHARED_SURFACE;
 
-/** The same module set, as `src/...` paths without extension (for the internals check). */
-const SHARED_ENTRY_MODULES: readonly string[] = Object.values(SHARED_SURFACE).map((file) =>
-  file.replace(/\.ts$/, ''),
-);
+/** The physical package that holds the shared surface (Phase 4.3, ADR-0035 step 2). */
+const SHARED_PACKAGE = 'packages/shared';
+const SHARED_PACKAGE_SRC = `${SHARED_PACKAGE}/src`;
 
 /** Backend modules the frontend must never import: implementation, not contract. */
 const INTERNAL_PREFIXES = [
@@ -44,6 +46,24 @@ const INTERNAL_PREFIXES = [
   'src/auth/',
   'src/jobs/queue',
   'src/jobs/store',
+];
+
+/**
+ * The target directories that are still **documentation markers** after Phase 4.3.
+ *
+ * `packages/shared` is no longer one of them: it holds real source and a real manifest.
+ * The rest wait for an ADR-0035 trigger, so they must stay inert — a directory that
+ * merely looks like a package is the half-migration the staging decision prevents.
+ */
+const PLACEHOLDER_DIRECTORIES = [
+  'apps/desktop',
+  'apps/web',
+  'apps/api',
+  'packages/ui',
+  'packages/database',
+  'packages/ai',
+  'packages/market-data',
+  'packages/trading-engine',
 ];
 
 function filesUnder(dir: string, extension: string): string[] {
@@ -169,8 +189,11 @@ describe('monorepo boundary: the declared surface', () => {
   });
 
   it('refuses backend internals on the surface', () => {
-    const leaked = SHARED_ENTRY_MODULES.filter((module) =>
-      INTERNAL_PREFIXES.some((prefix) => module.startsWith(prefix)),
+    // After Phase 4.3 the surface targets live under packages/shared/src, so the
+    // question is not *where* an entry sits but *what it names*: an implementation
+    // module such as the database driver or the HTTP server must never be a contract.
+    const leaked = Object.values(DECLARED_SPECIFIERS).filter((file) =>
+      INTERNAL_PREFIXES.some((prefix) => file.replace(`${SHARED_PACKAGE}/`, '').startsWith(prefix)),
     );
     expect(leaked, 'an implementation module must not be part of the contract').toEqual([]);
   });
@@ -232,44 +255,85 @@ describe('monorepo boundary: the three mirrors cannot drift', () => {
   });
 });
 
-describe('monorepo boundary: the target structure is inert', () => {
-  const TARGET_DIRECTORIES = [
-    'apps/desktop',
-    'apps/web',
-    'apps/api',
-    'packages/ui',
-    'packages/database',
-    'packages/ai',
-    'packages/market-data',
-    'packages/trading-engine',
-    'packages/shared',
-  ];
-
-  it('keeps the placeholder READMEs that say what each directory is', () => {
-    for (const directory of TARGET_DIRECTORIES) {
-      const readme = join(root, directory, 'README.md');
-      expect(existsSync(readme), `${directory}/README.md is missing`).toBe(true);
-      const text = readFileSync(readme, 'utf8');
-      expect(text, `${directory}/README.md does not say it is a placeholder`).toMatch(
-        /placeholder|not a package/i,
+describe('monorepo boundary: the shared package is physical', () => {
+  /** Relative specifiers a source file imports, as repository-relative targets. */
+  function relativeTargets(file: string): string[] {
+    const targets: string[] = [];
+    for (const specifier of importSpecifiers(readFileSync(join(root, file), 'utf8'))) {
+      if (!specifier.startsWith('.')) continue;
+      targets.push(
+        relative(root, resolve(root, dirname(file), specifier.replace(/\.js$/, '.ts')))
+          .split(sep)
+          .join('/'),
       );
-      expect(text, `${directory}/README.md does not say nothing lives there yet`).toMatch(
-        /nothing lives here yet|nothing has been moved/i,
+    }
+    return targets;
+  }
+
+  it('carries a manifest whose exports are exactly the declared surface', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(root, SHARED_PACKAGE, 'package.json'), 'utf8'),
+    ) as {
+      name?: string;
+      private?: boolean;
+      exports?: Record<string, string>;
+    };
+    expect(manifest.private, 'the shared package must not be publishable').toBe(true);
+    const declared = Object.keys(DECLARED_SPECIFIERS)
+      .map((specifier) => specifier.replace('@shared/', './'))
+      .sort();
+    expect(sorted(Object.keys(manifest.exports ?? {}))).toEqual(declared);
+    // Every export target must be the same file the resolver uses — one surface, not two.
+    for (const [specifier, file] of Object.entries(DECLARED_SPECIFIERS)) {
+      const key = specifier.replace('@shared/', './');
+      expect(manifest.exports?.[key], `exports[${key}] disagrees with the surface`).toBe(
+        `./${file.replace(`${SHARED_PACKAGE}/`, '')}`,
       );
     }
   });
 
-  it('contains no package.json in the target directories (no half-built packages)', () => {
-    const strays = TARGET_DIRECTORIES.filter((directory) =>
-      existsSync(join(root, directory, 'package.json')),
-    );
-    expect(
-      strays,
-      'a package.json appeared without a reviewed migration; ADR-0035 stages the extraction',
-    ).toEqual([]);
+  it('is closed: nothing inside it imports a file outside it', () => {
+    // This is what makes it a package rather than a folder. If a shared module reached
+    // back into `src/`, the dependency direction would invert and the extraction would
+    // be a rename with extra steps.
+    const escapes: string[] = [];
+    for (const file of filesUnder(SHARED_PACKAGE_SRC, '.ts')) {
+      for (const target of relativeTargets(file)) {
+        if (!target.startsWith(`${SHARED_PACKAGE_SRC}/`)) escapes.push(`${file} -> ${target}`);
+      }
+    }
+    expect(escapes, 'the shared package must depend on nothing in src/ or web/').toEqual([]);
   });
 
-  it('declares no npm workspaces (the layout is unchanged)', () => {
+  it('holds the whole closure, so no moved module was left behind', () => {
+    // Every file the surface transitively needs must live inside the package. A missing
+    // one would show up as a deep relative path escaping the package — caught above —
+    // but this states the intent positively: the package is self-contained.
+    const members = new Set(filesUnder(SHARED_PACKAGE_SRC, '.ts'));
+    for (const file of members) {
+      for (const target of relativeTargets(file)) {
+        expect(members.has(target), `${file} imports ${target}, which is not in the package`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it('is consumed by the backend too, not only the frontend', () => {
+    // Two genuine consumers is the whole justification for the package existing.
+    const backendConsumers = filesUnder('src', '.ts').filter((file) =>
+      relativeTargets(file).some((target) => target.startsWith(`${SHARED_PACKAGE_SRC}/`)),
+    );
+    expect(
+      backendConsumers.length,
+      'the backend does not consume the shared package',
+    ).toBeGreaterThan(0);
+  });
+
+  it('declares no npm workspaces yet, so the install topology is unchanged', () => {
+    // `npm ci` with the committed lockfile stays the single install path. Workspaces
+    // hoist differently, which is the mechanism behind the @tailwindcss/oxide failure
+    // fixed in c92fa9c — so it is a separate, deliberate decision, not a side effect.
     const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
       workspaces?: unknown;
       dependencies?: Record<string, string>;
@@ -283,15 +347,48 @@ describe('monorepo boundary: the target structure is inert', () => {
   });
 });
 
+describe('monorepo boundary: the remaining target structure is inert', () => {
+  it('keeps the placeholder READMEs that say what each directory is', () => {
+    for (const directory of PLACEHOLDER_DIRECTORIES) {
+      const readme = join(root, directory, 'README.md');
+      expect(existsSync(readme), `${directory}/README.md is missing`).toBe(true);
+      const text = readFileSync(readme, 'utf8');
+      expect(text, `${directory}/README.md does not say it is a placeholder`).toMatch(
+        /placeholder|not a package/i,
+      );
+      expect(text, `${directory}/README.md does not say nothing lives there yet`).toMatch(
+        /nothing lives here yet|nothing has been moved/i,
+      );
+    }
+  });
+
+  it('contains no package.json in the still-inert directories', () => {
+    const strays = PLACEHOLDER_DIRECTORIES.filter((directory) =>
+      existsSync(join(root, directory, 'package.json')),
+    );
+    expect(
+      strays,
+      'a package.json appeared without a reviewed migration; ADR-0035 stages the extraction',
+    ).toEqual([]);
+  });
+});
+
 describe('monorepo boundary: the decision is recorded', () => {
   it('keeps the assessment, the ADR, the foundation doc and the index linked', () => {
     const adr = 'ADR-0035-monorepo-migration-staged-boundary-first.md';
-    for (const file of ['docs/monorepo-assessment.md', 'docs/monorepo.md', `docs/adr/${adr}`]) {
+    const extractionAdr = 'ADR-0036-extract-shared-package-source-only.md';
+    for (const file of [
+      'docs/monorepo-assessment.md',
+      'docs/monorepo.md',
+      `docs/adr/${adr}`,
+      `docs/adr/${extractionAdr}`,
+    ]) {
       expect(existsSync(join(root, file)), `${file} is missing`).toBe(true);
     }
 
     const index = readFileSync(join(root, 'docs', 'adr', 'README.md'), 'utf8');
     expect(index, 'ADR-0035 is not listed in the ADR index').toContain('0035');
+    expect(index, 'ADR-0036 is not listed in the ADR index').toContain('0036');
 
     const assessment = readFileSync(join(root, 'docs', 'monorepo-assessment.md'), 'utf8');
     expect(assessment).toContain(adr);
@@ -304,8 +401,20 @@ describe('monorepo boundary: the decision is recorded', () => {
 
     const foundation = readFileSync(join(root, 'docs', 'monorepo.md'), 'utf8');
     expect(foundation).toContain(adr);
-    expect(foundation, 'the foundation doc must state the layout did not change').toMatch(
-      /has \*\*not\*\* changed|nothing was\s+moved/i,
+    expect(
+      foundation,
+      'the foundation doc must record that packages/shared is now physical',
+    ).toMatch(/packages\/shared/i);
+    // Phase 4.3 moved the shared surface out of `src/`; the document must say so
+    // rather than still claiming an unchanged layout.
+    expect(foundation, 'the foundation doc must record the Phase 4.3 extraction').toMatch(
+      /Phase 4\.3|extract/i,
+    );
+    // The extraction must name the ADR that authorised it, and the ADR must name the
+    // decision id, so the layout cannot change without a traceable decision.
+    expect(foundation).toContain(extractionAdr);
+    expect(readFileSync(join(root, 'docs', 'adr', extractionAdr), 'utf8')).toContain(
+      'DEC-REPO-2-EXTRACT-SHARED',
     );
   });
 });

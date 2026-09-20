@@ -10,7 +10,7 @@
  *   - the credential never appears in an error, a detail object or a log field.
  */
 
-import { AppError, toAppError } from '../../core/errors.js';
+import { AppError, toAppError } from '../../../packages/shared/src/core/errors.js';
 
 /** Minimal shape of `fetch`, so tests can inject a fake without a network. */
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;

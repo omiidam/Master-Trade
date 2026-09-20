@@ -18,23 +18,24 @@ import { resolve } from 'node:path';
  * TypeScript `paths` cannot read a module. `tests/monorepo-boundary.test.ts` asserts all
  * three agree on every specifier and target, so the mirrors cannot drift.
  *
- * Values are repository-relative paths to the TypeScript source. Every entry must be a
+ * Values are repository-relative paths to the TypeScript source, now pointing into the
+ * physical `packages/shared` package (Phase 4.3, ADR-0035 step 2). Every entry must be a
  * contract (types, view models, the wire protocol) — never an implementation module.
  */
 export const SHARED_SURFACE: Readonly<Record<string, string>> = {
-  '@shared/api/contracts': 'src/api/contracts.ts',
-  '@shared/core/errors': 'src/core/errors.ts',
-  '@shared/core/headers': 'src/core/headers.ts',
-  '@shared/core/ids': 'src/core/ids.ts',
-  '@shared/core/provenance': 'src/core/provenance.ts',
-  '@shared/desktop/ipc': 'src/desktop/ipc.ts',
-  '@shared/frontend/viewModels': 'src/frontend/viewModels.ts',
-  '@shared/jobs/service': 'src/jobs/service.ts',
-  '@shared/marketdata/provider': 'src/marketdata/provider.ts',
-  '@shared/realtime/contracts': 'src/realtime/contracts.ts',
-  '@shared/realtime/events': 'src/realtime/events.ts',
-  '@shared/realtime/protocol': 'src/realtime/protocol.ts',
-  '@shared/types': 'src/types.ts',
+  '@shared/api/contracts': 'packages/shared/src/api/contracts.ts',
+  '@shared/core/errors': 'packages/shared/src/core/errors.ts',
+  '@shared/core/headers': 'packages/shared/src/core/headers.ts',
+  '@shared/core/ids': 'packages/shared/src/core/ids.ts',
+  '@shared/core/provenance': 'packages/shared/src/core/provenance.ts',
+  '@shared/desktop/ipc': 'packages/shared/src/desktop/ipc.ts',
+  '@shared/frontend/viewModels': 'packages/shared/src/frontend/viewModels.ts',
+  '@shared/jobs/service': 'packages/shared/src/jobs/service.ts',
+  '@shared/marketdata/provider': 'packages/shared/src/marketdata/provider.ts',
+  '@shared/realtime/contracts': 'packages/shared/src/realtime/contracts.ts',
+  '@shared/realtime/events': 'packages/shared/src/realtime/events.ts',
+  '@shared/realtime/protocol': 'packages/shared/src/realtime/protocol.ts',
+  '@shared/types': 'packages/shared/src/types.ts',
 };
 
 /** Every specifier the frontend may import across the boundary. */

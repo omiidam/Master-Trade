@@ -11,9 +11,14 @@
  * The workflow is the *only* thing that can move a proposal to `active`.
  */
 
-import { AppError, PolicyViolationError } from '../core/errors.js';
-import { OPERATIONS, type OperationId, type Principal, type Role } from '../auth/model.js';
-import type { Provenance } from '../core/provenance.js';
+import { AppError, PolicyViolationError } from '../../packages/shared/src/core/errors.js';
+import {
+  OPERATIONS,
+  type OperationId,
+  type Principal,
+  type Role,
+} from '../../packages/shared/src/auth/model.js';
+import type { Provenance } from '../../packages/shared/src/core/provenance.js';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 

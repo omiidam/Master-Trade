@@ -16,7 +16,7 @@ import type { LlmGateway, LlmProviderId, LlmUsage } from '../llm/provider.js';
 import { buildTurnMessages } from '../llm/prompt.js';
 import { scriptedSummaryFor } from '../llm/providers/scripted.js';
 import { summarizeModelOutput, type StructuredSummary } from '../llm/summary.js';
-import type { ModelStatement } from '../types.js';
+import type { ModelStatement } from '../../packages/shared/src/types.js';
 
 /** A tool the model asked for. A request, with arguments, and nothing more. */
 export interface ToolRequest {

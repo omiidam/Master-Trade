@@ -1,0 +1,22 @@
+{
+  "name": "@master-trade/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Master Trade shared surface: the contract types, wire protocol and view models that both the backend and the frontend depend on.",
+  "type": "module",
+  "exports": {
+    "./api/contracts": "./src/api/contracts.ts",
+    "./core/errors": "./src/core/errors.ts",
+    "./core/headers": "./src/core/headers.ts",
+    "./core/ids": "./src/core/ids.ts",
+    "./core/provenance": "./src/core/provenance.ts",
+    "./desktop/ipc": "./src/desktop/ipc.ts",
+    "./frontend/viewModels": "./src/frontend/viewModels.ts",
+    "./jobs/service": "./src/jobs/service.ts",
+    "./marketdata/provider": "./src/marketdata/provider.ts",
+    "./realtime/contracts": "./src/realtime/contracts.ts",
+    "./realtime/events": "./src/realtime/events.ts",
+    "./realtime/protocol": "./src/realtime/protocol.ts",
+    "./types": "./src/types.ts"
+  }
+}

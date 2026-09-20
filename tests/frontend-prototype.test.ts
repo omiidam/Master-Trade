@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { APP_PAGE_IDS, NAV_SECTIONS, PREVIEW_NOTICE } from '../web/src/config/navigation.js';
 import { DURATION, EASE, FADE_UP, STAGGER } from '../web/src/design/motion.js';
-import { assertNoExecutionControls } from '../src/frontend/viewModels.js';
+import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 
 const web = join(process.cwd(), 'web');
 

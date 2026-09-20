@@ -25,7 +25,7 @@ import {
   type EpistemicKind,
   type ModelStatement,
   type SafetyProfile,
-} from '../types.js';
+} from '../../packages/shared/src/types.js';
 import {
   Orchestrator,
   scriptedModelAdapter,

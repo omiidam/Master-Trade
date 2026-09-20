@@ -12,8 +12,13 @@
  */
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { AppError } from '../core/errors.js';
-import { isSessionActive, type Principal, type Role, type Session } from './model.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
+import {
+  isSessionActive,
+  type Principal,
+  type Role,
+  type Session,
+} from '../../packages/shared/src/auth/model.js';
 
 export const SESSION_TOKEN_PREFIX = 'mt_s_';
 

@@ -13,18 +13,18 @@
  */
 
 import type { AppConfig } from '../core/config.js';
-import { assertNoHardlineOperations } from '../auth/model.js';
+import { assertNoHardlineOperations } from '../../packages/shared/src/auth/model.js';
 import { assertSafeConfig } from '../core/config.js';
 import { loadInstructions } from '../instructions/loader.js';
 import { MODEL_PRICES } from '../llm/pricing.js';
-import type { JobQueue } from '../jobs/queue.js';
+import type { JobQueue } from '../../packages/shared/src/jobs/queue.js';
 import type { JobWorkerPool } from '../jobs/worker.js';
 import type { RealtimeHub } from '../realtime/hub.js';
-import type { EventBus } from '../realtime/events.js';
+import type { EventBus } from '../../packages/shared/src/realtime/events.js';
 import type { SessionService } from '../auth/sessions.js';
 import type { AgentService } from '../agent/service.js';
 import { defaultToolRegistry } from '../tools/index.js';
-import { assertApiCatalogue } from '../api/contracts.js';
+import { assertApiCatalogue } from '../../packages/shared/src/api/contracts.js';
 import { check, type HealthCheck } from './health.js';
 import { databaseStatus } from '../db/index.js';
 

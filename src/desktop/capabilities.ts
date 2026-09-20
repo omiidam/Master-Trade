@@ -29,7 +29,7 @@
  * so the Tauri source is machine-checked on a machine with no Rust toolchain.
  */
 
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 
 export interface GrantedPermission {
   /** The Tauri 2 permission identifier granted in the capability file. */

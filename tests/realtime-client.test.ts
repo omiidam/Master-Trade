@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSE_CODES, REALTIME_PROTOCOL_VERSION } from '../src/realtime/protocol.js';
+import {
+  CLOSE_CODES,
+  REALTIME_PROTOCOL_VERSION,
+} from '../packages/shared/src/realtime/protocol.js';
 import {
   RealtimeClient,
   describeClose,

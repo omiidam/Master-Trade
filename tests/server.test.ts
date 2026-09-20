@@ -5,12 +5,12 @@ import {
   PENDING_ROUTES,
   type ServerDeps,
 } from '../src/server/index.js';
-import { API_ROUTES, API_VERSION } from '../src/api/contracts.js';
+import { API_ROUTES, API_VERSION } from '../packages/shared/src/api/contracts.js';
 import { AgentService } from '../src/agent/service.js';
 import { ApprovalWorkflow } from '../src/agent/approval.js';
 import { SessionService, bearerToken } from '../src/auth/sessions.js';
-import { MemoryLogSink } from '../src/core/logging.js';
-import { PolicyViolationError } from '../src/core/errors.js';
+import { MemoryLogSink } from '../packages/shared/src/core/logging.js';
+import { PolicyViolationError } from '../packages/shared/src/core/errors.js';
 import { DEFAULT_CONFIG, resolveConfig, type ConfigOverrides } from '../src/core/config.js';
 
 const FIXED_NOW = 1_700_000_000_000;

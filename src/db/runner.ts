@@ -19,7 +19,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { AppError } from '../core/errors.js';
+import { AppError } from '../../packages/shared/src/core/errors.js';
 import type { SqlDialect } from './dialect.js';
 import type { SqlExecutor } from './executor.js';
 import { MIGRATIONS } from './migrations/index.js';
