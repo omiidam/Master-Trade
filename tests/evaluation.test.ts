@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { InMemoryStore } from '../src/memory/store.js';
 import { Orchestrator } from '../src/agent/orchestrator.js';
-import { defaultToolRegistry } from '../src/tools/index.js';
+import { defaultToolRegistry } from '../packages/trading-engine/src/index.js';
 import { loadInstructions } from '../src/instructions/loader.js';
 import { scriptedModelAdapter } from '../src/agent/orchestrator.js';
 import { DEFAULT_SAFETY_PROFILE } from '../packages/shared/src/types.js';

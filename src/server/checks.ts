@@ -23,7 +23,7 @@ import type { RealtimeHub } from '../realtime/hub.js';
 import type { EventBus } from '../../packages/shared/src/realtime/events.js';
 import type { SessionService } from '../auth/sessions.js';
 import type { AgentService } from '../agent/service.js';
-import { defaultToolRegistry } from '../tools/index.js';
+import { defaultToolRegistry } from '../../packages/trading-engine/src/index.js';
 import { assertApiCatalogue } from '../../packages/shared/src/api/contracts.js';
 import { check, type HealthCheck } from './health.js';
 import { databaseStatus } from '../db/index.js';

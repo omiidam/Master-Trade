@@ -5,7 +5,7 @@
  * itself permissions; the orchestrator checks them before every tool run.
  */
 
-import type { ToolCapability } from '../tools/framework.js';
+import type { ToolCapability } from '../../packages/trading-engine/src/framework.js';
 
 export type Subject = 'model' | 'tool' | 'human';
 

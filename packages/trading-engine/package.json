@@ -1,0 +1,13 @@
+{
+  "name": "@master-trade/trading-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The deterministic trading core: typed, testable risk and market-data calculations. No LLM, no database, no network — enforced by test.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./framework": "./src/framework.ts",
+    "./risk": "./src/risk.ts",
+    "./marketData": "./src/marketData.ts"
+  }
+}

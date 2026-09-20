@@ -6,6 +6,6 @@
     "declaration": true,
     "rootDir": "."
   },
-  "include": ["src/**/*.ts", "packages/shared/src/**/*.ts"],
+  "include": ["packages/trading-engine/src/**/*.ts", "src/**/*.ts", "packages/shared/src/**/*.ts"],
   "exclude": ["tests/**/*.ts"]
 }

@@ -6,7 +6,7 @@
  * behind the same interface, with provenance recorded in memory.
  */
 
-import type { Bar } from '../../packages/shared/src/types.js';
+import type { Bar } from '../../shared/src/types.js';
 import type { Tool } from './framework.js';
 import { err, ok, type ToolResult } from './framework.js';
 

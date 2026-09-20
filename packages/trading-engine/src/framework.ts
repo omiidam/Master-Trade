@@ -8,7 +8,7 @@
  * - never performs side effects (orders, network writes, file writes).
  */
 
-import type { EpistemicKind } from '../../packages/shared/src/types.js';
+import type { EpistemicKind } from '../../shared/src/types.js';
 
 /** Capability classes used by the permission model. */
 export type ToolCapability =

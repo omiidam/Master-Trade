@@ -18,8 +18,8 @@ import {
   type InstructionSet,
 } from '../instructions/loader.js';
 import { InMemoryStore, type MemoryStore } from '../memory/store.js';
-import { defaultToolRegistry } from '../tools/index.js';
-import type { ToolRegistry } from '../tools/framework.js';
+import { defaultToolRegistry } from '../../packages/trading-engine/src/index.js';
+import type { ToolRegistry } from '../../packages/trading-engine/src/framework.js';
 import {
   DEFAULT_SAFETY_PROFILE,
   type EpistemicKind,

@@ -18,11 +18,11 @@ import { Orchestrator } from '../src/agent/orchestrator.js';
 import { scriptedAsyncModelAdapter, createLlmModelAdapter } from '../src/agent/asyncModel.js';
 import { AgentService } from '../src/agent/service.js';
 import { InMemoryStore } from '../src/memory/store.js';
-import { defaultToolRegistry } from '../src/tools/index.js';
+import { defaultToolRegistry } from '../packages/trading-engine/src/index.js';
 import { loadInstructions, renderInstructions } from '../src/instructions/loader.js';
 import { createAiGateway } from '../src/llm/registry.js';
 import { DEFAULT_SAFETY_PROFILE } from '../packages/shared/src/types.js';
-import { ToolRegistry, type Tool } from '../src/tools/framework.js';
+import { ToolRegistry, type Tool } from '../packages/trading-engine/src/framework.js';
 import { AppError } from '../packages/shared/src/core/errors.js';
 
 const instructions = renderInstructions(loadInstructions());

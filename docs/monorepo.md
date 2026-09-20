@@ -1,9 +1,11 @@
 # Monorepo Foundation — current state
 
-**Status:** Steps 1 and 2 of [ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md)
-are done. The frontend/backend boundary is a **declared contract** (Phase 4.2, `@shared/*`),
-and as of **Phase 4.3** that surface is the physical, source-only package
-**`packages/shared`** ([ADR-0036](./adr/ADR-0036-extract-shared-package-source-only.md)).
+**Status:** two packages are physical. The frontend/backend boundary is a **declared
+contract** (Phase 4.2, `@shared/*`); as of **Phase 4.3** that surface is the source-only
+package **`packages/shared`** ([ADR-0036](./adr/ADR-0036-extract-shared-package-source-only.md));
+and as of **Phase 4.4** the deterministic trading core is the package
+**`packages/trading-engine`** ([ADR-0037](./adr/ADR-0037-trading-engine-deterministic-core.md)).
+The other four candidate packages were **declined** — see §6.
 
 This is the **current-state reference** for the repository layout. ADRs and module
 documents written before Phase 4.3 keep naming the pre-move paths; they are records of
@@ -24,10 +26,18 @@ The subpath layout is preserved (`src/api/contracts.ts` →
 `packages/shared/src/api/contracts.ts`), so the moved modules' own internal imports stayed
 valid and the move was a pure `git mv` of a closed set.
 
+Phase 4.4 extracted a second package, `packages/trading-engine`, holding the Phase-1
+**Tools** layer — the `Tool` contract, the risk calculations and the deterministic
+market-data math (4 modules, formerly `src/tools/**`). Its justification is **safety, not
+sharing**: the project's rule that risk math must not depend on LLM reasoning becomes a
+boundary a test enforces. `src/evaluation` deliberately did **not** move (it drives the
+agent's `Orchestrator`, so it is not pure).
+
 **Nothing else moved.** `web/` is still `web/`, the Rust shell is still `src-tauri/`, the
 tests are still `tests/`, and every other backend module is still under `src/`.
-`apps/{desktop,web,api}` and `packages/{ui,database,ai,market-data,trading-engine}` remain
-inert placeholders awaiting an ADR-0035 trigger.
+`apps/{desktop,web,api}` and `packages/{ui,database,ai,market-data}` remain inert
+placeholders awaiting an ADR-0035 trigger. The directories Phase 4.3 emptied — `src/api`,
+`src/frontend`, `src/marketdata` — were removed.
 
 ## 2. The boundary: `@shared/*`
 
@@ -97,8 +107,9 @@ web/src/**       ──✗──▶  src/{db,server,auth,jobs/queue,jobs/store} 
 `packages/shared/src/**/*.ts`, so output is:
 
 ```
-dist/src/**                      ← the backend
-dist/packages/shared/src/**      ← the shared package
+dist/src/**                              ← the backend
+dist/packages/shared/src/**              ← the shared package
+dist/packages/trading-engine/src/**      ← the deterministic core
 ```
 
 That move was the non-obvious cost. The previous config let TypeScript infer `rootDir`
@@ -115,9 +126,17 @@ is unchanged. Both facts are asserted.
 
 ## 6. What may move next, and what may not
 
-**May move (when a trigger fires):** `src/db` → `packages/database`, `src/llm` +
-`src/agent` + `src/vector` → `packages/ai`, `src/marketdata` → `packages/market-data`,
-the frontend component set → `packages/ui`, and `web/` → `apps/web`, `src/` → `apps/api`.
+**Declined in Phase 4.4, with the evidence (ADR-0037):** `packages/ui` (one consumer — the
+frontend; boundary already enforced by the `@shared/*` surface), `packages/database` (one
+consumer — the backend; "no SQL outside `src/db`" already enforced), `packages/ai` (one
+consumer; provider-SDK confinement already enforced), and `packages/market-data` (nothing
+to put in it — the provider abstraction and provenance are a _contract the frontend
+consumes_, so they are on the shared surface as `@shared/marketdata/provider`).
+
+Measured: **zero** modules in `src/` are imported from both `src/` and `web/`.
+
+**May still move (when a trigger fires):** the four declined packages, plus `web/` →
+`apps/web` and `src/` → `apps/api`.
 
 **Must not move without a separate, reviewed change:**
 
@@ -140,20 +159,22 @@ the frontend component set → `packages/ui`, and `web/` → `apps/web`, `src/` 
 5. **`node:sqlite` portability is unchanged.** `packages/shared` contains no database code
    by construction: the closure is pure, with no `node:*`, Fastify or driver imports.
 
-## 8. Next step (Phase 4.4 candidate)
+## 8. Next step (Phase 4.5 candidate)
 
-Per ADR-0035, the next action is **not** the full migration. Options, in order of
-justification:
+Per [ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md), the next action
+is **not** the full migration. Options, in order of justification:
 
-1. **Wire `packages/shared` as an npm workspace + built package** — only if the longer
-   backend specifiers prove to be real friction, and only with a clean Ubuntu install
-   re-verifying the native engine first.
-2. **Extract `packages/market-data`** if a trigger fires.
-3. **`apps/web` + `apps/api`** when a trigger fires.
+1. **Guard the build topology** — assert at runtime that the _built_ API resolves every
+   cross-package import from `dist/`, so a `rootDir` or `dist` path regression fails loudly
+   instead of at launch.
+2. **Wire the packages as npm workspaces + built packages** — only if the longer backend
+   specifiers prove to be real friction, and only with a clean Ubuntu install re-verifying
+   the native engine first.
+3. **`apps/web` + `apps/api`**, or any declined package, when a trigger fires.
 
 ## 9. How it is enforced
 
-`tests/monorepo-boundary.test.ts` (19 tests) asserts:
+`tests/monorepo-boundary.test.ts` (25 tests) asserts:
 
 - dependency direction is one-way, and no frontend file reaches into `src/` relatively;
 - every `@shared/*` specifier used is declared, and no declared entry is dead;
@@ -166,6 +187,11 @@ justification:
 - **the package is closed** — no module inside it imports a file outside it, and the full
   closure is present;
 - **the backend consumes it too**, so it has two genuine consumers;
+- **`packages/trading-engine` holds the deterministic core** and reaches no model,
+  database, socket or shell — no `src/llm`, `src/agent`, `src/db`, `src/server`,
+  `src/realtime`, `src/vector`, `src/storage`, `web/`, and no `node:*` builtin;
+- **the engine depends only on `packages/shared` and itself**, and `src/tools` is gone, so
+  there is no second copy of the calculations;
 - **no npm workspaces**, so the install topology cannot drift by accident;
 - the remaining placeholder directories hold no `package.json` and say what they are;
-- the assessment, ADR-0035, ADR-0036 and this document exist and are cross-referenced.
+- the assessment, ADR-0035, ADR-0036, ADR-0037 and this document exist and are cross-referenced.

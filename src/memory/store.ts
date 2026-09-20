@@ -7,7 +7,7 @@
  */
 
 import type { EpistemicKind, ModelStatement } from '../../packages/shared/src/types.js';
-import type { ToolDescriptor } from '../tools/framework.js';
+import type { ToolDescriptor } from '../../packages/trading-engine/src/framework.js';
 
 export type MemoryOrigin =
   | { type: 'tool'; descriptor: ToolDescriptor }

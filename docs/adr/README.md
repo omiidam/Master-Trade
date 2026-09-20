@@ -102,3 +102,13 @@ that have since moved — for example `src/core/errors.ts`, `src/types.ts`,
 `src/desktop/ipc.ts` now live under `packages/shared/src/`. Those documents are kept
 as records of the phase that wrote them and are **not** rewritten. For the current
 layout, read [monorepo.md](../monorepo.md).
+
+## Phase 4.4 — deterministic core, and four declined packages
+
+| ADR                                                     | Decision                                                                                                                                                                                                         | Decision id(s)      | Status   |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | -------- |
+| [0037](./ADR-0037-trading-engine-deterministic-core.md) | Extract `packages/trading-engine` (the Phase-1 Tools layer) so determinism is a testable boundary; **decline** `ui`, `database`, `ai` and `market-data` — each has one consumer and an already-enforced boundary | `DEC-REPO-3-ENGINE` | Accepted |
+
+**Path note (continued):** `src/tools/**` now lives in `packages/trading-engine/src/**`,
+and `src/api/`, `src/frontend/` and `src/marketdata/` were emptied in Phase 4.3 and removed
+in Phase 4.4. Documents naming those paths describe the phase that wrote them.

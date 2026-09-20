@@ -4,7 +4,7 @@ import { checkPermission, PHASE1_PERMISSIONS } from '../src/permissions/model.js
 import { loadInstructions, renderInstructions } from '../src/instructions/loader.js';
 import { AgentLifecycle } from '../src/agent/lifecycle.js';
 import { Orchestrator, scriptedModelAdapter } from '../src/agent/orchestrator.js';
-import { defaultToolRegistry } from '../src/tools/index.js';
+import { defaultToolRegistry } from '../packages/trading-engine/src/index.js';
 import { DEFAULT_SAFETY_PROFILE } from '../packages/shared/src/types.js';
 
 const makeOrchestrator = () =>

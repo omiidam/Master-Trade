@@ -1,10 +1,10 @@
 export * from '../packages/shared/src/types.js';
 
 /* Phase 1 core: model / tools / instructions */
-export * from './tools/framework.js';
-export * from './tools/risk.js';
-export * from './tools/marketData.js';
-export * from './tools/index.js';
+export * from '../packages/trading-engine/src/framework.js';
+export * from '../packages/trading-engine/src/risk.js';
+export * from '../packages/trading-engine/src/marketData.js';
+export * from '../packages/trading-engine/src/index.js';
 export * from './instructions/loader.js';
 export * from './permissions/model.js';
 export * from './memory/store.js';

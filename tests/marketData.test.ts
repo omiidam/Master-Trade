@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { smaTool, syntheticSeriesTool } from '../src/tools/marketData.js';
-import { sma } from '../src/tools/marketData.js';
+import { smaTool, syntheticSeriesTool } from '../packages/trading-engine/src/marketData.js';
+import { sma } from '../packages/trading-engine/src/marketData.js';
 
 describe('marketData.syntheticSeries', () => {
   it('is deterministic for the same seed', () => {

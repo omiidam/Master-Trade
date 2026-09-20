@@ -49,11 +49,12 @@ const INTERNAL_PREFIXES = [
 ];
 
 /**
- * The target directories that are still **documentation markers** after Phase 4.3.
+ * The target directories that are still **documentation markers** after Phase 4.4.
  *
- * `packages/shared` is no longer one of them: it holds real source and a real manifest.
- * The rest wait for an ADR-0035 trigger, so they must stay inert — a directory that
- * merely looks like a package is the half-migration the staging decision prevents.
+ * `packages/shared` (Phase 4.3) and `packages/trading-engine` (Phase 4.4) are no longer
+ * among them: both hold real source and a real manifest. The rest wait for an ADR-0035
+ * trigger, so they must stay inert — a directory that merely looks like a package is the
+ * half-migration the staging decision prevents.
  */
 const PLACEHOLDER_DIRECTORIES = [
   'apps/desktop',
@@ -63,7 +64,26 @@ const PLACEHOLDER_DIRECTORIES = [
   'packages/database',
   'packages/ai',
   'packages/market-data',
-  'packages/trading-engine',
+];
+
+/** The deterministic trading core (Phase 4.4, ADR-0037). */
+const ENGINE_PACKAGE = 'packages/trading-engine';
+const ENGINE_PACKAGE_SRC = `${ENGINE_PACKAGE}/src`;
+
+/**
+ * Layers the deterministic core must never reach. This is the safety rule that justifies
+ * the package: risk math may not be influenced by a model, and must not need a database,
+ * a socket or a shell.
+ */
+const ENGINE_FORBIDDEN = [
+  'src/llm/',
+  'src/agent/',
+  'src/db/',
+  'src/server/',
+  'src/realtime/',
+  'src/vector/',
+  'src/storage/',
+  'web/',
 ];
 
 function filesUnder(dir: string, extension: string): string[] {
@@ -347,6 +367,112 @@ describe('monorepo boundary: the shared package is physical', () => {
   });
 });
 
+describe('monorepo boundary: the trading engine is deterministic', () => {
+  /** Relative specifiers a source file imports, as repository-relative targets. */
+  function relativeTargets(file: string): string[] {
+    const targets: string[] = [];
+    for (const specifier of importSpecifiers(readFileSync(join(root, file), 'utf8'))) {
+      if (!specifier.startsWith('.')) continue;
+      targets.push(
+        relative(root, resolve(root, dirname(file), specifier.replace(/\.js$/, '.ts')))
+          .split(sep)
+          .join('/'),
+      );
+    }
+    return targets;
+  }
+
+  function engineFiles(): string[] {
+    return filesUnder(ENGINE_PACKAGE_SRC, '.ts');
+  }
+
+  it('holds the deterministic calculations, and is not empty', () => {
+    const members = engineFiles();
+    expect(members.length, 'the trading engine package has no source').toBeGreaterThan(0);
+    for (const expected of ['risk.ts', 'framework.ts', 'marketData.ts', 'index.ts']) {
+      expect(members, `${expected} is missing from the engine`).toContain(
+        `${ENGINE_PACKAGE_SRC}/${expected}`,
+      );
+    }
+  });
+
+  it('reaches no model, database, socket or shell', () => {
+    const violations: string[] = [];
+    for (const file of engineFiles()) {
+      const source = readFileSync(join(root, file), 'utf8');
+      for (const specifier of importSpecifiers(source)) {
+        // Bare specifiers: only Node builtins are even a candidate, and the engine is
+        // pure arithmetic, so any builtin is a violation.
+        if (!specifier.startsWith('.')) {
+          if (specifier.startsWith('node:')) violations.push(`${file} -> ${specifier} (builtin)`);
+          continue;
+        }
+        const target = relative(
+          root,
+          resolve(root, dirname(file), specifier.replace(/\.js$/, '.ts')),
+        )
+          .split(sep)
+          .join('/');
+        if (ENGINE_FORBIDDEN.some((prefix) => target.startsWith(prefix))) {
+          violations.push(`${file} -> ${specifier}`);
+        }
+      }
+    }
+    expect(
+      violations,
+      'the deterministic core must not depend on the LLM, the agent, the database or the server',
+    ).toEqual([]);
+  });
+
+  it('depends on packages/shared and on itself, and on nothing else', () => {
+    const escapes: string[] = [];
+    for (const file of engineFiles()) {
+      for (const target of relativeTargets(file)) {
+        const allowed =
+          target.startsWith(`${ENGINE_PACKAGE_SRC}/`) || target.startsWith('packages/shared/src/');
+        if (!allowed) escapes.push(`${file} -> ${target}`);
+      }
+    }
+    expect(escapes, 'the engine escaped its own boundary').toEqual([]);
+  });
+
+  it('carries a private manifest exposing its modules', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(root, ENGINE_PACKAGE, 'package.json'), 'utf8'),
+    ) as {
+      name?: string;
+      private?: boolean;
+      exports?: Record<string, string>;
+    };
+    expect(manifest.private, 'the trading engine must not be publishable').toBe(true);
+    expect(manifest.name).toBe('@master-trade/trading-engine');
+    expect(Object.keys(manifest.exports ?? {})).toEqual(
+      expect.arrayContaining(['.', './framework', './risk', './marketData']),
+    );
+    for (const target of Object.values(manifest.exports ?? {})) {
+      expect(
+        existsSync(join(root, ENGINE_PACKAGE, target)),
+        `export target ${target} is missing`,
+      ).toBe(true);
+    }
+  });
+
+  it('is consumed by the backend — the deterministic core is actually wired in', () => {
+    const consumers = filesUnder('src', '.ts').filter((file) =>
+      relativeTargets(file).some((target) => target.startsWith(`${ENGINE_PACKAGE_SRC}/`)),
+    );
+    expect(consumers.length, 'nothing consumes the trading engine').toBeGreaterThan(0);
+  });
+
+  it('is not a second copy: the old src/tools location is gone', () => {
+    // A duplicated implementation would be worse than no package at all.
+    expect(
+      existsSync(join(root, 'src', 'tools')),
+      'src/tools still exists alongside the package',
+    ).toBe(false);
+  });
+});
+
 describe('monorepo boundary: the remaining target structure is inert', () => {
   it('keeps the placeholder READMEs that say what each directory is', () => {
     for (const directory of PLACEHOLDER_DIRECTORIES) {
@@ -377,18 +503,21 @@ describe('monorepo boundary: the decision is recorded', () => {
   it('keeps the assessment, the ADR, the foundation doc and the index linked', () => {
     const adr = 'ADR-0035-monorepo-migration-staged-boundary-first.md';
     const extractionAdr = 'ADR-0036-extract-shared-package-source-only.md';
+    const engineAdr = 'ADR-0037-trading-engine-deterministic-core.md';
     for (const file of [
       'docs/monorepo-assessment.md',
       'docs/monorepo.md',
       `docs/adr/${adr}`,
       `docs/adr/${extractionAdr}`,
+      `docs/adr/${engineAdr}`,
     ]) {
       expect(existsSync(join(root, file)), `${file} is missing`).toBe(true);
     }
 
     const index = readFileSync(join(root, 'docs', 'adr', 'README.md'), 'utf8');
-    expect(index, 'ADR-0035 is not listed in the ADR index').toContain('0035');
-    expect(index, 'ADR-0036 is not listed in the ADR index').toContain('0036');
+    for (const id of ['0035', '0036', '0037']) {
+      expect(index, `ADR-${id} is not listed in the ADR index`).toContain(id);
+    }
 
     const assessment = readFileSync(join(root, 'docs', 'monorepo-assessment.md'), 'utf8');
     expect(assessment).toContain(adr);
@@ -410,11 +539,15 @@ describe('monorepo boundary: the decision is recorded', () => {
     expect(foundation, 'the foundation doc must record the Phase 4.3 extraction').toMatch(
       /Phase 4\.3|extract/i,
     );
-    // The extraction must name the ADR that authorised it, and the ADR must name the
+    // Each extraction must name the ADR that authorised it, and each ADR must name its
     // decision id, so the layout cannot change without a traceable decision.
     expect(foundation).toContain(extractionAdr);
+    expect(foundation).toContain(engineAdr);
     expect(readFileSync(join(root, 'docs', 'adr', extractionAdr), 'utf8')).toContain(
       'DEC-REPO-2-EXTRACT-SHARED',
+    );
+    expect(readFileSync(join(root, 'docs', 'adr', engineAdr), 'utf8')).toContain(
+      'DEC-REPO-3-ENGINE',
     );
   });
 });

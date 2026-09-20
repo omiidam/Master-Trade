@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { positionSizeTool, rMultipleTool } from '../src/tools/risk.js';
+import { positionSizeTool, rMultipleTool } from '../packages/trading-engine/src/risk.js';
 
 describe('risk.positionSize', () => {
   it('computes fixed-fractional sizing deterministically', () => {

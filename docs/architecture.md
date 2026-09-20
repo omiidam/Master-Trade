@@ -258,8 +258,19 @@ the 9 modules they transitively need). Two genuine consumers use it — the fron
 through `@shared/*`, and the backend through relative paths, because Node cannot execute
 a TypeScript specifier at runtime. The package imports nothing outside itself, and
 `npm ci` with the committed lockfile is still the only install path (no workspaces yet).
-See [monorepo.md](./monorepo.md), [ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md)
-and [ADR-0036](./adr/ADR-0036-extract-shared-package-source-only.md); enforced by
+Phase 4.4 extracted a second package, **`packages/trading-engine`** — the Phase-1 **Tools**
+layer (the `Tool` contract, the risk calculations, the deterministic market-data math). Its
+justification is **safety rather than sharing**: "risk calculations must not depend on
+LLM-generated reasoning" was a convention, and is now a boundary the test refuses — the
+engine may import `packages/shared` and itself, and nothing else. The Model and the
+Instructions remain in the backend, so the Model / Tools / Instructions separation is
+unchanged. The other four candidate packages were declined for want of a second consumer
+(see [ADR-0037](./adr/ADR-0037-trading-engine-deterministic-core.md)).
+
+See [monorepo.md](./monorepo.md),
+[ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md),
+[ADR-0036](./adr/ADR-0036-extract-shared-package-source-only.md) and
+[ADR-0037](./adr/ADR-0037-trading-engine-deterministic-core.md); enforced by
 `tests/monorepo-boundary.test.ts`.
 
 ## 9. Implementation status (Phase 2)

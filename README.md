@@ -218,7 +218,12 @@ See [realtime-and-jobs.md](./docs/realtime-and-jobs.md) and
 - No live trading, no broker connections, no order placement — no operation,
   tool, job kind or config key for it exists; `assertNoHardlineOperations()` and
   `assertSafeConfig()` fail startup and CI if one is ever added.
-- Risk numbers come only from deterministic tools, never from model reasoning.
+- Risk numbers come only from deterministic tools, never from model reasoning. Since
+  Phase 4.4 this is structural, not conventional: the deterministic core is the package
+  `packages/trading-engine`, and it may import `packages/shared` and itself — reaching the
+  LLM, the agent, the database or the server is a package-boundary violation that
+  `tests/monorepo-boundary.test.ts` fails on. See
+  [ADR-0037](./docs/adr/ADR-0037-trading-engine-deterministic-core.md).
 - Facts / analysis / hypotheses / uncertainty are always labeled; unverified
   memory is labelled uncertainty and can never be promoted by automation.
 - New trading rules require a recorded human approval before activation.

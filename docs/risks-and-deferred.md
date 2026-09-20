@@ -490,3 +490,50 @@ surface, that the package is closed, and that the backend is a real consumer.
 
 **Deferred, with triggers (ADR-0035 §6 unchanged):** `apps/web` + `apps/api`, npm
 workspaces, a built `@master-trade/shared`, and the other four packages.
+
+## 10. Deterministic core extracted; four packages declined (Phase 4.4 — completed)
+
+Full record: [ADR-0037](./adr/ADR-0037-trading-engine-deterministic-core.md); current layout:
+[monorepo.md](./monorepo.md).
+
+**Extracted:** `packages/trading-engine`, holding the Phase-1 **Tools** layer —
+`framework.ts` (the `Tool` contract, `ToolRegistry`), `risk.ts` (`positionSizeTool`,
+`rMultipleTool`), `marketData.ts` (`smaTool`, `syntheticSeriesTool`) and `index.ts`
+(`defaultToolRegistry`) — formerly `src/tools/**`. Four files, 357 lines, **19 specifiers
+rewritten across 13 consumer files** (plus the moved files' own imports to `packages/shared`).
+
+**The justification is safety, not sharing.** The project's rule is that risk calculations
+must not depend on LLM-generated reasoning. That was a convention — `src/tools/**` happened
+to import nothing dangerous. It is now a checkable boundary: the engine may import
+`packages/shared` and itself, and nothing else, with no `node:*` builtin. A future model
+influence on position sizing would have to cross a package boundary a test refuses.
+
+**`src/evaluation` deliberately did not move.** It imports `../agent/orchestrator.js`, so it
+is not deterministic in the sense the package requires — the new test caught this while the
+move set was being drafted, which is the argument for extracting by measured dependency
+rather than by directory name.
+
+**Four candidates declined, with evidence.** `packages/ui`, `packages/database` and
+`packages/ai` each have exactly **one consumer** and an already-enforced boundary;
+`packages/market-data` has **nothing to put in it** — the provider abstraction and
+provenance are a contract the frontend consumes, already on the shared surface as
+`@shared/marketdata/provider`. A cross-boundary scan confirms **zero** modules in `src/` are
+imported from both `src/` and `web/`. Creating them would be the ceremony ADR-0035 rejected.
+
+**Cleanup:** the three directories Phase 4.3 emptied — `src/api/`, `src/frontend/`,
+`src/marketdata/` — were removed, and `src/tools/` went with the engine.
+
+**Build/install topology:** unchanged in shape. `tsconfig.build.json` gained
+`packages/trading-engine/src/**`, so output is `dist/packages/trading-engine/src/**`; no
+`rootDir` change was needed this time, no `package.json` script changed, and
+`tauri.conf.json` is untouched again. Still **no npm workspaces**, so `npm ci` with the
+committed lockfile remains the single install path and the `@tailwindcss/oxide` hoisting
+surface stays closed.
+
+**Status** — all green: `format:check`, `typecheck`, `typecheck:web`, **396 tests in 29
+files** (0 skipped, 0 todo), `build`, `build:web`, and 22 desktop checks with 0 errors and
+1 warning (the updater placeholder signing key). The boundary suite grew from 19 to 25
+tests.
+
+**Deferred, with triggers (ADR-0035 §6 unchanged):** the four declined packages,
+`apps/web` + `apps/api`, npm workspaces, and a built package artifact.
