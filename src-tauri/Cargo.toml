@@ -1,0 +1,42 @@
+[package]
+name = "master-trade-desktop"
+version = "0.6.0"
+description = "Master Trade desktop shell — training workstation host"
+authors = ["Omid Emadi"]
+edition = "2021"
+rust-version = "1.77"
+# The shell is proprietary to this project; it is not published anywhere.
+publish = false
+
+[lib]
+# `main.rs` is a one-liner over this library, which is what Tauri expects and what
+# makes the command surface testable from Rust integration tests later.
+name = "master_trade_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-updater = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# OS keychain access for provider credentials. Secrets never touch a file.
+keyring = { version = "3", features = [
+    "apple-native",
+    "windows-native",
+    "linux-native",
+] }
+# Blocking HTTP client used for exactly one thing: probing the sidecar's
+# /v1/health with the per-launch token until it answers. It is not a general
+# HTTP client for the shell — the shell makes no other outbound request.
+ureq = { version = "2", default-features = false, features = ["tls"] }
+
+[features]
+# Kept so `cargo build --features custom-protocol` matches Tauri's own template.
+custom-protocol = ["tauri/custom-protocol"]

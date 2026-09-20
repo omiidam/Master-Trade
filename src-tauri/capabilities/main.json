@@ -1,0 +1,24 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "The entire plugin surface granted to the WebView. Everything else the app does with the OS is a Rust command (see src/desktop/ipc.ts), which is why there is no fs, shell, path, http or store permission here. `npm run desktop:verify` fails the build if this list drifts from src/desktop/capabilities.ts.",
+  "windows": ["main"],
+  "platforms": ["linux", "macOS", "windows"],
+  "permissions": [
+    "core:app:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:webview:default",
+    "core:menu:default",
+    "core:resources:default",
+    "notification:default",
+    "updater:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://*" }]
+    }
+  ]
+}

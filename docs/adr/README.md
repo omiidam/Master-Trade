@@ -58,6 +58,14 @@ the alternatives that were deliberately turned down.
 | [0027](./ADR-0027-structured-summaries-not-chain-of-thought.md) | Structured summaries only; chain-of-thought never accepted, stored or displayed | `DEC-AI-1-ABSTRACTION`  | Accepted |
 | [0028](./ADR-0028-provider-transport-native-fetch.md)           | Provider transport over native `fetch`; no vendor SDK becomes a dependency      | `DEC-AI-3-INDEPENDENCE` | Accepted |
 
+## Phase 3.6 — desktop foundation
+
+| ADR                                                   | Decision                                                                                            | Decision id(s)               | Status   |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------- | -------- |
+| [0029](./ADR-0029-webview-capability-boundary.md)     | WebView granted no `shell:` permission; Rust spawns the sidecar, commands are the only surface      | `DEC-DESKTOP-3-CAPABILITIES` | Accepted |
+| [0030](./ADR-0030-sidecar-supervision-fixed-port.md)  | Fixed launch plan, fixed loopback port, per-launch token, proven readiness, bounded restarts        | `DEC-DESKTOP-4-LIFECYCLE`    | Accepted |
+| [0031](./ADR-0031-desktop-config-appdata-keychain.md) | Config in the OS app-data directory, strict schema compared with Rust, credentials only in keychain | `DEC-DESKTOP-5-CONFIG`       | Accepted |
+
 The machine-readable form of this lock is `src/core/architectureLock.ts` and it
 is enforced by `tests/technology-lock.test.ts`. Every decision id above also
 appears in [technology-decisions.md](../technology-decisions.md).

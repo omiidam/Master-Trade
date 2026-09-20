@@ -1,0 +1,11 @@
+# Rust build output
+/target
+
+# Tauri writes the permission schemas here on every build; they are generated from
+# src-tauri/capabilities/*.json, which is the file under review.
+/gen
+
+# Generated icons are produced from the source SVG by `npm run tauri icon`.
+# Commit the PNG/ICO/ICNS outputs before the first release; do not commit the
+# intermediate sizes.
+/icons/*-generated.png

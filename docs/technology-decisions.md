@@ -21,29 +21,32 @@ Phase 1/2 invariants are unchanged and remain authoritative:
 
 ## 0. Locked stack at a glance
 
-| Area                  | Decision                                                                                | Decision id              | ADR(s)                                                                                                     |
-| --------------------- | --------------------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| Frontend framework    | React 19 + TypeScript (strict) bundled by Vite 6                                        | `DEC-FE-1-FRAMEWORK`     | [0010](./adr/ADR-0010-frontend-framework-react-vite.md)                                                    |
-| Frontend state        | TanStack Query v5 (async) + Zustand v5 (UI state)                                       | `DEC-FE-2-STATE`         | [0011](./adr/ADR-0011-frontend-state-tanstack-query-zustand.md)                                            |
-| UI system             | Tailwind CSS v4 + Radix primitives (vendored shadcn-style) + lucide-react               | `DEC-FE-3-UI-SYSTEM`     | [0012](./adr/ADR-0012-ui-system-tailwind-radix.md)                                                         |
-| Charting              | TradingView Lightweight Charts behind an internal `ChartAdapter`                        | `DEC-FE-4-CHARTING`      | [0013](./adr/ADR-0013-charting-lightweight-charts.md)                                                      |
-| UI motion             | Framer Motion with reduced-motion presets; motion never carries information             | `DEC-FE-5-MOTION`        | [0020](./adr/ADR-0020-ui-motion-framer-motion.md)                                                          |
-| Backend runtime       | Node.js 22 LTS (Node 20 compatibility lane stays in CI)                                 | `DEC-BE-1-RUNTIME`       | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
-| Backend framework     | Fastify 5, loopback-only, plugin lifecycle hooks                                        | `DEC-BE-2-FRAMEWORK`     | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
-| API architecture      | Typed contracts in `src/api/contracts.ts`; Fastify is an adapter over the same pipeline | `DEC-BE-3-API`           | [0002](./adr/ADR-0002-modular-monolith.md), [0014](./adr/ADR-0014-backend-runtime-fastify.md)              |
-| Validation            | Zod schemas as the single validator; Fastify body validation disabled                   | `DEC-BE-4-VALIDATION`    | [0015](./adr/ADR-0015-validation-zod-single-source.md)                                                     |
-| Request pipeline      | One `preHandler` pipeline per catalogue route; coverage asserted at boot                | `DEC-BE-5-PIPELINE`      | [0021](./adr/ADR-0021-single-request-pipeline.md)                                                          |
-| Database — local      | SQLite via `node:sqlite`, WAL, foreign keys on, file in OS app-data dir                 | `DEC-DB-1-LOCAL`         | [0003](./adr/ADR-0003-sqlite-first.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md)               |
-| Database — production | PostgreSQL behind one declaration set + dialect, driver injected (not installed yet)    | `DEC-DB-2-PRODUCTION`    | [0016](./adr/ADR-0016-persistence-driver-and-orm.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md) |
-| Migrations            | Generated from the schema, numbered, forward-only, checksummed, drift refuses at boot   | `DEC-DB-3-MIGRATIONS`    | [0024](./adr/ADR-0024-generated-migrations-and-ledger.md)                                                  |
-| Data access           | Repository boundary over a `SqlExecutor` port; one owner repository per table           | `DEC-DB-4-REPOSITORIES`  | [0023](./adr/ADR-0023-repository-boundary-and-data-ownership.md)                                           |
-| AI abstraction        | `LlmProvider` interface; adapters only in `src/llm/providers/`                          | `DEC-AI-1-ABSTRACTION`   | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
-| AI gateway            | Existing `LlmGateway`: fallback, retry, timeout, streaming, token/cost, budget          | `DEC-AI-2-GATEWAY`       | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
-| Provider independence | Import-boundary test confines provider SDKs to `src/llm/providers/**`                   | `DEC-AI-3-INDEPENDENCE`  | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
-| Desktop runtime       | Tauri 2 shell + TypeScript backend as bundled Node sidecar on loopback                  | `DEC-DESKTOP-1-RUNTIME`  | [0001](./adr/ADR-0001-desktop-shell-tauri.md)                                                              |
-| Desktop security      | Loopback-only + per-launch bearer token, keychain-only secrets, capability allow-list   | `DEC-DESKTOP-2-SECURITY` | [0001](./adr/ADR-0001-desktop-shell-tauri.md), [0007](./adr/ADR-0007-deny-by-default-auth.md)              |
-| Realtime              | WebSocket at `/ws` (`@fastify/websocket`) over the existing `EventBus`                  | `DEC-RT-1-WEBSOCKET`     | [0017](./adr/ADR-0017-realtime-websocket-transport.md)                                                     |
-| Background jobs       | Durable DB-backed queue, in-process workers, claim + lease, dead-letter                 | `DEC-JOBS-1-QUEUE`       | [0018](./adr/ADR-0018-durable-db-backed-job-queue.md)                                                      |
+| Area                  | Decision                                                                                | Decision id                  | ADR(s)                                                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Frontend framework    | React 19 + TypeScript (strict) bundled by Vite 6                                        | `DEC-FE-1-FRAMEWORK`         | [0010](./adr/ADR-0010-frontend-framework-react-vite.md)                                                    |
+| Frontend state        | TanStack Query v5 (async) + Zustand v5 (UI state)                                       | `DEC-FE-2-STATE`             | [0011](./adr/ADR-0011-frontend-state-tanstack-query-zustand.md)                                            |
+| UI system             | Tailwind CSS v4 + Radix primitives (vendored shadcn-style) + lucide-react               | `DEC-FE-3-UI-SYSTEM`         | [0012](./adr/ADR-0012-ui-system-tailwind-radix.md)                                                         |
+| Charting              | TradingView Lightweight Charts behind an internal `ChartAdapter`                        | `DEC-FE-4-CHARTING`          | [0013](./adr/ADR-0013-charting-lightweight-charts.md)                                                      |
+| UI motion             | Framer Motion with reduced-motion presets; motion never carries information             | `DEC-FE-5-MOTION`            | [0020](./adr/ADR-0020-ui-motion-framer-motion.md)                                                          |
+| Backend runtime       | Node.js 22 LTS (Node 20 compatibility lane stays in CI)                                 | `DEC-BE-1-RUNTIME`           | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
+| Backend framework     | Fastify 5, loopback-only, plugin lifecycle hooks                                        | `DEC-BE-2-FRAMEWORK`         | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
+| API architecture      | Typed contracts in `src/api/contracts.ts`; Fastify is an adapter over the same pipeline | `DEC-BE-3-API`               | [0002](./adr/ADR-0002-modular-monolith.md), [0014](./adr/ADR-0014-backend-runtime-fastify.md)              |
+| Validation            | Zod schemas as the single validator; Fastify body validation disabled                   | `DEC-BE-4-VALIDATION`        | [0015](./adr/ADR-0015-validation-zod-single-source.md)                                                     |
+| Request pipeline      | One `preHandler` pipeline per catalogue route; coverage asserted at boot                | `DEC-BE-5-PIPELINE`          | [0021](./adr/ADR-0021-single-request-pipeline.md)                                                          |
+| Database — local      | SQLite via `node:sqlite`, WAL, foreign keys on, file in OS app-data dir                 | `DEC-DB-1-LOCAL`             | [0003](./adr/ADR-0003-sqlite-first.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md)               |
+| Database — production | PostgreSQL behind one declaration set + dialect, driver injected (not installed yet)    | `DEC-DB-2-PRODUCTION`        | [0016](./adr/ADR-0016-persistence-driver-and-orm.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md) |
+| Migrations            | Generated from the schema, numbered, forward-only, checksummed, drift refuses at boot   | `DEC-DB-3-MIGRATIONS`        | [0024](./adr/ADR-0024-generated-migrations-and-ledger.md)                                                  |
+| Data access           | Repository boundary over a `SqlExecutor` port; one owner repository per table           | `DEC-DB-4-REPOSITORIES`      | [0023](./adr/ADR-0023-repository-boundary-and-data-ownership.md)                                           |
+| AI abstraction        | `LlmProvider` interface; adapters only in `src/llm/providers/`                          | `DEC-AI-1-ABSTRACTION`       | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
+| AI gateway            | Existing `LlmGateway`: fallback, retry, timeout, streaming, token/cost, budget          | `DEC-AI-2-GATEWAY`           | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
+| Provider independence | Import-boundary test confines provider SDKs to `src/llm/providers/**`                   | `DEC-AI-3-INDEPENDENCE`      | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
+| Desktop runtime       | Tauri 2 shell + TypeScript backend as bundled Node sidecar on loopback                  | `DEC-DESKTOP-1-RUNTIME`      | [0001](./adr/ADR-0001-desktop-shell-tauri.md)                                                              |
+| Desktop security      | Loopback-only + per-launch bearer token, keychain-only secrets, capability allow-list   | `DEC-DESKTOP-2-SECURITY`     | [0001](./adr/ADR-0001-desktop-shell-tauri.md), [0007](./adr/ADR-0007-deny-by-default-auth.md)              |
+| Desktop capabilities  | WebView granted no `shell:`/`fs:`/`path:`/`http:` permission; Rust owns privileged work | `DEC-DESKTOP-3-CAPABILITIES` | [0029](./adr/ADR-0029-webview-capability-boundary.md)                                                      |
+| Desktop lifecycle     | Fixed launch plan, per-launch token, health-gated window, bounded restarts              | `DEC-DESKTOP-4-LIFECYCLE`    | [0030](./adr/ADR-0030-sidecar-supervision-fixed-port.md)                                                   |
+| Desktop config        | App-data directory, one strict schema shared with Rust, credentials refused             | `DEC-DESKTOP-5-CONFIG`       | [0031](./adr/ADR-0031-desktop-config-appdata-keychain.md)                                                  |
+| Realtime              | WebSocket at `/ws` (`@fastify/websocket`) over the existing `EventBus`                  | `DEC-RT-1-WEBSOCKET`         | [0017](./adr/ADR-0017-realtime-websocket-transport.md)                                                     |
+| Background jobs       | Durable DB-backed queue, in-process workers, claim + lease, dead-letter                 | `DEC-JOBS-1-QUEUE`           | [0018](./adr/ADR-0018-durable-db-backed-job-queue.md)                                                      |
 
 Everything else in Phase 1/2 — error codes, provenance vocabulary, redaction,
 retry primitives, approval workflow, vector memory, market-data normalization,
@@ -234,7 +237,12 @@ routes, unauthenticated 501s).
 ### 2.6 Implementation status — Phase 3.3
 
 `src/server/**` implements this section on the locked stack, using the
-`DEC-DESKTOP-2-SECURITY` boundary from § 5.2 as behaviour rather than intent
+`DEC-DESKTOP-2-SECURITY` boundary from § 5.2 as behaviour rather than intent,
+and Phase 3.6 implemented the shell itself against
+`DEC-DESKTOP-3-CAPABILITIES`, `DEC-DESKTOP-4-LIFECYCLE` and
+`DEC-DESKTOP-5-CONFIG` ([ADR-0029](./adr/ADR-0029-webview-capability-boundary.md),
+[ADR-0030](./adr/ADR-0030-sidecar-supervision-fixed-port.md),
+[ADR-0031](./adr/ADR-0031-desktop-config-appdata-keychain.md))
 ([backend-foundation.md](./backend-foundation.md), [ADR-0022](./adr/ADR-0022-local-api-trust-boundary.md)):
 six catalogue routes, three implemented, Zod-only validation, one error handler,
 structured request logging, environment-driven config with refusal rules, and
@@ -627,3 +635,29 @@ The AI infrastructure is implemented on the locked stack (see
 
 Three locked decisions were refined and none was superseded; no experimental
 technology was introduced.
+
+## 15. Phase 3.6 status against this lock
+
+The desktop shell is implemented on the locked stack (see
+[desktop-and-frontend.md](./desktop-and-frontend.md) § 3 and
+[desktop-shell.md](./desktop-shell.md)):
+
+| Locked choice              | Status in Phase 3.6                                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tauri 2 runtime            | `src-tauri/` holds the project: config, capability file, six Rust modules, five plugins                                                                 |
+| Node sidecar               | launched from a typed plan (`planSidecarLaunch`) on the fixed loopback port 4317; `scripts/build-sidecar.mjs` packages it                               |
+| Per-launch secret          | implemented — 256-bit token through the environment, health probe uses it, handshake exposes it to the WebView only                                     |
+| Capability allow-list      | five permissions, zero `shell:`/`fs:`/`path:`/`http:` permissions ([ADR-0029](./adr/ADR-0029-webview-capability-boundary.md))                           |
+| Keychain-only secrets      | implemented in `src-tauri/src/secrets.rs`; the config file refuses credential-shaped keys                                                               |
+| CSP with no remote origins | implemented; verified present and restrictive                                                                                                           |
+| Application lifecycle      | implemented as a machine-checked state machine; the window is gated on the API answering ([ADR-0030](./adr/ADR-0030-sidecar-supervision-fixed-port.md)) |
+| Local configuration        | implemented in the per-OS app-data directory under one strict schema shared with Rust ([ADR-0031](./adr/ADR-0031-desktop-config-appdata-keychain.md))   |
+| Verification without Rust  | `npm run desktop:verify` — 22 checks including both-direction command parity, spawn-location, port/version/schema agreement                             |
+| Compiled bundle            | **still deferred** — no Rust toolchain in this environment or in CI; the shell is source-complete and policy-verified, not built                        |
+| Updater signing            | **placeholder key** — reported as a warning and a release blocker, not an error                                                                         |
+| Icons and signing identity | **not supplied** — placeholders, documented in `src-tauri/icons/README.md`                                                                              |
+
+Three locked decisions were added (the three desktop ones above) and none was
+superseded. No experimental technology was introduced: no Electron, no Rust
+rewrite of the backend, no Tauri plugin beyond the five whose permissions are
+listed, and no change to the Model / Tools / Instructions separation.

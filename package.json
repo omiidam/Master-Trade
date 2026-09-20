@@ -24,9 +24,13 @@
     "db:ownership": "node dist/db/cli.js ownership",
     "db:schema": "node dist/db/cli.js schema",
     "preview:web": "vite preview --port 4173 --strictPort",
-    "validate": "npm run format:check && npm run typecheck && npm run typecheck:web && npm run test && npm run build && npm run build:web",
+    "validate": "npm run format:check && npm run typecheck && npm run typecheck:web && npm run test && npm run build && npm run build:web && npm run desktop:verify",
     "agent:demo": "node dist/agent/demo.js",
-    "ai:demo": "node dist/agent/aiDemo.js"
+    "ai:demo": "node dist/agent/aiDemo.js",
+    "build:sidecar": "node scripts/build-sidecar.mjs",
+    "desktop:verify": "node dist/desktop/cli.js",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

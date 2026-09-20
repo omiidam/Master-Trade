@@ -198,3 +198,43 @@ the HTTP server still registers no provider, and readiness keeps saying so.
 
 **Next:** register a provider in the server composition root and expose the async
 turn over the API, then wire the frontend to it.
+
+### 4.6 Phase 3.6 — desktop foundation
+
+**Done — the shell exists as source, and its policy is executable.** `src-tauri/`
+holds the Tauri 2 project (config, capability file, six Rust modules, five
+plugins); `src/desktop/` holds the same rules as TypeScript that runs in the test
+suite. `npm run desktop:verify` checks 22 things across the two, including command
+parity **in both directions**, that `Command::new` appears only in `sidecar.rs`,
+and that port, version and config-schema agree between Rust and TypeScript.
+
+**Done — the boundary is a list, not a promise.** The WebView is granted five
+permissions and no `shell:`, `fs:`, `path:`, `http:`, `process:`, `store:` or
+`global-shortcut:` permission at all
+([ADR-0029](./adr/ADR-0029-webview-capability-boundary.md)). Rust spawns the
+sidecar, reads the keychain, writes the cache and resolves export destinations; no
+command returns a filesystem path.
+
+**Done — lifecycle and configuration.** Launch is a typed plan on a fixed loopback
+port with a per-launch token in the environment; the window waits for the
+_authenticated_ health route to answer
+([ADR-0030](./adr/ADR-0030-sidecar-supervision-fixed-port.md)). Config lives in the
+per-OS app-data directory under one strict schema sharing its keys with Rust, and a
+credential-shaped key anywhere in it is refused rather than filtered
+([ADR-0031](./adr/ADR-0031-desktop-config-appdata-keychain.md)). 29 new tests.
+
+**Four real defects this phase exposed,** all fixed and covered: the restart
+budget was cleared by the restart itself, so a crash loop respawned forever while
+looking like recovery; a credential named `openaiKey` slipped past the secret-key
+pattern and was only caught as an unknown key; a shell build answering `null` for
+the save dialog crashed the bridge; and the offline scripted provider needed to
+satisfy the summary contract so a keyless turn is a real path.
+
+**Not done — and this is the honest headline:** there is no compiled bundle. This
+environment and CI have no Rust toolchain, so `cargo build`, `tauri dev`, the
+keychain round-trip, window timing, code signing and notarisation are unexercised.
+The verifier says so in its own report rather than implying a tested app. Icons are
+placeholders, and the updater's signing key is a placeholder reported as a warning.
+
+**Next:** build the shell on a machine with a toolchain, then run the first real
+end-to-end: window → handshake → authenticated API call → agent turn.

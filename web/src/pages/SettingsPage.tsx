@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Database, KeyRound, Layers, Palette, ShieldCheck, Sliders, Sparkles } from 'lucide-react';
+import {
+  Database,
+  KeyRound,
+  Layers,
+  Monitor,
+  Palette,
+  ShieldCheck,
+  Sliders,
+  Sparkles,
+} from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
@@ -8,6 +17,7 @@ import { TabPanel, Tabs } from '../components/Tabs';
 import { Tooltip } from '../components/Tooltip';
 import { Grid, Workspace } from '../app/Workspace';
 import { THEME } from '../design/tokens';
+import { useShellStatus } from '../desktop/useShellStatus';
 import { mockBudget, mockProviders, mockSystemStatus } from '../mock/data';
 import { useUiStore } from '../store/ui';
 import { cn } from '../lib/cn';
@@ -31,6 +41,7 @@ export function SettingsPage() {
   const setDirection = useUiStore((state) => state.setDirection);
   const density = useUiStore((state) => state.density);
   const setDensity = useUiStore((state) => state.setDensity);
+  const shell = useShellStatus();
 
   return (
     <Workspace
@@ -148,6 +159,83 @@ export function SettingsPage() {
         </TabPanel>
 
         <TabPanel value="providers" className="space-y-4">
+          {/*
+            The host card comes first because it decides what the rest of this tab
+            can honestly claim: without the desktop shell there is no keychain to
+            store a key in, and the provider rows below say so.
+          */}
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle className="text-body">Desktop host</CardTitle>
+                <CardDescription>
+                  {shell.loading
+                    ? 'Asking the host what it can do…'
+                    : shell.inShell
+                      ? `Running in the desktop shell · ${shell.status?.platform ?? 'unknown platform'} · v${shell.status?.appVersion ?? '?'}`
+                      : 'Running in a browser: no OS keychain, no offline cache and no local API'}
+                </CardDescription>
+              </div>
+              <Monitor size={15} aria-hidden className="text-text-faint" />
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              <ReadOnlyValue
+                label="Local API"
+                value={
+                  shell.status?.apiBaseUrl
+                    ? `${shell.status.apiBaseUrl} · ${shell.status.sidecarState}`
+                    : shell.inShell
+                      ? `not running (${shell.status?.sidecarState ?? 'unknown'})`
+                      : 'not available in a browser'
+                }
+                hint="The bundled API binds 127.0.0.1 only, on a fixed port, with a per-launch token."
+              />
+              <ReadOnlyValue
+                label="Credential store"
+                value={
+                  shell.inShell
+                    ? 'OS keychain'
+                    : 'unavailable here — keys can only be entered in the desktop app'
+                }
+                hint="Windows Credential Manager, macOS Keychain or Secret Service. Never a file."
+              />
+              <ReadOnlyValue
+                label="Offline cache"
+                value={
+                  shell.inShell
+                    ? 'app-data directory, bounded to 4 MB'
+                    : 'not available in a browser'
+                }
+                hint="Lesson content and last-known status survive without a network."
+              />
+              <ReadOnlyValue
+                label="Shell protocol"
+                value={
+                  shell.status
+                    ? `v${shell.status.protocolVersion} · ${shell.status.capabilities.length} capabilities`
+                    : shell.error
+                      ? `host did not answer: ${shell.error}`
+                      : 'unknown'
+                }
+                hint="A protocol mismatch is refused rather than guessed at."
+              />
+              {(shell.status?.unavailable.length ?? 0) > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {shell.status?.unavailable.map((entry) => (
+                    <li key={entry.capability} className="text-caption text-warning">
+                      {entry.capability}: {entry.reason}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+            <CardContent className="border-t border-border pt-3 text-caption text-text-faint">
+              The shell grants the interface no filesystem, path, shell or network permission. Every
+              privileged action — the keychain, the cache, exports, the bundled API process — is a
+              typed command implemented in Rust, and the allow-list is verified in CI.
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <div>

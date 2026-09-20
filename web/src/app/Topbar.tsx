@@ -1,9 +1,10 @@
-import { Bell, Languages, Search, ShieldCheck, WifiOff } from 'lucide-react';
+import { Bell, Languages, Monitor, Search, ShieldCheck, WifiOff } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button, IconButton } from '../components/Button';
 import { Input } from '../components/Input';
 import { Tooltip } from '../components/Tooltip';
 import { findNavSection, PREVIEW_NOTICE } from '../config/navigation';
+import { useShellStatus } from '../desktop/useShellStatus';
 import { useUiStore } from '../store/ui';
 
 /**
@@ -20,6 +21,28 @@ export function Topbar() {
   const openSafety = useUiStore((state) => state.setSafetyDialogOpen);
   const openAbout = useUiStore((state) => state.setAboutDialogOpen);
   const section = findNavSection(page);
+  const shell = useShellStatus();
+
+  // Where this page is running is stated, never implied: in a browser there is no
+  // keychain, no offline cache and no local API, and the shell says which of those
+  // it currently has.
+  const apiReady = shell.status?.sidecarState === 'ready';
+  const shellLabel = shell.loading
+    ? 'Checking host…'
+    : shell.inShell
+      ? apiReady
+        ? 'Desktop shell'
+        : `Desktop shell · API ${shell.status?.sidecarState ?? 'unknown'}`
+      : 'Browser preview';
+  const shellTooltip = shell.loading
+    ? 'Asking the desktop shell what it can do.'
+    : shell.error
+      ? `The host did not answer: ${shell.error}. Assuming no keychain, no offline cache and no local API.`
+      : shell.inShell
+        ? apiReady
+          ? `Desktop shell v${shell.status?.appVersion ?? '?'} on ${shell.status?.platform ?? '?'}. The local API answers on ${shell.status?.apiBaseUrl ?? 'a loopback port'}.`
+          : `The bundled local API is ${shell.status?.sidecarState ?? 'not running'}; the interface stays usable but nothing is connected.`
+        : 'Running in a browser: no OS keychain, no offline cache and no local API. Credentials cannot be stored from here.';
 
   return (
     <header className="sticky top-0 z-[var(--z-shell)] border-b border-border bg-bg/85 backdrop-blur">
@@ -41,7 +64,16 @@ export function Topbar() {
           </button>
         </Tooltip>
 
-        <Tooltip content="No real-time connection in this phase (WebSocket transport is Phase 3.3).">
+        <Tooltip content={shellTooltip}>
+          <Badge
+            tone={shell.inShell ? (apiReady ? 'info' : 'warning') : 'neutral'}
+            icon={<Monitor size={12} aria-hidden />}
+          >
+            {shellLabel}
+          </Badge>
+        </Tooltip>
+
+        <Tooltip content="No real-time connection in this phase (WebSocket transport is not mounted yet).">
           <Badge tone="neutral" icon={<WifiOff size={12} aria-hidden />}>
             Offline
           </Badge>

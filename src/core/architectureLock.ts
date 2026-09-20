@@ -42,6 +42,11 @@ export const LOCK_AREAS = [
   'ai.providerIndependence',
   'desktop.runtime',
   'desktop.security',
+  // Phase 3.6: the shell became an implementation, so three areas of its policy
+  // are locked in the same machine-checked form rather than left in prose.
+  'desktop.capabilities',
+  'desktop.lifecycle',
+  'desktop.config',
   'realtime.transport',
   'jobs.queue',
 ] as const;
@@ -276,6 +281,36 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     ],
     constraint:
       'No shell or API capability exists for broker connection, order placement or live trading.',
+  },
+  {
+    id: 'DEC-DESKTOP-3-CAPABILITIES',
+    area: 'desktop.capabilities',
+    choice:
+      'The WebView is granted five permissions and no shell:/fs:/path:/http:/process:/store: permission at all; Rust performs privileged work and exposes typed commands',
+    status: 'locked',
+    adr: ['ADR-0029-webview-capability-boundary.md'],
+    constraint:
+      'No command returns a filesystem path; command names must match between src/desktop/ipc.ts and src-tauri/src/commands.rs in both directions.',
+  },
+  {
+    id: 'DEC-DESKTOP-4-LIFECYCLE',
+    area: 'desktop.lifecycle',
+    choice:
+      'Sidecar launched from a fixed typed plan on a fixed loopback port with a per-launch environment token; readiness proven by an authenticated health probe; restarts bounded and the budget not cleared by a restart',
+    status: 'locked',
+    adr: ['ADR-0030-sidecar-supervision-fixed-port.md'],
+    constraint:
+      'The window is never shown before the API answers; the shell token never reaches a file, a log or the config.',
+  },
+  {
+    id: 'DEC-DESKTOP-5-CONFIG',
+    area: 'desktop.config',
+    choice:
+      'Local config in the per-OS app-data directory under one strict schema shared with the Rust host, with a recursive refusal of credential-shaped keys',
+    status: 'locked',
+    adr: ['ADR-0031-desktop-config-appdata-keychain.md'],
+    constraint:
+      'A credential value in the config file is rejected, not filtered; a malformed file fails the start rather than falling back to defaults.',
   },
   {
     id: 'DEC-RT-1-WEBSOCKET',
