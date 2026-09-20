@@ -1,5 +1,5 @@
 import { AlertTriangle, Download, FileText } from 'lucide-react';
-import type { DataProvenance } from '../../../../src/marketdata/provider.js';
+import type { DataProvenance } from '@shared/marketdata/provider';
 import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
 import { Badge } from '../Badge';

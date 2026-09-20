@@ -18,7 +18,7 @@
  * payload is a data change, not a rewrite.
  */
 
-import type { JobView } from '../../../src/jobs/service.js';
+import type { JobView } from '@shared/jobs/service';
 
 export const ACTIVITY_PREVIEW_NOTICE =
   'Interface preview — mock data only, no backend or AI connected.';

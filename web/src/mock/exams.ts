@@ -17,7 +17,7 @@
  *     page states that plainly.
  */
 
-import type { ExamView } from '../../../src/frontend/viewModels.js';
+import type { ExamView } from '@shared/frontend/viewModels';
 
 /** The six states the assessment surface must be able to render. */
 export type ExamRunState = 'available' | 'in-progress' | 'completed' | 'failed' | 'locked';

@@ -1,0 +1,57 @@
+import { resolve } from 'node:path';
+
+/**
+ * The declared frontend/backend surface — one source of truth (Phase 4.2, ADR-0035 step 1).
+ *
+ * The frontend reaches backend code through `@shared/*` names, never through a relative
+ * path. This map is what those names mean. It is **exact-match, not a directory prefix**:
+ * `@shared/db/sqlite` and `@shared/server/app` do not resolve, so a UI bundle cannot pull
+ * in the database driver or the HTTP server — the toolchain refuses it, not just a test.
+ *
+ * It is consumed by:
+ *   - `vite.config.ts`  — the production bundle
+ *   - `vitest.config.ts` — the test run (Vitest is Vite-based; without the alias the test
+ *     resolver and the app resolver would disagree, and `web/src/realtime/client.ts`
+ *     would load in the app but not under test)
+ *
+ * It is *mirrored*, literally, in `tsconfig.json` and `web/tsconfig.json`, because
+ * TypeScript `paths` cannot read a module. `tests/monorepo-boundary.test.ts` asserts all
+ * three agree on every specifier and target, so the mirrors cannot drift.
+ *
+ * Values are repository-relative paths to the TypeScript source. Every entry must be a
+ * contract (types, view models, the wire protocol) — never an implementation module.
+ */
+export const SHARED_SURFACE: Readonly<Record<string, string>> = {
+  '@shared/api/contracts': 'src/api/contracts.ts',
+  '@shared/core/errors': 'src/core/errors.ts',
+  '@shared/core/headers': 'src/core/headers.ts',
+  '@shared/core/ids': 'src/core/ids.ts',
+  '@shared/core/provenance': 'src/core/provenance.ts',
+  '@shared/desktop/ipc': 'src/desktop/ipc.ts',
+  '@shared/frontend/viewModels': 'src/frontend/viewModels.ts',
+  '@shared/jobs/service': 'src/jobs/service.ts',
+  '@shared/marketdata/provider': 'src/marketdata/provider.ts',
+  '@shared/realtime/contracts': 'src/realtime/contracts.ts',
+  '@shared/realtime/events': 'src/realtime/events.ts',
+  '@shared/realtime/protocol': 'src/realtime/protocol.ts',
+  '@shared/types': 'src/types.ts',
+};
+
+/** Every specifier the frontend may import across the boundary. */
+export function sharedSpecifiers(): string[] {
+  return Object.keys(SHARED_SURFACE);
+}
+
+/**
+ * Vite/Rollup alias entries, resolved against the repository root.
+ *
+ * A plain resolver map: no plugin, no dependency. Rollup matches a string `find` by
+ * prefix, but no key here is a prefix of another, so each entry matches exactly one
+ * specifier.
+ */
+export function sharedAlias(root: string): { find: string; replacement: string }[] {
+  return Object.entries(SHARED_SURFACE).map(([find, file]) => ({
+    find,
+    replacement: resolve(root, file),
+  }));
+}

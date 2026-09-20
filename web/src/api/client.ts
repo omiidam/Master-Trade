@@ -25,11 +25,11 @@ import {
   CORRELATION_ID_HEADER,
   type ApiErrorBody,
   type ApiResponse,
-} from '../../../src/api/contracts.js';
-import { ERROR_STATUS, type ErrorCode } from '../../../src/core/errors.js';
-import { IdFactory } from '../../../src/core/ids.js';
-import { SHELL_TOKEN_HEADER } from '../../../src/core/headers.js';
-import type { JobView } from '../../../src/jobs/service.js';
+} from '@shared/api/contracts';
+import { ERROR_STATUS, type ErrorCode } from '@shared/core/errors';
+import { IdFactory } from '@shared/core/ids';
+import { SHELL_TOKEN_HEADER } from '@shared/core/headers';
+import type { JobView } from '@shared/jobs/service';
 
 /** Where the API is, and what may talk to it. */
 export interface ApiConnection {

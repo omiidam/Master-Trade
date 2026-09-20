@@ -132,7 +132,8 @@ describe('preview prototype', () => {
     // A typed client over the real API contracts, and a session resolver that reports
     // unavailability instead of inventing an endpoint or a credential.
     const api = source('api/client.ts');
-    expect(api).toContain("from '../../../src/api/contracts.js'");
+    // The boundary is a declared name, not a path depth (Phase 4.2, ADR-0035).
+    expect(api).toContain("from '@shared/api/contracts'");
     expect(api).toContain('ApiError');
     expect(api).not.toMatch(/localStorage|sessionStorage|document\.cookie/);
 

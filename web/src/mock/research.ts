@@ -18,7 +18,7 @@
  *     recorded human approval (`approvalRef`), and the interface says so.
  */
 
-import type { Provenance } from '../../../src/core/provenance.js';
+import type { Provenance } from '@shared/core/provenance';
 
 export type ExperimentStatus =
   'planned' | 'running' | 'complete' | 'awaiting-approval' | 'abandoned';

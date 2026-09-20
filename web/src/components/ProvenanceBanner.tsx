@@ -1,6 +1,6 @@
 import { Database, Lock } from 'lucide-react';
-import type { DataProvenance } from '../../../src/marketdata/provider.js';
-import { provenanceLabel } from '../../../src/frontend/viewModels.js';
+import type { DataProvenance } from '@shared/marketdata/provider';
+import { provenanceLabel } from '@shared/frontend/viewModels';
 import { formatTimestamp } from '../lib/format';
 import { cn } from '../lib/cn';
 import { ProvenanceBadge } from './Badge';

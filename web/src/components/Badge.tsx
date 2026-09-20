@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import type { EpistemicKind } from '../../../src/types.js';
-import type { DataProvenance } from '../../../src/marketdata/provider.js';
+import type { EpistemicKind } from '@shared/types';
+import type { DataProvenance } from '@shared/marketdata/provider';
 import { cn } from '../lib/cn';
 import { Tooltip } from './Tooltip';
 

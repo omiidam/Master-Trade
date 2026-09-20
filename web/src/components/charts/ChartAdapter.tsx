@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { DataProvenance } from '../../../../src/marketdata/provider.js';
+import type { DataProvenance } from '@shared/marketdata/provider';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { cn } from '../../lib/cn';
 

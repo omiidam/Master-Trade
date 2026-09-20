@@ -44,14 +44,14 @@ import {
   TERMINAL_CLOSE_CODES,
   type ClientFrame,
   type ServerFrame,
-} from '../../../src/realtime/protocol.js';
+} from '@shared/realtime/protocol';
 import {
   contractFor,
   isRealtimeEventType,
   validateEventPayload,
   type RealtimeEventType,
-} from '../../../src/realtime/contracts.js';
-import type { RealtimeEvent } from '../../../src/realtime/events.js';
+} from '@shared/realtime/contracts';
+import type { RealtimeEvent } from '@shared/realtime/events';
 
 /** Connection lifecycle, as the UI shows it. */
 export type ConnectionState =

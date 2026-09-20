@@ -6,7 +6,7 @@ import { JobProgressIndicator } from './JobProgressIndicator';
 import { CancelTaskControl } from './CancelTaskControl';
 import { cn } from '../../lib/cn';
 import { formatRelative, formatTimestamp } from '../../lib/format';
-import type { JobView } from '../../../../src/jobs/service.js';
+import type { JobView } from '@shared/jobs/service';
 
 export interface JobStatusCardProps {
   job: JobView;

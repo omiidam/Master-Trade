@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { inDesktopShell, shellStatus } from './bridge';
-import type { ShellStatus } from '../../../src/desktop/ipc.js';
+import type { ShellStatus } from '@shared/desktop/ipc';
 
 export interface ShellStatusState {
   /** True while the first status call is in flight. */

@@ -1,6 +1,6 @@
 import { Bot, Database, FileText, Sparkles, User } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { ProvenanceSource } from '../../../../src/core/provenance.js';
+import type { ProvenanceSource } from '@shared/core/provenance';
 import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
 

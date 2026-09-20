@@ -14,11 +14,27 @@
     "declaration": true,
     "sourceMap": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@shared/api/contracts": ["./src/api/contracts.js"],
+      "@shared/core/errors": ["./src/core/errors.js"],
+      "@shared/core/headers": ["./src/core/headers.js"],
+      "@shared/core/ids": ["./src/core/ids.js"],
+      "@shared/core/provenance": ["./src/core/provenance.js"],
+      "@shared/desktop/ipc": ["./src/desktop/ipc.js"],
+      "@shared/frontend/viewModels": ["./src/frontend/viewModels.js"],
+      "@shared/jobs/service": ["./src/jobs/service.js"],
+      "@shared/marketdata/provider": ["./src/marketdata/provider.js"],
+      "@shared/realtime/contracts": ["./src/realtime/contracts.js"],
+      "@shared/realtime/events": ["./src/realtime/events.js"],
+      "@shared/realtime/protocol": ["./src/realtime/protocol.js"],
+      "@shared/types": ["./src/types.js"]
+    }
   },
   "include": [
     "src/**/*.ts",
     "tests/**/*.ts",
+    "config/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "web/src/config/**/*.ts",

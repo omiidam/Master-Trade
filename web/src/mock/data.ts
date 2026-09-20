@@ -21,8 +21,8 @@ import type {
   NotificationView,
   ProgressView,
   SystemStatusView,
-} from '../../../src/frontend/viewModels.js';
-import type { EpistemicKind } from '../../../src/types.js';
+} from '@shared/frontend/viewModels';
+import type { EpistemicKind } from '@shared/types';
 
 /**
  * The assessment rows live with the Exams module (`./exams.js`) so the Academy

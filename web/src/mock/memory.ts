@@ -17,11 +17,7 @@
  *      which the interface shows as `Archived`.
  */
 
-import {
-  contextKindForTrust,
-  type Provenance,
-  type TrustLevel,
-} from '../../../src/core/provenance.js';
+import { contextKindForTrust, type Provenance, type TrustLevel } from '@shared/core/provenance';
 
 export type MemoryCategoryId =
   'trading-concepts' | 'market-rules' | 'personal-mistakes' | 'research-notes' | 'agent-learnings';

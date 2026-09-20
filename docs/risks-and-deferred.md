@@ -369,3 +369,54 @@ non-Rust sidecar build steps). Until one fires, the cheapest correct next step i
 the single import alias for the shared surface (one `paths` entry mirrored in both
 tsconfigs), which turns the boundary into a stable specifier with no directory
 moves.
+
+## 7. Phase 4.2 — monorepo foundation, boundary first (complete)
+
+Implemented **step 1 of ADR-0035** and nothing else. No file was moved, no workspace was
+configured, no dependency was added — `package.json` is untouched and `npm ci` against
+the committed lockfile remains the single install path. Docs:
+[monorepo.md](./monorepo.md).
+
+**What changed.** The frontend's 27 relative specifiers into `src/` (spread over 18
+files, up to four levels of `../`) became **13 exact `@shared/*` names**. The mapping is
+declared once in `config/sharedSurface.ts`, consumed by `vite.config.ts` and
+`vitest.config.ts`, and mirrored literally in both tsconfigs because TypeScript `paths`
+cannot read a module.
+
+**Why exact-match matters.** Each entry names one module, not a directory prefix, so
+`@shared/db/sqlite`, `@shared/server/app`, `@shared/auth/sessions` and bare `@shared`
+have **no resolver entry at all**. A frontend import of the database driver or the HTTP
+server now fails to compile and fails to bundle, rather than being merely discouraged by
+a test.
+
+**Vitest needed the alias, and that was the point.** Two suites import frontend modules
+directly (`tests/realtime-client.test.ts` → `web/src/realtime/client.ts`,
+`tests/frontend-modules.test.ts` → `web/src/mock/*`), and those modules cross the
+boundary. Had the alias lived only in `vite.config.ts`, the boundary would have worked
+in production and failed in CI — so both configs read one shared map, and
+`tests/monorepo-boundary.test.ts` fails if either inlines its own copy.
+
+**Proof the change is semantically neutral:** `npm run build:web` produces the
+**identical bundle hash** before and after (`index-DYVNC18H.js`, `index-BJ_1UnX4.css`) —
+the alias resolved to the same modules byte for byte.
+
+**Target structure is inert by design.** `apps/{desktop,web,api}` and
+`packages/{ui,database,ai,market-data,trading-engine,shared}` exist as README markers
+that state what will move there and which trigger fires it. There is deliberately no
+`package.json` inside them and no `workspaces` field, so npm ignores them entirely.
+Asserted by test, along with the honest note in `packages/trading-engine/README.md` that
+it would be nearly empty.
+
+**Fixed en route:** one assertion in `tests/frontend-prototype.test.ts` pinned the old
+literal relative import string; it now asserts the declared name. One real config
+defect was caught by the toolchain: `paths` targets must be relative to the tsconfig and,
+under the root's `NodeNext`, must carry an explicit `.js` extension (`TS5090`/`TS2307`).
+
+**Status** — all green: `format:check`, `typecheck`, `typecheck:web`, **386 tests in 29
+files** (0 skipped, 0 todo), `build`, `build:web`, and 22 desktop checks with 0 errors
+and 1 warning (the updater placeholder signing key).
+
+**Next (Phase 4.3 candidate)** — extract `packages/shared` alone, source-only, by
+repointing the alias target from `src/…` to `packages/shared/…`. Because every consumer
+already imports one of 13 exact names, no consumer import changes. The remaining five
+packages wait for a trigger (§6 of the assessment).

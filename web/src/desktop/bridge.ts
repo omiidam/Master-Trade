@@ -24,7 +24,7 @@ import {
   type InvokeFn,
   type ShellBridge,
   type ShellStatus,
-} from '../../../src/desktop/ipc.js';
+} from '@shared/desktop/ipc';
 
 type TauriInternals = { invoke?: InvokeFn };
 

@@ -20,10 +20,10 @@
  */
 
 import { create } from 'zustand';
-import type { RealtimeEvent, RealtimeEventType } from '../../../src/realtime/events.js';
+import type { RealtimeEvent, RealtimeEventType } from '@shared/realtime/events';
 import { ApiClient, ApiError, type JobStatus } from '../api/client.js';
 import { inDesktopShell, shellBridge, apiHandshake } from '../desktop/bridge.js';
-import type { JobView } from '../../../src/jobs/service.js';
+import type { JobView } from '@shared/jobs/service';
 import {
   RealtimeClient,
   type ConnectionState,
@@ -32,7 +32,7 @@ import {
 } from './client.js';
 import { resolveRealtimeSession, SESSION_TOKEN_KEY, type SessionResolution } from './session.js';
 
-export type { JobView } from '../../../src/jobs/service.js';
+export type { JobView } from '@shared/jobs/service';
 
 /** How many feed entries and notifications the store keeps. Bounded on purpose. */
 export const FEED_LIMIT = 200;

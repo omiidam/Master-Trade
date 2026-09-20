@@ -8,7 +8,7 @@ import { ErrorState } from '../ErrorState';
 import { SkeletonCard } from '../Skeleton';
 import { JobStatusCard } from './JobStatusCard';
 import { cn } from '../../lib/cn';
-import type { JobView } from '../../../../src/jobs/service.js';
+import type { JobView } from '@shared/jobs/service';
 
 export interface BackgroundTaskPanelProps {
   jobs: readonly JobView[];

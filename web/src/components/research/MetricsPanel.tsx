@@ -1,6 +1,6 @@
 import { BarChart3, Gauge, Percent, TrendingDown, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { DataProvenance } from '../../../../src/marketdata/provider.js';
+import type { DataProvenance } from '@shared/marketdata/provider';
 import { cn } from '../../lib/cn';
 import { formatPercent } from '../../lib/format';
 import { Badge } from '../Badge';
