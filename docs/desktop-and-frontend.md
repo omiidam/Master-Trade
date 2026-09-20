@@ -65,7 +65,7 @@ always knows what is live and what is cached.
 ### Responsibilities and state
 
 The frontend owns UI and application state only. Its shapes are defined in
-`src/frontend/viewModels.ts` so that backend, tests and UI agree on one
+`packages/shared/src/frontend/viewModels.ts` so that backend, tests and UI agree on one
 contract. State groups:
 
 - session/principal (roles drive what is rendered);

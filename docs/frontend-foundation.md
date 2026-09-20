@@ -147,7 +147,7 @@ records and carry the trust/provenance labels their records declare
 | **Settings**     | direction and density controls, theme tokens, provider rows with keychain references, safety posture, budget, jobs, configuration read-outs | secrets shown as references only, safety flags as assertions     |
 
 Every page states what it is not. Mock data lives in `web/src/mock/data.ts` and is
-**typed against the backend view models** (`src/frontend/viewModels.ts`), so the
+**typed against the backend view models** (`packages/shared/src/frontend/viewModels.ts`), so the
 preview cannot drift into an invented contract the real API will not satisfy.
 
 ## 5. RTL and accessibility

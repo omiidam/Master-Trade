@@ -167,7 +167,7 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     id: 'DEC-BE-3-API',
     area: 'backend.api',
     choice:
-      'Transport-agnostic typed contracts in src/api/contracts.ts; Fastify is an adapter that maps HTTP into the same envelope → guard → dispatch pipeline as the desktop in-process bridge',
+      'Transport-agnostic typed contracts in packages/shared/src/api/contracts.ts; Fastify is an adapter that maps HTTP into the same envelope → guard → dispatch pipeline as the desktop in-process bridge',
     status: 'locked',
     adr: ['ADR-0002-modular-monolith.md', 'ADR-0014-backend-runtime-fastify.md'],
   },
@@ -178,7 +178,8 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
       'Zod schemas as the single source of truth; Fastify body/schema validation is disabled so exactly one validator decides',
     status: 'locked',
     adr: ['ADR-0015-validation-zod-single-source.md'],
-    constraint: 'Untrusted input is parsed only in src/api; everything downstream is typed.',
+    constraint:
+      'Untrusted input is parsed only in packages/shared/src/api; everything downstream is typed.',
   },
   {
     id: 'DEC-BE-5-PIPELINE',
@@ -290,7 +291,7 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     status: 'locked',
     adr: ['ADR-0029-webview-capability-boundary.md'],
     constraint:
-      'No command returns a filesystem path; command names must match between src/desktop/ipc.ts and src-tauri/src/commands.rs in both directions.',
+      'No command returns a filesystem path; command names must match between packages/shared/src/desktop/ipc.ts and src-tauri/src/commands.rs in both directions.',
   },
   {
     id: 'DEC-DESKTOP-4-LIFECYCLE',

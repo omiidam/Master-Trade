@@ -112,3 +112,9 @@ layout, read [monorepo.md](../monorepo.md).
 **Path note (continued):** `src/tools/**` now lives in `packages/trading-engine/src/**`,
 and `src/api/`, `src/frontend/` and `src/marketdata/` were emptied in Phase 4.3 and removed
 in Phase 4.4. Documents naming those paths describe the phase that wrote them.
+
+## Phase 4.5 — finalized import strategy and package boundaries
+
+| ADR                                                         | Decision                                                                                                                                                            | Decision id(s)       | Status   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------- |
+| [0038](./ADR-0038-finalized-import-and-package-strategy.md) | The resolution rules stated once: `@shared/*` for the frontend, relative paths for the backend, one package dependency direction, and lock path claims must be true | `DEC-REPO-4-IMPORTS` | Accepted |

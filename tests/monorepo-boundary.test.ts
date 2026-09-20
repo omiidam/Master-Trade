@@ -504,18 +504,20 @@ describe('monorepo boundary: the decision is recorded', () => {
     const adr = 'ADR-0035-monorepo-migration-staged-boundary-first.md';
     const extractionAdr = 'ADR-0036-extract-shared-package-source-only.md';
     const engineAdr = 'ADR-0037-trading-engine-deterministic-core.md';
+    const strategyAdr = 'ADR-0038-finalized-import-and-package-strategy.md';
     for (const file of [
       'docs/monorepo-assessment.md',
       'docs/monorepo.md',
       `docs/adr/${adr}`,
       `docs/adr/${extractionAdr}`,
       `docs/adr/${engineAdr}`,
+      `docs/adr/${strategyAdr}`,
     ]) {
       expect(existsSync(join(root, file)), `${file} is missing`).toBe(true);
     }
 
     const index = readFileSync(join(root, 'docs', 'adr', 'README.md'), 'utf8');
-    for (const id of ['0035', '0036', '0037']) {
+    for (const id of ['0035', '0036', '0037', '0038']) {
       expect(index, `ADR-${id} is not listed in the ADR index`).toContain(id);
     }
 
@@ -548,6 +550,9 @@ describe('monorepo boundary: the decision is recorded', () => {
     );
     expect(readFileSync(join(root, 'docs', 'adr', engineAdr), 'utf8')).toContain(
       'DEC-REPO-3-ENGINE',
+    );
+    expect(readFileSync(join(root, 'docs', 'adr', strategyAdr), 'utf8')).toContain(
+      'DEC-REPO-4-IMPORTS',
     );
   });
 });

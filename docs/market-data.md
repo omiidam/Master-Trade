@@ -1,6 +1,7 @@
 # Market-Data Layer
 
-Implemented in `src/marketdata/provider.ts`. Reading prices is not trading: this
+Implemented in `packages/shared/src/marketdata/provider.ts` (moved from `src/marketdata/`
+in Phase 4.3; that directory no longer exists). Reading prices is not trading: this
 layer is read-only, and nothing in it can reach a broker.
 
 ## 1. Provider-independent interface

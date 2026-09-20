@@ -77,6 +77,31 @@ describe('architecture lock (Phase 3.1)', () => {
     }
   });
 
+  it('names only repository paths that exist in every locked decision', () => {
+    // The lock's records are prose, but they make factual claims about *where* things
+    // live — "Transport-agnostic typed contracts in src/api/contracts.ts". Nothing
+    // checked those claims, so when Phases 4.3/4.4 moved the shared surface and the
+    // deterministic core, three of them silently went stale. This is that check: a
+    // path named by the lock has to exist, or the lock is describing a repository it
+    // no longer describes.
+    const text = LOCKED_DECISIONS.map((decision) => JSON.stringify(decision)).join('\n');
+    const tokens = new Set<string>();
+    const pattern = /\b(?:src|web|packages|src-tauri|docs|config|tests)\/[A-Za-z0-9_@./-]+/g;
+    for (const match of text.matchAll(pattern)) tokens.add(match[0]);
+
+    const missing: string[] = [];
+    for (const token of tokens) {
+      // Trim sentence punctuation and a trailing glob separator, so `src/db/**` and
+      // `... in src/api; everything` both reduce to a checkable path.
+      const trimmed = token.replace(/[.,;:)]+$/, '').replace(/\/+$/, '');
+      if (trimmed.length === 0) continue;
+      const candidates = [trimmed, trimmed.replace(/\.js$/, '.ts')];
+      if (!candidates.some((candidate) => existsSync(join(root, candidate)))) missing.push(token);
+    }
+
+    expect(missing, 'the architecture lock names a path that no longer exists').toEqual([]);
+  });
+
   it('keeps the lock document in sync with the decision set', () => {
     const doc = readFileSync(join(root, ARCHITECTURE_LOCK_DOC), 'utf8');
     for (const decision of LOCKED_DECISIONS) {
