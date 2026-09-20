@@ -84,6 +84,60 @@ These are enforced by tests and must stay green on every push:
 - configuration refuses to start on an unsafe value, and a session token never
   appears in a log record.
 
+## Native engine / optional dependencies (Tailwind oxide)
+
+**Symptom.** `npm run build:web` (or `vite build`) fails with:
+
+```
+Cannot find native binding
+    at …/node_modules/@tailwindcss/oxide/index.js
+```
+
+**Root cause.** Tailwind CSS v4 builds on a native engine, `@tailwindcss/oxide`,
+published as a set of per-platform packages (`@tailwindcss/oxide-linux-x64-gnu`,
+`…-linux-x64-musl`, `…-darwin-arm64`, `…-win32-x64-msvc`, …) declared by oxide as
+**optional** dependencies. npm installs the one matching the host OS/CPU and skips
+the others. If anything makes npm omit optional dependencies, the package that
+disappears is the engine itself, and the error above is thrown from inside oxide —
+which is why it reads as a packaging complaint rather than a missing install.
+
+**What it is not.** It is _not_ a missing or pruned lockfile: `package-lock.json`
+declares every platform package with its `os`/`cpu`, including
+`@tailwindcss/oxide-linux-x64-gnu`. It is _not_ a dependency-version problem, and it
+is _not_ a Node version problem — the binaries are N-API and independent of the
+Node minor. Editing or deleting the lockfile cannot fix it and loses
+reproducibility.
+
+**Diagnose the host.**
+
+```bash
+node -v && npm -v                              # Node ≥ 22.5 expected (node:sqlite)
+node -p "process.platform + ' ' + process.arch"
+npm config get omit                            # 'optional' here is the cause
+npm ls @tailwindcss/oxide                      # is the platform package present?
+node -e "require('@tailwindcss/oxide'); console.log('binding ok')"
+```
+
+**Fix.** Keep optional dependencies. The repository commits a `.npmrc` setting
+`include=optional` — npm's positive directive for keeping them — so a user- or
+global-level `omit=optional` on a build host can no longer silently disable the
+engine, because a project `.npmrc` outranks one higher up the tree. (Writing
+`omit=` with an empty value does not work: npm rejects it as invalid config and
+ignores it, which is why the positive form is used.) `npm run validate` fails
+loudly at `tests/native-engine.test.ts` if the engine is ever absent. Then
+reinstall **without touching the lockfile**:
+
+```bash
+rm -rf node_modules
+npm ci                     # never `--omit=optional` / `--no-optional`
+node -e "require('@tailwindcss/oxide'); console.log('binding ok')"
+```
+
+A command-line flag still outranks `.npmrc`, so an explicit `--omit=optional` on the
+build host must be removed rather than worked around. Do not hand-pin the platform
+package in `package.json`: the lockfile is already correct, and a hard-pinned
+platform package goes stale the next time Tailwind is upgraded.
+
 ## Commit style
 
 - `area: summary` (e.g. `risk: add fixed-fractional position sizing tool`)
@@ -91,5 +145,9 @@ These are enforced by tests and must stay green on every push:
 
 ## CI
 
-`.github/workflows/ci.yml` runs `npm run validate` on every push and PR
-(Node 20 and 22). CI passing is required before a push is considered valid.
+`.github/workflows/ci.yml` runs `npm run validate` on every push and PR, on a
+Node **22 and 24** matrix (22.5+ is required for `node:sqlite`, the local database
+driver; a 22 build without it skips the database suites with a recorded reason
+rather than failing). It installs with `npm ci` — the committed lockfile, which
+also keeps the optional Tailwind engine — and never `npm install`. CI passing is
+required before a push is considered valid.
