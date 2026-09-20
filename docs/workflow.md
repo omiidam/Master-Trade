@@ -151,3 +151,9 @@ driver; a 22 build without it skips the database suites with a recorded reason
 rather than failing). It installs with `npm ci` — the committed lockfile, which
 also keeps the optional Tailwind engine — and never `npm install`. CI passing is
 required before a push is considered valid.
+
+CI also runs `npm run audit:prod` (`npm audit --omit=dev --audit-level=high`)
+immediately after install, so a **production-scope** advisory fails the build. The
+open advisories in the dev/test toolchain are out of that scope, with their
+reachability recorded in [dependency-audit.md](./dependency-audit.md). The gate is
+not part of `npm run validate`, which stays offline and deterministic.

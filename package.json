@@ -25,6 +25,7 @@
     "db:schema": "node dist/db/cli.js schema",
     "preview:web": "vite preview --port 4173 --strictPort",
     "validate": "npm run format:check && npm run typecheck && npm run typecheck:web && npm run test && npm run build && npm run build:web && npm run desktop:verify",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
     "agent:demo": "node dist/agent/demo.js",
     "ai:demo": "node dist/agent/aiDemo.js",
     "build:sidecar": "node scripts/build-sidecar.mjs",

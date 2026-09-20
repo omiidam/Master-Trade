@@ -420,3 +420,31 @@ and 1 warning (the updater placeholder signing key).
 repointing the alias target from `src/…` to `packages/shared/…`. Because every consumer
 already imports one of 13 exact names, no consumer import changes. The remaining five
 packages wait for a trigger (§6 of the assessment).
+
+## 8. Dependency audit — Vitest/Vite advisories (investigated, remediation pending)
+
+`npm audit` reports 5 vulnerabilities in the dev/test toolchain (3 moderate, 1 high, 1
+critical). **Production scope is clean** — `npm audit --omit=dev --audit-level=high`
+exits 0. Full analysis, reachability and the rejected alternatives:
+[dependency-audit.md](./dependency-audit.md).
+
+**Root cause:** `vitest@2.1.9` requires `vite ^5.0.0`, but the project's own `vite` is
+6.4.3, so npm keeps a nested `vite@5.4.21` + `esbuild@0.21.5` + `vite-node@2.1.9` +
+`@vitest/mocker@2.1.9`. Every flagged node is inside that duplicate. `5.4.21` is the
+last `5.4.x` ever published, so **no patched Vite 5 exists** — the duplicate can only
+be eliminated, not upgraded.
+
+**Not reachable in this repository:** the critical advisory needs the Vitest UI or
+Browser Mode (we run `vitest run` only); the `@vitest/mocker` one needs `vi.mock`
+redirect mocks or a third-party dev server on Vite's unauthenticated HMR socket (`vi.mock`
+appears 0 times); the `vite`/`esbuild` ones need a dev server served from the nested
+copies, and our dev server is the patched top-level 6.4.3.
+
+**Recommended fix, not applied:** `vitest` 2.1.9 → `^4.1.11`. That is the minimum fully
+patched version (3.2.7 is not enough — `@vitest/mocker` is only fixed at 4.1.11), and it
+clears all five: `vite-node` disappears in vitest 4, and the tree dedupes onto our
+existing `vite@6.4.3`. It is a **two-major** upgrade, so it is documented rather than
+applied automatically.
+
+**Enforced instead:** `npm run audit:prod` plus a CI step, so a production-scope
+advisory fails the build while dev-toolchain noise does not block unrelated work.
