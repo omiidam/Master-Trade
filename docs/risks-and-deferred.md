@@ -26,6 +26,9 @@
 | R20 | Backend readiness mistaken for a working system (three routes answer 501, nothing persists) | false confidence, wasted integration | medium          | readiness returns `degraded` per unbuilt layer with a detail string; the 501 body names the missing capability; owner-only config view is redacted    | keep readiness honest as slices land; make the frontend render `501 NOT_IMPLEMENTED` distinctly from `403 FORBIDDEN` |
 | R21 | A new local process (or a browser page) reaching the loopback port                          | unauthorized API use                 | low now         | loopback refusal, optional per-launch shell token compared in constant time, hashed session tokens; no shell token configured triggers a boot warning | set the shell token in the Tauri handshake; add a per-session rate limit before any costly endpoint exists           |
 | R22 | Body/session memory of a long-lived process grows (sessions, dead letters, log sink)        | memory pressure over weeks           | low             | sessions have a TTL with `purgeExpired()`; dead letters are bounded; logs stream to a sink rather than accumulating                                   | schedule a maintenance job once the durable queue lands; cap in-memory log retention in the desktop build            |
+| R23 | Price table drifts from provider pricing, so the budget stops matching real spend           | budget control inaccurate            | medium          | cost derived from one reviewed table; unpriced models refused; usage flagged `estimated` when counts are missing                                      | review prices when a provider announces a change; add a spend reconciliation report per session                      |
+| R24 | A model ignores the summary contract, so turns fail instead of degrading                    | visible failures, friction           | medium          | every rejection is typed and named (missing source, free-form text, reasoning field); the offline adapter is always available as a working default    | add a repair retry that re-asks once with the contract, then fails; measure the violation rate per provider          |
+| R25 | A provider's reasoning or tool payload leaks into the product through a new field           | exposure of private deliberation     | low             | adapters read named fields only; the parser refuses reasoning keys; a structural check on summary kinds guards the contract                           | extend the adapter fixtures for each provider release; keep the structural test in CI                                |
 
 ## 2. Trade-offs consciously accepted
 
@@ -52,7 +55,7 @@
 
 | Area                    | Deferred                                                                                                                                                                    |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| LLM                     | real OpenAI/Anthropic/local adapters, streaming, true cancellation, prompt template registry                                                                                |
+| LLM                     | streaming (`stream()`), true cancellation from the UI into an in-flight call, the multi-step tool loop, prompt template registry, spend report per session                  |
 | Agent                   | tool-calling loop with multi-step tool use, summarization section source, per-user model preference                                                                         |
 | Database                | SQLite driver + repositories, WAL configuration, backup/restore, hard-delete job, seed content                                                                              |
 | Storage                 | filesystem and remote adapters, content-hash dedup on disk, export pipeline for reports                                                                                     |
@@ -156,3 +159,42 @@ trust rule and metric-source rule is asserted by `tests/frontend-modules.test.ts
 
 **Next:** persistence wiring (repositories → server → UI), then one real LLM
 provider (Phase 3.5 AI infrastructure).
+
+### 4.5 Phase 3.5 — AI infrastructure
+
+**Done — the LLM layer, implemented rather than described.** Providers are real
+adapters behind `LlmProvider`: OpenAI and any OpenAI-compatible local server, and
+Anthropic's Messages API, over native `fetch` with no vendor SDK
+([ADR-0028](./adr/ADR-0028-provider-transport-native-fetch.md)).
+`createAiGateway()` is the composition root: the offline scripted adapter is
+always registered, a provider that cannot be built is skipped _with a reason_, and
+an unpriced model is a start-up warning and a call-time refusal.
+
+**Done — three controls that used to be conventions.**
+
+1. **Cost is ours.** A provider returns token counts; the gateway prices them
+   from one reviewed table and refuses a model it cannot price
+   ([ADR-0026](./adr/ADR-0026-cost-from-our-price-table.md)). A spent budget
+   blocks the turn before any provider call.
+2. **Answers are structured.** `OUTPUT_CONTRACT` is injected into every request
+   and enforced after it: an answer is a JSON summary or the turn fails. A
+   `fact` without a source is rejected, `uncertainty` is a rendered field, and
+   chain-of-thought is refused by name — as a JSON field or an inline
+   `<thinking>` block, in the adapter and in the parser
+   ([ADR-0027](./adr/ADR-0027-structured-summaries-not-chain-of-thought.md)).
+3. **Tools run in the orchestrator, with arguments.** `Orchestrator.runAsync()`
+   authorizes each requested tool, runs it, and records provenance; one denied or
+   unknown tool blocks the whole turn. The model never receives a tool handle.
+
+**Also done:** the gateway circuit breaker (a down provider stops being
+attempted, then is re-probed) and the offline default now answers _inside_ the
+summary contract, so a keyless run is a real path through the same parser,
+permission check and cost accounting. 42 new tests
+([ai-and-llm.md](./ai-and-llm.md)); `npm run ai:demo` runs a turn offline.
+
+**Not done, deliberately:** streaming, UI cancellation, the multi-step tool loop
+(the model is not re-asked to narrate a deterministic result), and server wiring —
+the HTTP server still registers no provider, and readiness keeps saying so.
+
+**Next:** register a provider in the server composition root and expose the async
+turn over the API, then wire the frontend to it.

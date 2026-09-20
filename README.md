@@ -113,6 +113,32 @@ curl http://127.0.0.1:4317/v1/health/ready    # readiness reflects the database
 See [database-and-storage.md](./docs/database-and-storage.md) and
 [ADR-0023…0025](./docs/adr/).
 
+## AI layer (Phase 3.5)
+
+`src/llm/**` is provider-independent by construction. A provider returns **token
+counts only**; the gateway owns endpoints, fallback, retry, timeout, cost,
+budget and the circuit breaker, and prices every call from its own table
+(`src/llm/pricing.ts`) — a model with no price row is refused, because an
+unbudgetable model is an unaccountable one.
+
+Adapters for OpenAI, any OpenAI-compatible local server and Anthropic live in
+`src/llm/providers/` and are built on native `fetch`, with no vendor SDK in the
+dependency tree. `createAiGateway()` turns settings into a live gateway, always
+registers the offline scripted adapter, and reports any provider it had to skip.
+
+A model answers with a **structured summary or not at all**: `headline`,
+`statements[{kind, text, sources}]`, `uncertainty[]`, `toolRequests[]`. A `fact`
+without a source is rejected, and chain-of-thought is refused by name — as a JSON
+field or an inline `<thinking>` block. Tools it requests are authorized and run
+by the orchestrator; it never receives a tool handle.
+
+```bash
+npm run build && npm run ai:demo   # offline: a full async turn, no key, no network
+```
+
+See [ai-and-llm.md](./docs/ai-and-llm.md) and
+[ADR-0026…0028](./docs/adr/).
+
 ## Safety
 
 - No live trading, no broker connections, no order placement — no operation,

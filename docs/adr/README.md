@@ -50,6 +50,14 @@ the alternatives that were deliberately turned down.
 | [0024](./ADR-0024-generated-migrations-and-ledger.md)        | Migrations generated from the schema, checksummed ledger, refuse instead of guessing | `DEC-DB-3-MIGRATIONS`                   | Accepted                                          |
 | [0025](./ADR-0025-sqlite-driver-and-dialects.md)             | Driver becomes `node:sqlite`; one dialect serves SQLite and PostgreSQL               | `DEC-DB-1-LOCAL`, `DEC-DB-2-PRODUCTION` | Accepted (supersedes the driver half of ADR-0016) |
 
+## Phase 3.5 — AI infrastructure
+
+| ADR                                                             | Decision                                                                        | Decision id(s)          | Status   |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------- | ----------------------- | -------- |
+| [0026](./ADR-0026-cost-from-our-price-table.md)                 | Cost from our own price table; an unpriced model cannot be called               | `DEC-AI-2-GATEWAY`      | Accepted |
+| [0027](./ADR-0027-structured-summaries-not-chain-of-thought.md) | Structured summaries only; chain-of-thought never accepted, stored or displayed | `DEC-AI-1-ABSTRACTION`  | Accepted |
+| [0028](./ADR-0028-provider-transport-native-fetch.md)           | Provider transport over native `fetch`; no vendor SDK becomes a dependency      | `DEC-AI-3-INDEPENDENCE` | Accepted |
+
 The machine-readable form of this lock is `src/core/architectureLock.ts` and it
 is enforced by `tests/technology-lock.test.ts`. Every decision id above also
 appears in [technology-decisions.md](../technology-decisions.md).

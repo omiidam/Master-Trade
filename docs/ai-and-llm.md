@@ -56,13 +56,24 @@ this.
 interface LlmProvider {
   readonly id: LlmProviderId; // 'scripted' | 'openai' | 'anthropic' | 'local-openai-compatible'
   readonly models: readonly string[];
-  complete(request: LlmRequest, signal?: AbortSignal): Promise<LlmResponse>;
+  complete(request: LlmRequest, signal?: AbortSignal): Promise<LlmProviderResponse>;
 }
 ```
 
 Provider-specific code exists only inside providers. Adding a provider means
 implementing this interface and registering it with the gateway — no change to
 orchestration, permissions, tools or storage.
+
+**Phase 3.5 status: implemented.** Three things changed in Phase 3.5, and each is
+recorded as an ADR:
+
+- a provider returns **token counts only** (`LlmTokenUsage`) — the contract has no
+  field that can carry money, so cost cannot be self-reported
+  ([ADR-0026](./adr/ADR-0026-cost-from-our-price-table.md));
+- a model answers with a **structured summary** and nothing else; chain-of-thought
+  is refused by name ([ADR-0027](./adr/ADR-0027-structured-summaries-not-chain-of-thought.md));
+- adapters are built on native `fetch`, not vendor SDKs
+  ([ADR-0028](./adr/ADR-0028-provider-transport-native-fetch.md)).
 
 ### Request/response contract
 
@@ -87,6 +98,38 @@ the gateway has no tool registry at all.
 If a provider is not registered, its endpoint is skipped rather than failing the
 whole chain (this is what makes `scripted` the safe offline default).
 
+### Provider adapters (Phase 3.5)
+
+```
+src/llm/
+├── provider.ts        # interfaces + LlmGateway (the only component that knows
+│                      #   about endpoints, fallback, retry, timeout, pricing, budget)
+├── pricing.ts         # one price row per (provider, model); cost is computed here
+├── summary.ts         # the only accepted answer shape + the output contract text
+├── prompt.ts          # assembled context → labelled provider messages
+├── registry.ts        # settings → a live gateway (the composition root)
+└── providers/
+    ├── http.ts               # JSON POST, timeout/abort, status → typed error
+    ├── openaiCompatible.ts   # OpenAI and any OpenAI-compatible local server
+    ├── anthropic.ts          # Messages API (system split, content blocks)
+    └── scripted.ts           # offline deterministic adapter (always registered)
+```
+
+| Concern              | Where it lives, and why it is there                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Transport + timeouts | `providers/http.ts`: one JSON POST, `AbortSignal` on timeout, no `Response` escapes the adapter                         |
+| Error taxonomy       | `http.ts`: 429/5xx retryable; 401/403 `FORBIDDEN` and 400/404 `VALIDATION_FAILED` not — a bad credential is not a flake |
+| Credential travel    | `x-api-key` for Anthropic, `Authorization: Bearer` otherwise; never in a detail object, an error or a log               |
+| Reasoning exclusion  | adapters never read reasoning fields/blocks; the summary parser refuses them by name                                    |
+| Tool arguments       | parsed from JSON, or the call is refused — a deterministic calculator must never receive guessed inputs                 |
+| Cost                 | `pricing.ts` + gateway: priced by the model **we** requested, not the one the response names                            |
+| Composition          | `registry.ts`: the scripted adapter is always registered; a provider that cannot be built is skipped _with a reason_    |
+
+The offline default is a real path, not a stub: with the scripted provider
+registered, a turn still goes through the prompt builder, the summary parser, the
+permission check and the cost accounting — running without a key degrades answer
+quality, never a guarantee.
+
 ### Model configuration
 
 ```ts
@@ -99,6 +142,12 @@ ai: {
   allowModelDirectToolExecution: false,   // literal false, enforced by assertSafeConfig
 }
 ```
+
+Configured providers that cannot be built (missing credential, malformed
+settings) are skipped and reported by `createAiGateway()` — the app degrades to
+the next endpoint rather than failing to start, and "it silently used the offline
+model" cannot happen without a recorded reason. An unpriced configured model is a
+start-up warning and a `POLICY_VIOLATION` at call time.
 
 Secrets are `SecretRef` values (`{kind:'env'|'keychain', name}`) — configuration
 objects can be logged, exported and committed without leaking keys. The desktop
@@ -115,6 +164,41 @@ shell resolves `kind:'keychain'` from the OS keychain.
 5. Denied runs are recorded as `BLOCKED` with a reason, so attempts are visible
    in the audit trail rather than silently dropped.
 
+### One asynchronous turn, in order
+
+`Orchestrator.runAsync()` (`src/agent/orchestrator.ts`) is the path a hosted model
+takes. The order is the safety property:
+
+```
+1. lifecycle: IDLE → LOADING → READY → RUNNING
+2. render instructions (version-stamped)
+3. assemble context under a token budget          (src/agent/context.ts)
+4. build the prompt: instructions + operating rules + OUTPUT CONTRACT  (src/llm/prompt.ts)
+5. gateway.complete()  → primary, then fallbacks; retry/timeout/budget/circuit
+6. summarizeModelOutput()  → structured summary, or the turn fails
+7. lifecycle: RUNNING → RESPONDING
+8. for each tool request: authorize() → run → record provenance
+     unknown tool            → BLOCKED (whole turn)
+     permission denied       → BLOCKED (whole turn)
+     tool reports an error   → recorded as a value, not an exception
+9. lifecycle: RESPONDING → IDLE
+```
+
+Step 8 is where the LLM-permission rule is enforced with arguments in hand: the
+model supplies the arguments, but `checkPermission` runs first, and the tool is
+executed by the orchestrator. A single unknown or denied tool blocks the whole
+turn — a model that asks for something it may not have does not get a partial run.
+
+`AgentService.runAsync()` wraps this into the view the API layer serves
+(`summary`, `statements`, `toolExecutions`, `usage`, `provider`, `model`), and
+`npm run ai:demo` runs it offline end to end.
+
+**Not implemented in this phase:** the multi-step tool loop. A turn runs the
+tools it asked for and the deterministic results are returned as values; the model
+is not called a second time to narrate them. That is deliberate — an unverified
+narrative over a deterministic result is exactly the content this layer is built to
+keep separated.
+
 ## 3. Prompt and instruction management
 
 Instructions live in `src/instructions/loader.ts`: immutable modules with id +
@@ -126,7 +210,14 @@ a conversation can be replayed against the exact instructions that produced it
 
 ## 4. Deferred
 
-- Real provider adapters (OpenAI/Anthropic/local) with streaming.
+- **Streaming** (`stream()` returning `AsyncIterable<LlmStreamChunk>`) and true
+  cancellation propagation from the UI into an in-flight provider call. The
+  gateway owns timeouts today; a user-visible cancel needs the interface change.
+- **The multi-step tool loop**: re-asking the model to explain a deterministic
+  result, with the result supplied as a source.
+- **Embedding + reranking for context selection** — retrieval quality, not layer
+  structure.
 - Prompt templates distinct from instruction modules and an instruction registry.
-- Per-user model preference and cost dashboards.
-- True cancellation propagation from the UI into in-flight provider calls.
+- Per-user model preference, cost dashboards and a spend report per session.
+- A provider-registry UI: configuration is code/config today, resolved by
+  `createAiGateway()`.

@@ -22,7 +22,7 @@ export * from './core/rateLimit.js';
 export * from './core/config.js';
 
 /* Phase 2 platform: layers */
-export * from './llm/provider.js';
+export * from './llm/index.js';
 export * from './auth/model.js';
 export * from './api/contracts.js';
 export * from './marketdata/provider.js';
@@ -35,6 +35,11 @@ export * from './vector/memory.js';
 export * from './agent/approval.js';
 export * from './agent/proposals.js';
 export * from './agent/context.js';
+
+/* Phase 3.5: AI infrastructure — the LLM-backed async turn. The adapters and the
+   gateway come from ./llm/index.js above; this adds the async model adapter that
+   turns a provider response into the structured summary the agent may use. */
+export * from './agent/asyncModel.js';
 export * from './desktop/host.js';
 export * from './frontend/viewModels.js';
 

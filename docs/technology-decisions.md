@@ -315,27 +315,35 @@ OS app-data dir/
 `LlmProvider` (Phase 2) stays the boundary. Phase 3.2 adds three adapters in
 `src/llm/providers/`:
 
-| Adapter                    | Purpose                                                       |
-| -------------------------- | ------------------------------------------------------------- |
-| `openai/`                  | primary hosted reasoning model                                |
-| `anthropic/`               | second hosted provider — proves the seam is real, not nominal |
-| `openai-compatible-local/` | llama.cpp / Ollama / LM Studio / vLLM for offline use         |
+| Adapter                                            | Purpose                                                           |
+| -------------------------------------------------- | ----------------------------------------------------------------- |
+| `providers/openaiCompatible.ts`                    | primary hosted reasoning model (and any OpenAI-compatible server) |
+| `providers/anthropic.ts`                           | second hosted provider — proves the seam is real, not nominal     |
+| `providers/openaiCompatible.ts` with `id: local-…` | llama.cpp / Ollama / LM Studio / vLLM for offline use             |
+| `providers/scripted.ts`                            | offline default and test double; always registered                |
 
 `LlmRequest` still has no field that can execute anything; adapters translate
-transport details only. The `scripted` provider remains the offline default and
-the test double.
+transport details only. Implemented in Phase 3.5 over native `fetch` with no
+vendor SDK ([ADR-0028](./adr/ADR-0028-provider-transport-native-fetch.md)).
 
 ### 4.2 Gateway — `DEC-AI-2-GATEWAY`
 
 The existing `LlmGateway` keeps ownership of: endpoint order, fallback on
 provider failure, retry for retryable codes only, per-request timeout via
 `AbortSignal`, `UsageTracker` token/cost accounting, and budget refusal
-(`BUDGET_EXCEEDED`). Phase 3.2 adds streaming (`stream()` returning
-`AsyncIterable<LlmStreamChunk>`) and a consecutive-failure circuit breaker.
+(`BUDGET_EXCEEDED`).
 
-Streaming changes nothing about authority: a stream chunk can carry text and
-tool-call _requests_, never an execution. The gateway still holds no
-`ToolRegistry`.
+Phase 3.5 added the consecutive-failure **circuit breaker** (a provider that is
+down stops being attempted, and is re-probed after a reset window) and moved cost
+ownering to the gateway: a provider returns tokens, the gateway prices them from
+`src/llm/pricing.ts`, and a model with no price row is refused
+(`POLICY_VIOLATION`) because an unbudgetable model is an unaccountable one
+([ADR-0026](./adr/ADR-0026-cost-from-our-price-table.md)).
+
+Still deferred: streaming (`stream()` returning `AsyncIterable<LlmStreamChunk>`).
+When it lands it changes nothing about authority — a chunk can carry text and
+tool-call _requests_, never an execution. The gateway holds no `ToolRegistry` in
+either case.
 
 ### 4.3 Provider independence — `DEC-AI-3-INDEPENDENCE`
 
@@ -597,4 +605,25 @@ One locked decision was amended rather than superseded: the SQLite driver moved
 to the Node built-in because the better-sqlite3 install failed on this platform
 (exactly risk R15), and the driver port keeps the swap reversible
 ([ADR-0025](./adr/ADR-0025-sqlite-driver-and-dialects.md)). No experimental
+technology was introduced.
+
+## 14. Phase 3.5 status against this lock
+
+The AI infrastructure is implemented on the locked stack (see
+[ai-and-llm.md](./ai-and-llm.md)):
+
+| Locked choice                       | Status in Phase 3.5                                                                                                                 |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `LlmProvider` abstraction           | implemented; a provider returns **token counts only** — the contract cannot carry money                                             |
+| OpenAI / Anthropic / local adapters | implemented over native `fetch` in `src/llm/providers/` ([ADR-0028](./adr/ADR-0028-provider-transport-native-fetch.md))             |
+| `LlmGateway` ownership              | endpoint order, fallback, retry, timeout, cost, budget **and** the circuit breaker                                                  |
+| Provider independence               | enforced by the existing import-scope test; no provider SDK is a dependency                                                         |
+| Cost tracking                       | computed from our own price table; an unpriced model is refused ([ADR-0026](./adr/ADR-0026-cost-from-our-price-table.md))           |
+| Model output                        | structured summary only; chain-of-thought refused by name ([ADR-0027](./adr/ADR-0027-structured-summaries-not-chain-of-thought.md)) |
+| Context management                  | `assembleContext()` + `buildTurnMessages()`: instructions mandatory, every section labelled with trust and provenance               |
+| Scripted provider                   | kept, always registered, and now answers inside the summary contract — the offline default is a real path                           |
+| Streaming                           | **still deferred** — the interface change waits for real cancellation plumbing                                                      |
+| Server wiring                       | **not yet** — the server still registers no provider; readiness reports that honestly and names the adapters that exist             |
+
+Three locked decisions were refined and none was superseded; no experimental
 technology was introduced.

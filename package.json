@@ -1,6 +1,6 @@
 {
   "name": "master-trade",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Master Trade — Trading Training Agent: Model + typed deterministic Tools + versioned Instructions. Training-only, no live trading.",
   "private": true,
   "type": "module",
@@ -25,7 +25,8 @@
     "db:schema": "node dist/db/cli.js schema",
     "preview:web": "vite preview --port 4173 --strictPort",
     "validate": "npm run format:check && npm run typecheck && npm run typecheck:web && npm run test && npm run build && npm run build:web",
-    "agent:demo": "node dist/agent/demo.js"
+    "agent:demo": "node dist/agent/demo.js",
+    "ai:demo": "node dist/agent/aiDemo.js"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

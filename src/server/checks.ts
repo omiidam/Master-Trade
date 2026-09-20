@@ -16,6 +16,7 @@ import type { AppConfig } from '../core/config.js';
 import { assertNoHardlineOperations } from '../auth/model.js';
 import { assertSafeConfig } from '../core/config.js';
 import { loadInstructions } from '../instructions/loader.js';
+import { MODEL_PRICES } from '../llm/pricing.js';
 import type { JobQueue } from '../jobs/queue.js';
 import type { EventBus } from '../realtime/events.js';
 import type { SessionService } from '../auth/sessions.js';
@@ -141,12 +142,16 @@ export function defaultHealthChecks(deps: HealthCheckDeps): HealthCheck[] {
     check('llm.providers', false, () => {
       const registered = [...deps.llmProviders];
       const hosted = registered.filter((id) => id !== 'scripted');
+      const priced = `Cost is derived from our own price table (${MODEL_PRICES.length} model rows); a model without a row cannot be budgeted and is refused.`;
       if (hosted.length > 0) {
-        return { status: 'ok', detail: `Providers registered: ${registered.join(', ')}.` };
+        return {
+          status: 'ok',
+          detail: `Providers registered: ${registered.join(', ')}. ${priced}`,
+        };
       }
       return {
         status: 'degraded',
-        detail: `Only the offline scripted adapter is registered (${registered.join(', ') || 'none'}); no hosted provider is configured or connected.`,
+        detail: `Only the offline scripted adapter is registered (${registered.join(', ') || 'none'}): openai, anthropic and local OpenAI-compatible adapters exist but none is configured or connected. ${priced}`,
       };
     }),
 

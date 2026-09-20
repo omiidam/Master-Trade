@@ -102,7 +102,7 @@ export function bootWarnings(config: AppConfig): string[] {
   }
   if (config.ai.primary.provider !== 'scripted') {
     warnings.push(
-      `ai.primary.provider is "${config.ai.primary.provider}" but no adapter is registered in this phase; requests will fail over to the offline scripted adapter.`,
+      `ai.primary.provider is "${config.ai.primary.provider}" but this server registers no provider: the adapters exist (src/llm/providers, wired by createAiGateway) and none is configured here, so the offline scripted adapter answers.`,
     );
   }
   if (config.api.shellToken === null) {

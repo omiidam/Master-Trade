@@ -93,26 +93,26 @@ Supporting subsystems added in Phase 2 keep the same separation: permissions
 
 ## 3. Component responsibility matrix
 
-| Component             | Owns                                                               | Never does                                              | Module                                              |
-| --------------------- | ------------------------------------------------------------------ | ------------------------------------------------------- | --------------------------------------------------- |
-| Desktop shell         | windows, OS keychain, dialogs, offline cache, updates              | business logic, provider credentials in plain text      | `src/desktop/host.ts`                               |
-| Frontend              | UI, application state, rendering provenance/labels                 | calling providers directly, offering execution controls | `src/frontend/viewModels.ts`                        |
-| API layer             | versioned routes, validation, authZ guard, error mapping           | business rules, direct DB access                        | `src/api/contracts.ts`                              |
-| Backend services      | orchestration, education, evaluation, risk services                | provider-specific code, transport concerns              | `src/agent/*`                                       |
-| AI orchestrator       | lifecycle, context assembly, permission checks, provenance         | numeric risk calculations, direct provider calls        | `src/agent/orchestrator.ts`, `src/agent/context.ts` |
-| LLM abstraction       | provider interface, fallback, retry/timeout, token & cost tracking | executing tools, granting permissions                   | `src/llm/provider.ts`                               |
-| Tools                 | deterministic calculations, labeled data retrieval                 | side effects, network writes, order logic               | `src/tools/*`                                       |
-| Instructions          | versioned rules, safety policy text                                | being edited in place; being authored by the model      | `src/instructions/loader.ts`                        |
-| Auth                  | sessions, roles, deny-by-default grants, approval flags            | live trading or broker capabilities (they do not exist) | `src/auth/model.ts`                                 |
-| Permissions (Phase 1) | capability table for tools                                         | granting model direct memory/backtest access            | `src/permissions/model.ts`                          |
-| Database layer        | entity definitions, migrations, repositories                       | storing secrets or raw file bytes                       | `src/db/schema.ts`                                  |
-| File storage          | metadata, ownership, validation, size limits                       | storing sensitive categories by default                 | `src/storage/files.ts`                              |
-| Jobs                  | queueing, idempotency, retry/timeout, approval gate                | running unapproved evaluation/backtest work             | `src/jobs/queue.ts`                                 |
-| Real-time bus         | role-scoped delivery, ordering, replay                             | sending internal events to clients                      | `src/realtime/events.ts`                            |
-| Market data           | provider interface, normalization, quality checks, provenance      | fetching live data in this phase; trading               | `src/marketdata/provider.ts`                        |
-| Vector memory         | embeddings, ranking, trust, versioning, deletion                   | promoting model output to trusted knowledge             | `src/vector/memory.ts`                              |
-| Observability         | structured logs, redaction, correlation ids, audit                 | logging secrets, unredacted payloads                    | `src/core/logging.ts`                               |
-| Approvals             | human approval requests/decisions                                  | self-approval, approval of non-gated operations         | `src/agent/approval.ts`                             |
+| Component             | Owns                                                                                                   | Never does                                                       | Module                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Desktop shell         | windows, OS keychain, dialogs, offline cache, updates                                                  | business logic, provider credentials in plain text               | `src/desktop/host.ts`                                                         |
+| Frontend              | UI, application state, rendering provenance/labels                                                     | calling providers directly, offering execution controls          | `src/frontend/viewModels.ts`                                                  |
+| API layer             | versioned routes, validation, authZ guard, error mapping                                               | business rules, direct DB access                                 | `src/api/contracts.ts`                                                        |
+| Backend services      | orchestration, education, evaluation, risk services                                                    | provider-specific code, transport concerns                       | `src/agent/*`                                                                 |
+| AI orchestrator       | lifecycle, context assembly, permission checks, provenance                                             | numeric risk calculations, direct provider calls                 | `src/agent/orchestrator.ts`, `src/agent/context.ts`                           |
+| LLM abstraction       | provider interface, fallback, retry/timeout, circuit breaker, pricing from our table, summary contract | executing tools, granting permissions, reading private reasoning | `src/llm/provider.ts`, `pricing.ts`, `summary.ts`, `prompt.ts`, `registry.ts` |
+| Tools                 | deterministic calculations, labeled data retrieval                                                     | side effects, network writes, order logic                        | `src/tools/*`                                                                 |
+| Instructions          | versioned rules, safety policy text                                                                    | being edited in place; being authored by the model               | `src/instructions/loader.ts`                                                  |
+| Auth                  | sessions, roles, deny-by-default grants, approval flags                                                | live trading or broker capabilities (they do not exist)          | `src/auth/model.ts`                                                           |
+| Permissions (Phase 1) | capability table for tools                                                                             | granting model direct memory/backtest access                     | `src/permissions/model.ts`                                                    |
+| Database layer        | entity definitions, migrations, repositories                                                           | storing secrets or raw file bytes                                | `src/db/schema.ts`                                                            |
+| File storage          | metadata, ownership, validation, size limits                                                           | storing sensitive categories by default                          | `src/storage/files.ts`                                                        |
+| Jobs                  | queueing, idempotency, retry/timeout, approval gate                                                    | running unapproved evaluation/backtest work                      | `src/jobs/queue.ts`                                                           |
+| Real-time bus         | role-scoped delivery, ordering, replay                                                                 | sending internal events to clients                               | `src/realtime/events.ts`                                                      |
+| Market data           | provider interface, normalization, quality checks, provenance                                          | fetching live data in this phase; trading                        | `src/marketdata/provider.ts`                                                  |
+| Vector memory         | embeddings, ranking, trust, versioning, deletion                                                       | promoting model output to trusted knowledge                      | `src/vector/memory.ts`                                                        |
+| Observability         | structured logs, redaction, correlation ids, audit                                                     | logging secrets, unredacted payloads                             | `src/core/logging.ts`                                                         |
+| Approvals             | human approval requests/decisions                                                                      | self-approval, approval of non-gated operations                  | `src/agent/approval.ts`                                                       |
 
 ## 4. Data flows
 
@@ -246,7 +246,9 @@ Implemented (types + behaviour + tests):
 - config, errors, provenance/trust, logging + redaction, retry/timeout, rate limit
 - auth model (roles, sessions, deny-by-default, approval flags)
 - API contracts, validation, guard, error mapping
-- LLM provider interface + gateway (fallback, retry, timeout, budget, usage)
+- LLM provider interface + gateway (fallback, retry, timeout, circuit breaker,
+  tokens, pricing from our own table, budget refusal) and the structured-summary
+  contract a model answer must satisfy
 - market-data provider interface, normalization, quality validation, provenance
 - database entity definitions + migration validation
 - file storage contract + validation + in-memory adapter
@@ -256,10 +258,12 @@ Implemented (types + behaviour + tests):
 - approval workflow, rule registry, context assembly, desktop host, view models
 - Phase 1 model/tools/instructions separation and safety gates, still enforced
 
-Phase 3.3 mounted this on HTTP (see § 12). Deferred intentionally: real LLM
-providers, real market-data providers, SQLite driver and repositories, durable
-job scheduler, WebSocket transport server, embedding provider (remote), full
-curriculum content, backtesting.
+Phase 3.3 mounted this on HTTP (see § 12); Phase 3.4 added the SQLite driver,
+generated migrations and repositories; Phase 3.5 implemented the LLM adapters,
+cost accounting and the summary contract. Deferred intentionally: real
+market-data providers, a hosted provider actually registered by the server,
+durable job scheduler, WebSocket transport server, streaming and UI
+cancellation, embedding provider (remote), full curriculum content, backtesting.
 
 See [risks-and-deferred.md](./risks-and-deferred.md) for the trade-offs and the
 recommended Phase 3.
