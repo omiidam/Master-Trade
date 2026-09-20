@@ -364,7 +364,9 @@ export class JobQueue {
         },
       );
     }
-    const decision = authorize(input.principal, definition.operation);
+    // The queue's own clock, so the session is judged against the same instant the
+    // queue stamps the job with (see `isSessionActive`).
+    const decision = authorize(input.principal, definition.operation, this.now());
     if (!decision.allowed) {
       throw new PolicyViolationError(
         `denied: ${input.principal.id} may not enqueue ${input.kind} (${decision.reason})`,
@@ -430,7 +432,7 @@ export class JobQueue {
         id,
       });
     }
-    const decision = authorize(principal, 'job.cancel');
+    const decision = authorize(principal, 'job.cancel', this.now());
     if (!decision.allowed) {
       throw new PolicyViolationError(`denied: ${decision.reason}`, { id, operation: 'job.cancel' });
     }

@@ -537,3 +537,27 @@ tests.
 
 **Deferred, with triggers (ADR-0035 §6 unchanged):** the four declined packages,
 `apps/web` + `apps/api`, npm workspaces, and a built package artifact.
+
+## Phase 4.6 — audit findings and what was deliberately left alone
+
+**Fixed:** one real defect, the two-clock authorization path (`F-1`/`F-2`). `SessionService`
+resolved a session against its injected clock while `requireOperation`/`guardRoute` re-checked
+the same session against `Date.now()`, which made the realtime suite pass before `17:00 UTC`
+and fail after it. `now` is now a **required** parameter on every gate and each caller passes
+the clock it owns. See [ADR-0039](./adr/ADR-0039-one-clock-per-authorization-decision.md) and
+[security-and-integration-audit.md](./security-and-integration-audit.md). Baseline went from
+**425/430 to 430/430**.
+
+**Deferred, with triggers:**
+
+| Item                                                                                                              | Trigger to revisit                                                                                                                                   |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5 dev-only advisories in the `vite`/`vitest`/`esbuild`/`vite-node` chain (`npm audit`; production scope is **0**) | A scoped Vitest + Vite major upgrade, with the 30-file suite as acceptance. The phase rules forbid breaking upgrades without this record.            |
+| Single 1.0 MB frontend chunk, no code splitting                                                                   | Before any non-Tauri (browser) deployment, or when first-load time is actually measured as a problem. Low impact while Tauri serves from local disk. |
+| `pg` driver absent for production PostgreSQL                                                                      | When a PostgreSQL instance is actually deployed. The adapter and `SqlExecutor` boundary already exist; installing a driver now would be dead weight. |
+| Browser realtime sessions                                                                                         | When a real session can be issued to a browser. Until then catalogue routes answer a typed 401 and the Activity surface uses labelled fixtures.      |
+
+**Deliberately NOT changed**, having been examined: no architecture was altered to make a test
+pass, no dependency was upgraded, no mock was introduced, and the trading safety flags were
+left exactly as they were — they are typed as the literal `false`, so they cannot be set
+without a compile error, and `assertSafeConfig` refuses to start if either is ever `true`.

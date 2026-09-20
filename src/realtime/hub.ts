@@ -275,7 +275,12 @@ export class RealtimeConnection {
       // The same operation gate the HTTP surface uses: realtime access is a
       // permission, not a side channel. A principal with a valid session but no
       // `realtime.connect` grant is refused here, not merely filtered later.
-      const decision = requireOperation(principal, 'realtime.connect');
+      //
+      // The gate is given *this* connection's clock, not the wall clock. The
+      // session was just resolved by a clock-injectable service, so judging it
+      // again against `Date.now()` would let one clock accept a principal and
+      // another reject the same principal.
+      const decision = requireOperation(principal, 'realtime.connect', this.now());
       if (!decision.allowed) {
         throw new PolicyViolationError(decision.reason, { operation: 'realtime.connect' });
       }

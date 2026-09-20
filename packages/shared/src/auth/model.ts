@@ -189,18 +189,33 @@ export type AuthDecision =
   | { allowed: true; operation: OperationId; approvalRequired: boolean }
   | { allowed: false; reason: string };
 
-export function isSessionActive(session: Session, now: number = Date.now()): boolean {
+/**
+ * A session is active while its expiry lies ahead of the supplied instant.
+ *
+ * `now` is **required**, not defaulted to the wall clock. A default here is how a
+ * session validated by one clock gets rejected by another: the session service is
+ * clock-injectable, so the gate that re-checks the same session has to read the
+ * same clock. Omitting the argument used to be silent and time-of-day dependent —
+ * a session issued from a fixed clock was accepted by `SessionService.redeem()`
+ * and then refused as "expired" one layer later, purely because the wall clock had
+ * moved past the fixed instant. Making the parameter mandatory turns that into a
+ * compile error instead of a suite that passes in the morning and fails at 18:00.
+ */
+export function isSessionActive(session: Session, now: number): boolean {
   return Date.parse(session.expiresAt) > now;
 }
 
 /**
  * Authorize a principal for an operation. Checks, in order:
  * hardline prohibition -> session validity -> explicit role grant.
+ *
+ * `now` is required for the reason given on `isSessionActive`: the caller owns the
+ * clock for the whole decision, so one request cannot be judged against two.
  */
 export function authorize(
   principal: Principal | null,
   operationId: OperationId,
-  now: number = Date.now(),
+  now: number,
 ): AuthDecision {
   if (HARDLINE_OPERATION_PATTERN.test(operationId)) {
     return { allowed: false, reason: `Operation ${operationId} is forbidden by policy.` };
@@ -226,7 +241,7 @@ export function authorize(
 export function requireOperation(
   principal: Principal | null,
   operationId: OperationId,
-  now: number = Date.now(),
+  now: number,
 ): AuthDecision {
   return authorize(principal, operationId, now);
 }

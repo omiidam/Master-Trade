@@ -41,13 +41,23 @@ import {
   listMissingCapabilities,
 } from '../packages/shared/src/desktop/host.js';
 
+/**
+ * The instant these assertions judge.
+ *
+ * `authorize` requires a clock, so a test states which instant it is judging
+ * instead of inheriting the wall clock. A session built from `Date.now()` and
+ * checked against a defaulted clock is a test whose meaning depends on when it
+ * runs — this was the one live instance of exactly that mistake.
+ */
+const NOW = Date.parse('2026-09-20T09:00:00.000Z');
+
 const principal = (roles: Principal['roles'], id = 'user_1'): Principal => ({
   id,
   roles,
   session: {
     id: 'sess_1',
     issuedAt: new Date(0).toISOString(),
-    expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+    expiresAt: new Date(NOW + 3_600_000).toISOString(),
   },
 });
 
@@ -100,9 +110,9 @@ describe('authorization invariants', () => {
   });
 
   it('denies everything without an explicit role grant', () => {
-    expect(authorize(null, 'agent.chat').allowed).toBe(false);
-    expect(authorize(principal(['observer']), 'agent.chat').allowed).toBe(false);
-    const allowed = authorize(principal(['student']), 'agent.chat');
+    expect(authorize(null, 'agent.chat', NOW).allowed).toBe(false);
+    expect(authorize(principal(['observer']), 'agent.chat', NOW).allowed).toBe(false);
+    const allowed = authorize(principal(['student']), 'agent.chat', NOW);
     expect(allowed.allowed).toBe(true);
   });
 
@@ -112,14 +122,17 @@ describe('authorization invariants', () => {
       session: {
         id: 's',
         issuedAt: new Date(0).toISOString(),
-        expiresAt: new Date(Date.now() - 1_000).toISOString(),
+        expiresAt: new Date(NOW - 1_000).toISOString(),
       },
     };
-    expect(authorize(expired, 'agent.chat').allowed).toBe(false);
+    expect(authorize(expired, 'agent.chat', NOW).allowed).toBe(false);
+    // The same session is accepted one second earlier: the gate answers the
+    // question the caller asked, and it is the caller's clock that decides.
+    expect(authorize(expired, 'agent.chat', NOW - 2_000).allowed).toBe(true);
   });
 
   it('flags critical operations as approval-gated', () => {
-    const decision = authorize(principal(['owner']), 'rule.activate');
+    const decision = authorize(principal(['owner']), 'rule.activate', NOW);
     expect(decision.allowed).toBe(true);
     if (decision.allowed) expect(decision.approvalRequired).toBe(true);
     expect(OPERATIONS['rule.activate'].sensitivity).toBe('critical');
@@ -149,18 +162,18 @@ describe('API contracts', () => {
     expect(chat).toBeDefined();
     if (!chat) return;
 
-    const anonymous = guardRoute(chat, null);
+    const anonymous = guardRoute(chat, null, NOW);
     expect(anonymous.allowed).toBe(false);
     if (!anonymous.allowed) {
       expect(anonymous.status).toBe(401);
       expect(anonymous.error.code).toBe('UNAUTHENTICATED');
     }
 
-    const forbidden = guardRoute(chat, principal(['observer']));
+    const forbidden = guardRoute(chat, principal(['observer']), NOW);
     expect(forbidden.allowed).toBe(false);
     if (!forbidden.allowed) expect(forbidden.status).toBe(403);
 
-    const allowed = guardRoute(chat, principal(['student']));
+    const allowed = guardRoute(chat, principal(['student']), NOW);
     expect(allowed.allowed).toBe(true);
   });
 
@@ -168,7 +181,7 @@ describe('API contracts', () => {
     const activate = findRoute('rule.activate');
     expect(activate).toBeDefined();
     if (!activate) return;
-    const decision = guardRoute(activate, principal(['owner']));
+    const decision = guardRoute(activate, principal(['owner']), NOW);
     expect(decision.allowed).toBe(true);
     if (decision.allowed) expect(decision.approvalRequired).toBe(true);
   });

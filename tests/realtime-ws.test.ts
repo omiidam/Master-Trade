@@ -192,6 +192,38 @@ describe('websocket transport', () => {
     await server.close();
   });
 
+  it('judges the session by the server clock, not the wall clock', async () => {
+    // The defect this pins, found in the Phase 4.6 audit: `SessionService` resolved
+    // the token against the injected clock, and the operation gate then re-checked
+    // the *same session* against `Date.now()`. Whichever clock is not the wall
+    // clock produced a principal that one layer accepted and the next refused as
+    // "expired" — so the whole realtime suite passed before 17:00 UTC and failed
+    // after it, with no code change in between.
+    //
+    // The clock here is deliberately years in the past, so this assertion cannot be
+    // time-of-day dependent: a session that is long expired by the wall clock is
+    // still valid to a server whose clock says it is.
+    const past = Date.parse('2020-01-01T00:00:00.000Z');
+    const server = build({ deps: { now: () => past } });
+    const token = server.sessions.issue({ userId: 'u_owner', roles: ['owner'] }).token;
+    const app = await ready(server);
+
+    // Sanity: the wall clock really does consider this session expired.
+    expect(Date.now()).toBeGreaterThan(Date.parse('2020-01-01T08:00:00.000Z'));
+
+    const socket = await app.injectWS('/ws', loopback);
+    const frames = collector(socket as never);
+    socket.send(JSON.stringify({ t: 'auth', token }));
+    await frames.waitForType('welcome');
+
+    const welcome = frames.ofType('welcome')[0] as { principalId: string } | undefined;
+    expect(welcome?.principalId).toBe('u_owner');
+    expect(frames.closes).toHaveLength(0);
+
+    socket.close();
+    await server.close();
+  });
+
   it('closes an unauthenticated socket after the authentication deadline', async () => {
     const server = build({ deps: { realtimeLimits: { authTimeoutMs: 30 } } });
     const app = await ready(server);

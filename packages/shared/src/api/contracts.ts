@@ -380,11 +380,17 @@ export type RouteGuardDecision =
   | { allowed: true; approvalRequired: boolean }
   | { allowed: false; status: number; error: ApiErrorBody };
 
-/** Reject a request before any backend work happens. */
+/**
+ * Reject a request before any backend work happens.
+ *
+ * `now` is required rather than defaulted, for the same reason the gate requires
+ * it: the HTTP layer already resolves the principal against its own clock, and a
+ * default here would let that clock and this one disagree about one request.
+ */
 export function guardRoute(
   route: AnyApiRoute,
   principal: Principal | null,
-  now: number = Date.now(),
+  now: number,
 ): RouteGuardDecision {
   if (route.auth === 'anonymous') {
     return { allowed: true, approvalRequired: false };

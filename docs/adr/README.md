@@ -118,3 +118,13 @@ in Phase 4.4. Documents naming those paths describe the phase that wrote them.
 | ADR                                                         | Decision                                                                                                                                                            | Decision id(s)       | Status   |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------- |
 | [0038](./ADR-0038-finalized-import-and-package-strategy.md) | The resolution rules stated once: `@shared/*` for the frontend, relative paths for the backend, one package dependency direction, and lock path claims must be true | `DEC-REPO-4-IMPORTS` | Accepted |
+
+## Phase 4.6 — authorization clock, and the audit that found it
+
+| ADR                                                        | Decision                                                                                                                                                                                        | Decision id(s)     | Status   |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | -------- |
+| [0039](./ADR-0039-one-clock-per-authorization-decision.md) | Every authorization decision takes an **explicit** instant — `now` is required on `isSessionActive`, `authorize`, `requireOperation` and `guardRoute`, and each caller passes the clock it owns | `DEC-AUTH-2-CLOCK` | Accepted |
+
+The Phase 4.6 audit is recorded in
+[security-and-integration-audit.md](../security-and-integration-audit.md) (findings F-1…F-6,
+with severity, evidence and dispositions).

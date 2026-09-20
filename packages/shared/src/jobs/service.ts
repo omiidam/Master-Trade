@@ -46,6 +46,12 @@ export interface JobServiceOptions {
   events?: JobEventSink;
   audit?: JobAuditSink;
   logger?: Logger;
+  /**
+   * The clock used for authorization. Defaults to the wall clock, which is what
+   * the queue does too — supply one only when the queue was given one, so the
+   * session is not judged against two different instants.
+   */
+  now?: () => number;
 }
 
 export interface JobView {
@@ -81,11 +87,13 @@ export class JobService {
   private readonly queue: JobQueue;
   private readonly logger: Logger | undefined;
   private readonly audit: JobAuditSink | undefined;
+  private readonly now: () => number;
 
   constructor(options: JobServiceOptions) {
     this.queue = options.queue;
     this.logger = options.logger;
     this.audit = options.audit;
+    this.now = options.now ?? Date.now;
     // The queue reports through exactly one observer, attached here so there is a
     // single path from "something changed" to "the client was told".
     if (options.events !== undefined) {
@@ -226,7 +234,7 @@ export class JobService {
     if (principal === null) {
       throw new AppError('UNAUTHENTICATED', `${what} requires an authenticated principal`);
     }
-    const decision = authorize(principal, operation);
+    const decision = authorize(principal, operation, this.now());
     if (!decision.allowed) throw new AppError('FORBIDDEN', `denied: ${decision.reason}`);
   }
 
