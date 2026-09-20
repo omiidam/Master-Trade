@@ -239,6 +239,18 @@ master-trade/
 Dependency direction: `api → agent → (llm, tools, vector, marketdata, auth,
 core)`; `core` depends on nothing above it. No module imports `api`.
 
+The frontend is a second boundary in the same package. `web/src/**` imports
+backend source through relative paths, so the edge is `web → src` and never the
+reverse. Phase 4.1 assessed whether that should become an npm-workspace monorepo
+and decided **not to migrate now**: the shared surface already exists as a path
+depth, the install topology that just broke on the VPS (`@tailwindcss/oxide`,
+`c92fa9c`) is sensitive to workspace hoisting, and the target
+`packages/trading-engine` would be nearly empty. The boundary is instead a
+_declared, enforced_ contract — see
+[monorepo-assessment.md](./monorepo-assessment.md) and
+[ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md), checked by
+`tests/monorepo-boundary.test.ts`.
+
 ## 9. Implementation status (Phase 2)
 
 Implemented (types + behaviour + tests):

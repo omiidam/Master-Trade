@@ -75,5 +75,17 @@ the alternatives that were deliberately turned down.
 | [0034](./ADR-0034-loading-empty-error-are-designed-states.md)   | Loading, empty and error are designed states, shown with the real components           | `DEC-FE-8-STATES`   | Accepted |
 
 The machine-readable form of this lock is `src/core/architectureLock.ts` and it
-is enforced by `tests/technology-lock.test.ts`. Every decision id above also
-appears in [technology-decisions.md](../technology-decisions.md).
+is enforced by `tests/technology-lock.test.ts`. Every decision id in the two
+tables above also appears in [technology-decisions.md](../technology-decisions.md).
+
+## Phase 4.1 — monorepo assessment (planning)
+
+| ADR                                                            | Decision                                                                                                                                                                      | Decision id(s)      | Status   |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | -------- |
+| [0035](./ADR-0035-monorepo-migration-staged-boundary-first.md) | Keep one package; make the frontend/backend boundary explicit (and enforced) before splitting it. Full `apps/` + `packages/` migration deferred with named trigger conditions | `DEC-REPO-1-LAYOUT` | Accepted |
+
+The full analysis — the measured layout, the proposed `apps/`/`packages/`
+mapping, the benefits that do **not** require moving directories, the
+install-topology risk that motivated deferral, and the trigger conditions — is in
+[monorepo-assessment.md](../monorepo-assessment.md). The boundary it declares is
+enforced by `tests/monorepo-boundary.test.ts`.

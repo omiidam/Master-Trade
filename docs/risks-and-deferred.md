@@ -326,3 +326,46 @@ in 27 files** (0 skipped, 0 todo), `build`, `build:web`, and 22 desktop checks
 with 0 errors and 1 warning (the updater placeholder signing key, a release-time
 prerequisite, not a code defect). No secrets are tracked; `.env*` and `data/` are
 gitignored.
+
+## 6. Phase 4.1 — monorepo assessment (complete, planning only)
+
+A repository-wide inspection followed by an architecture assessment, not a
+migration. **Nothing was moved, no dependency was added, and `package.json` is
+untouched.** Decision: [ADR-0035](./adr/ADR-0035-monorepo-migration-staged-boundary-first.md)
+— keep the single package, **defer** the full `apps/` + `packages/` layout, and
+make the existing frontend/backend boundary explicit first. Full analysis in
+[monorepo-assessment.md](./monorepo-assessment.md).
+
+**What the inspection found.** The shared surface the proposed
+`packages/shared` would hold already exists — as a path depth. **18** frontend
+files import backend source through raw relative specifiers up to four levels
+deep, across **27** specifiers resolving to nine backend modules. The direction is
+already one-way (nothing in `src/` imports `web/`), there are no circular
+dependencies, and no duplicated responsibility to fix by moving directories. What
+is missing is _enforcement_: `web/tsconfig.json` declares no `paths`, the root
+tsconfig reaches into `web/src/{config,design,mock}`, and `vitest.config.ts` exists
+only because Vite's root is `web/`.
+
+**Why the migration is deferred.** Commit `c92fa9c` — two commits earlier — fixed
+`@tailwindcss/oxide` failing to find its native binding on the VPS because npm was
+omitting _optional_ dependencies. Workspaces hoist differently, so the platform
+package resolving today can move or vanish, re-creating exactly that failure. On
+top of that, cross-package TypeScript resolution is a new build-order cost, the
+Tauri chain hardcodes `../web/dist` and `dist/server/start.js`, and
+`packages/trading-engine` would be nearly empty — the only real trading logic is
+`src/tools/risk.ts` plus the evaluation harness.
+
+**What was enforced instead.** `tests/monorepo-boundary.test.ts` (7 tests) pins the
+assessment's own claims so they cannot drift: the one-way dependency direction, a
+**declared** shared surface that every frontend cross-boundary import must resolve
+to, a refusal of deep imports into `src/db`, `src/server`, `src/auth`, `src/jobs/queue`
+and `src/jobs/store`, the existence and indexing of the ADR, and the absence of a
+`workspaces` field. Adding a genuinely new shared module is now a deliberate edit
+to the declared list.
+
+**Next** — the trigger for a real migration is recorded in §6 of the assessment
+(a second consumer of the shared surface, independent frontend packaging, or
+non-Rust sidecar build steps). Until one fires, the cheapest correct next step is
+the single import alias for the shared surface (one `paths` entry mirrored in both
+tsconfigs), which turns the boundary into a stable specifier with no directory
+moves.
