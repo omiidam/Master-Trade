@@ -64,6 +64,10 @@ describe('frontend shell', () => {
       'memory',
       'research',
       'journal',
+      // Phase 5.5: one entry for the declared composition and its valuation. Its sections
+      // (overview, holdings, allocation, observations, quality, declare) are internal tabs,
+      // so the sidebar does not grow a sub-tree for it.
+      'portfolio',
       'academy',
       'exams',
       'lab',

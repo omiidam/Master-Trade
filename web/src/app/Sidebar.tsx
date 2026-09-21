@@ -9,6 +9,7 @@ import {
   Microscope,
   NotebookPen,
   PanelLeft,
+  PieChart,
   Settings as SettingsIcon,
   ShieldCheck,
   Sparkles,
@@ -27,6 +28,7 @@ import { useUiStore } from '../store/ui';
 const ICONS: Record<NavIconName, ReactNode> = {
   gauge: <Gauge size={17} aria-hidden />,
   coins: <Coins size={17} aria-hidden />,
+  'pie-chart': <PieChart size={17} aria-hidden />,
   sparkles: <Sparkles size={17} aria-hidden />,
   brain: <BrainCircuit size={17} aria-hidden />,
   microscope: <Microscope size={17} aria-hidden />,

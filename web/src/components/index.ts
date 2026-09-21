@@ -228,6 +228,58 @@ export type {
   TradeTableProps,
 } from './journal';
 
+// Phase 5.5 — the declared portfolio and the figures computed from it. Every number
+// these render is the server's: no component here values a position or sums a total, and
+// an absent figure stays absent rather than becoming a zero.
+export {
+  AllocationPair,
+  AssetAllocationChart,
+  ConcentrationRiskCard,
+  HoldingsEditor,
+  HoldingsTable,
+  MissingHoldingData,
+  PortfolioInsightCard,
+  PortfolioInsightsList,
+  PortfolioOverview,
+  PortfolioQualitySummary,
+  PortfolioReadinessPanel,
+  PortfolioSnapshotTimeline,
+  PortfolioValueCard,
+  RiskExposurePanel,
+  assetClassLabel,
+  currencyLabel,
+  describePriceAge,
+  formatMoney,
+  formatPercent,
+  formatSignedPercent,
+  insightSeverityLabel,
+  insightSeverityRank,
+  insightSeverityTone,
+  insightTypeLabel,
+  insightTypeMeaning,
+  issueMeaning,
+  issueTone,
+  scopeLabel,
+  scopeMeaning,
+  snapshotReasonLabel,
+} from './portfolio';
+export type {
+  AllocationPairProps,
+  AssetAllocationChartProps,
+  ConcentrationRiskCardProps,
+  HoldingsEditorProps,
+  HoldingsTableProps,
+  MissingHoldingDataProps,
+  PortfolioInsightCardProps,
+  PortfolioInsightsListProps,
+  PortfolioOverviewProps,
+  PortfolioQualitySummaryProps,
+  PortfolioReadinessPanelProps,
+  PortfolioSnapshotTimelineProps,
+  PortfolioValueCardProps,
+  RiskExposurePanelProps,
+} from './portfolio';
+
 /* Realtime + background tasks -------------------------------------------- */
 
 export { ConnectionStatus, CONNECTION_PRESENTATION } from './realtime/ConnectionStatus';

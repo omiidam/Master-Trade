@@ -199,3 +199,21 @@ The catalogue, the credit accounting rules, the metering lifecycle, the refund a
 strategy, the entitlement enforcement order, the security posture, the frontend surface, the
 prerequisites of a future payment integration and the deferrals are in
 [usage-credits-and-premium.md](../usage-credits-and-premium.md).
+
+## Phase 5.5 — the portfolio is declared, and its values are never stored
+
+Phase 5.1 asked for portfolio intelligence that analyses rather than advises. The architecture
+follows from one observation: a market value is a function of a price, so a stored total is
+either wrong or a second source of truth that drifts invisibly. The decision below keeps the
+_document_ in the database and computes every figure from it, makes `null` a state rather than a
+zero, and composes the portfolio gate with the phase 5.3 one so the second can only ever narrow
+the first.
+
+| ADR                                                                             | Decision                                                                                                                                                                                                                                                                                                             | Decision id(s)                        | Status   |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | -------- |
+| [0046](./ADR-0046-the-portfolio-is-declared-and-its-values-are-never-stored.md) | The portfolio is **declared**: no value, cost basis or share is ever stored; `null` is a state, not a zero; a share of the whole requires the whole **in one currency**; two weight populations and never a hybrid; readiness may only narrow the phase 5.3 verdict; composition is free because it runs no provider | `DEC-PORTFOLIO-1-DECLARED-NOT-STORED` | Accepted |
+
+The domain model, the calculation rules, the readiness matrix, the provenance and freshness
+policy, the storage split, the API and metering boundary, the surface, and the prerequisites of a
+future market-data provider are in
+[portfolio-intelligence.md](../portfolio-intelligence.md).

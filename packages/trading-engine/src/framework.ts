@@ -15,13 +15,19 @@ export type ToolCapability =
   | 'marketData.read'
   | 'marketData.synthetic'
   | 'risk.calculate'
+  | 'portfolio.calculate'
   | 'education.explain'
   | 'memory.write'
   | 'backtest.run';
 
 /** Categories a tool belongs to (mirrors docs/architecture.md). */
 export type ToolCategory =
-  'market-data' | 'deterministic-calc' | 'risk-management' | 'education' | 'backtesting';
+  | 'market-data'
+  | 'deterministic-calc'
+  | 'risk-management'
+  | 'portfolio'
+  | 'education'
+  | 'backtesting';
 
 /** How the tool's output should be treated epistemically. */
 export interface ToolOutputSemantics {

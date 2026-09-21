@@ -11,6 +11,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ExamsPage } from './pages/ExamsPage';
 import { JournalPage } from './pages/JournalPage';
 import { MemoryPage } from './pages/MemoryPage';
+import { PortfolioPage } from './pages/PortfolioPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ResearchPage } from './pages/ResearchPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -31,6 +32,8 @@ function renderPage(page: AppPageId) {
       return <ResearchPage />;
     case 'journal':
       return <JournalPage />;
+    case 'portfolio':
+      return <PortfolioPage />;
     case 'academy':
       return <AcademyPage />;
     case 'exams':

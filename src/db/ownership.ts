@@ -37,7 +37,8 @@ export type Owner =
   | 'audit'
   | 'platform'
   | 'profile'
-  | 'usage';
+  | 'usage'
+  | 'portfolio';
 
 export type Mutability = 'append-only' | 'mutable' | 'versioned' | 'tombstone';
 
@@ -302,6 +303,33 @@ export const OWNERSHIP: readonly TableOwnership[] = [
     backup: 'backed-up',
     personalData: true,
     rule: 'The user declares their own context; a new version is appended and no earlier version is ever rewritten, so the context an answer was given from stays recoverable.',
+  },
+  {
+    table: 'portfolios',
+    owner: 'portfolio',
+    mutability: 'mutable',
+    retention: 'by-user-request',
+    backup: 'backed-up',
+    personalData: true,
+    rule: 'The container for a declared composition; mutable because it is current state, and deleted with the account because a portfolio belongs to the person who described it. Nothing about value is stored here.',
+  },
+  {
+    table: 'portfolio_positions',
+    owner: 'portfolio',
+    mutability: 'mutable',
+    retention: 'by-user-request',
+    backup: 'backed-up',
+    personalData: true,
+    rule: 'The current composition, replaced as a whole rather than edited row by row, so a half-applied redeclaration cannot exist. Every figure the product reports is computed from these rows and is never stored beside them.',
+  },
+  {
+    table: 'portfolio_snapshots',
+    owner: 'portfolio',
+    mutability: 'append-only',
+    retention: 'by-user-request',
+    backup: 'backed-up',
+    personalData: true,
+    rule: 'Append-only history. No repository method updates or deletes a version: a composition that was analysed has to stay recoverable exactly as it was, so a later edit cannot rewrite what an earlier answer was based on.',
   },
 ];
 

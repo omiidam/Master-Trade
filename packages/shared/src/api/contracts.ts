@@ -29,10 +29,12 @@ import {
   qualityAssessBodySchema,
   readinessQuerySchema,
   ruleActivateBodySchema,
+  portfolioWriteBodySchema,
   profileContextBodySchema,
   ruleProposeBodySchema,
   zodValidator,
   type AgentChatBody,
+  type PortfolioWriteBody,
   type ProfileContextBody,
   type QualityAssessBody,
   type LessonCompleteBody,
@@ -51,6 +53,13 @@ import {
 } from './schemas.js';
 import type { AnalysisReadinessDecision } from '../quality/readiness.js';
 import type { QualityReport } from '../quality/model.js';
+import type {
+  Portfolio,
+  PortfolioDocumentAssessment,
+  PortfolioInsight,
+  PortfolioMetrics,
+} from '../portfolio/model.js';
+import type { PortfolioReadinessDecision } from '../portfolio/readiness.js';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type ApiVersion = 'v1';
@@ -405,6 +414,96 @@ const qualityAssessRoute: ApiRoute<QualityAssessBody, QualityAssessData> = {
 };
 
 /* ------------------------------------------------------------------ */
+/* Portfolio composition and its readiness                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One version of a composition, as a reviewer reads it.
+ *
+ * `changedBy` is present because a version with no attribution is not reviewable. The
+ * document itself is deliberately **absent** here: the timeline needs to say what
+ * changed and when, and shipping every historical composition to a list view would send
+ * a user's entire holdings history to render a set of dates. The current document is in
+ * `portfolio`, and a future by-version route is the honest way to serve an old one.
+ */
+export interface PortfolioSnapshotView {
+  version: number;
+  reason: string;
+  reasonLabel: string;
+  changedBy: string;
+  createdAt: string;
+}
+
+/**
+ * `GET /v1/portfolio` and the answer to `PUT /v1/portfolio`.
+ *
+ * The whole reading in one response, because the parts are only meaningful together: a
+ * metric without the assessment that produced it is a number with no caveats, and a
+ * readiness verdict without the findings behind it is a refusal nobody can act on. The
+ * client computes nothing — every figure here was produced by deterministic code on the
+ * server.
+ *
+ * `declared` distinguishes "this account has not told us what it holds" from "it told us
+ * it holds nothing". Those are different facts and the honest answer to each is
+ * different, so the two are never collapsed into an empty portfolio.
+ */
+export interface PortfolioViewData {
+  declared: boolean;
+  /** The version of the current composition, or 0 when nothing is declared. */
+  version: number;
+  portfolio: Portfolio;
+  assessment: PortfolioDocumentAssessment;
+  metrics: PortfolioMetrics;
+  insights: PortfolioInsight[];
+  /** One entry per scope, so the surface never derives a verdict of its own. */
+  readiness: PortfolioReadinessDecision[];
+  snapshots: PortfolioSnapshotView[];
+  asOf: string;
+  note: string;
+}
+
+/**
+ * `GET /v1/portfolio`
+ *
+ * A read of the caller's own declaration. It takes no identifier of any kind — not in
+ * the path, not in the query — so reading another account's composition is not
+ * expressible, and the isolation holds by construction rather than by a check somebody
+ * could forget.
+ */
+const portfolioReadRoute: ApiRoute<Record<string, unknown> | undefined, PortfolioViewData> = {
+  id: 'portfolio.read',
+  method: 'GET',
+  path: '/v1/portfolio',
+  version: API_VERSION,
+  operation: 'portfolio.read',
+  auth: 'required',
+  summary:
+    'Read the declared portfolio with the metrics, insights and readiness verdict computed from it.',
+  validateBody: zodValidator(emptyBodySchema),
+  validateQuery: zodValidator(readinessQuerySchema) as (
+    raw: unknown,
+  ) => ValidationResult<Record<string, unknown>>,
+};
+
+/**
+ * `PUT /v1/portfolio`
+ *
+ * Declaration is a write, and the operation says so (`portfolio.write`). The body is the
+ * document; there is no subject field, and the server mints every row id, so a client
+ * cannot name a position it does not own.
+ */
+const portfolioWriteRoute: ApiRoute<PortfolioWriteBody, PortfolioViewData> = {
+  id: 'portfolio.write',
+  method: 'PUT',
+  path: '/v1/portfolio',
+  version: API_VERSION,
+  operation: 'portfolio.write',
+  auth: 'required',
+  summary: 'Declare or replace the portfolio composition. The previous version is kept as history.',
+  validateBody: zodValidator(portfolioWriteBodySchema),
+};
+
+/* ------------------------------------------------------------------ */
 /* Usage, credits and subscription                                     */
 /* ------------------------------------------------------------------ */
 
@@ -653,6 +752,8 @@ export const API_ROUTES: readonly AnyApiRoute[] = [
   profileReadRoute,
   profileWriteRoute,
   qualityAssessRoute,
+  portfolioReadRoute,
+  portfolioWriteRoute,
   usageStatusRoute,
   usageHistoryRoute,
   usageAdjustRoute,

@@ -54,6 +54,7 @@ import { logRequestCompleted, createLogging, type ServerLogging } from './loggin
 import { agentChatHandler } from './handlers/agent.js';
 import { healthHandler, readinessHandler } from './handlers/health.js';
 import { jobCancelHandler, jobGetHandler, jobListHandler } from './handlers/jobs.js';
+import { portfolioReadHandler, portfolioWriteHandler } from './handlers/portfolio.js';
 import { profileReadHandler, profileWriteHandler } from './handlers/profile.js';
 import { decideReadiness, loadContext, qualityAssessHandler } from './handlers/quality.js';
 import {
@@ -398,6 +399,24 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
       now: deps.now,
     }) as AnyHandler,
     'quality.assess': qualityAssessHandler({
+      repositories: deps.repositories,
+      marketData,
+      now: deps.now,
+    }) as AnyHandler,
+    // Composition is metered through `portfolio.composition`, which costs nothing and is
+    // therefore never refused for affordability — but the entitlement is still resolved and
+    // the attempt is still recorded, so the usage history is a record of what the platform
+    // did rather than only of what it charged. The feature's declared operation is
+    // `portfolio.read`, which is exactly the route that runs the arithmetic, so the two
+    // cannot drift: a declaration is not a consumption and is not metered here.
+    'portfolio.read': portfolioReadHandler({
+      repositories: deps.repositories,
+      marketData,
+      usage,
+      featureId: FEATURES_BY_ID['portfolio.composition'].id,
+      now: deps.now,
+    }) as AnyHandler,
+    'portfolio.write': portfolioWriteHandler({
       repositories: deps.repositories,
       marketData,
       now: deps.now,

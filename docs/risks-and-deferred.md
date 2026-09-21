@@ -719,3 +719,35 @@ Postgres connection pool rather than this executor.
 And one thing this phase explicitly did **not** build, and will not: a numeric "value" score for
 a capability. A single number cannot say which refusal applied, and a threshold in a constant is
 a hidden rule.
+
+---
+
+## Phase 5.5 — portfolio intelligence foundation
+
+The portfolio layer keeps the same discipline one level down: it computes from a declaration and
+stores none of the results.
+
+| Kind                                | Item                                                                                                                                                         | Trigger to revisit                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **Limitation** — market data        | No price provider is registered, so a price in a portfolio is something a user typed and is reported `unverified`.                                           | Registering one provider with provenance turns `market-data-unavailable` from the gate's usual verdict into a real series. |
+| **Deferred** — the model half       | `portfolio.analysis` stays `coming-soon` at five credits: it needs a series per holding and a turn that can carry the metrics as tool output.                | The provider above.                                                                                                        |
+| **Deferred** — per-version document | The timeline ships dates, reasons and authors, not each historical composition: a list view must not ship a user's whole holdings history to render a table. | A review flow that needs the composition behind an analysis.                                                               |
+| **Deferred** — cash as a position   | A declared cash _weight_ exists; a cash position with its own currency and value does not.                                                                   | A user for whom a weight is not enough.                                                                                    |
+| **Not planned** — aggregate view    | The product has no combined or multi-user portfolio view, and none is proposed.                                                                              | Not applicable.                                                                                                            |
+
+Two defects this phase found and fixed, both pinned by tests:
+
+- **A mixed-currency document produced market-value shares while refusing a combined total.** The
+  money total was already refused, because a sum over two currencies adds unlike units — but the
+  _weight_ population was still formed over the same sum, so a share was reported for a total that
+  did not exist. `assessment.singleCurrency` now decides both, and the `mixed-currency` gap names
+  the absence.
+- **A usage note could exceed the column's own check.** The note recorded for a zero-cost attempt
+  is built from the feature catalogue's `costBasis`, which is documentation and grows as the
+  product is explained better. A longer one turned an ordinary request into a 500. The note is now
+  bounded where it is written, because a _summary_ must never be able to fail a write.
+
+And one thing this phase refused to add: a "risk score". A single number for risk has no defined
+meaning, invites comparison between people's portfolios, and reads as advice. The answer to "how
+risky is this" is a set of observations with their evidence and their limitations, or it is
+nothing.

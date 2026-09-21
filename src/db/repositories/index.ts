@@ -19,6 +19,7 @@ import { createMemoryRepository, MemoryRepository } from './memory.js';
 import { createPlatformRepository, PlatformRepository } from './platform.js';
 import { createAgentRepository, AgentRepository } from './agent.js';
 import { createProfileRepository, ProfileRepository } from './profile.js';
+import { createPortfolioRepository, PortfolioRepository } from './portfolio.js';
 import { createUsageRepository, UsageRepository } from './usage.js';
 import { OWNERSHIP_BY_TABLE, type Owner } from '../ownership.js';
 import type { TableName } from '../schema.js';
@@ -32,6 +33,14 @@ export { MemoryRepository, createMemoryRepository } from './memory.js';
 export { PlatformRepository, createPlatformRepository } from './platform.js';
 export { AgentRepository, createAgentRepository } from './agent.js';
 export { ProfileRepository, createProfileRepository } from './profile.js';
+export { PortfolioRepository, createPortfolioRepository, portfolioOrDefault } from './portfolio.js';
+export type {
+  PortfolioPositionRow,
+  PortfolioRow,
+  PortfolioSnapshotRow,
+  ReplacePortfolioInput,
+  StoredPortfolio,
+} from './portfolio.js';
 export { UsageRepository, createUsageRepository } from './usage.js';
 export type {
   ApplyCreditInput,
@@ -67,6 +76,10 @@ export const REPOSITORY_MODULES: readonly { owner: Owner; tables: readonly Table
     owner: 'usage',
     tables: ['subscriptions', 'credit_accounts', 'credit_ledger', 'usage_events'],
   },
+  {
+    owner: 'portfolio',
+    tables: ['portfolios', 'portfolio_positions', 'portfolio_snapshots'],
+  },
 ];
 
 export interface Repositories {
@@ -80,6 +93,7 @@ export interface Repositories {
   marketData: MarketDataRepository;
   profile: ProfileRepository;
   usage: UsageRepository;
+  portfolio: PortfolioRepository;
 }
 
 export interface RepositoryOptions {
@@ -111,6 +125,7 @@ export function createRepositories(db: SqlExecutor, options: RepositoryOptions =
     marketData: createMarketDataRepository(db, shared),
     profile: createProfileRepository(db, shared),
     usage: createUsageRepository(db, shared),
+    portfolio: createPortfolioRepository(db, shared),
   };
 }
 

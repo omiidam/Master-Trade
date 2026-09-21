@@ -32,12 +32,14 @@ import { IdFactory } from '@shared/core/ids';
 import { SHELL_TOKEN_HEADER } from '@shared/core/headers';
 import type { JobView } from '@shared/jobs/service';
 import type {
+  PortfolioViewData,
   ProfileData,
   ProfileWriteData,
   QualityAssessData,
   UsageHistoryData,
   UsageStatusData,
 } from '@shared/api/contracts';
+import type { PortfolioDocumentBody } from '@shared/portfolio/model';
 import type { AnalysisType } from '@shared/quality/readiness';
 import type { FieldKey } from '@shared/profile/model';
 import type { TradingContext } from '@shared/profile/model';
@@ -233,6 +235,33 @@ export class ApiClient {
     if (filter.limit !== undefined) query.set('limit', String(filter.limit));
     const suffix = query.size > 0 ? `?${query.toString()}` : '';
     return this.request<UsageHistoryData>('GET', `/v1/usage/history${suffix}`);
+  }
+
+  /**
+   * The caller's own declared portfolio, with the metrics computed from it.
+   *
+   * No subject is passed, for the same reason as the profile and usage routes: a
+   * portfolio belongs to the authenticated principal, so there is no parameter that
+   * could name another account. **Every figure arrives computed.** The client does not
+   * value a position, sum a total or derive a concentration — a number calculated here
+   * would be a second opinion about money, and there is exactly one place arithmetic
+   * about a portfolio is allowed to happen.
+   */
+  async getPortfolio(): Promise<PortfolioViewData> {
+    return this.request<PortfolioViewData>('GET', '/v1/portfolio');
+  }
+
+  /**
+   * Declare the composition, replacing the previous one and appending a version.
+   *
+   * The document is sent whole rather than as a patch: a merge would make "unchanged"
+   * and "not restated" indistinguishable, and a half-applied redeclaration would leave
+   * a composition that is partly what the user described and partly what they meant. No
+   * row ids are sent — the server mints them, so a client cannot name a row it does not
+   * own.
+   */
+  async savePortfolio(document: PortfolioDocumentBody): Promise<PortfolioViewData> {
+    return this.request<PortfolioViewData>('PUT', '/v1/portfolio', { body: document });
   }
 
   /** One request, one typed outcome. */

@@ -109,6 +109,18 @@ export const OPERATIONS = {
     true,
     'Adjust another account’s credits or subscription (approval required)',
   ),
+  'portfolio.read': op(
+    'portfolio.read',
+    'normal',
+    false,
+    "Read the authenticated user's own declared portfolio and the metrics computed from it",
+  ),
+  'portfolio.write': op(
+    'portfolio.write',
+    'sensitive',
+    false,
+    "Declare or replace the authenticated user's own portfolio composition",
+  ),
   'marketData.read': op('marketData.read', 'normal', false, 'Read normalized market data'),
   'marketData.ingest': op(
     'marketData.ingest',
@@ -175,6 +187,11 @@ const student: OperationId[] = [
   // A learner sees their own balance and what they have consumed. Adjusting another
   // account is not on this list in any form.
   'usage.read',
+  // A portfolio is declared for the caller and read back for the caller. Nothing on
+  // this surface accepts a user id, so there is no parameter that could name another
+  // account — the isolation is structural rather than checked.
+  'portfolio.read',
+  'portfolio.write',
 ];
 
 const coach: OperationId[] = [
@@ -212,6 +229,8 @@ const observer: OperationId[] = [
   'profile.read',
   'quality.assess',
   'usage.read',
+  // Reading a composition is a read; declaring one is not granted to this role at all.
+  'portfolio.read',
 ];
 
 /** A background worker: infrastructure capabilities only. */

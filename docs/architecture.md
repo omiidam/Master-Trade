@@ -16,6 +16,7 @@ why the decisions were made.
 | User profile and trading context                  | [user-profile-and-trading-context.md](./user-profile-and-trading-context.md)         |
 | Input quality and the analysis-readiness gate     | [input-quality-and-data-reliability.md](./input-quality-and-data-reliability.md)     |
 | Usage credits, plans and premium                  | [usage-credits-and-premium.md](./usage-credits-and-premium.md)                       |
+| Portfolio intelligence (declared, never stored)   | [portfolio-intelligence.md](./portfolio-intelligence.md)                             |
 | Desktop shell, frontend, view models              | [desktop-and-frontend.md](./desktop-and-frontend.md)                                 |
 | API layer, contracts, auth/authz                  | [api-auth.md](./api-auth.md)                                                         |
 | AI layer, prompts, LLM abstraction                | [ai-and-llm.md](./ai-and-llm.md)                                                     |

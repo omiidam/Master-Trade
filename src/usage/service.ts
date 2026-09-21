@@ -169,6 +169,30 @@ const STATUS_NOTE =
 const HISTORY_NOTE =
   'Every movement is listed with the balance it produced, and every attempt — including the ones that were refused and the ones that cost nothing — is listed with its outcome. A movement is never edited; a correction is another movement.';
 
+/**
+ * The bound an attempt's note must fit inside.
+ *
+ * It matches the `note` column's own `CHECK`, and the number is stated here rather than
+ * trusted to the caller for a reason a test found: most notes are built from the feature
+ * catalogue's own strings, and a longer `costBasis` — which is documentation, and grows as the
+ * product is explained better — made an ordinary zero-cost attempt fail the column's constraint
+ * and answer 500. A *summary* must never be able to fail a write.
+ */
+const MAX_ATTEMPT_NOTE = 240;
+
+/**
+ * Clamp a system-worded note to the column's bound.
+ *
+ * Truncating rather than refusing is the right trade here and only here: the note is a summary
+ * the platform writes for itself, the authoritative record is the row's own status and credits,
+ * and the text is never user-authored. Nothing is lost that a reader needs, and an attempt that
+ * happened is always recorded.
+ */
+function summariseAttempt(note: string | null): string | null {
+  if (note === null || note.length <= MAX_ATTEMPT_NOTE) return note;
+  return `${note.slice(0, MAX_ATTEMPT_NOTE - 1)}…`;
+}
+
 export class UsageService {
   private readonly store: UsageStore;
   private readonly audit: UsageAuditSink | undefined;
@@ -683,7 +707,7 @@ export class UsageService {
       operationKey: request.operationKey,
       correlationId: request.correlationId,
       actor: request.actor,
-      note: outcome.note,
+      note: summariseAttempt(outcome.note),
     });
   }
 

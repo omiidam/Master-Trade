@@ -54,6 +54,7 @@ export const USAGE_CATEGORY_LABEL: Readonly<Record<UsageCategory, string>> = {
 export const FEATURE_IDS = [
   'agent.chat',
   'quality.assess',
+  'portfolio.composition',
   'portfolio.analysis',
   'research.report',
   'backtest.run',
@@ -138,17 +139,31 @@ export const FEATURES: readonly FeatureDefinition[] = [
     usesModel: false,
   },
   {
+    id: 'portfolio.composition',
+    label: 'Portfolio composition',
+    description:
+      'Valuing a declared composition: allocation, cost basis, unrealised profit and loss, concentration and exposure, with every gap named rather than filled.',
+    category: 'portfolio-evaluation',
+    creditCost: 0,
+    costBasis:
+      'Zero. It runs no provider: the arithmetic is deterministic code over the document the user declared, so it is free by construction — the ADR-0041 rule that a calculation must not stop working because a credit ran out.',
+    state: 'available',
+    stateReason: null,
+    operation: 'portfolio.read',
+    usesModel: false,
+  },
+  {
     id: 'portfolio.analysis',
     label: 'Portfolio analysis',
     description:
-      'Concentration, correlation and scenario exposure over a composition the user described.',
+      'Scenario and correlation commentary over a composition, written by the model from the deterministic composition result.',
     category: 'portfolio-evaluation',
     creditCost: 5,
     costBasis:
       'Five credits: a composition is enumerated, correlated and re-run under each declared scenario, so one request is several computations plus a model pass over the result. Declared, not yet charged.',
     state: 'coming-soon',
     stateReason:
-      'Portfolio Intelligence is a planned module with no code (product vision §3.2). The entitlement is resolved and the cost is declared, so the surface can say what it would take.',
+      'The deterministic half is built and free (see `portfolio.composition`). What is missing is the rest: scenario evaluation needs price history, and correlation needs a series per holding, so this stays declared rather than charged.',
     operation: null,
     usesModel: true,
   },

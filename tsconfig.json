@@ -25,6 +25,8 @@
       "@shared/frontend/viewModels": ["./packages/shared/src/frontend/viewModels.js"],
       "@shared/jobs/service": ["./packages/shared/src/jobs/service.js"],
       "@shared/marketdata/provider": ["./packages/shared/src/marketdata/provider.js"],
+      "@shared/portfolio/model": ["./packages/shared/src/portfolio/model.js"],
+      "@shared/portfolio/readiness": ["./packages/shared/src/portfolio/readiness.js"],
       "@shared/profile/model": ["./packages/shared/src/profile/model.js"],
       "@shared/quality/model": ["./packages/shared/src/quality/model.js"],
       "@shared/quality/readiness": ["./packages/shared/src/quality/readiness.js"],

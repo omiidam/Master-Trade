@@ -110,12 +110,16 @@ export interface Plan {
 const freeEntitlements: readonly FeatureEntitlement[] = FEATURE_IDS.map((feature) => {
   if (feature === 'agent.chat') return { feature, included: true, periodLimit: 20 };
   if (feature === 'quality.assess') return { feature, included: true, periodLimit: null };
+  // Composition costs nothing, so it is on every plan including this one: gating a free
+  // calculation behind a tier would make the tier the price of arithmetic.
+  if (feature === 'portfolio.composition') return { feature, included: true, periodLimit: null };
   return { feature, included: false, periodLimit: null };
 });
 
 const premiumEntitlements: readonly FeatureEntitlement[] = [
   { feature: 'agent.chat', included: true, periodLimit: 200 },
   { feature: 'quality.assess', included: true, periodLimit: null },
+  { feature: 'portfolio.composition', included: true, periodLimit: null },
   { feature: 'portfolio.analysis', included: true, periodLimit: 20 },
   { feature: 'research.report', included: true, periodLimit: 5 },
   // Deliberately included by **no** tier: `backtest.run` is approval-gated, so it is a

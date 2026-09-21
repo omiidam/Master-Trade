@@ -16,6 +16,7 @@
  */
 
 import { z } from 'zod';
+import { portfolioDocumentInputSchema } from '../portfolio/model.js';
 import { FIELD_KEYS, tradingContextSchema } from '../profile/model.js';
 import { ANALYSIS_TYPES } from '../quality/readiness.js';
 import { MAX_MOVEMENT } from '../usage/credits.js';
@@ -227,6 +228,21 @@ export const usageSubscriptionBodySchema = z.strictObject({
   reference: z.string().trim().min(8).max(200),
 });
 
+/**
+ * `PUT /v1/portfolio`
+ *
+ * The declaration of what the account holds. Strict, and for a sharper reason than
+ * the usage bodies above: this document is the sole input to every figure the product
+ * will show about a portfolio, so a key the schema ignored would be a user believing
+ * they had recorded something the engine never read.
+ *
+ * Carried as a `PUT` rather than a `POST` because the composition is a single
+ * document that is replaced as a whole — a redeclaration is a new version of the same
+ * resource, not an append. There is no subject field: the portfolio belongs to the
+ * authenticated principal.
+ */
+export const portfolioWriteBodySchema = portfolioDocumentInputSchema;
+
 /** GET routes carry no body; accept nothing but an empty object. */
 export const emptyBodySchema = z.union([z.undefined(), z.record(z.string(), z.unknown())]);
 
@@ -243,6 +259,7 @@ export type QualityAssessBody = z.infer<typeof qualityAssessBodySchema>;
 export type UsageHistoryQuery = z.infer<typeof usageHistoryQuerySchema>;
 export type UsageAdjustBody = z.infer<typeof usageAdjustBodySchema>;
 export type UsageSubscriptionBody = z.infer<typeof usageSubscriptionBodySchema>;
+export type PortfolioWriteBody = z.infer<typeof portfolioWriteBodySchema>;
 
 /** Safe, stable text for one validation issue: `field: reason`. */
 export function formatIssue(issue: { path: readonly PropertyKey[]; message: string }): string {

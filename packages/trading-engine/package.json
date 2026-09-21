@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./framework": "./src/framework.ts",
     "./risk": "./src/risk.ts",
-    "./marketData": "./src/marketData.ts"
+    "./marketData": "./src/marketData.ts",
+    "./portfolio": "./src/portfolio.ts"
   }
 }

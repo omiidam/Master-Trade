@@ -87,7 +87,10 @@ export type TableName =
   | 'subscriptions'
   | 'credit_accounts'
   | 'credit_ledger'
-  | 'usage_events';
+  | 'usage_events'
+  | 'portfolios'
+  | 'portfolio_positions'
+  | 'portfolio_snapshots';
 
 export type EntityKind = 'persistent' | 'transient';
 
@@ -914,6 +917,226 @@ export const SCHEMA: readonly EntityDefinition[] = [
     indexes: [
       { name: 'usage_events_user_occurred_idx', columns: ['user_id', 'occurred_at'] },
       { name: 'usage_events_user_operation_idx', columns: ['user_id', 'operation_key'] },
+    ],
+  },
+
+  /* Portfolio intelligence (Phase 5.5) -------------------------------- */
+
+  {
+    table: 'portfolios',
+    kind: 'persistent',
+    description:
+      'One portfolio per account: the container a composition is declared in. It holds identity, a name and the currency the user thinks in — and nothing about value, which is computed from the positions every time it is asked for and never stored. A stored total would be a second source of truth that drifts the moment a price moves.',
+    columns: [
+      pk(),
+      {
+        name: 'user_id',
+        type: 'uuid',
+        nullable: false,
+        unique: true,
+        references: fk('users', 'cascade'),
+      },
+      { name: 'name', type: 'text', nullable: false, maxLength: 80 },
+      {
+        name: 'base_currency',
+        type: 'text',
+        nullable: false,
+        maxLength: 3,
+        values: [
+          'USD',
+          'EUR',
+          'GBP',
+          'JPY',
+          'CHF',
+          'AUD',
+          'CAD',
+          'SEK',
+          'NOK',
+          'DKK',
+          'PLN',
+          'TRY',
+          'BRL',
+          'INR',
+          'ZAR',
+          'CNY',
+          'HKD',
+          'SGD',
+          'NZD',
+          'MXN',
+        ],
+        note: 'Mirrors PORTFOLIO_CURRENCIES. Enforced in SQL so an unrecognised code cannot reach the engine.',
+      },
+      {
+        name: 'cash_weight_percent',
+        type: 'real',
+        nullable: true,
+        min: 0,
+        max: 100,
+        note: 'Cash as a declared share, when the user described it. Never an amount.',
+      },
+      createdAt(),
+      updatedAt(),
+    ],
+  },
+  {
+    table: 'portfolio_positions',
+    kind: 'persistent',
+    description:
+      'One row per declared position: the current composition, replaced as a whole when the user redeclares it and never edited in place. **Allocation only where the user chose to declare it**: a quantity and an average entry price are optional, a declared share is optional, and a position with none of them is stored and reported as contributing nothing rather than being filled in. There is no account identifier, no order reference and no broker link — this is a description of what is held, not a trading record.',
+    columns: [
+      pk(),
+      {
+        name: 'portfolio_id',
+        type: 'uuid',
+        nullable: false,
+        references: fk('portfolios', 'cascade'),
+      },
+      {
+        name: 'symbol',
+        type: 'text',
+        nullable: false,
+        maxLength: 24,
+        note: 'Bounded and pattern-checked by the shared schema before it reaches SQL.',
+      },
+      {
+        name: 'asset_class',
+        type: 'text',
+        nullable: false,
+        values: ['equity', 'fx', 'crypto', 'commodity', 'index'],
+      },
+      {
+        name: 'currency',
+        type: 'text',
+        nullable: false,
+        maxLength: 3,
+        note: 'Checked against the same currency vocabulary as the portfolio base.',
+      },
+      {
+        name: 'quantity',
+        type: 'real',
+        nullable: true,
+        min: 0,
+        note: 'Units held, when the user knows them. Null is a real state: “not declared”.',
+      },
+      {
+        name: 'quantity_source',
+        type: 'text',
+        nullable: false,
+        values: ['user-stated', 'derived', 'assumed'],
+        note: 'Every declared number carries where it came from, so an assumption is never read as a fact.',
+      },
+      { name: 'quantity_observed_at', type: 'timestamp', nullable: true },
+      {
+        name: 'average_entry_price',
+        type: 'real',
+        nullable: true,
+        min: 0,
+        note: 'Per unit. With a quantity it is a cost basis; without one it is nothing.',
+      },
+      {
+        name: 'entry_price_source',
+        type: 'text',
+        nullable: false,
+        values: ['user-stated', 'derived', 'assumed'],
+      },
+      { name: 'entry_price_observed_at', type: 'timestamp', nullable: true },
+      {
+        name: 'price',
+        type: 'real',
+        nullable: true,
+        min: 0,
+        note: 'The latest price the system has for this symbol. Null when none exists — never carried forward.',
+      },
+      { name: 'price_currency', type: 'text', nullable: true, maxLength: 3 },
+      { name: 'price_observed_at', type: 'timestamp', nullable: true },
+      {
+        name: 'price_source',
+        type: 'text',
+        nullable: true,
+        maxLength: 32,
+        note: 'user, derived, system or market-data; absent provenance is treated as unverified, not as trusted.',
+      },
+      {
+        name: 'price_trust',
+        type: 'text',
+        nullable: true,
+        values: ['unverified', 'verified', 'authoritative'],
+        note: 'Unverified is the default reading. Only a provider can raise it.',
+      },
+      {
+        name: 'price_ref',
+        type: 'text',
+        nullable: true,
+        maxLength: 64,
+        note: 'A pointer to where the price came from, never the series itself.',
+      },
+      {
+        name: 'weight_percent',
+        type: 'real',
+        nullable: true,
+        min: 0.01,
+        max: 100,
+        note: 'The declared share, when the user described the position by allocation instead of by quantity.',
+      },
+      {
+        name: 'note',
+        type: 'text',
+        nullable: true,
+        maxLength: 280,
+        note: 'Free text the user wrote. It is stored and returned, and never copied into a finding, an insight or a log.',
+      },
+    ],
+    indexes: [{ name: 'portfolio_positions_portfolio_idx', columns: ['portfolio_id'] }],
+  },
+  {
+    table: 'portfolio_snapshots',
+    kind: 'persistent',
+    description:
+      'Append-only history of the declared composition. One row per version, holding the whole document as one JSON value, so the composition an analysis was computed from stays recoverable exactly as it was — the same reason a message row is never rewritten. The current state is the positions table; this is what makes it reviewable. Columns carry identity, ordering, attribution and reason only, because a column per field would duplicate the model and allow a half-written snapshot.',
+    columns: [
+      pk(),
+      {
+        name: 'portfolio_id',
+        type: 'uuid',
+        nullable: false,
+        references: fk('portfolios', 'cascade'),
+      },
+      {
+        name: 'user_id',
+        type: 'uuid',
+        nullable: false,
+        references: fk('users', 'cascade'),
+        note: 'Denormalised so a snapshot can be read without joining, and so the ownership check is one comparison.',
+      },
+      { name: 'version', type: 'integer', nullable: false, min: 1 },
+      {
+        name: 'reason',
+        type: 'text',
+        nullable: false,
+        values: ['created', 'edited', 'reassessment', 'imported'],
+      },
+      {
+        name: 'document',
+        type: 'json',
+        nullable: false,
+        note: 'A Portfolio document, validated by the shared schema before it is written.',
+      },
+      {
+        name: 'changed_by',
+        type: 'text',
+        nullable: false,
+        maxLength: 120,
+        note: 'user id or "system"; an unattributed version is not reviewable.',
+      },
+      createdAt(),
+    ],
+    indexes: [
+      {
+        name: 'portfolio_snapshots_portfolio_version_idx',
+        columns: ['portfolio_id', 'version'],
+        unique: true,
+      },
+      { name: 'portfolio_snapshots_user_idx', columns: ['user_id', 'created_at'] },
     ],
   },
 ];

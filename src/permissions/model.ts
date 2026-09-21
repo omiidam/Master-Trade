@@ -39,6 +39,13 @@ export const PHASE1_PERMISSIONS: PermissionRule[] = [
   },
   {
     subject: 'model',
+    capability: 'portfolio.calculate',
+    allowed: true,
+    rationale:
+      'The model may ask for a composition to be valued, and the arithmetic is done by deterministic code over the document the user declared. The result describes what was measured; it is not a recommendation, and the model may not produce a portfolio figure itself.',
+  },
+  {
+    subject: 'model',
     capability: 'education.explain',
     allowed: true,
     rationale: 'Core teaching purpose of the agent.',

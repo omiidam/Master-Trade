@@ -25,6 +25,7 @@ export const APP_PAGE_IDS = [
   'memory',
   'research',
   'journal',
+  'portfolio',
   'academy',
   'exams',
   'lab',
@@ -39,6 +40,7 @@ export type AppPageId = (typeof APP_PAGE_IDS)[number];
 export type NavIconName =
   | 'gauge'
   | 'coins'
+  | 'pie-chart'
   | 'sparkles'
   | 'brain'
   | 'microscope'
@@ -107,6 +109,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     description:
       'Record what you actually did: setups, risk, rule compliance, mistakes and the lesson taken from each trade',
     icon: 'journal',
+    group: 'workspace',
+  },
+  {
+    id: 'portfolio',
+    label: 'Portfolio',
+    description:
+      'Declare what you hold and read the deterministic valuation: allocation, cost basis, concentration and exposure, with every gap named rather than filled',
+    icon: 'pie-chart',
     group: 'workspace',
   },
   {

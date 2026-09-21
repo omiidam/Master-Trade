@@ -14,6 +14,8 @@
     "./frontend/viewModels": "./src/frontend/viewModels.ts",
     "./jobs/service": "./src/jobs/service.ts",
     "./marketdata/provider": "./src/marketdata/provider.ts",
+    "./portfolio/model": "./src/portfolio/model.ts",
+    "./portfolio/readiness": "./src/portfolio/readiness.ts",
     "./profile/model": "./src/profile/model.ts",
     "./quality/model": "./src/quality/model.ts",
     "./quality/readiness": "./src/quality/readiness.ts",
