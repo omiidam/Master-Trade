@@ -157,7 +157,8 @@ also keeps the optional Tailwind engine — and never `npm install`. CI passing 
 required before a push is considered valid.
 
 CI also runs `npm run audit:prod` (`npm audit --omit=dev --audit-level=high`)
-immediately after install, so a **production-scope** advisory fails the build. The
-open advisories in the dev/test toolchain are out of that scope, with their
-reachability recorded in [dependency-audit.md](./dependency-audit.md). The gate is
-not part of `npm run validate`, which stays offline and deterministic.
+immediately after install, so a **production-scope** advisory fails the build. The gate
+is scoped to production deliberately: what can ship is what blocks a build. The dev/test
+toolchain is assessed separately — currently at 0 as well — and its reachability record
+lives in [dependency-audit.md](./dependency-audit.md). The gate is not part of
+`npm run validate`, which stays offline and deterministic.

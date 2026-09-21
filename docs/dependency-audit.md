@@ -1,10 +1,11 @@
 # Dependency Audit — Vitest / Vite toolchain advisories
 
-**Status:** investigated, **remediation documented but not applied** (it is a breaking
-change and requires explicit approval). Production scope is clean. See §4 for the exact
-upgrade and its verification.
+**Status:** **resolved** — applied; `npm audit` and `npm audit --omit=dev` both report
+**0 vulnerabilities**. Production scope was clean throughout. §4 records the applied
+change and the verification that accepted it; §6 is empty by construction.
 
-Audited at commit `40751ff`, Node 24.20.0, npm 11.19.0.
+First audited at commit `40751ff` (Node 24.20.0, npm 11.19.0) and applied on top of
+`d873ba0`.
 
 ## 1. What the audit reports
 
@@ -53,6 +54,10 @@ every affected range. Note that `5.4.21` is the last `5.4.x` release ever publis
 
 ## 3. Actual reachability in this repository
 
+_(Recorded while the findings were open, and kept because the reachability reasoning — not
+the severity label — is what justified the scope. The same reasoning applies to the next
+advisory that arrives.)_
+
 Severity in an advisory is not the same as exposure in a given project. Each finding
 requires a capability this repository does not have:
 
@@ -68,7 +73,7 @@ The `vitest` **critical** rating is a severity roll-up: it takes the highest of 
 `via` entries, which includes the UI-server advisory. The reachable-in-our-usage
 advisories in that chain are the moderate `@vitest/mocker` and nested-`vite` ones.
 
-## 4. Recommended remediation — documented, **not applied**
+## 4. Remediation — **applied and verified**
 
 **Upgrade `vitest` from 2.1.9 to `^4.1.11`.** That is the _minimum fully patched_
 version, and one change clears all five findings:
@@ -80,23 +85,69 @@ version, and one change clears all five findings:
   and the tree **dedupes to our existing `vite@6.4.3`**, which is patched
 - `esbuild` → resolves to `0.25.12` through `vite@6.4.3`, which is patched
 
-Engines are satisfied: vitest 4 needs `node ^20 || ^22 || >=24`, and CI already runs a
-22/24 matrix (local is 24).
+Engines are satisfied: vitest 4 needs `node ^20 || ^22 || >=24`, and CI runs a 22/24
+matrix (the local verification ran Node 24.20.0).
 
 ```bash
-npm install --save-dev vitest@^4.1.11
-npm run validate        # expect 386 tests in 29 files
-npm audit               # expect 0 vulnerabilities
-npm run build:web       # confirm the bundle still builds
+npm install --save-dev vitest@4.1.11   # the only source change: one devDependency line
+npm audit                              # 0 vulnerabilities
+npm ci                                 # clean install from the lockfile: 218 packages, 0 vulnerabilities
+npm run typecheck                      # exit 0
+npm run typecheck:web                  # exit 0
+npx vitest run                         # see the delta table below
+npm run build                          # exit 0
+npm run build:web                      # exit 0
+npm run desktop:verify                 # 0 errors, 1 pre-existing warning
 ```
 
-**Why this is not applied automatically.** `2 → 4` is two major versions. This
-repository's guarantees rest on 386 tests plus strict architectural invariants, and a
-major test-runner upgrade can change resolution, timing and isolation semantics. The
-configuration surface is small — `vitest.config.ts` uses only `include` and
-`environment: 'node'`, and the `@shared` alias — but "small config" is not evidence
-that the suite behaves identically. The upgrade must be made deliberately, with the
-suite run and the result inspected.
+### What the upgrade did to the tree
+
+It **removed** 15 packages rather than adding them:
+
+```bash
+$ npm ls vitest vite vite-node esbuild @vitest/mocker
+master-trade@0.6.0
++-- @tailwindcss/vite@4.3.3
+| `-- vite@6.4.3 deduped
++-- @vitejs/plugin-react@4.7.0
+| `-- vite@6.4.3 deduped
++-- vite@6.4.3
+| `-- esbuild@0.25.12
+`-- vitest@4.1.11
+  +-- @vitest/mocker@4.1.11
+  | `-- vite@6.4.3 deduped
+  `-- vite@6.4.3 deduped
+```
+
+There is now exactly **one** `vite` (6.4.3), `vite-node` is **absent**, and
+`node_modules/vitest/node_modules` does not exist at all. The five advisories were not
+suppressed — the packages that carried them are no longer installed. That is the
+difference between this and the rejected `overrides` option below.
+
+### Acceptance: the suite behaves identically
+
+The upgrade was accepted on a **delta**, not on a pass/fail, because the working tree
+carried unrelated unfinished work (Phase 5.6) whose two failing tests predate this change.
+Holding the failure set constant is the only honest comparison available:
+
+| Run                      | Files               | Tests                |
+| ------------------------ | ------------------- | -------------------- |
+| baseline, `vitest@2.1.9` | 39 passed, 2 failed | 704 passed, 2 failed |
+| after, `vitest@4.1.11`   | 39 passed, 2 failed | 704 passed, 2 failed |
+
+Both runs fail the same two tests — `quality.test.ts`'s "marks a capability available
+only where something implements it" (`decision.evaluation` was added to the requirement
+registry without updating its pinning test) and `monorepo-boundary.test.ts`'s "keeps no
+dead entries" (`@shared/decisions/*` is declared on the surface ahead of its consumers).
+Both come from uncommitted Phase 5.6 additions; **no test changed state under the
+upgrade**, which is the evidence that the runner substitution is behaviour-neutral here.
+
+The limited API surface is why: `tests/` imports only `describe`, `it`, `expect`,
+`vi.fn`, `vi.spyOn`, `afterEach` and `afterAll` — no `vi.mock`, no fake timers, no
+snapshots, no pool or reporter configuration — and `vitest.config.ts` sets only `include`,
+`environment: 'node'` and the `@shared` alias. The `2 → 4` jump was still made
+deliberately and inspected, as §4's history required; it was simply inspected against a
+known-red baseline rather than a green one.
 
 ### Alternatives rejected
 
@@ -124,20 +175,23 @@ deterministic (format → typecheck → tests → builds → desktop verify), an
 registry network call into it would make the local pipeline fail for reasons unrelated
 to the code in front of you.
 
-## 6. Remaining vulnerabilities and justification
+## 6. Remaining vulnerabilities
 
-**5 remain, by decision.** They are dev/test-only and not reachable through any code
-path this repository exercises: no Vitest UI or browser mode, no `vi.mock` (hence no
-redirect mocks), and no dev server served from the nested duplicates. They will be
-cleared by the §4 upgrade.
+**None.** `npm audit` reports 0 across the full tree; `npm audit --omit=dev` reports 0.
+The five dev/test findings were removed by eliminating the nested duplicate major they
+lived in (§4), not by suppressing them, not with an `overrides` entry, and not by
+narrowing the audit scope.
 
-The distinction this document records: **a vulnerability in a tool you run locally is
-not the same as a vulnerability in what you ship.** `npm audit --omit=dev` is the line,
-and it is currently at zero.
+The distinction this document was written to record still holds, and is why the response
+was a scoped upgrade rather than an incident: **a vulnerability in a tool you run locally
+is not the same as a vulnerability in what you ship.** The production scope was 0 the
+whole time.
 
 ## 7. Re-audit checklist
 
 1. `npm run audit:prod` — must stay at 0.
-2. `npm audit` — expected to show the 5 dev-scope findings until §4 is applied.
-3. When the vitest 4 upgrade is approved: run `npm audit` and confirm 0, then delete
-   §3–§6's dev-scope caveats and record the new versions.
+2. `npm audit` — now also 0. A new dev-scope advisory is a finding to triage, not the
+   standing noise it was in §3–§6.
+3. `npm ls vite vite-node esbuild` — should show a single deduped `vite@6.4.3`. A second
+   `vite` reappearing is the signal that something has pulled an old major back in, which
+   is exactly how these five findings existed.

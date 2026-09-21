@@ -21,9 +21,10 @@ jobs:
       # `npm ci` installs exactly the committed lockfile and fails on drift, so a
       # dependency cannot change under CI without the lockfile changing with it.
       - run: npm ci
-      # Ship-time dependencies only, and only high or critical. The open advisories
-      # in the dev/test toolchain (vitest 2's nested vite 5 / esbuild, @vitest/mocker)
-      # are deliberately out of scope here and are recorded with their reachability in
+      # Ship-time dependencies only, and only high or critical. The gate scopes to
+      # production on purpose: what can ship is what blocks a build. The dev/test
+      # toolchain is assessed separately and is currently at 0 as well, after the
+      # vitest 4 upgrade that removed the nested vite 5 duplicate — see
       # docs/dependency-audit.md. A production-scope advisory is not acceptable.
       - run: npm run audit:prod
       - run: npm run validate

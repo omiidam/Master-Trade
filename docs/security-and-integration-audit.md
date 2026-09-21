@@ -79,20 +79,27 @@ the session instant and the judged instant are now a fixed `NOW`, and the test a
 asserts the session is accepted one second _earlier_ — pinning that the caller's clock
 decides.
 
-### F-3 — Dev-scope dependency advisories (deferred, justified)
+### F-3 — Dev-scope dependency advisories (**resolved**)
+
+As recorded at the time of this audit:
 
 ```
 npm run audit:prod   -> found 0 vulnerabilities
 npm audit            -> 5 vulnerabilities (3 moderate, 1 high, 1 critical)
 ```
 
-All five sit in the **development** chain — `vite` nested under `vitest`/`vite-node`,
-depending on a vulnerable `esbuild`. Production scope is clean, and the production
-dependency list is 13 packages, all pure JavaScript. There is no non-breaking remedy: the
-fix is a Vitest/Vite **major** upgrade, which the phase rules forbid without documented
-justification, and which would risk the 430-test suite for no production gain. Deferred and
-recorded (see `docs/dependency-audit.md`); recommended as its own phase with the suite as
-the acceptance test.
+All five sat in the **development** chain — `vite` nested under `vitest`/`vite-node`,
+depending on a vulnerable `esbuild`. Production scope was clean, and the production
+dependency list is 13 packages, all pure JavaScript. There was no non-breaking remedy: the
+fix was a Vitest **major** upgrade, which the phase rules forbade without documented
+justification. Deferred and recorded, and recommended as its own phase with the suite as
+the acceptance test — which is what eventually happened.
+
+**Resolved:** `vitest` 2.1.9 → `^4.1.11`. It removes the nested duplicate major outright
+(15 packages deleted, `vite-node` gone, one deduped `vite@6.4.3`), and **both** `npm audit`
+and `npm audit --omit=dev` now report 0. Applied on top of `d873ba0`; accepted on a
+held-constant delta because the tree carried unrelated unfinished work. Full record:
+[dependency-audit.md](./dependency-audit.md).
 
 ### F-4 — One 1.0 MB frontend chunk (recommended)
 
@@ -247,10 +254,10 @@ clock-relative behaviour.
 
 ## 8. Recommended next step
 
-Phase 4.7 should be the **dependency modernization pass**: upgrade Vitest and Vite to the
-current majors in one scoped change, with the full 30-file suite and both builds as the
-acceptance test, and re-run `npm audit`. It is the only outstanding item that is both
-security-relevant and already understood.
+The **dependency modernization pass** recommended here has since been completed: `vitest`
+2.1.9 → `^4.1.11`, one scoped change with the suite and both builds as the acceptance test,
+re-audited to 0. See [dependency-audit.md](./dependency-audit.md) §4 and
+[risks-and-deferred.md](./risks-and-deferred.md) §8.
 
 The more interesting follow-up is suggested by this audit's own method: the clock defect
 survived multiple phases precisely because nothing asserted that the _runtime_ behaviour

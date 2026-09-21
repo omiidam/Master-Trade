@@ -421,17 +421,17 @@ repointing the alias target from `src/…` to `packages/shared/…`. Because eve
 already imports one of 13 exact names, no consumer import changes. The remaining five
 packages wait for a trigger (§6 of the assessment).
 
-## 8. Dependency audit — Vitest/Vite advisories (investigated, remediation pending)
+## 8. Dependency audit — Vitest/Vite advisories (**resolved**)
 
-`npm audit` reports 5 vulnerabilities in the dev/test toolchain (3 moderate, 1 high, 1
-critical). **Production scope is clean** — `npm audit --omit=dev --audit-level=high`
-exits 0. Full analysis, reachability and the rejected alternatives:
-[dependency-audit.md](./dependency-audit.md).
+`npm audit` reported 5 vulnerabilities in the dev/test toolchain (3 moderate, 1 high, 1
+critical). **Production scope was clean throughout** — `npm audit --omit=dev
+--audit-level=high` always exited 0. Full analysis, reachability and the rejected
+alternatives: [dependency-audit.md](./dependency-audit.md).
 
 **Root cause:** `vitest@2.1.9` requires `vite ^5.0.0`, but the project's own `vite` is
-6.4.3, so npm keeps a nested `vite@5.4.21` + `esbuild@0.21.5` + `vite-node@2.1.9` +
-`@vitest/mocker@2.1.9`. Every flagged node is inside that duplicate. `5.4.21` is the
-last `5.4.x` ever published, so **no patched Vite 5 exists** — the duplicate can only
+6.4.3, so npm kept a nested `vite@5.4.21` + `esbuild@0.21.5` + `vite-node@2.1.9` +
+`@vitest/mocker@2.1.9`. Every flagged node was inside that duplicate. `5.4.21` is the
+last `5.4.x` ever published, so **no patched Vite 5 existed** — the duplicate could only
 be eliminated, not upgraded.
 
 **Not reachable in this repository:** the critical advisory needs the Vitest UI or
@@ -440,14 +440,19 @@ redirect mocks or a third-party dev server on Vite's unauthenticated HMR socket 
 appears 0 times); the `vite`/`esbuild` ones need a dev server served from the nested
 copies, and our dev server is the patched top-level 6.4.3.
 
-**Recommended fix, not applied:** `vitest` 2.1.9 → `^4.1.11`. That is the minimum fully
-patched version (3.2.7 is not enough — `@vitest/mocker` is only fixed at 4.1.11), and it
-clears all five: `vite-node` disappears in vitest 4, and the tree dedupes onto our
-existing `vite@6.4.3`. It is a **two-major** upgrade, so it is documented rather than
-applied automatically.
+**Applied:** `vitest` 2.1.9 → `^4.1.11` — one devDependency line, plus the lockfile. That
+is the minimum fully patched version (3.2.7 is not enough — `@vitest/mocker` is only fixed
+at 4.1.11), and it clears all five: `vite-node` does not exist in vitest 4, and the tree
+dedupes onto our existing `vite@6.4.3`, which is patched. It **removes** 15 packages.
+`npm audit` and `npm audit --omit=dev` are both at **0**, from a clean `npm ci`.
 
-**Enforced instead:** `npm run audit:prod` plus a CI step, so a production-scope
-advisory fails the build while dev-toolchain noise does not block unrelated work.
+**Accepted on a delta, not a pass/fail:** the working tree carried unrelated unfinished
+work, so the suite was compared against a held-constant baseline — 704 passed / 2 failed
+in 41 files both before and after, failing the _same_ two tests. No test changed state.
+See [dependency-audit.md](./dependency-audit.md) §4.
+
+**Still enforced:** `npm run audit:prod` plus a CI step, so a production-scope advisory
+fails the build.
 
 ## 9. `packages/shared` extraction (Phase 4.3 — completed)
 
@@ -550,12 +555,12 @@ the clock it owns. See [ADR-0039](./adr/ADR-0039-one-clock-per-authorization-dec
 
 **Deferred, with triggers:**
 
-| Item                                                                                                              | Trigger to revisit                                                                                                                                   |
-| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5 dev-only advisories in the `vite`/`vitest`/`esbuild`/`vite-node` chain (`npm audit`; production scope is **0**) | A scoped Vitest + Vite major upgrade, with the 30-file suite as acceptance. The phase rules forbid breaking upgrades without this record.            |
-| Single 1.0 MB frontend chunk, no code splitting                                                                   | Before any non-Tauri (browser) deployment, or when first-load time is actually measured as a problem. Low impact while Tauri serves from local disk. |
-| `pg` driver absent for production PostgreSQL                                                                      | When a PostgreSQL instance is actually deployed. The adapter and `SqlExecutor` boundary already exist; installing a driver now would be dead weight. |
-| Browser realtime sessions                                                                                         | When a real session can be issued to a browser. Until then catalogue routes answer a typed 401 and the Activity surface uses labelled fixtures.      |
+| Item                                                                                                                                                                                                                            | Trigger to revisit                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~5 dev-only advisories in the `vite`/`vitest`/`esbuild`/`vite-node` chain (`npm audit`; production scope is **0**)~~ **RESOLVED** — `vitest` 2.1.9 → `^4.1.11` removed the nested duplicate major; both audits are now 0 (§8). | Done. The trigger was a scoped Vitest major upgrade with the suite as acceptance — recorded in [dependency-audit.md](./dependency-audit.md).         |
+| Single 1.0 MB frontend chunk, no code splitting                                                                                                                                                                                 | Before any non-Tauri (browser) deployment, or when first-load time is actually measured as a problem. Low impact while Tauri serves from local disk. |
+| `pg` driver absent for production PostgreSQL                                                                                                                                                                                    | When a PostgreSQL instance is actually deployed. The adapter and `SqlExecutor` boundary already exist; installing a driver now would be dead weight. |
+| Browser realtime sessions                                                                                                                                                                                                       | When a real session can be issued to a browser. Until then catalogue routes answer a typed 401 and the Activity surface uses labelled fixtures.      |
 
 **Deliberately NOT changed**, having been examined: no architecture was altered to make a test
 pass, no dependency was upgraded, no mock was introduced, and the trading safety flags were
