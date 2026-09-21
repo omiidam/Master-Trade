@@ -25,6 +25,7 @@ import type { SessionService } from '../auth/sessions.js';
 import type { AgentService } from '../agent/service.js';
 import { defaultToolRegistry } from '../../packages/trading-engine/src/index.js';
 import { assertApiCatalogue } from '../../packages/shared/src/api/contracts.js';
+import { PLAN_CATALOGUE } from '../../packages/shared/src/usage/plans.js';
 import { check, type HealthCheck } from './health.js';
 import { databaseStatus } from '../db/index.js';
 
@@ -37,6 +38,9 @@ export interface HealthCheckDeps {
   /** Store identity and durability, reported rather than assumed. */
   jobStoreKind: string;
   durableJobs: boolean;
+  /** The same two facts for credits: which store, and whether a restart loses them. */
+  usageStoreKind: string;
+  durableUsage: boolean;
   /** True when a repository bundle exists, so a profile can actually be stored. */
   profileStore: boolean;
   /**
@@ -180,6 +184,36 @@ export function defaultHealthChecks(deps: HealthCheckDeps): HealthCheck[] {
         status: 'ok',
         detail:
           'Trading context versions are append-only: a change appends n+1 and no earlier version is rewritten.',
+      };
+    }),
+
+    check('usage.credits', false, () => {
+      // Two things worth saying out loud: metering happens on every deployment (a
+      // metered capability is never silently unmetered), and whether the balance is
+      // durable is a property of *this* deployment rather than of the feature.
+      const detail = `${deps.usageStoreKind} store (${deps.durableUsage ? 'survives restart' : 'in-process only: a restart resets the balance and loses the history'}); credits are reserved before work and returned in full when the work does not complete.`;
+      return { status: deps.durableUsage ? 'ok' : 'degraded', detail };
+    }),
+
+    check('usage.billing', true, () => {
+      // A safety check rather than an informational one, and critical for that reason:
+      // the catalogue refuses a purchasable plan, and this proves it at runtime. A plan
+      // that became purchasable without a payment integration would be a way to take
+      // money for something nothing can charge for.
+      const purchasable = PLAN_CATALOGUE.filter(
+        (plan) => plan.purchasable !== false || plan.price !== null,
+      );
+      if (purchasable.length > 0) {
+        return {
+          status: 'fail',
+          detail: `Plans claim to be purchasable with no payment integration: ${purchasable
+            .map((plan) => plan.id)
+            .join(', ')}`,
+        };
+      }
+      return {
+        status: 'ok',
+        detail: `${PLAN_CATALOGUE.length} plans; none is purchasable and none declares a price. No payment integration exists in this build.`,
       };
     }),
 

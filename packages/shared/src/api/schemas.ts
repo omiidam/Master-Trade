@@ -18,6 +18,9 @@
 import { z } from 'zod';
 import { FIELD_KEYS, tradingContextSchema } from '../profile/model.js';
 import { ANALYSIS_TYPES } from '../quality/readiness.js';
+import { MAX_MOVEMENT } from '../usage/credits.js';
+import { FEATURE_IDS } from '../usage/features.js';
+import { PLAN_IDS, SUBSCRIPTION_STATUSES } from '../usage/plans.js';
 import type { ValidationResult } from './contracts.js';
 
 export const MAX_MESSAGE_LENGTH = 8_000;
@@ -35,6 +38,18 @@ export const MAX_TEXT_LENGTH = 4_000;
 const ANALYSIS_TYPES_AS_ENUM = [...ANALYSIS_TYPES] as [
   (typeof ANALYSIS_TYPES)[number],
   ...(typeof ANALYSIS_TYPES)[number][],
+];
+const FEATURE_IDS_AS_ENUM = [...FEATURE_IDS] as [
+  (typeof FEATURE_IDS)[number],
+  ...(typeof FEATURE_IDS)[number][],
+];
+const PLAN_IDS_AS_ENUM = [...PLAN_IDS] as [
+  (typeof PLAN_IDS)[number],
+  ...(typeof PLAN_IDS)[number][],
+];
+const SUBSCRIPTION_STATUSES_AS_ENUM = [...SUBSCRIPTION_STATUSES] as [
+  (typeof SUBSCRIPTION_STATUSES)[number],
+  ...(typeof SUBSCRIPTION_STATUSES)[number][],
 ];
 const FIELD_KEYS_AS_ENUM = [...FIELD_KEYS] as [
   (typeof FIELD_KEYS)[number],
@@ -55,6 +70,16 @@ export const agentChatBodySchema = z.strictObject({
    * blocked input set means no model is consulted at all (ADR-0044).
    */
   analysisType: z.enum(ANALYSIS_TYPES_AS_ENUM).optional(),
+  /**
+   * The caller's own name for *this attempt*, when it may be retried.
+   *
+   * A turn costs a credit, so a retry must be recognisable as the same attempt rather
+   * than a second one. Supplying the same key twice resolves to the first attempt — the
+   * reservation is reused and nothing is charged again. It is in the body rather than a
+   * header because the request pipeline validates bodies and does not read headers, and a
+   * header nobody validates is a value nobody can rely on.
+   */
+  idempotencyKey: z.string().trim().min(8).max(128).optional(),
 });
 
 /** POST /v1/academy/lessons/:lessonId/complete */
@@ -156,6 +181,52 @@ export const qualityAssessBodySchema = z
     path: ['premises'],
   });
 
+/**
+ * Usage and subscription (Phase 5.4).
+ *
+ * Every body here is **strict**, so a client cannot smuggle a balance, a plan or an
+ * entitlement in alongside the fields the route reads. That is not defensiveness for its
+ * own sake: the whole credit system rests on the server being the only thing that knows
+ * what an account may spend, and a permissive schema would be the one place where a
+ * client could try to say otherwise.
+ */
+export const usageHistoryQuerySchema = z.strictObject({
+  /** Absent means every feature. Enumerated, so an unknown id is a validation error. */
+  feature: z.enum(FEATURE_IDS_AS_ENUM).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+/**
+ * `POST /v1/usage/credits/adjust`
+ *
+ * `reference` is the decision the movement rests on and is required for that reason: an
+ * adjustment with no stated basis is an unexplained change to somebody's allowance. The
+ * route is approval-gated, so an operator also needs a recorded approval for it.
+ */
+export const usageAdjustBodySchema = z.strictObject({
+  userId: identifier,
+  amount: z
+    .number()
+    .int()
+    .min(-MAX_MOVEMENT)
+    .max(MAX_MOVEMENT)
+    .refine((value) => value !== 0, { message: 'an adjustment of zero is not a movement' }),
+  reference: z.string().trim().min(8).max(200),
+});
+
+/**
+ * `POST /v1/usage/subscription`
+ *
+ * Changing a plan is the same class of act as adjusting credits — it changes what the
+ * account may consume — so it carries the same requirement for a stated reference.
+ */
+export const usageSubscriptionBodySchema = z.strictObject({
+  userId: identifier,
+  planId: z.enum(PLAN_IDS_AS_ENUM),
+  status: z.enum(SUBSCRIPTION_STATUSES_AS_ENUM),
+  reference: z.string().trim().min(8).max(200),
+});
+
 /** GET routes carry no body; accept nothing but an empty object. */
 export const emptyBodySchema = z.union([z.undefined(), z.record(z.string(), z.unknown())]);
 
@@ -169,6 +240,9 @@ export type JobListQuery = z.infer<typeof jobListQuerySchema>;
 export type JobCancelBody = z.infer<typeof jobCancelBodySchema>;
 export type ProfileContextBody = z.infer<typeof profileContextBodySchema>;
 export type QualityAssessBody = z.infer<typeof qualityAssessBodySchema>;
+export type UsageHistoryQuery = z.infer<typeof usageHistoryQuerySchema>;
+export type UsageAdjustBody = z.infer<typeof usageAdjustBodySchema>;
+export type UsageSubscriptionBody = z.infer<typeof usageSubscriptionBodySchema>;
 
 /** Safe, stable text for one validation issue: `field: reason`. */
 export function formatIssue(issue: { path: readonly PropertyKey[]; message: string }): string {

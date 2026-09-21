@@ -19,6 +19,7 @@ import { createMemoryRepository, MemoryRepository } from './memory.js';
 import { createPlatformRepository, PlatformRepository } from './platform.js';
 import { createAgentRepository, AgentRepository } from './agent.js';
 import { createProfileRepository, ProfileRepository } from './profile.js';
+import { createUsageRepository, UsageRepository } from './usage.js';
 import { OWNERSHIP_BY_TABLE, type Owner } from '../ownership.js';
 import type { TableName } from '../schema.js';
 
@@ -31,6 +32,17 @@ export { MemoryRepository, createMemoryRepository } from './memory.js';
 export { PlatformRepository, createPlatformRepository } from './platform.js';
 export { AgentRepository, createAgentRepository } from './agent.js';
 export { ProfileRepository, createProfileRepository } from './profile.js';
+export { UsageRepository, createUsageRepository } from './usage.js';
+export type {
+  ApplyCreditInput,
+  ApplyCreditResult,
+  CreditAccountRow,
+  CreditLedgerRow,
+  SubscriptionRow,
+  UsageEventRow,
+  UsageEventStatus,
+  UpsertSubscriptionInput,
+} from './usage.js';
 
 /** Every repository module, with the owner it writes as. */
 export const REPOSITORY_MODULES: readonly { owner: Owner; tables: readonly TableName[] }[] = [
@@ -51,6 +63,10 @@ export const REPOSITORY_MODULES: readonly { owner: Owner; tables: readonly Table
     tables: ['settings', 'files', 'jobs', 'job_scratch', 'market_data_bars'],
   },
   { owner: 'profile', tables: ['trading_context_versions'] },
+  {
+    owner: 'usage',
+    tables: ['subscriptions', 'credit_accounts', 'credit_ledger', 'usage_events'],
+  },
 ];
 
 export interface Repositories {
@@ -63,6 +79,7 @@ export interface Repositories {
   platform: PlatformRepository;
   marketData: MarketDataRepository;
   profile: ProfileRepository;
+  usage: UsageRepository;
 }
 
 export interface RepositoryOptions {
@@ -93,6 +110,7 @@ export function createRepositories(db: SqlExecutor, options: RepositoryOptions =
     platform: createPlatformRepository(db, { ...shared, defaultLeaseMs: options.jobLeaseMs }),
     marketData: createMarketDataRepository(db, shared),
     profile: createProfileRepository(db, shared),
+    usage: createUsageRepository(db, shared),
   };
 }
 

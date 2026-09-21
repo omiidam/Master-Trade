@@ -180,3 +180,22 @@ The eight quality dimensions, the closed issue vocabulary, the validation rules,
 freshness policy, the requirement registry, the readiness outcomes, the redaction rules and
 the deferrals are in
 [input-quality-and-data-reliability.md](../input-quality-and-data-reliability.md).
+
+## Phase 5.4 — plans are code, and entitlement may only narrow
+
+Phase 5.1 placed Usage Credits & Premium on the roadmap with two constraints: no payment
+integration in this phase, and no encouragement of excessive trading. Those constraints turn out
+to decide the architecture. A plan decides what an account may consume, so it belongs to the
+same boundary as the role table — and a boundary that a database write can move is not a
+boundary. The decision below therefore keeps the catalogue in code, makes the purchase question
+answerable in the negative, and gives the resolver one direction: it may narrow what the role
+table allows and can never widen it.
+
+| ADR                                                               | Decision                                                                                                                                                                                                                                                             | Decision id(s)               | Status   |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | -------- |
+| [0045](./ADR-0045-plans-are-code-and-entitlement-only-narrows.md) | Plans are declared **in code** and no plan is purchasable, enforced at boot; no tier may reach an approval-gated operation; entitlement may only **narrow** a role decision; credits are **reserved before the work** and returned in full when it does not complete | `DEC-USAGE-1-PLANS-ARE-CODE` | Accepted |
+
+The catalogue, the credit accounting rules, the metering lifecycle, the refund and idempotency
+strategy, the entitlement enforcement order, the security posture, the frontend surface, the
+prerequisites of a future payment integration and the deferrals are in
+[usage-credits-and-premium.md](../usage-credits-and-premium.md).

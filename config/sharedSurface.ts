@@ -39,6 +39,10 @@ export const SHARED_SURFACE: Readonly<Record<string, string>> = {
   '@shared/realtime/events': 'packages/shared/src/realtime/events.ts',
   '@shared/realtime/protocol': 'packages/shared/src/realtime/protocol.ts',
   '@shared/types': 'packages/shared/src/types.ts',
+  '@shared/usage/credits': 'packages/shared/src/usage/credits.ts',
+  '@shared/usage/entitlements': 'packages/shared/src/usage/entitlements.ts',
+  '@shared/usage/features': 'packages/shared/src/usage/features.ts',
+  '@shared/usage/plans': 'packages/shared/src/usage/plans.ts',
 };
 
 /** Every specifier the frontend may import across the boundary. */

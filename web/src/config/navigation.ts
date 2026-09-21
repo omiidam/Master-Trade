@@ -29,6 +29,7 @@ export const APP_PAGE_IDS = [
   'exams',
   'lab',
   'activity',
+  'usage',
   'profile',
   'settings',
 ] as const;
@@ -37,6 +38,7 @@ export type AppPageId = (typeof APP_PAGE_IDS)[number];
 
 export type NavIconName =
   | 'gauge'
+  | 'coins'
   | 'sparkles'
   | 'brain'
   | 'microscope'
@@ -134,6 +136,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     description:
       'The live event stream and the background-task queue, with their provenance and their failures',
     icon: 'activity',
+    group: 'system',
+  },
+  {
+    id: 'usage',
+    label: 'Usage',
+    description:
+      'Your plan, credit allowance and what each capability costs — with the refusals stated rather than hidden',
+    icon: 'coins',
     group: 'system',
   },
   {

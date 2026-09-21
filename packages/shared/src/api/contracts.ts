@@ -40,9 +40,14 @@ import {
   jobCancelBodySchema,
   jobListQuerySchema,
   jobParamsSchema,
+  usageAdjustBodySchema,
+  usageHistoryQuerySchema,
+  usageSubscriptionBodySchema,
   type JobCancelBody,
   type RuleActivateBody,
   type RuleProposeBody,
+  type UsageAdjustBody,
+  type UsageSubscriptionBody,
 } from './schemas.js';
 import type { AnalysisReadinessDecision } from '../quality/readiness.js';
 import type { QualityReport } from '../quality/model.js';
@@ -164,6 +169,26 @@ export interface AgentChatData {
    * leaving the client to infer why it got a refusal.
    */
   readiness?: AnalysisReadinessDecision | null;
+  /**
+   * What this turn cost, and why.
+   *
+   * Present only when the server meters turns, which it does whenever a usage store is
+   * configured. `charged` is the honest part for a client with a retry to think about: a
+   * turn that ran but produced a refusal costs nothing, and a surface that did not know
+   * that would report a spend that never happened.
+   */
+  usage?: {
+    /** The key this attempt was metered under, echoed so a retry can reuse it. */
+    operationKey: string;
+    /** The feature's declared cost per invocation. */
+    credits: number;
+    charged: boolean;
+    /** The balance after the turn, read from the ledger rather than computed. */
+    balance: number;
+    /** True when this response resolved to an earlier attempt with the same key. */
+    replay: boolean;
+    note: string;
+  } | null;
 }
 
 /** One entry of the context history, for review. */
@@ -379,6 +404,219 @@ const qualityAssessRoute: ApiRoute<QualityAssessBody, QualityAssessData> = {
   validateBody: zodValidator(qualityAssessBodySchema),
 };
 
+/* ------------------------------------------------------------------ */
+/* Usage, credits and subscription                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A plan as the API reports it.
+ *
+ * The catalogue is public configuration, so it is served as data rather than restated by
+ * a client: a surface that hard-codes an allowance will be wrong the first time the
+ * catalogue changes, and the wrong number would be the one a person budgets against.
+ */
+export interface UsagePlanView {
+  id: string;
+  displayName: string;
+  tagline: string;
+  active: boolean;
+  billingPeriod: string;
+  periodCredits: number;
+  resetCadence: string;
+  carryOver: string;
+  /**
+   * Always `false`, and `price` always `null`, in this build: there is no payment
+   * integration, so no price can be charged and none is displayed as if it could be.
+   */
+  purchasable: false;
+  price: null;
+  entitlements: {
+    feature: string;
+    included: boolean;
+    periodLimit: number | null;
+  }[];
+  mayNot: string[];
+  notes: string[];
+}
+
+export interface UsageFeatureViewData {
+  id: string;
+  label: string;
+  description: string;
+  category: string;
+  creditCost: number;
+  /** What the cost means. Served with the number so the number can be reviewed. */
+  costBasis: string;
+  state: string;
+  stateReason: string | null;
+  operation: string | null;
+  allowed: boolean;
+  /** The refusal, when there is one. Never `null` on an allowed feature. */
+  denial: string | null;
+  /** The refusal's meaning in words, shipped with the decision. */
+  reason: string;
+  /** True only when an upgrade would actually resolve this refusal. */
+  upgradeOffered: boolean;
+  upgradePlanId: string | null;
+  usedThisPeriod: number;
+  periodLimit: number | null;
+}
+
+/**
+ * `GET /v1/usage` — the caller's own allowance, consumption and entitlements.
+ *
+ * No subject parameter exists, in the path or the body: the account is always the
+ * authenticated principal, so reading somebody else's balance is not expressible.
+ */
+export interface UsageStatusData {
+  plan: UsagePlanView;
+  /** The whole catalogue, so a comparison view needs no second request. */
+  plans: UsagePlanView[];
+  subscriptionStatus: string;
+  subscriptionLabel: string;
+  /** False when the free default is being reported as a default rather than a record. */
+  subscriptionRecorded: boolean;
+  balance: number;
+  lifetime: { granted: number; consumed: number };
+  period: {
+    key: string;
+    startAt: string;
+    endAt: string;
+    /** When the allowance is next renewed. Derived from the clock, never stored. */
+    resetsAt: string;
+  };
+  totals: {
+    granted: number;
+    consumed: number;
+    refunded: number;
+    expired: number;
+    adjusted: number;
+    net: number;
+  };
+  features: UsageFeatureViewData[];
+  /** False when a restart would lose the balance. Reported, never implied. */
+  durable: boolean;
+  storeKind: string;
+  purchasable: false;
+  note: string;
+}
+
+/**
+ * One movement, as a user reads it.
+ *
+ * `balanceAfter` is stored on the row rather than recomputed, so the history reconciles
+ * without replaying it — and a displayed balance cannot drift from the one that was seen.
+ */
+export interface UsageMovementView {
+  id: string;
+  kind: string;
+  status: string;
+  reason: string;
+  reasonLabel: string;
+  delta: number;
+  balanceAfter: number;
+  feature: string | null;
+  correlationId: string | null;
+  actor: string;
+  createdAt: string;
+}
+
+/** One metered attempt, including the ones that were refused or cost nothing. */
+export interface UsageAttemptView {
+  id: string;
+  feature: string;
+  category: string;
+  status: string;
+  credits: number;
+  denial: string | null;
+  correlationId: string | null;
+  occurredAt: string;
+  settledAt: string | null;
+  note: string | null;
+}
+
+/** `GET /v1/usage/history` — the movements and the attempts behind the balance. */
+export interface UsageHistoryData {
+  movements: UsageMovementView[];
+  attempts: UsageAttemptView[];
+  totals: UsageStatusData['totals'];
+  note: string;
+}
+
+/** The result of an administrative adjustment or subscription change. */
+export interface UsageAdminData {
+  userId: string;
+  /** The balance the change produced, read back from the ledger. */
+  balance: number;
+  change: {
+    kind: 'credits' | 'subscription';
+    credits?: number;
+    planId?: string;
+    status?: string;
+    reference: string;
+    /** Stated so a record cannot be mistaken for a receipt. */
+    purchase: null;
+  };
+  note: string;
+}
+
+const usageStatusRoute: ApiRoute<Record<string, unknown> | undefined, UsageStatusData> = {
+  id: 'usage.read',
+  method: 'GET',
+  path: '/v1/usage',
+  version: API_VERSION,
+  operation: 'usage.read',
+  auth: 'required',
+  summary:
+    "Read the authenticated user's plan, credit balance, allowance and feature entitlements.",
+  validateBody: zodValidator(emptyBodySchema),
+};
+
+const usageHistoryRoute: ApiRoute<Record<string, unknown> | undefined, UsageHistoryData> = {
+  id: 'usage.history',
+  method: 'GET',
+  path: '/v1/usage/history',
+  version: API_VERSION,
+  operation: 'usage.read',
+  auth: 'required',
+  summary: 'Read the credit movements and metered attempts behind the current balance.',
+  validateBody: zodValidator(emptyBodySchema),
+  validateQuery: zodValidator(usageHistoryQuerySchema) as (
+    raw: unknown,
+  ) => ValidationResult<Record<string, unknown>>,
+};
+
+/**
+ * `POST /v1/usage/credits/adjust`
+ *
+ * Administrative, and therefore two gates rather than one: the `usage.adjust` operation,
+ * which is approval-gated, and the service's own refusal to let an operator act on their
+ * own account. The reference is stored in the audit record rather than on the ledger, so
+ * the accounting rows stay machine-readable.
+ */
+const usageAdjustRoute: ApiRoute<UsageAdjustBody, UsageAdminData> = {
+  id: 'usage.credits.adjust',
+  method: 'POST',
+  path: '/v1/usage/credits/adjust',
+  version: API_VERSION,
+  operation: 'usage.adjust',
+  auth: 'required',
+  summary: "Adjust another account's credit balance. Requires a recorded human approval.",
+  validateBody: zodValidator(usageAdjustBodySchema),
+};
+
+const usageSubscriptionRoute: ApiRoute<UsageSubscriptionBody, UsageAdminData> = {
+  id: 'usage.subscription.set',
+  method: 'POST',
+  path: '/v1/usage/subscription',
+  version: API_VERSION,
+  operation: 'usage.adjust',
+  auth: 'required',
+  summary:
+    "Record another account's plan and subscription status as an administrative grant. Requires a recorded human approval.",
+  validateBody: zodValidator(usageSubscriptionBodySchema),
+};
+
 const healthRoute: ApiRoute<Record<string, unknown> | undefined, { status: string }> = {
   id: 'system.health',
   method: 'GET',
@@ -415,6 +653,10 @@ export const API_ROUTES: readonly AnyApiRoute[] = [
   profileReadRoute,
   profileWriteRoute,
   qualityAssessRoute,
+  usageStatusRoute,
+  usageHistoryRoute,
+  usageAdjustRoute,
+  usageSubscriptionRoute,
   agentChatRoute,
   lessonCompleteRoute,
   ruleProposeRoute,

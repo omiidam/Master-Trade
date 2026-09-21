@@ -15,6 +15,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { ResearchPage } from './pages/ResearchPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TradingLabPage } from './pages/TradingLabPage';
+import { UsagePage } from './pages/UsagePage';
 import { useRealtimeStore } from './realtime/store.js';
 import { useUiStore } from './store/ui';
 
@@ -38,6 +39,8 @@ function renderPage(page: AppPageId) {
       return <TradingLabPage />;
     case 'activity':
       return <ActivityPage />;
+    case 'usage':
+      return <UsagePage />;
     case 'profile':
       return <ProfilePage />;
     case 'settings':

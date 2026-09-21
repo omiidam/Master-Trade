@@ -97,6 +97,18 @@ export const OPERATIONS = {
     false,
     "Assess the quality of the authenticated user's declared inputs and decide whether an analysis may run",
   ),
+  'usage.read': op(
+    'usage.read',
+    'normal',
+    false,
+    "Read the authenticated user's own credit balance, plan, subscription status and usage history",
+  ),
+  'usage.adjust': op(
+    'usage.adjust',
+    'sensitive',
+    true,
+    'Adjust another account’s credits or subscription (approval required)',
+  ),
   'marketData.read': op('marketData.read', 'normal', false, 'Read normalized market data'),
   'marketData.ingest': op(
     'marketData.ingest',
@@ -160,6 +172,9 @@ const student: OperationId[] = [
   // Assessing inputs is a read of the caller's own declarations, never a way to
   // reach another account's: the subject is the principal, as on the profile routes.
   'quality.assess',
+  // A learner sees their own balance and what they have consumed. Adjusting another
+  // account is not on this list in any form.
+  'usage.read',
 ];
 
 const coach: OperationId[] = [
@@ -174,6 +189,12 @@ const coach: OperationId[] = [
   'user.invite',
 ];
 
+/**
+ * The account owner operates the deployment, so it is the only role that may change
+ * another account's credits — and even then under an approval. `owner` is the whole
+ * catalogue; that `usage.adjust` is approval-gated is what keeps it from being a
+ * unilateral spend authorization.
+ */
 const owner: OperationId[] = ALL_OPERATION_IDS;
 
 const observer: OperationId[] = [
@@ -190,6 +211,7 @@ const observer: OperationId[] = [
   // of one's own inputs is a read, so it is granted.
   'profile.read',
   'quality.assess',
+  'usage.read',
 ];
 
 /** A background worker: infrastructure capabilities only. */

@@ -83,7 +83,11 @@ export type TableName =
   | 'jobs'
   | 'market_data_bars'
   | 'job_scratch'
-  | 'trading_context_versions';
+  | 'trading_context_versions'
+  | 'subscriptions'
+  | 'credit_accounts'
+  | 'credit_ledger'
+  | 'usage_events';
 
 export type EntityKind = 'persistent' | 'transient';
 
@@ -677,6 +681,239 @@ export const SCHEMA: readonly EntityDefinition[] = [
         columns: ['user_id', 'version'],
         unique: true,
       },
+    ],
+  },
+
+  /* Usage & Subscription (Phase 5.4) ---------------------------------- */
+
+  {
+    table: 'subscriptions',
+    kind: 'persistent',
+    description:
+      'Which plan an account is on, and whether it is active. One row per user: this is current state, not history — the history is the audit trail, which is append-only and cannot be rewritten. Nothing here records a payment: there is no payment integration, no price is charged, and no credential or card reference may be stored in this table or any other.',
+    columns: [
+      pk(),
+      {
+        name: 'user_id',
+        type: 'uuid',
+        nullable: false,
+        unique: true,
+        references: fk('users', 'cascade'),
+      },
+      {
+        name: 'plan_id',
+        type: 'text',
+        nullable: false,
+        values: ['free', 'premium'],
+        note: 'Mirrors the plan catalogue in packages/shared/src/usage/plans.ts',
+      },
+      {
+        name: 'status',
+        type: 'text',
+        nullable: false,
+        values: ['active', 'inactive', 'expired', 'pending'],
+      },
+      {
+        name: 'billing_period',
+        type: 'text',
+        nullable: false,
+        values: ['none', 'monthly', 'annual'],
+      },
+      { name: 'current_period_start', type: 'timestamp', nullable: true },
+      { name: 'current_period_end', type: 'timestamp', nullable: true },
+      { name: 'started_at', type: 'timestamp', nullable: false },
+      { name: 'ended_at', type: 'timestamp', nullable: true },
+      {
+        name: 'changed_by',
+        type: 'text',
+        nullable: false,
+        maxLength: 120,
+        note: 'user id or "system"; a subscription change with no attribution is not auditable',
+      },
+      createdAt(),
+      updatedAt(),
+    ],
+  },
+  {
+    table: 'credit_accounts',
+    kind: 'persistent',
+    description:
+      'One row per user holding the current credit balance. Mutable, and mutated only by a guarded UPDATE whose WHERE clause refuses to cross zero — which is what makes overconsumption impossible rather than unlikely. The ledger is the record of how the balance got here; this row exists so a debit is a single atomic statement instead of a read-then-write race.',
+    columns: [
+      pk(),
+      {
+        name: 'user_id',
+        type: 'uuid',
+        nullable: false,
+        unique: true,
+        references: fk('users', 'cascade'),
+      },
+      {
+        name: 'balance',
+        type: 'integer',
+        nullable: false,
+        min: 0,
+        note: 'Credits available now. Never negative; the CHECK is the last line of defence.',
+      },
+      {
+        name: 'period_key',
+        type: 'text',
+        nullable: false,
+        maxLength: 32,
+        note: 'The period the balance belongs to, so a turnover is detectable without a clock comparison',
+      },
+      { name: 'lifetime_granted', type: 'integer', nullable: false, min: 0 },
+      { name: 'lifetime_consumed', type: 'integer', nullable: false, min: 0 },
+      updatedAt(),
+    ],
+  },
+  {
+    table: 'credit_ledger',
+    kind: 'persistent',
+    description:
+      'Append-only journal of every credit movement: one row per operation, carrying the balance after it. The UNIQUE (user_id, operation_id) index is what makes a retry idempotent — the second attempt inserts nothing and reads the first result — and the operation id is derived from the thing being charged rather than chosen by a client.',
+    columns: [
+      pk(),
+      { name: 'user_id', type: 'uuid', nullable: false, references: fk('users', 'cascade') },
+      {
+        name: 'operation_id',
+        type: 'text',
+        nullable: false,
+        maxLength: 160,
+        note: 'Derived idempotency key: grant:<period>, expire:<period>, refund:<op>, or the caller’s own key',
+      },
+      {
+        name: 'kind',
+        type: 'text',
+        nullable: false,
+        values: ['grant', 'consume', 'refund', 'expire', 'adjustment'],
+      },
+      {
+        name: 'status',
+        type: 'text',
+        nullable: false,
+        values: ['reserved', 'settled', 'released'],
+      },
+      {
+        name: 'reason',
+        type: 'text',
+        nullable: false,
+        values: [
+          'plan-allowance',
+          'metered-usage',
+          'operation-failed',
+          'period-expiry',
+          'admin-adjustment',
+        ],
+      },
+      {
+        name: 'delta',
+        type: 'integer',
+        nullable: false,
+        note: 'Signed: negative for a debit. Matches deltaFor(kind, amount) in the shared model.',
+      },
+      {
+        name: 'balance_after',
+        type: 'integer',
+        nullable: false,
+        min: 0,
+        note: 'The balance the account held once this row was applied, so the history reconciles without replay',
+      },
+      {
+        name: 'feature',
+        type: 'text',
+        nullable: true,
+        maxLength: 64,
+        note: 'The metered capability, when the movement paid for one',
+      },
+      {
+        name: 'correlation_id',
+        type: 'text',
+        nullable: true,
+        maxLength: 80,
+        note: 'Ties a movement to the request that caused it; never a value the user supplied',
+      },
+      {
+        name: 'actor',
+        type: 'text',
+        nullable: false,
+        maxLength: 120,
+        note: 'user id, "system" or "operator:<id>". Who caused the movement.',
+      },
+      createdAt(),
+    ],
+    indexes: [
+      {
+        name: 'credit_ledger_user_operation_idx',
+        columns: ['user_id', 'operation_id'],
+        unique: true,
+      },
+      { name: 'credit_ledger_user_created_idx', columns: ['user_id', 'created_at'] },
+    ],
+  },
+  {
+    table: 'usage_events',
+    kind: 'persistent',
+    description:
+      'One row per metered attempt and its outcome, including the ones that moved no credits: a refused request and a capability that costs nothing. The ledger is the accounting record and holds only movements; this is the metering record and holds attempts, which is why the two are not one table that can disagree about what happened. A row moves from `reserved` to `settled` or `released` exactly once, through a guarded UPDATE, so a double settlement is refused rather than silently applied. It is deliberately **not** the idempotency mechanism — that is the ledger’s UNIQUE (user_id, operation_id), because idempotency exists to prevent a double charge, and a retry that was refused the first time must be allowed to succeed later with the same key.',
+    columns: [
+      pk(),
+      { name: 'user_id', type: 'uuid', nullable: false, references: fk('users', 'cascade') },
+      { name: 'feature', type: 'text', nullable: false, maxLength: 64 },
+      {
+        name: 'category',
+        type: 'text',
+        nullable: false,
+        maxLength: 40,
+        note: 'Coarse grouping for summaries: ai-analysis, backtest, deterministic-tool, …',
+      },
+      {
+        name: 'status',
+        type: 'text',
+        nullable: false,
+        values: ['reserved', 'settled', 'released', 'refused'],
+      },
+      {
+        name: 'credits',
+        type: 'integer',
+        nullable: false,
+        min: 0,
+        note: 'Credits this attempt held; 0 for a free or refused one',
+      },
+      {
+        name: 'denial',
+        type: 'text',
+        nullable: true,
+        maxLength: 40,
+        note: 'The refusal code, when the attempt was refused before any work happened',
+      },
+      {
+        name: 'operation_key',
+        type: 'text',
+        nullable: false,
+        maxLength: 160,
+        note: 'The caller-supplied idempotency key, so a retry is recognisable in the history. Not unique: a retry is a real attempt and is recorded as one.',
+      },
+      {
+        name: 'correlation_id',
+        type: 'text',
+        nullable: true,
+        maxLength: 80,
+      },
+      { name: 'actor', type: 'text', nullable: false, maxLength: 120 },
+      { name: 'occurred_at', type: 'timestamp', nullable: false },
+      { name: 'settled_at', type: 'timestamp', nullable: true },
+      {
+        name: 'note',
+        type: 'text',
+        nullable: true,
+        maxLength: 240,
+        note: 'A system-worded summary. Never text the user typed.',
+      },
+    ],
+    indexes: [
+      { name: 'usage_events_user_occurred_idx', columns: ['user_id', 'occurred_at'] },
+      { name: 'usage_events_user_operation_idx', columns: ['user_id', 'operation_key'] },
     ],
   },
 ];

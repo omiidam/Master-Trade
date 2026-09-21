@@ -685,3 +685,37 @@ Two things this phase explicitly did **not** build, and will not: a numeric inpu
 (a threshold hidden in a constant, and a single number that cannot say which dimension failed),
 and LLM-written explanations of a verdict (a model may restate a computed verdict in the
 contract's own words, never compute or soften one).
+
+## Phase 5.4 — usage credits, plans and premium
+
+- [ADR-0045](./adr/ADR-0045-plans-are-code-and-entitlement-only-narrows.md) —
+  `DEC-USAGE-1-PLANS-ARE-CODE`. Plans are declared in code and no plan is purchasable (checked
+  at boot); no tier may reach an approval-gated operation; entitlement may only **narrow** what
+  the role table allows; credits are reserved **before** the work and returned in full when it
+  does not complete.
+
+The catalogue, the credit accounting rules, the metering lifecycle, the entitlement enforcement
+order, the frontend surface, the prerequisites of a future payment integration and the
+deferrals are in [usage-credits-and-premium.md](./usage-credits-and-premium.md). Undeferred
+items recorded there, with triggers:
+
+| Item                                                                 | Trigger to revisit                                                                                                                                                               |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Deferred** — no payment integration, no price, nothing purchasable | A decision to sell a plan; §11 of the layer document lists what must exist first (signed webhooks, non-expiring bought credits, refund paths, no card data here, a legal review) |
+| **Deferred** — no purchase or top-up of credits                      | As above: bought credits need a non-expiring policy, which is a schema change rather than a flag                                                                                 |
+| **Deferred** — no persisted entitlement or quality audit             | A requirement to answer "what was this account entitled to on that date" without replaying the ledger                                                                            |
+| **Deferred** — no rate limiting on the metering path                 | A deployment exposed beyond loopback; the balance bounds spend, but nothing bounds request volume yet                                                                            |
+| **Deferred** — no reconciliation between credits and provider spend  | Wiring a hosted provider, when there is token spend to reconcile against the project price table                                                                                 |
+
+One defect this phase found and fixed, because it is worth recording as a class: two concurrent
+metered turns against SQLite failed with `cannot start a transaction within a transaction`. The
+driver is synchronous but the port is not, so a transaction yields at its `await`s and a second
+request's continuation could open its own transaction on the same connection. The fix is in
+`SqliteExecutor.transaction`, which now serialises — the truth about a single-connection engine —
+and the regression is pinned in `tests/database.test.ts`. The remaining limitation is honest: the
+queue is **per process**, so a future multi-process deployment needs a durable queue or a real
+Postgres connection pool rather than this executor.
+
+And one thing this phase explicitly did **not** build, and will not: a numeric "value" score for
+a capability. A single number cannot say which refusal applied, and a threshold in a constant is
+a hidden rule.

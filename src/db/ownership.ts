@@ -29,7 +29,15 @@ import { SCHEMA, type EntityDefinition, type TableName } from './schema.js';
 
 /** Bounded context that owns a table. Matches the repository file name. */
 export type Owner =
-  'identity' | 'academy' | 'agent' | 'memory' | 'governance' | 'audit' | 'platform' | 'profile';
+  | 'identity'
+  | 'academy'
+  | 'agent'
+  | 'memory'
+  | 'governance'
+  | 'audit'
+  | 'platform'
+  | 'profile'
+  | 'usage';
 
 export type Mutability = 'append-only' | 'mutable' | 'versioned' | 'tombstone';
 
@@ -249,6 +257,42 @@ export const OWNERSHIP: readonly TableOwnership[] = [
     backup: 'not-backed-up',
     personalData: false,
     rule: 'Intermediate payloads with an expiry; losing it costs a recomputation, nothing else.',
+  },
+  {
+    table: 'subscriptions',
+    owner: 'usage',
+    mutability: 'mutable',
+    retention: 'forever',
+    backup: 'backed-up',
+    personalData: true,
+    rule: 'Which plan an account is on. Mutable, because a subscription is current state; every change is attributed, audited and must not be made by the account being changed. No payment reference may ever be stored here.',
+  },
+  {
+    table: 'credit_accounts',
+    owner: 'usage',
+    mutability: 'mutable',
+    retention: 'forever',
+    backup: 'backed-up',
+    personalData: false,
+    rule: 'The current balance. Mutated only by a guarded UPDATE that refuses to cross zero, so overconsumption is unrepresentable; the ledger, not this row, is the record of how the balance was reached.',
+  },
+  {
+    table: 'credit_ledger',
+    owner: 'usage',
+    mutability: 'append-only',
+    retention: 'forever',
+    backup: 'backed-up',
+    personalData: false,
+    rule: 'Append-only accounting record. A movement is never rewritten or deleted: a correction is another movement. Operation ids are derived, never chosen by a client, and the unique index is what makes a retry idempotent.',
+  },
+  {
+    table: 'usage_events',
+    owner: 'usage',
+    mutability: 'mutable',
+    retention: 'rolling-365d',
+    backup: 'backed-up',
+    personalData: false,
+    rule: 'One row per metered attempt, including the refused ones that moved no credits. Mutable exactly once: `reserved` moves to `settled` or `released` via a guarded UPDATE whose WHERE clause names the only accepted prior state, so a double settlement is refused rather than silently applied. Rolling retention: usage history is a product surface, while the ledger keeps the accounting.',
   },
   {
     table: 'trading_context_versions',

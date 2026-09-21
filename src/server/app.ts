@@ -10,8 +10,9 @@
  *   1. configuration safety (loopback host, no live trading, redaction on),
  *   2. no hardline operation in the catalogue,
  *   3. API catalogue structural rules (versioning, no anonymous writes),
- *   4. instruction policy (no authorization language),
- *   5. route coverage (no route can bypass the pipeline).
+ *   4. plan catalogue invariants (nothing purchasable; no tier reaches an approval),
+ *   5. instruction policy (no authorization language),
+ *   6. route coverage (no route can bypass the pipeline).
  *
  * Nothing here executes a trade, connects a broker or registers a hosted model
  * provider: those capabilities do not exist in the codebase.
@@ -33,6 +34,11 @@ import { JobService } from '../../packages/shared/src/jobs/service.js';
 import { SqliteJobStore } from '../jobs/sqliteStore.js';
 import { InMemoryJobStore, type JobStore } from '../../packages/shared/src/jobs/store.js';
 import { JobWorkerPool } from '../jobs/worker.js';
+import { FEATURES_BY_ID } from '../../packages/shared/src/usage/features.js';
+import { assertPlanCatalogue } from '../../packages/shared/src/usage/plans.js';
+import { SqliteUsageStore } from '../usage/sqliteStore.js';
+import { InMemoryUsageStore, type UsageStore } from '../usage/store.js';
+import { UsageService } from '../usage/service.js';
 import type { Repositories } from '../db/repositories/index.js';
 import { EventBus } from '../../packages/shared/src/realtime/events.js';
 import { RealtimeHub, type RealtimeLimits } from '../realtime/hub.js';
@@ -50,6 +56,12 @@ import { healthHandler, readinessHandler } from './handlers/health.js';
 import { jobCancelHandler, jobGetHandler, jobListHandler } from './handlers/jobs.js';
 import { profileReadHandler, profileWriteHandler } from './handlers/profile.js';
 import { decideReadiness, loadContext, qualityAssessHandler } from './handlers/quality.js';
+import {
+  usageCreditsAdjustHandler,
+  usageHistoryHandler,
+  usageStatusHandler,
+  usageSubscriptionHandler,
+} from './handlers/usage.js';
 import { NO_MARKET_DATA, type MarketDataInput } from '../../packages/shared/src/quality/model.js';
 import type { AnalysisReadinessDecision } from '../../packages/shared/src/quality/readiness.js';
 import {
@@ -99,6 +111,12 @@ export interface ServerDeps {
   startWorkers?: boolean;
   /** Realtime limits, so a test can shorten the authentication deadline. */
   realtimeLimits?: Partial<RealtimeLimits>;
+  /**
+   * The usage store. Defaults to durable when a database handle is open and in-process
+   * otherwise, and the difference is reported by the readiness check rather than hidden:
+   * "credits survive a restart" is either true for this deployment or it is not.
+   */
+  usageStore?: UsageStore;
 }
 
 export interface ServerInstance {
@@ -115,6 +133,9 @@ export interface ServerInstance {
   eventBus: EventBus;
   realtime: RealtimeHub;
   agent: AgentService;
+  /** The metering service, exposed so a test can assert on the ledger it holds. */
+  usage: UsageService;
+  usageStore: UsageStore;
   routes: readonly RouteEntry[];
   bootWarnings: readonly string[];
   close(): Promise<void>;
@@ -125,6 +146,10 @@ export function assertServerPreconditions(config: AppConfig): void {
   assertSafeConfig(config);
   assertNoHardlineOperations();
   assertApiCatalogue();
+  // The plan catalogue is part of the authorization boundary — an entitlement composed
+  // with the role table decides what a request may consume — so its invariants are checked
+  // at boot rather than left to a review. An invariant nothing calls is documentation.
+  assertPlanCatalogue();
   loadInstructions();
 }
 
@@ -188,6 +213,34 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
       ? new InMemoryJobStore(deps.now)
       : new SqliteJobStore(deps.repositories.platform, deps.now));
   const jobs = deps.jobs ?? new JobQueue({ store: jobStore, now: deps.now });
+
+  // Metering is never silently skipped: a server with no database handle still meters, it
+  // simply cannot promise the balance survives a restart, and says so.
+  const usageStore: UsageStore =
+    deps.usageStore ??
+    (deps.repositories === undefined
+      ? new InMemoryUsageStore(deps.now === undefined ? {} : { now: deps.now })
+      : new SqliteUsageStore(deps.repositories.usage));
+  const usage = new UsageService({
+    store: usageStore,
+    logger,
+    ...(deps.now === undefined ? {} : { now: deps.now }),
+    ...(deps.repositories === undefined
+      ? {}
+      : {
+          audit: {
+            append: async (record) => {
+              await (deps.repositories as Repositories).audit.append({
+                correlationId: record.correlationId,
+                actor: record.actor,
+                event: record.event,
+                severity: record.severity,
+                payload: record.payload,
+              });
+            },
+          },
+        }),
+  });
 
   const jobService = new JobService({
     queue: jobs,
@@ -269,6 +322,8 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
       realtime,
       jobStoreKind: jobStore.kind,
       durableJobs: jobStore.durable,
+      usageStoreKind: usageStore.kind,
+      durableUsage: usageStore.durable,
       profileStore: deps.repositories !== undefined,
       marketDataAvailable: marketData.available,
     }),
@@ -326,7 +381,11 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
   const handlers: Record<string, AnyHandler> = {
     'system.health': healthHandler(health, config),
     'system.readiness': readinessHandler(health, config),
-    'agent.chat': agentChatHandler(agent, eventBus, readinessFor) as AnyHandler,
+    'agent.chat': agentChatHandler(agent, eventBus, readinessFor, {
+      service: usage,
+      featureId: 'agent.chat',
+      credits: FEATURES_BY_ID['agent.chat'].creditCost,
+    }) as AnyHandler,
     'job.list': jobListHandler(jobService) as AnyHandler,
     'job.get': jobGetHandler(jobService) as AnyHandler,
     'job.cancel': jobCancelHandler(jobService) as AnyHandler,
@@ -343,6 +402,10 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
       marketData,
       now: deps.now,
     }) as AnyHandler,
+    'usage.read': usageStatusHandler({ usage, now: deps.now }) as AnyHandler,
+    'usage.history': usageHistoryHandler({ usage, now: deps.now }) as AnyHandler,
+    'usage.credits.adjust': usageCreditsAdjustHandler({ usage, now: deps.now }) as AnyHandler,
+    'usage.subscription.set': usageSubscriptionHandler({ usage, now: deps.now }) as AnyHandler,
   };
 
   registerRoutes(app, { handlers, pipeline });
@@ -396,6 +459,8 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     eventBus,
     realtime,
     agent,
+    usage,
+    usageStore,
     routes: routeEntries(handlers),
     bootWarnings: warnings,
     close: async () => {

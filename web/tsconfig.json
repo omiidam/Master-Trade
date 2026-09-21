@@ -32,7 +32,11 @@
       "@shared/realtime/contracts": ["../packages/shared/src/realtime/contracts.js"],
       "@shared/realtime/events": ["../packages/shared/src/realtime/events.js"],
       "@shared/realtime/protocol": ["../packages/shared/src/realtime/protocol.js"],
-      "@shared/types": ["../packages/shared/src/types.js"]
+      "@shared/types": ["../packages/shared/src/types.js"],
+      "@shared/usage/credits": ["../packages/shared/src/usage/credits.js"],
+      "@shared/usage/entitlements": ["../packages/shared/src/usage/entitlements.js"],
+      "@shared/usage/features": ["../packages/shared/src/usage/features.js"],
+      "@shared/usage/plans": ["../packages/shared/src/usage/plans.js"]
     }
   },
   "include": ["src", "../vite.config.ts"]

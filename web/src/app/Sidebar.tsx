@@ -2,6 +2,7 @@ import {
   Activity,
   BrainCircuit,
   ClipboardCheck,
+  Coins,
   FlaskConical,
   Gauge,
   GraduationCap,
@@ -25,6 +26,7 @@ import { useUiStore } from '../store/ui';
 
 const ICONS: Record<NavIconName, ReactNode> = {
   gauge: <Gauge size={17} aria-hidden />,
+  coins: <Coins size={17} aria-hidden />,
   sparkles: <Sparkles size={17} aria-hidden />,
   brain: <BrainCircuit size={17} aria-hidden />,
   microscope: <Microscope size={17} aria-hidden />,

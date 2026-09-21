@@ -70,11 +70,16 @@ describe('schema declarations', () => {
   });
 
   it('declare every table from the Phase 2 entity overview', () => {
-    expect(SCHEMA).toHaveLength(23);
+    expect(SCHEMA).toHaveLength(27);
     expect(SCHEMA.map((entity) => entity.table)).toContain('audit_records');
     expect(SCHEMA.map((entity) => entity.table)).toContain('memory_records');
     // Phase 5.2 added the append-only Trading Context history.
     expect(SCHEMA.map((entity) => entity.table)).toContain('trading_context_versions');
+    // Phase 5.4 added the subscription record, the balance and the two records that
+    // make a credit movement and a metered attempt each checkable.
+    for (const table of ['subscriptions', 'credit_accounts', 'credit_ledger', 'usage_events']) {
+      expect(SCHEMA.map((entity) => entity.table)).toContain(table);
+    }
     for (const entity of SCHEMA) {
       expect(entity.description.length).toBeGreaterThan(10);
       expect(entity.columns.some((column) => column.primaryKey === true)).toBe(true);
@@ -263,8 +268,18 @@ describe('dialects and DDL', () => {
     expect(order).toHaveLength(SCHEMA.length);
     // Drops run the other way round.
     const drops = dropSchemaSql(DIALECTS.sqlite);
-    expect(drops[0]).toContain('DROP TABLE IF EXISTS "trading_context_versions"');
+    expect(drops[0]).toContain('DROP TABLE IF EXISTS "usage_events"');
     expect(drops.at(-1)).toContain('DROP TABLE IF EXISTS "users"');
+    // The usage tables reference users, so every one of them is dropped first.
+    const usageTables: TableName[] = [
+      'subscriptions',
+      'credit_accounts',
+      'credit_ledger',
+      'usage_events',
+    ];
+    for (const table of usageTables) {
+      expect(position(table)).toBeGreaterThan(position('users'));
+    }
   });
 
   it('rewrites placeholders without touching string literals or identifiers', () => {
@@ -312,10 +327,24 @@ describe('migration registry', () => {
       ),
     ).toThrow(/trading_context_versions/);
 
+    // A table claimed by two migrations is refused — including the case where a later
+    // migration repeats one the frozen initial list already created.
     expect(() =>
       assertMigrationCoverage([
         { ...MIGRATIONS[0]!, tables: INITIAL_SCHEMA_TABLES },
         { ...MIGRATIONS[1]!, tables: ['users'] },
+      ]),
+    ).toThrow(/created by both/);
+
+    // A later migration may not re-create a table an earlier one already made — the
+    // failure mode the frozen 0001 list exists to catch.
+    expect(() =>
+      assertMigrationCoverage([
+        ...MIGRATIONS.slice(0, 2),
+        {
+          ...MIGRATIONS[2]!,
+          tables: ['users', ...MIGRATIONS[2]!.tables!.filter((t) => t !== 'users')],
+        },
       ]),
     ).toThrow(/created by both/);
   });
@@ -342,7 +371,7 @@ describe('migration registry', () => {
 
   it('validates ids, versions and per-dialect statements', () => {
     expect(() => validateMigrationRegistry()).not.toThrow();
-    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2]);
+    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3]);
     expect(() => assertMigrationCoverage()).not.toThrow();
     expect(() =>
       validateMigrationRegistry([
@@ -425,11 +454,11 @@ describe('migrations against a real database', () => {
     const db = openInMemorySqlite();
     try {
       const plan = await migrationPlan(db);
-      expect(plan.pending).toHaveLength(2);
+      expect(plan.pending).toHaveLength(3);
       expect(plan.upToDate).toBe(false);
 
       const report = await migrate(db);
-      expect(report.appliedNow).toEqual([1, 2]);
+      expect(report.appliedNow).toEqual([1, 2, 3]);
       expect(report.upToDate).toBe(true);
       expect(report.applied[0]?.checksum).toHaveLength(64);
 
@@ -450,7 +479,65 @@ describe('migrations against a real database', () => {
 
       const second = await migrate(db);
       expect(second.appliedNow).toEqual([]);
-      expect(second.applied).toHaveLength(2);
+      expect(second.applied).toHaveLength(3);
+    } finally {
+      await db.close();
+    }
+  });
+
+  withDatabase('serialise transactions, so two concurrent callers cannot interleave', async () => {
+    // One connection, one transaction at a time. Without this, the second caller opens a
+    // transaction inside the first and the driver refuses it — which is a 500 for one of
+    // two ordinary concurrent requests, not a theoretical concern: two metered agent turns
+    // arriving together take exactly this path.
+    const db = await migratedDatabase();
+    try {
+      // A real account: the ledger's user reference is a foreign key, so a movement cannot
+      // exist for an account that does not.
+      const now = new Date().toISOString();
+      await db.execute(
+        `INSERT INTO "users" ("id", "display_name", "timezone", "experience_level", "created_at", "updated_at")
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        ['user_x', 'Concurrency', 'UTC', 'intermediate', now, now],
+      );
+      await db.execute(
+        `INSERT INTO "credit_accounts" ("id", "user_id", "balance", "period_key", "lifetime_granted", "lifetime_consumed", "updated_at")
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ['acct_x', 'user_x', 0, 'lifetime', 0, 0, now],
+      );
+
+      const observed: string[] = [];
+      const credit = async (id: string, open: () => void): Promise<void> => {
+        await db.transaction(async (tx) => {
+          open();
+          // Yield inside the transaction: the point of the test is that the second
+          // transaction waits rather than starting.
+          await Promise.resolve();
+          observed.push(id);
+          await tx.execute(
+            `UPDATE "credit_accounts" SET "balance" = "balance" + 1 WHERE "id" = ?`,
+            ['acct_x'],
+          );
+          await Promise.resolve();
+        });
+      };
+
+      let firstOpened = false;
+      await Promise.all([
+        credit('first', () => {
+          firstOpened = true;
+        }),
+        credit('second', () => {
+          expect(firstOpened).toBe(true);
+        }),
+      ]);
+
+      // Both ran, in some order, and neither was lost.
+      expect([...observed].sort()).toEqual(['first', 'second']);
+      const row = await db.queryOne('SELECT "balance" FROM "credit_accounts" WHERE "id" = ?', [
+        'acct_x',
+      ]);
+      expect(Number(row?.balance)).toBe(2);
     } finally {
       await db.close();
     }
@@ -479,8 +566,8 @@ describe('migrations against a real database', () => {
       // test is about ever runs. The fake is held in a named constant so the two
       // arrays cannot drift to different entries.
       const invented: Migration = {
-        id: '0003_add_something',
-        version: 3,
+        id: '0004_add_something',
+        version: 4,
         description: 'a migration that will be edited after being applied',
         up: () => ['CREATE TABLE "later_table" ("id" TEXT PRIMARY KEY)'],
         down: () => ['DROP TABLE "later_table"'],
@@ -495,7 +582,7 @@ describe('migrations against a real database', () => {
         },
       ];
       const plan = await migrationPlan(db, { migrations: edited });
-      expect(plan.tampered.map((entry) => entry.id)).toEqual(['0003_add_something']);
+      expect(plan.tampered.map((entry) => entry.id)).toEqual(['0004_add_something']);
       await expect(migrate(db, { migrations: edited })).rejects.toThrow(
         /changed after being applied/,
       );
@@ -581,7 +668,7 @@ describe('migrations against a real database', () => {
     const file = tempFile();
     const first = openSqlite({ file });
     const report = await migrate(first);
-    expect(report.appliedNow).toEqual([1, 2]);
+    expect(report.appliedNow).toEqual([1, 2, 3]);
     await first.execute(
       `INSERT INTO "users" ("id", "display_name", "timezone", "experience_level", "created_at", "updated_at") VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -630,7 +717,7 @@ describe('PostgreSQL production mode', () => {
     // Applying the migration through the injected client proves the production
     // path end to end: the same registry, the same repositories, different SQL.
     const report = await migrate(db);
-    expect(report.appliedNow).toEqual([1, 2]);
+    expect(report.appliedNow).toEqual([1, 2, 3]);
     const ddl = seen.map((entry) => entry.text).join('\n');
     expect(ddl).toContain('JSONB');
     expect(ddl).toContain('TIMESTAMPTZ');

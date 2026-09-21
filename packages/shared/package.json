@@ -20,6 +20,10 @@
     "./realtime/contracts": "./src/realtime/contracts.ts",
     "./realtime/events": "./src/realtime/events.ts",
     "./realtime/protocol": "./src/realtime/protocol.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./usage/credits": "./src/usage/credits.ts",
+    "./usage/entitlements": "./src/usage/entitlements.ts",
+    "./usage/features": "./src/usage/features.ts",
+    "./usage/plans": "./src/usage/plans.ts"
   }
 }

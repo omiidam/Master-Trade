@@ -28,6 +28,59 @@ export type { CardProps } from './Card';
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 
+// Usage, credits and subscription (Phase 5.4). The numbers these render are the
+// server's: no component here adds, subtracts or estimates a credit.
+export {
+  ComingSoonNotice,
+  CreditBalance,
+  CreditTransactionItem,
+  DisabledFeatureNotice,
+  FeatureEntitlementBadge,
+  InsufficientCreditsState,
+  PlanComparison,
+  SubscriptionPlanCard,
+  SubscriptionStatusCard,
+  UpgradePrompt,
+  UsageCreditsCard,
+  UsageEmptyState,
+  UsageHistory,
+  UsageLimitNotice,
+  UsageProgressBar,
+  UsageRetryAction,
+  asSubscriptionStatus,
+  attemptStatusLabel,
+  creditReasonLabel,
+  creditReasonMeaning,
+  denialGroup,
+  denialHeading,
+  denialTone,
+  describeReset,
+  featureBadgeTone,
+  formatDelta,
+  ledgerKindLabel,
+  ledgerStatusLabel,
+  subscriptionStatusLabel,
+  usageBarState,
+  usageCategoryLabel,
+} from './usage';
+export type {
+  ComingSoonNoticeProps,
+  CreditBalanceProps,
+  CreditTransactionItemProps,
+  DenialGroup,
+  FeatureEntitlementBadgeProps,
+  InsufficientCreditsStateProps,
+  PlanComparisonProps,
+  SubscriptionPlanCardProps,
+  SubscriptionStatusCardProps,
+  UpgradePromptProps,
+  UsageBarState,
+  UsageCreditsCardProps,
+  UsageHistoryProps,
+  UsageLimitNoticeProps,
+  UsageProgressBarProps,
+} from './usage';
+
 export { ErrorState } from './ErrorState';
 export type { ErrorStateProps, ErrorSeverity } from './ErrorState';
 

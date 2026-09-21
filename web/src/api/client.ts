@@ -31,7 +31,13 @@ import { ERROR_STATUS, type ErrorCode } from '@shared/core/errors';
 import { IdFactory } from '@shared/core/ids';
 import { SHELL_TOKEN_HEADER } from '@shared/core/headers';
 import type { JobView } from '@shared/jobs/service';
-import type { ProfileData, ProfileWriteData, QualityAssessData } from '@shared/api/contracts';
+import type {
+  ProfileData,
+  ProfileWriteData,
+  QualityAssessData,
+  UsageHistoryData,
+  UsageStatusData,
+} from '@shared/api/contracts';
 import type { AnalysisType } from '@shared/quality/readiness';
 import type { FieldKey } from '@shared/profile/model';
 import type { TradingContext } from '@shared/profile/model';
@@ -61,6 +67,12 @@ export interface JobListData {
 
 export interface JobCancelData extends JobView {
   reason?: string | null;
+}
+
+/** `GET /v1/usage/history` filters. Both are bounded by the server's own schema. */
+export interface UsageHistoryFilter {
+  feature?: string;
+  limit?: number;
 }
 
 /** Raised for any failed request. `code` is the server's code, or a local one. */
@@ -195,6 +207,32 @@ export class ApiClient {
     body: { analysisType?: AnalysisType; premises?: readonly FieldKey[] } = {},
   ): Promise<QualityAssessData> {
     return this.request<QualityAssessData>('POST', '/v1/quality/assess', { body });
+  }
+
+  /**
+   * The caller's own plan, balance, allowance and feature entitlements.
+   *
+   * No subject is passed, for the same reason as the profile routes: the balance is the
+   * authenticated principal's own, so there is no parameter that could name another
+   * account. The server computes every number here — the client never sends one, and a
+   * client-computed balance would not be believed if it did.
+   */
+  async getUsage(): Promise<UsageStatusData> {
+    return this.request<UsageStatusData>('GET', '/v1/usage');
+  }
+
+  /**
+   * The movements and metered attempts behind the balance.
+   *
+   * Refusals are included, which is the useful part: "why did nothing happen" is
+   * answered by the attempt that was refused, and by the reservation that was returned.
+   */
+  async getUsageHistory(filter: UsageHistoryFilter = {}): Promise<UsageHistoryData> {
+    const query = new URLSearchParams();
+    if (filter.feature !== undefined) query.set('feature', filter.feature);
+    if (filter.limit !== undefined) query.set('limit', String(filter.limit));
+    const suffix = query.size > 0 ? `?${query.toString()}` : '';
+    return this.request<UsageHistoryData>('GET', `/v1/usage/history${suffix}`);
   }
 
   /** One request, one typed outcome. */

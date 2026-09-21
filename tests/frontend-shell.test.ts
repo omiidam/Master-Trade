@@ -68,6 +68,10 @@ describe('frontend shell', () => {
       'exams',
       'lab',
       'activity',
+      // Phase 5.4: one entry for the plan, the allowance and what each capability costs.
+      // Its sections (overview, capabilities, plans, history) are internal tabs, so the
+      // sidebar does not grow a sub-tree for it.
+      'usage',
       'profile',
       'settings',
     ]);

@@ -115,19 +115,47 @@ class SqliteExecutor implements SqlExecutor {
     return this.db.prepare(this.dialect.prepare(sql)).get(...params) ?? null;
   }
 
+  /**
+   * One transaction at a time, on the one connection there is.
+   *
+   * The driver is synchronous but the port is not, so a transaction yields at its `await`s
+   * — and a second request's continuation can therefore run in the middle of it. Without
+   * this queue, that second request opens its own transaction on the same connection and
+   * the driver refuses it: `cannot start a transaction within a transaction`, which is a
+   * 500 for one of two perfectly ordinary concurrent requests. Serialising is not a
+   * limitation being papered over; it is the truth about a single-connection engine, and
+   * the alternative — a second connection — would move the problem into `SQLITE_BUSY`
+   * retries without making the arithmetic any safer.
+   *
+   * The queue never rejects: a transaction's failure is reported to *its* caller and must
+   * not poison the next one.
+   */
+  private queue: Promise<void> = Promise.resolve();
+
   async transaction<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T> {
-    this.db.exec('BEGIN');
+    const wait = this.queue;
+    let open!: () => void;
+    this.queue = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+
+    await wait;
     try {
-      const result = await fn(this);
-      this.db.exec('COMMIT');
-      return result;
-    } catch (error) {
+      this.db.exec('BEGIN');
       try {
-        this.db.exec('ROLLBACK');
-      } catch {
-        // A failed rollback must not mask the original failure.
+        const result = await fn(this);
+        this.db.exec('COMMIT');
+        return result;
+      } catch (error) {
+        try {
+          this.db.exec('ROLLBACK');
+        } catch {
+          // A failed rollback must not mask the original failure.
+        }
+        throw error;
       }
-      throw error;
+    } finally {
+      open();
     }
   }
 
