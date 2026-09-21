@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, History, PencilLine, ShieldCheck, UserRound } from 'lucide-react';
+import {
+  AlertTriangle,
+  GaugeCircle,
+  History,
+  PencilLine,
+  ShieldCheck,
+  UserRound,
+} from 'lucide-react';
 import { FIELD_KEYS, FIELD_LABELS, type FieldKey } from '@shared/profile/model';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -10,6 +17,11 @@ import { Skeleton } from '../components/Skeleton';
 import { TabPanel, Tabs } from '../components/Tabs';
 import { Tooltip } from '../components/Tooltip';
 import {
+  AnalysisReadinessPanel,
+  InputQualitySummary,
+  MissingInformationPanel,
+} from '../components/quality';
+import {
   ClarifyingPrompts,
   CompletenessMeter,
   FactRow,
@@ -17,6 +29,7 @@ import {
 } from '../components/profile';
 import { Grid, Workspace } from '../app/Workspace';
 import { useProfileStore, type ProfileContextInput } from '../store/profile';
+import { useQualityStore } from '../store/quality';
 
 /**
  * Profile: what the user has declared, and what is still unanswered.
@@ -37,6 +50,7 @@ import { useProfileStore, type ProfileContextInput } from '../store/profile';
 const TABS = [
   { id: 'overview', label: 'Overview', icon: <UserRound size={14} aria-hidden /> },
   { id: 'context', label: 'Declared context', icon: <ShieldCheck size={14} aria-hidden /> },
+  { id: 'quality', label: 'Data quality', icon: <GaugeCircle size={14} aria-hidden /> },
   { id: 'edit', label: 'Preferences', icon: <PencilLine size={14} aria-hidden /> },
   { id: 'history', label: 'History', icon: <History size={14} aria-hidden /> },
 ] as const;
@@ -53,11 +67,29 @@ export function ProfilePage() {
   const save = useProfileStore((state) => state.save);
   const clearSaveResult = useProfileStore((state) => state.clearSaveResult);
 
+  const qualityStatus = useQualityStore((state) => state.status);
+  const qualityAssessment = useQualityStore((state) => state.assessment);
+  const qualityUnavailable = useQualityStore((state) => state.unavailableReason);
+  const qualityError = useQualityStore((state) => state.error);
+  const loadQuality = useQualityStore((state) => state.load);
+
   const [tab, setTab] = useState<string>('overview');
 
   useEffect(() => {
     if (status === 'idle') void load();
   }, [status, load]);
+
+  /**
+   * The assessment is requested when the tab is opened, not with the page.
+   *
+   * It is computed against the stored context and the clock, and it is only meaningful
+   * while its tab is on screen — fetching it for every visitor would spend a request on
+   * a panel most readers never open, and would show a verdict that predates an edit made
+   * a moment later.
+   */
+  useEffect(() => {
+    if (tab === 'quality' && qualityStatus === 'idle') void loadQuality();
+  }, [tab, qualityStatus, loadQuality]);
 
   const assessment = profile?.assessment ?? null;
 
@@ -250,6 +282,96 @@ export function ProfilePage() {
               })}
             </CardContent>
           </Card>
+        </TabPanel>
+
+        <TabPanel value="quality" className="space-y-4">
+          {qualityStatus === 'idle' || qualityStatus === 'loading' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Assessing the declared inputs</CardTitle>
+                <CardDescription>
+                  Deterministic checks over what you have declared and what each capability declares
+                  it needs. No language model is consulted.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {qualityStatus === 'unavailable' ? (
+            <ErrorState
+              severity="info"
+              title="Could not assess the declared inputs"
+              description={`${qualityUnavailable ?? 'The assessment could not be reached.'} No sample assessment is shown in its place: a quality verdict that was not computed would be an invented claim about your own inputs.`}
+            />
+          ) : null}
+
+          {qualityStatus === 'error' ? (
+            <ErrorState
+              title="The assessment failed"
+              description={qualityError?.message ?? 'The request failed without a reason.'}
+              code={qualityError?.code}
+              action={
+                <Button size="sm" variant="secondary" onClick={() => void loadQuality()}>
+                  Try again
+                </Button>
+              }
+            />
+          ) : null}
+
+          {qualityStatus === 'ready' && qualityAssessment !== null ? (
+            <>
+              <InputQualitySummary
+                report={qualityAssessment.report}
+                contextVersion={qualityAssessment.contextVersion}
+                contextSet={qualityAssessment.contextSet}
+                asOf={qualityAssessment.asOf}
+              />
+
+              <MissingInformationPanel
+                gaps={qualityAssessment.report.gaps}
+                clarifications={qualityAssessment.decisions.flatMap(
+                  (decision) => decision.clarifications,
+                )}
+                onAnswer={() => setTab('edit')}
+              />
+
+              <section className="space-y-3" aria-label="Analysis readiness">
+                <div className="space-y-1">
+                  <h3 className="text-body font-medium text-text">
+                    May each analysis run, and in what form?
+                  </h3>
+                  <p className="text-body-sm text-text-muted">
+                    The same gate the agent consults before a model is asked to reason. It is
+                    evaluated here from the stored context, on the server, so the answer you read
+                    and the answer the agent acts on are one and the same.
+                  </p>
+                  <p className="text-caption text-text-faint">
+                    Market data for this deployment:{' '}
+                    {qualityAssessment.marketData.available
+                      ? `${qualityAssessment.marketData.barCount} bar(s), source ${
+                          qualityAssessment.marketData.source ?? 'unrecorded'
+                        }`
+                      : `not available — ${qualityAssessment.marketData.detail}`}
+                  </p>
+                </div>
+
+                {qualityAssessment.decisions.map((decision) => (
+                  <AnalysisReadinessPanel
+                    key={decision.requestedType}
+                    decision={decision}
+                    onAnswer={() => setTab('edit')}
+                  />
+                ))}
+              </section>
+
+              <p className="text-caption text-text-faint">{qualityAssessment.note}</p>
+            </>
+          ) : null}
         </TabPanel>
 
         <TabPanel value="edit" className="space-y-4">

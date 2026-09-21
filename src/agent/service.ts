@@ -35,6 +35,7 @@ import {
 import type { AsyncModelAdapter } from './asyncModel.js';
 import type { ContextSection } from './context.js';
 import type { StructuredSummary } from '../llm/summary.js';
+import type { AnalysisReadinessDecision } from '../../packages/shared/src/quality/readiness.js';
 
 export interface AgentStatementView {
   kind: EpistemicKind;
@@ -51,6 +52,40 @@ export interface AgentTurn {
   agentState: string;
   model: string;
   reason?: string;
+  /** The gate's verdict, when the request named an analysis. */
+  readiness?: AnalysisReadinessDecision | null;
+}
+
+/**
+ * Why a turn may not run, or `null` when it may.
+ *
+ * One function so both paths refuse for exactly the same reason, with the same words,
+ * and so a change to the rule cannot be applied to one of them.
+ *
+ * Three conditions refuse: the inputs are unsuitable (`BLOCKED`), the capability is
+ * declared but not implemented, or there is no decision at all — the last because a
+ * server that cannot evaluate the gate must not answer an analysis request as if it
+ * had.
+ */
+export function refusalFor(readiness: AnalysisReadinessDecision | null): string | null {
+  if (readiness === null) {
+    return 'This request names an analysis, and no readiness decision was supplied for it. An analysis request is not answered without the deterministic gate having run.';
+  }
+  if (readiness.capability === 'planned') {
+    return `"${readiness.analysisType}" is a declared capability that is not implemented yet. The inputs were assessed; no analysis is produced.`;
+  }
+  if (readiness.readiness === 'BLOCKED') {
+    const reasons =
+      readiness.limitations.length > 0
+        ? readiness.limitations.join(' ')
+        : 'The declared inputs do not support this analysis.';
+    return `The analysis was not produced. ${reasons}`;
+  }
+  if (readiness.readiness === 'REQUIRES_CLARIFICATION') {
+    const questions = readiness.clarifications.map((question) => question.question);
+    return `The analysis was not produced, because it would rest on inputs that are not there. ${questions.join(' ')}`;
+  }
+  return null;
 }
 
 export interface AgentServiceOptions {
@@ -79,6 +114,14 @@ export interface AgentAsyncTurn {
   provider: string | null;
   model: string;
   agentState: string;
+  /**
+   * The gate's verdict, when the request named an analysis type.
+   *
+   * Attached even when the turn was permitted: a `READY_WITH_LIMITATIONS` decision has
+   * limitations the answer must carry, and dropping them because the turn succeeded
+   * would be the same dishonesty as not gating at all.
+   */
+  readiness?: AnalysisReadinessDecision | null;
   usage: {
     promptTokens: number;
     completionTokens: number;
@@ -130,8 +173,42 @@ export class AgentService {
    */
   async runAsync(
     message: string,
-    options: { correlationId?: string; context?: readonly ContextSection[] } = {},
+    options: {
+      correlationId?: string;
+      context?: readonly ContextSection[];
+      /**
+       * The gate's verdict, when the request named an analysis.
+       *
+       * `undefined` means no analysis was requested, so there is nothing to gate and
+       * behaviour is exactly what it was before this gate existed. `null` means an
+       * analysis *was* requested and no decision could be produced, which is a refusal.
+       */
+      readiness?: AnalysisReadinessDecision | null;
+    } = {},
   ): Promise<AgentAsyncTurn> {
+    const refusal = options.readiness === undefined ? null : refusalFor(options.readiness);
+    if (refusal !== null) {
+      // The model is not consulted, so there is nothing for it to override. That is the
+      // whole rule: "the LLM cannot override deterministic validation" holds because on a
+      // refusal there is no inference to argue with.
+      return {
+        status: 'blocked',
+        reply: refusal,
+        epistemicKind: 'uncertainty',
+        statements: [],
+        summary: null,
+        toolExecutions: [],
+        provider: null,
+        model: this.model,
+        agentState: this.orchestrator.state(),
+        usage: null,
+        latencyMs: null,
+        reason: refusal,
+        readiness: options.readiness ?? null,
+      };
+    }
+
+    const readiness = options.readiness ?? null;
     const outcome = await this.orchestrator.runAsync(message, options);
     if (outcome.status === 'blocked') {
       return {
@@ -147,6 +224,7 @@ export class AgentService {
         usage: null,
         latencyMs: null,
         reason: outcome.reason,
+        readiness,
       };
     }
     const statements: AgentStatementView[] = outcome.statements.map((statement) => ({
@@ -166,11 +244,28 @@ export class AgentService {
       agentState: this.orchestrator.state(),
       usage: outcome.usage,
       latencyMs: outcome.latencyMs,
+      readiness,
     };
   }
 
   /** Run one turn. Never throws for a refused request: that is a `blocked` turn. */
-  run(message: string): AgentTurn {
+  run(message: string, options: { readiness?: AnalysisReadinessDecision | null } = {}): AgentTurn {
+    const refusal = options.readiness === undefined ? null : refusalFor(options.readiness);
+    if (refusal !== null) {
+      return {
+        status: 'blocked',
+        reply: refusal,
+        epistemicKind: 'uncertainty',
+        statements: [],
+        toolResultCount: 0,
+        agentState: this.orchestrator.state(),
+        model: this.model,
+        reason: refusal,
+        readiness: options.readiness ?? null,
+      };
+    }
+
+    const readiness = options.readiness ?? null;
     const outcome = this.orchestrator.run(message);
     if (outcome.status === 'blocked') {
       return {
@@ -182,6 +277,7 @@ export class AgentService {
         agentState: this.orchestrator.state(),
         model: this.model,
         reason: outcome.reason,
+        readiness,
       };
     }
     const statements: AgentStatementView[] = outcome.statements.map((statement) => ({
@@ -197,6 +293,11 @@ export class AgentService {
       toolResultCount: outcome.toolResults.length,
       agentState: this.orchestrator.state(),
       model: this.model,
+      // Attached on the permitted path too. A `READY_WITH_LIMITATIONS` verdict carries
+      // limitations the answer has to be read against, and dropping them because the turn
+      // succeeded is the same dishonesty as not gating at all — which is exactly what the
+      // sync path did before this line existed.
+      readiness,
     };
   }
 

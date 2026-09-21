@@ -164,3 +164,19 @@ the fact (provenance kept, conflicts detectable, status recomputable, gaps recov
 
 The domain model, schema, ownership rules, validation rules, freshness policy and deferrals are
 in [user-profile-and-trading-context.md](../user-profile-and-trading-context.md).
+
+## Phase 5.3 — the gate runs before the model
+
+ADR-0041 named a ladder and ADR-0043 gave the inputs a durable home. Neither said _where_ the
+ladder is evaluated, and that location is the difference between a rule and a wish: put it in
+the prompt and it becomes an interpretation no test can hold. The decision below puts it in a
+pure function that runs first, so a refusal means the model was never asked.
+
+| ADR                                                  | Decision                                                                                                                                                                                                                                                                                               | Decision id(s)                 | Status   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | -------- |
+| [0044](./ADR-0044-the-gate-runs-before-the-model.md) | Requirements are declared per capability and the readiness verdict is computed from stored state **before** any model is consulted: a refusal short-circuits the turn, a permitted verdict still travels, an undecidable gate is a refusal, and one implementation serves both the route and the agent | `DEC-QUALITY-1-READINESS-GATE` | Accepted |
+
+The eight quality dimensions, the closed issue vocabulary, the validation rules, the
+freshness policy, the requirement registry, the readiness outcomes, the redaction rules and
+the deferrals are in
+[input-quality-and-data-reliability.md](../input-quality-and-data-reliability.md).

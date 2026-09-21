@@ -218,3 +218,38 @@ export {
   formatFieldValue,
 } from './profile';
 export type { ClarifyingPromptsProps, FactRowProps, ProfileEditorProps } from './profile';
+
+// Phase 5.3 — input quality, validation findings and the analysis-readiness gate.
+export {
+  AnalysisReadinessPanel,
+  AssumptionNotice,
+  ClarificationQuestionCard,
+  DataFreshnessIndicator,
+  DataQualityBadge,
+  DimensionGrid,
+  InputFreshnessCell,
+  InputProvenanceCell,
+  InputQualitySummary,
+  MissingInformationPanel,
+  ProvenanceIndicator,
+  ValidationIssueList,
+  clarificationReasonLabel,
+  describeAge,
+  dimensionLabel,
+  inputLabel,
+  issueCodeLabel,
+  orderIssues,
+  qualityBadgePresentation,
+} from './quality';
+export type {
+  AnalysisReadinessPanelProps,
+  AssumptionNoticeProps,
+  ClarificationQuestionCardProps,
+  DataFreshnessIndicatorProps,
+  DataQualityBadgeProps,
+  InputQualitySummaryProps,
+  MissingInformationPanelProps,
+  ProvenanceIndicatorProps,
+  QualityBadgeKind,
+  ValidationIssueListProps,
+} from './quality';

@@ -25,6 +25,7 @@ Full documentation: [docs/architecture.md](./docs/architecture.md) — component
 matrix, data-flow diagrams, security boundaries — plus per-layer documents
 (api-auth, ai-and-llm, database-and-storage, jobs-and-realtime, market-data,
 vector-memory, observability, desktop-and-frontend, desktop-shell,
+user-profile-and-trading-context, input-quality-and-data-reliability,
 risks-and-deferred) and [ADRs](./docs/adr/).
 
 Product scope, the eight core modules and their boundaries, and the

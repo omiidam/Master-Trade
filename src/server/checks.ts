@@ -39,6 +39,14 @@ export interface HealthCheckDeps {
   durableJobs: boolean;
   /** True when a repository bundle exists, so a profile can actually be stored. */
   profileStore: boolean;
+  /**
+   * True when a market-data source is configured.
+   *
+   * Reported rather than assumed, because the readiness gate refuses a structure
+   * analysis without bars — so this is the check that explains why such a request is
+   * blocked, instead of leaving it to look like a user-input problem.
+   */
+  marketDataAvailable: boolean;
   eventBus: EventBus;
   agent: AgentService;
   /** Provider ids registered with the LLM gateway (usually just 'scripted'). */
@@ -172,6 +180,21 @@ export function defaultHealthChecks(deps: HealthCheckDeps): HealthCheck[] {
         status: 'ok',
         detail:
           'Trading context versions are append-only: a change appends n+1 and no earlier version is rewritten.',
+      };
+    }),
+
+    check('marketData.source', false, () => {
+      if (!deps.marketDataAvailable) {
+        return {
+          status: 'degraded',
+          detail:
+            'No market-data source is configured, so no bars can be checked. The readiness gate refuses any analysis that requires a series rather than substituting one.',
+        };
+      }
+      return {
+        status: 'ok',
+        detail:
+          'A market-data source is configured. Provenance and the quality report travel with every series, and the gate weighs both before an analysis runs.',
       };
     }),
 

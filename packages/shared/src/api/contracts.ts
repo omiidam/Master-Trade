@@ -26,6 +26,7 @@ import {
   lessonCompleteBodySchema,
   lessonParamsSchema,
   proposalParamsSchema,
+  qualityAssessBodySchema,
   readinessQuerySchema,
   ruleActivateBodySchema,
   profileContextBodySchema,
@@ -33,6 +34,7 @@ import {
   zodValidator,
   type AgentChatBody,
   type ProfileContextBody,
+  type QualityAssessBody,
   type LessonCompleteBody,
   type ReadinessQuery,
   jobCancelBodySchema,
@@ -42,6 +44,8 @@ import {
   type RuleActivateBody,
   type RuleProposeBody,
 } from './schemas.js';
+import type { AnalysisReadinessDecision } from '../quality/readiness.js';
+import type { QualityReport } from '../quality/model.js';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type ApiVersion = 'v1';
@@ -152,6 +156,14 @@ export interface AgentChatData {
   reply: string;
   epistemicKind: string;
   correlationId: string;
+  /**
+   * Present only when the request named an analysis type.
+   *
+   * When it is present and not permitted, the reply is the gate's own refusal and no
+   * model was consulted — which is the whole point of carrying it here rather than
+   * leaving the client to infer why it got a refusal.
+   */
+  readiness?: AnalysisReadinessDecision | null;
 }
 
 /** One entry of the context history, for review. */
@@ -326,6 +338,47 @@ const profileWriteRoute: ApiRoute<ProfileContextBody, ProfileWriteData> = {
   validateBody: zodValidator(profileContextBodySchema),
 };
 
+export interface QualityAssessData {
+  /** False until the user has declared anything at all. */
+  contextSet: boolean;
+  /** The context version the assessment was computed from, so it is reproducible. */
+  contextVersion: number;
+  /** What the server can offer, reported as a fact rather than assumed by a caller. */
+  marketData: {
+    available: boolean;
+    provenance: string | null;
+    source: string | null;
+    barCount: number;
+    lastBarAt: string | null;
+    detail: string;
+  };
+  /** The whole declared context, assessed with no capability in mind. */
+  report: QualityReport;
+  /** One entry per requested type, or one per declared type when none was named. */
+  decisions: AnalysisReadinessDecision[];
+  asOf: string;
+  note: string;
+}
+
+/**
+ * `POST /v1/quality/assess`
+ *
+ * One route for both questions the phase asks. It takes no subject: the inputs are the
+ * authenticated principal's own, as on the profile routes, so there is no parameter a
+ * client could point at another account.
+ */
+const qualityAssessRoute: ApiRoute<QualityAssessBody, QualityAssessData> = {
+  id: 'quality.assess',
+  method: 'POST',
+  path: '/v1/quality/assess',
+  version: API_VERSION,
+  operation: 'quality.assess',
+  auth: 'required',
+  summary:
+    'Assess the quality of the declared inputs and report whether each declared analysis may run.',
+  validateBody: zodValidator(qualityAssessBodySchema),
+};
+
 const healthRoute: ApiRoute<Record<string, unknown> | undefined, { status: string }> = {
   id: 'system.health',
   method: 'GET',
@@ -361,6 +414,7 @@ export const API_ROUTES: readonly AnyApiRoute[] = [
   readinessRoute,
   profileReadRoute,
   profileWriteRoute,
+  qualityAssessRoute,
   agentChatRoute,
   lessonCompleteRoute,
   ruleProposeRoute,

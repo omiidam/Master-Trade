@@ -26,6 +26,8 @@
       "@shared/jobs/service": ["./packages/shared/src/jobs/service.js"],
       "@shared/marketdata/provider": ["./packages/shared/src/marketdata/provider.js"],
       "@shared/profile/model": ["./packages/shared/src/profile/model.js"],
+      "@shared/quality/model": ["./packages/shared/src/quality/model.js"],
+      "@shared/quality/readiness": ["./packages/shared/src/quality/readiness.js"],
       "@shared/realtime/contracts": ["./packages/shared/src/realtime/contracts.js"],
       "@shared/realtime/events": ["./packages/shared/src/realtime/events.js"],
       "@shared/realtime/protocol": ["./packages/shared/src/realtime/protocol.js"],

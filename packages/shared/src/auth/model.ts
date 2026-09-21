@@ -91,6 +91,12 @@ export const OPERATIONS = {
     false,
     "Change the authenticated user's declared profile and trading context",
   ),
+  'quality.assess': op(
+    'quality.assess',
+    'normal',
+    false,
+    "Assess the quality of the authenticated user's declared inputs and decide whether an analysis may run",
+  ),
   'marketData.read': op('marketData.read', 'normal', false, 'Read normalized market data'),
   'marketData.ingest': op(
     'marketData.ingest',
@@ -151,6 +157,9 @@ const student: OperationId[] = [
   // accepts a user id, so this cannot be pointed at another account.
   'profile.read',
   'profile.write',
+  // Assessing inputs is a read of the caller's own declarations, never a way to
+  // reach another account's: the subject is the principal, as on the profile routes.
+  'quality.assess',
 ];
 
 const coach: OperationId[] = [
@@ -177,8 +186,10 @@ const observer: OperationId[] = [
   'realtime.connect',
   'job.read',
   // Read-only by design: an observer may see their own context and may not change
-  // it, so the grant is deliberately narrower than the learner's.
+  // it, so the grant is deliberately narrower than the learner's. Seeing the quality
+  // of one's own inputs is a read, so it is granted.
   'profile.read',
+  'quality.assess',
 ];
 
 /** A background worker: infrastructure capabilities only. */

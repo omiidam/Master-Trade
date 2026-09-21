@@ -33,6 +33,8 @@ export const SHARED_SURFACE: Readonly<Record<string, string>> = {
   '@shared/jobs/service': 'packages/shared/src/jobs/service.ts',
   '@shared/marketdata/provider': 'packages/shared/src/marketdata/provider.ts',
   '@shared/profile/model': 'packages/shared/src/profile/model.ts',
+  '@shared/quality/model': 'packages/shared/src/quality/model.ts',
+  '@shared/quality/readiness': 'packages/shared/src/quality/readiness.ts',
   '@shared/realtime/contracts': 'packages/shared/src/realtime/contracts.ts',
   '@shared/realtime/events': 'packages/shared/src/realtime/events.ts',
   '@shared/realtime/protocol': 'packages/shared/src/realtime/protocol.ts',

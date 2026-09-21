@@ -660,3 +660,28 @@ application-level encryption at rest**, only filesystem/database-level. Both are
 data-protection review that ADR-0042 already treats as a release condition. The constraint
 refusal check is a **vocabulary** check on prose: it catches the words in its pattern and nothing
 else, and is one of several reasons nothing in the system can execute.
+
+## Phase 5.3 — input quality and the analysis-readiness gate
+
+- [ADR-0044](./adr/ADR-0044-the-gate-runs-before-the-model.md) —
+  `DEC-QUALITY-1-READINESS-GATE`. Requirements are declared per capability, the verdict is a
+  pure function of stored state, and it runs **before** any model: a refusal short-circuits the
+  turn so there is no inference to argue with, a permitted verdict keeps its limitations, an
+  undecidable gate is a refusal rather than a permissive default, and one implementation serves
+  both the route and the agent so the two cannot disagree.
+
+The dimensions, the closed issue vocabulary, the validation rules, the freshness policy, the
+requirement registry and the deferrals are in
+[input-quality-and-data-reliability.md](./input-quality-and-data-reliability.md). Undeferred
+items recorded there, with triggers:
+
+| Item                                                                     | Trigger to revisit                                                                                                                                                |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Deferred** — no persisted quality assessment                           | A requirement to answer "what did the system believe when it produced this answer?" for a past turn (the turn's own audit record already logs the decision codes) |
+| **Deferred** — no available capability requiring an input                | The first analysis type that is both `available` and has a required input; the `REQUIRES_CLARIFICATION` refusal branch exists and is tested through `refusalFor`  |
+| **Deferred** — no market-data provider, so `market.structure` is blocked | Wiring a provider, not this layer                                                                                                                                 |
+
+Two things this phase explicitly did **not** build, and will not: a numeric input-quality score
+(a threshold hidden in a constant, and a single number that cannot say which dimension failed),
+and LLM-written explanations of a verdict (a model may restate a computed verdict in the
+contract's own words, never compute or soften one).

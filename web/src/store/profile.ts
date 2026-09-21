@@ -54,8 +54,14 @@ export interface ProfileStoreState {
   reset: () => void;
 }
 
-/** Build a client from the session the realtime store resolved, or report why not. */
-async function clientForProfile(): Promise<ApiClient | { reason: string }> {
+/**
+ * Build a client from the session the realtime store resolved, or report why not.
+ *
+ * Exported because every authenticated store must reuse *this* resolution. A second
+ * one would be a second answer to "what credential am I using", and the day the two
+ * disagreed the surface would show a failure no server log explains.
+ */
+export async function clientForProfile(): Promise<ApiClient | { reason: string }> {
   const realtime = useRealtimeStore.getState();
   if (realtime.resolution === null) {
     await realtime.initialize();

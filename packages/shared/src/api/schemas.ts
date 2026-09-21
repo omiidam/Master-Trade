@@ -16,12 +16,30 @@
  */
 
 import { z } from 'zod';
-import { tradingContextSchema } from '../profile/model.js';
+import { FIELD_KEYS, tradingContextSchema } from '../profile/model.js';
+import { ANALYSIS_TYPES } from '../quality/readiness.js';
 import type { ValidationResult } from './contracts.js';
 
 export const MAX_MESSAGE_LENGTH = 8_000;
 export const MAX_ID_LENGTH = 128;
 export const MAX_TEXT_LENGTH = 4_000;
+
+/**
+ * The two closed vocabularies, presented to Zod as tuples.
+ *
+ * `z.enum` needs a non-empty tuple and these arrays are the single source of the
+ * vocabulary, so the cast is the price of not writing the list a second time — which
+ * is the alternative that actually drifts. Declared before the schemas that use them,
+ * because a schema is built when the module loads.
+ */
+const ANALYSIS_TYPES_AS_ENUM = [...ANALYSIS_TYPES] as [
+  (typeof ANALYSIS_TYPES)[number],
+  ...(typeof ANALYSIS_TYPES)[number][],
+];
+const FIELD_KEYS_AS_ENUM = [...FIELD_KEYS] as [
+  (typeof FIELD_KEYS)[number],
+  ...(typeof FIELD_KEYS)[number][],
+];
 
 const identifier = z.string().trim().min(1).max(MAX_ID_LENGTH);
 
@@ -29,6 +47,14 @@ const identifier = z.string().trim().min(1).max(MAX_ID_LENGTH);
 export const agentChatBodySchema = z.strictObject({
   message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
   conversationId: identifier.optional(),
+  /**
+   * The analysis the message is asking for, when it is asking for one.
+   *
+   * Optional, and its absence changes nothing: without it the agent is not gated,
+   * exactly as before. With it, the deterministic readiness gate runs first and a
+   * blocked input set means no model is consulted at all (ADR-0044).
+   */
+  analysisType: z.enum(ANALYSIS_TYPES_AS_ENUM).optional(),
 });
 
 /** POST /v1/academy/lessons/:lessonId/complete */
@@ -102,6 +128,34 @@ export const readinessQuerySchema = z.strictObject({
   verbose: z.enum(['0', '1']).optional(),
 });
 
+/**
+ * POST /v1/quality/assess
+ *
+ * A body rather than a query, deliberately: `premises` is user-chosen context about
+ * their own analysis, and anything in a URL ends up in access logs. The route is also
+ * a POST because it *evaluates* rather than fetches — the shape of a decision depends
+ * on the clock and on the server's own market-data capability, so it is not a
+ * cacheable representation of a resource.
+ */
+export const qualityAssessBodySchema = z
+  .strictObject({
+    /** Absent means "assess every declared analysis type", which is what a panel wants. */
+    analysisType: z.enum(ANALYSIS_TYPES_AS_ENUM).optional(),
+    /**
+     * Fields the user themselves declared a substitute for.
+     *
+     * Enumerated rather than free text: a premise is a declaration of intent, and the
+     * wording the system uses for it is the system's own. Nothing user-written can
+     * enter an assessment through this field.
+     */
+    premises: z.array(z.enum(FIELD_KEYS_AS_ENUM)).max(6).optional(),
+  })
+  .refine((body) => body.premises === undefined || body.analysisType !== undefined, {
+    message:
+      'premises name fields of a specific analysis, so they require analysisType to be given as well',
+    path: ['premises'],
+  });
+
 /** GET routes carry no body; accept nothing but an empty object. */
 export const emptyBodySchema = z.union([z.undefined(), z.record(z.string(), z.unknown())]);
 
@@ -114,6 +168,7 @@ export type JobParams = z.infer<typeof jobParamsSchema>;
 export type JobListQuery = z.infer<typeof jobListQuerySchema>;
 export type JobCancelBody = z.infer<typeof jobCancelBodySchema>;
 export type ProfileContextBody = z.infer<typeof profileContextBodySchema>;
+export type QualityAssessBody = z.infer<typeof qualityAssessBodySchema>;
 
 /** Safe, stable text for one validation issue: `field: reason`. */
 export function formatIssue(issue: { path: readonly PropertyKey[]; message: string }): string {

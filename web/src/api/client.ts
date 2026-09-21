@@ -14,9 +14,10 @@
  *   2. **A failure is typed.** Every non-2xx answer — and every transport failure —
  *      becomes an `ApiError` carrying the server's own error code, so the UI can say
  *      *why* ("your session is not authorized for this") instead of "request failed".
- *   3. **Nothing here executes trading.** The only routes this client knows are job
- *      status, job cancellation and readiness. There is no order route to call, and
- *      `POST /v1/jobs` does not exist: enqueueing background work stays server-side.
+ *   3. **Nothing here executes trading.** Every route this client knows is about
+ *      reading state, declaring context or asking a question: jobs, profile, input
+ *      quality, readiness. There is no order route to call, and `POST /v1/jobs` does
+ *      not exist — enqueueing background work stays server-side.
  */
 
 import {
@@ -30,7 +31,9 @@ import { ERROR_STATUS, type ErrorCode } from '@shared/core/errors';
 import { IdFactory } from '@shared/core/ids';
 import { SHELL_TOKEN_HEADER } from '@shared/core/headers';
 import type { JobView } from '@shared/jobs/service';
-import type { ProfileData, ProfileWriteData } from '@shared/api/contracts';
+import type { ProfileData, ProfileWriteData, QualityAssessData } from '@shared/api/contracts';
+import type { AnalysisType } from '@shared/quality/readiness';
+import type { FieldKey } from '@shared/profile/model';
 import type { TradingContext } from '@shared/profile/model';
 
 /** Where the API is, and what may talk to it. */
@@ -179,6 +182,19 @@ export class ApiClient {
     context: Omit<TradingContext, 'version' | 'createdAt'>,
   ): Promise<ProfileWriteData> {
     return this.request<ProfileWriteData>('PUT', '/v1/profile', { body: { context } });
+  }
+
+  /**
+   * Assess the caller's declared inputs and ask whether an analysis may run.
+   *
+   * No subject is passed, for the same reason as the profile routes: the inputs are
+   * the authenticated principal's own. The server evaluates the gate — a client
+   * cannot assert its own readiness, which is the point of the route existing.
+   */
+  async assessQuality(
+    body: { analysisType?: AnalysisType; premises?: readonly FieldKey[] } = {},
+  ): Promise<QualityAssessData> {
+    return this.request<QualityAssessData>('POST', '/v1/quality/assess', { body });
   }
 
   /** One request, one typed outcome. */

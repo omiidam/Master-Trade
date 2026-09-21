@@ -49,6 +49,9 @@ import { agentChatHandler } from './handlers/agent.js';
 import { healthHandler, readinessHandler } from './handlers/health.js';
 import { jobCancelHandler, jobGetHandler, jobListHandler } from './handlers/jobs.js';
 import { profileReadHandler, profileWriteHandler } from './handlers/profile.js';
+import { decideReadiness, loadContext, qualityAssessHandler } from './handlers/quality.js';
+import { NO_MARKET_DATA, type MarketDataInput } from '../../packages/shared/src/quality/model.js';
+import type { AnalysisReadinessDecision } from '../../packages/shared/src/quality/readiness.js';
 import {
   assertRouteCoverage,
   assertSocketCoverage,
@@ -83,6 +86,15 @@ export interface ServerDeps {
    * jobs durable and job actions auditable; without them the server says so.
    */
   repositories?: Repositories;
+  /**
+   * What the server can offer in the way of bars.
+   *
+   * A fact about the deployment, not a request: the readiness gate weighs the series
+   * before an analysis runs, so this is reported by the server and never accepted from
+   * a client. Defaults to "nothing", which is the honest state until a provider is
+   * registered.
+   */
+  marketData?: MarketDataInput;
   /** Start the background worker loop with the server. Off in tests by default. */
   startWorkers?: boolean;
   /** Realtime limits, so a test can shorten the authentication deadline. */
@@ -217,6 +229,34 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
   const agent = deps.agent ?? new AgentService();
   const llmProviders = deps.llmProviders ?? ['scripted'];
 
+  /**
+   * What this server can offer in the way of bars.
+   *
+   * Reported as a fact and defaulted to "nothing", because until a provider is
+   * registered there is genuinely nothing to read — and the readiness gate treats an
+   * absent series as a reason to refuse rather than a gap to fill.
+   */
+  const marketData: MarketDataInput = deps.marketData ?? NO_MARKET_DATA;
+
+  /**
+   * Evaluate the gate for one requested analysis, against the stored context.
+   *
+   * The gate is a function of stored state, so it is evaluated here where the store is
+   * reachable and passed into the agent as a verdict. The agent then refuses on a
+   * refusal *before* consulting any model, which is the ordering the rule needs.
+   */
+  const readinessFor = async (
+    userId: string,
+    analysisType: string,
+  ): Promise<AnalysisReadinessDecision | null> => {
+    if (deps.repositories === undefined) return null;
+    const now = (deps.now ?? (() => Date.now()))();
+    const loaded = await loadContext(deps.repositories, userId, now);
+    return (
+      decideReadiness({ context: loaded.context, marketData, now }, { analysisType })[0] ?? null
+    );
+  };
+
   const health = new HealthRegistry(
     defaultHealthChecks({
       config,
@@ -230,6 +270,7 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
       jobStoreKind: jobStore.kind,
       durableJobs: jobStore.durable,
       profileStore: deps.repositories !== undefined,
+      marketDataAvailable: marketData.available,
     }),
     { now: deps.now, startedAt: deps.now === undefined ? undefined : deps.now() },
   );
@@ -285,7 +326,7 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
   const handlers: Record<string, AnyHandler> = {
     'system.health': healthHandler(health, config),
     'system.readiness': readinessHandler(health, config),
-    'agent.chat': agentChatHandler(agent, eventBus),
+    'agent.chat': agentChatHandler(agent, eventBus, readinessFor) as AnyHandler,
     'job.list': jobListHandler(jobService) as AnyHandler,
     'job.get': jobGetHandler(jobService) as AnyHandler,
     'job.cancel': jobCancelHandler(jobService) as AnyHandler,
@@ -295,6 +336,11 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     }) as AnyHandler,
     'profile.write': profileWriteHandler({
       repositories: deps.repositories,
+      now: deps.now,
+    }) as AnyHandler,
+    'quality.assess': qualityAssessHandler({
+      repositories: deps.repositories,
+      marketData,
       now: deps.now,
     }) as AnyHandler,
   };
