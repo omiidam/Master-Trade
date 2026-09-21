@@ -11,6 +11,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ExamsPage } from './pages/ExamsPage';
 import { JournalPage } from './pages/JournalPage';
 import { MemoryPage } from './pages/MemoryPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { ResearchPage } from './pages/ResearchPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TradingLabPage } from './pages/TradingLabPage';
@@ -37,6 +38,8 @@ function renderPage(page: AppPageId) {
       return <TradingLabPage />;
     case 'activity':
       return <ActivityPage />;
+    case 'profile':
+      return <ProfilePage />;
     case 'settings':
       return <SettingsPage />;
   }

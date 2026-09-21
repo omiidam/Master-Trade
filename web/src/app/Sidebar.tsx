@@ -11,6 +11,7 @@ import {
   Settings as SettingsIcon,
   ShieldCheck,
   Sparkles,
+  UserRound,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { NAV_ARIA_LABEL, NAV_GROUPS, NAV_SECTIONS } from '../config/navigation';
@@ -32,6 +33,7 @@ const ICONS: Record<NavIconName, ReactNode> = {
   clipboard: <ClipboardCheck size={17} aria-hidden />,
   flask: <FlaskConical size={17} aria-hidden />,
   settings: <SettingsIcon size={17} aria-hidden />,
+  user: <UserRound size={17} aria-hidden />,
   shield: <ShieldCheck size={17} aria-hidden />,
   activity: <Activity size={17} aria-hidden />,
   bell: <Activity size={17} aria-hidden />,

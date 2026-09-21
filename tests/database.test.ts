@@ -4,11 +4,13 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
   DIALECTS,
+  INITIAL_SCHEMA_TABLES,
   MIGRATIONS,
   OWNERSHIP,
   SCHEMA,
   SCHEMA_BY_TABLE,
   applyMigrations,
+  assertMigrationCoverage,
   assertValidSchema,
   checksumOf,
   columnNames,
@@ -24,12 +26,14 @@ import {
   orderedEntities,
   repositoryCoverage,
   rewritePlaceholders,
+  schemaSubset,
   sqliteDriverInfo,
   tablesInCreationOrder,
   validateMigrationRegistry,
   validateOwnership,
   validateSchema,
   type EntityDefinition,
+  type Migration,
   type SqlExecutor,
   type TableName,
 } from '../src/db/index.js';
@@ -66,9 +70,11 @@ describe('schema declarations', () => {
   });
 
   it('declare every table from the Phase 2 entity overview', () => {
-    expect(SCHEMA).toHaveLength(22);
+    expect(SCHEMA).toHaveLength(23);
     expect(SCHEMA.map((entity) => entity.table)).toContain('audit_records');
     expect(SCHEMA.map((entity) => entity.table)).toContain('memory_records');
+    // Phase 5.2 added the append-only Trading Context history.
+    expect(SCHEMA.map((entity) => entity.table)).toContain('trading_context_versions');
     for (const entity of SCHEMA) {
       expect(entity.description.length).toBeGreaterThan(10);
       expect(entity.columns.some((column) => column.primaryKey === true)).toBe(true);
@@ -257,7 +263,7 @@ describe('dialects and DDL', () => {
     expect(order).toHaveLength(SCHEMA.length);
     // Drops run the other way round.
     const drops = dropSchemaSql(DIALECTS.sqlite);
-    expect(drops[0]).toContain('DROP TABLE IF EXISTS "job_scratch"');
+    expect(drops[0]).toContain('DROP TABLE IF EXISTS "trading_context_versions"');
     expect(drops.at(-1)).toContain('DROP TABLE IF EXISTS "users"');
   });
 
@@ -292,9 +298,52 @@ describe('dialects and DDL', () => {
 });
 
 describe('migration registry', () => {
+  it('creates every declared table exactly once across the migrations', () => {
+    // The invariant the frozen 0001 list makes possible: a declaration cannot exist
+    // without a migration, and two migrations cannot both claim a table.
+    expect(() => assertMigrationCoverage()).not.toThrow();
+
+    expect(() =>
+      assertMigrationCoverage(
+        MIGRATIONS.map((migration) => ({
+          ...migration,
+          tables: migration.tables?.filter((table) => table !== 'trading_context_versions'),
+        })),
+      ),
+    ).toThrow(/trading_context_versions/);
+
+    expect(() =>
+      assertMigrationCoverage([
+        { ...MIGRATIONS[0]!, tables: INITIAL_SCHEMA_TABLES },
+        { ...MIGRATIONS[1]!, tables: ['users'] },
+      ]),
+    ).toThrow(/created by both/);
+  });
+
+  it('keeps 0001 frozen, so an added table cannot change an applied migration', () => {
+    // If 0001 were generated from the whole schema, adding a table anywhere would
+    // change its statements — and every existing database would then refuse to
+    // migrate, reporting the change as tampering.
+    for (const dialect of Object.values(DIALECTS)) {
+      const statements = MIGRATIONS[0]!.up(dialect).join('\n');
+      expect(statements).not.toContain('trading_context_versions');
+      expect(statements).toContain('"users"');
+    }
+    expect(INITIAL_SCHEMA_TABLES).not.toContain('trading_context_versions');
+
+    // The new table is created by the migration that declares it, and by no other.
+    for (const dialect of Object.values(DIALECTS)) {
+      const added = MIGRATIONS[1]!.up(dialect).join('\n');
+      expect(added).toContain('"trading_context_versions"');
+      expect(added).not.toContain('"memory_records"');
+    }
+    expect(schemaSubset(['trading_context_versions'])).toHaveLength(1);
+  });
+
   it('validates ids, versions and per-dialect statements', () => {
     expect(() => validateMigrationRegistry()).not.toThrow();
-    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([1]);
+    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2]);
+    expect(() => assertMigrationCoverage()).not.toThrow();
     expect(() =>
       validateMigrationRegistry([
         MIGRATIONS[0]!,
@@ -376,11 +425,11 @@ describe('migrations against a real database', () => {
     const db = openInMemorySqlite();
     try {
       const plan = await migrationPlan(db);
-      expect(plan.pending).toHaveLength(1);
+      expect(plan.pending).toHaveLength(2);
       expect(plan.upToDate).toBe(false);
 
       const report = await migrate(db);
-      expect(report.appliedNow).toEqual([1]);
+      expect(report.appliedNow).toEqual([1, 2]);
       expect(report.upToDate).toBe(true);
       expect(report.applied[0]?.checksum).toHaveLength(64);
 
@@ -401,7 +450,7 @@ describe('migrations against a real database', () => {
 
       const second = await migrate(db);
       expect(second.appliedNow).toEqual([]);
-      expect(second.applied).toHaveLength(1);
+      expect(second.applied).toHaveLength(2);
     } finally {
       await db.close();
     }
@@ -425,27 +474,28 @@ describe('migrations against a real database', () => {
   withDatabase('refuse a migration that changed after it was applied', async () => {
     const db = await migratedDatabase();
     try {
-      const tampered = [
-        MIGRATIONS[0]!,
-        {
-          id: '0002_add_something',
-          version: 2,
-          description: 'a migration that will be edited after being applied',
-          up: () => ['CREATE TABLE "later_table" ("id" TEXT PRIMARY KEY)'],
-          down: () => ['DROP TABLE "later_table"'],
-        },
-      ];
-      await migrate(db, { migrations: tampered });
+      // The real ledger must be complete here: an artificial subset would be
+      // refused as "newer than the build" before the checksum comparison this
+      // test is about ever runs. The fake is held in a named constant so the two
+      // arrays cannot drift to different entries.
+      const invented: Migration = {
+        id: '0003_add_something',
+        version: 3,
+        description: 'a migration that will be edited after being applied',
+        up: () => ['CREATE TABLE "later_table" ("id" TEXT PRIMARY KEY)'],
+        down: () => ['DROP TABLE "later_table"'],
+      };
+      await migrate(db, { migrations: [...MIGRATIONS, invented] });
 
       const edited = [
-        MIGRATIONS[0]!,
+        ...MIGRATIONS,
         {
-          ...tampered[1]!,
+          ...invented,
           up: () => ['CREATE TABLE "later_table" ("id" TEXT PRIMARY KEY, "extra" TEXT)'],
         },
       ];
       const plan = await migrationPlan(db, { migrations: edited });
-      expect(plan.tampered.map((entry) => entry.id)).toEqual(['0002_add_something']);
+      expect(plan.tampered.map((entry) => entry.id)).toEqual(['0003_add_something']);
       await expect(migrate(db, { migrations: edited })).rejects.toThrow(
         /changed after being applied/,
       );
@@ -531,7 +581,7 @@ describe('migrations against a real database', () => {
     const file = tempFile();
     const first = openSqlite({ file });
     const report = await migrate(first);
-    expect(report.appliedNow).toEqual([1]);
+    expect(report.appliedNow).toEqual([1, 2]);
     await first.execute(
       `INSERT INTO "users" ("id", "display_name", "timezone", "experience_level", "created_at", "updated_at") VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -580,7 +630,7 @@ describe('PostgreSQL production mode', () => {
     // Applying the migration through the injected client proves the production
     // path end to end: the same registry, the same repositories, different SQL.
     const report = await migrate(db);
-    expect(report.appliedNow).toEqual([1]);
+    expect(report.appliedNow).toEqual([1, 2]);
     const ddl = seen.map((entry) => entry.text).join('\n');
     expect(ddl).toContain('JSONB');
     expect(ddl).toContain('TIMESTAMPTZ');

@@ -14,6 +14,12 @@
 
 import { authorize, type OperationId, type Principal } from '../auth/model.js';
 import { ERROR_STATUS, toAppError, type ErrorCode } from '../core/errors.js';
+import type {
+  ContextAssessment,
+  ContextIssue,
+  ClarifyingPrompt,
+  TradingContext,
+} from '../profile/model.js';
 import {
   agentChatBodySchema,
   emptyBodySchema,
@@ -22,9 +28,11 @@ import {
   proposalParamsSchema,
   readinessQuerySchema,
   ruleActivateBodySchema,
+  profileContextBodySchema,
   ruleProposeBodySchema,
   zodValidator,
   type AgentChatBody,
+  type ProfileContextBody,
   type LessonCompleteBody,
   type ReadinessQuery,
   jobCancelBodySchema,
@@ -35,7 +43,7 @@ import {
   type RuleProposeBody,
 } from './schemas.js';
 
-export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type ApiVersion = 'v1';
 export const API_VERSION: ApiVersion = 'v1';
 export const API_PATH_PREFIX = `/${API_VERSION}`;
@@ -146,6 +154,42 @@ export interface AgentChatData {
   correlationId: string;
 }
 
+/** One entry of the context history, for review. */
+export interface ProfileHistoryEntry {
+  version: number;
+  createdAt: string;
+  changedBy: string;
+}
+
+/**
+ * The profile as the API reports it: the account, the current context, and the
+ * assessment derived from it. `assessment` is computed on read rather than stored, so
+ * it can never disagree with the fields it describes.
+ */
+export interface ProfileData {
+  userId: string;
+  displayName: string;
+  timezone: string;
+  /** False until the user has saved a context at least once. */
+  contextSet: boolean;
+  version: number;
+  context: TradingContext;
+  assessment: ContextAssessment;
+  prompts: ClarifyingPrompt[];
+  history: ProfileHistoryEntry[];
+  note: string;
+}
+
+/** The result of appending a version: what changed, and what still needs asking. */
+export interface ProfileWriteData {
+  version: number;
+  context: TradingContext;
+  assessment: ContextAssessment;
+  /** Non-critical findings the surface must show rather than resolve. */
+  questions: ContextIssue[];
+  note: string;
+}
+
 const agentChatRoute: ApiRoute<AgentChatBody, AgentChatData> = {
   id: 'agent.chat',
   method: 'POST',
@@ -251,6 +295,37 @@ const jobCancelRoute: ApiRoute<JobCancelBody, JobViewData> = {
   validateParams: zodValidator(jobParamsSchema),
 };
 
+/**
+ * Profile routes.
+ *
+ * Neither route takes a user id, in the path or the body. The subject is always the
+ * authenticated principal, so reading or editing another account is not something a
+ * client can express — no parameter exists to point somewhere else. Signed-out
+ * access is a `401` before the handler runs, and the repository enforces the
+ * per-user scoping a second time.
+ */
+const profileReadRoute: ApiRoute<Record<string, unknown> | undefined, ProfileData> = {
+  id: 'profile.read',
+  method: 'GET',
+  path: '/v1/profile',
+  version: API_VERSION,
+  operation: 'profile.read',
+  auth: 'required',
+  summary: "Read the authenticated user's profile and current trading context.",
+  validateBody: zodValidator(emptyBodySchema),
+};
+
+const profileWriteRoute: ApiRoute<ProfileContextBody, ProfileWriteData> = {
+  id: 'profile.write',
+  method: 'PUT',
+  path: '/v1/profile',
+  version: API_VERSION,
+  operation: 'profile.write',
+  auth: 'required',
+  summary: 'Append a new version of the trading context. Previous versions are never rewritten.',
+  validateBody: zodValidator(profileContextBodySchema),
+};
+
 const healthRoute: ApiRoute<Record<string, unknown> | undefined, { status: string }> = {
   id: 'system.health',
   method: 'GET',
@@ -284,6 +359,8 @@ export type ReadinessRouteQuery = ReadinessQuery;
 export const API_ROUTES: readonly AnyApiRoute[] = [
   healthRoute,
   readinessRoute,
+  profileReadRoute,
+  profileWriteRoute,
   agentChatRoute,
   lessonCompleteRoute,
   ruleProposeRoute,

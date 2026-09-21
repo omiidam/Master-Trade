@@ -18,11 +18,24 @@
  */
 
 import type { SqlDialect } from '../dialect.js';
+import type { TableName } from '../schema.js';
 
 export interface Migration {
   id: string;
   version: number;
   description: string;
+  /**
+   * The tables this migration introduces.
+   *
+   * Declared rather than inferred, because the statements are generated: without it
+   * nothing could tell a table that is created somewhere from a table that is
+   * created nowhere. `assertMigrationCoverage()` asserts the union of these is
+   * exactly the schema, so a declaration cannot exist that no migration creates.
+   *
+   * Optional so a test can build a throwaway migration; the registry check treats a
+   * missing list as claiming no tables, which then fails coverage.
+   */
+  tables?: readonly TableName[];
   /** Statements to apply, in order. */
   up(dialect: SqlDialect): readonly string[];
   /** Local rollback only; never executed by the runner automatically. */

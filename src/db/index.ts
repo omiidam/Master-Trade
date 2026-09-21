@@ -127,12 +127,20 @@ export {
   checksumOf,
 } from './runner.js';
 export type { MigrationPlan, MigrationReport } from './runner.js';
-export { MIGRATIONS, validateMigrationRegistry, latestVersion } from './migrations/index.js';
+export {
+  MIGRATIONS,
+  assertMigrationCoverage,
+  migrationById,
+  validateMigrationRegistry,
+  latestVersion,
+} from './migrations/index.js';
 export type { Migration, AppliedMigration } from './migrations/types.js';
 export { SCHEMA_MIGRATIONS_TABLE } from './migrations/types.js';
 export {
   SCHEMA,
   SCHEMA_BY_TABLE,
+  INITIAL_SCHEMA_TABLES,
+  schemaSubset,
   entityFor,
   tablesOfKind,
   columnNames,

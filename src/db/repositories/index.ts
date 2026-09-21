@@ -18,6 +18,7 @@ import { createMarketDataRepository, MarketDataRepository } from './marketData.j
 import { createMemoryRepository, MemoryRepository } from './memory.js';
 import { createPlatformRepository, PlatformRepository } from './platform.js';
 import { createAgentRepository, AgentRepository } from './agent.js';
+import { createProfileRepository, ProfileRepository } from './profile.js';
 import { OWNERSHIP_BY_TABLE, type Owner } from '../ownership.js';
 import type { TableName } from '../schema.js';
 
@@ -29,6 +30,7 @@ export { MarketDataRepository, createMarketDataRepository } from './marketData.j
 export { MemoryRepository, createMemoryRepository } from './memory.js';
 export { PlatformRepository, createPlatformRepository } from './platform.js';
 export { AgentRepository, createAgentRepository } from './agent.js';
+export { ProfileRepository, createProfileRepository } from './profile.js';
 
 /** Every repository module, with the owner it writes as. */
 export const REPOSITORY_MODULES: readonly { owner: Owner; tables: readonly TableName[] }[] = [
@@ -48,6 +50,7 @@ export const REPOSITORY_MODULES: readonly { owner: Owner; tables: readonly Table
     owner: 'platform',
     tables: ['settings', 'files', 'jobs', 'job_scratch', 'market_data_bars'],
   },
+  { owner: 'profile', tables: ['trading_context_versions'] },
 ];
 
 export interface Repositories {
@@ -59,6 +62,7 @@ export interface Repositories {
   audit: AuditRepository;
   platform: PlatformRepository;
   marketData: MarketDataRepository;
+  profile: ProfileRepository;
 }
 
 export interface RepositoryOptions {
@@ -88,6 +92,7 @@ export function createRepositories(db: SqlExecutor, options: RepositoryOptions =
     audit: createAuditRepository(db, shared),
     platform: createPlatformRepository(db, { ...shared, defaultLeaseMs: options.jobLeaseMs }),
     marketData: createMarketDataRepository(db, shared),
+    profile: createProfileRepository(db, shared),
   };
 }
 

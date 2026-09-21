@@ -79,6 +79,18 @@ export const OPERATIONS = {
   ),
   'backtest.run': op('backtest.run', 'sensitive', true, 'Run a backtest (deferred capability)'),
   'evaluation.run': op('evaluation.run', 'normal', false, 'Run the invariant evaluation harness'),
+  'profile.read': op(
+    'profile.read',
+    'normal',
+    false,
+    "Read the authenticated user's declared profile and trading context",
+  ),
+  'profile.write': op(
+    'profile.write',
+    'sensitive',
+    false,
+    "Change the authenticated user's declared profile and trading context",
+  ),
   'marketData.read': op('marketData.read', 'normal', false, 'Read normalized market data'),
   'marketData.ingest': op(
     'marketData.ingest',
@@ -135,6 +147,10 @@ const student: OperationId[] = [
   'settings.read',
   'realtime.connect',
   'job.read',
+  // A learner reads and edits *their own* declared context. There is no route that
+  // accepts a user id, so this cannot be pointed at another account.
+  'profile.read',
+  'profile.write',
 ];
 
 const coach: OperationId[] = [
@@ -160,6 +176,9 @@ const observer: OperationId[] = [
   'settings.read',
   'realtime.connect',
   'job.read',
+  // Read-only by design: an observer may see their own context and may not change
+  // it, so the grant is deliberately narrower than the learner's.
+  'profile.read',
 ];
 
 /** A background worker: infrastructure capabilities only. */

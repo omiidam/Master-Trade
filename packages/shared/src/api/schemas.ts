@@ -16,6 +16,7 @@
  */
 
 import { z } from 'zod';
+import { tradingContextSchema } from '../profile/model.js';
 import type { ValidationResult } from './contracts.js';
 
 export const MAX_MESSAGE_LENGTH = 8_000;
@@ -45,6 +46,21 @@ export const ruleProposeBodySchema = z.strictObject({
 /** POST /v1/rules/proposals/:proposalId/activate */
 export const ruleActivateBodySchema = z.strictObject({
   proposalId: identifier,
+});
+
+/**
+ * PUT /v1/profile
+ *
+ * The whole context document, not a patch. A merge would mean "fields you did not
+ * mention are unchanged", and a client that forgot a field would then be silently
+ * keeping an old value — the exact silent-fill the profile rules forbid. Sending the
+ * document makes the statement explicit.
+ *
+ * `version` and `createdAt` are omitted deliberately: the version is assigned by the
+ * repository from the current row, so a client can neither choose nor replay it.
+ */
+export const profileContextBodySchema = z.strictObject({
+  context: tradingContextSchema.omit({ version: true, createdAt: true }),
 });
 
 /** Path parameters (validated before the handler sees them). */
@@ -97,6 +113,7 @@ export type ReadinessQuery = z.infer<typeof readinessQuerySchema>;
 export type JobParams = z.infer<typeof jobParamsSchema>;
 export type JobListQuery = z.infer<typeof jobListQuerySchema>;
 export type JobCancelBody = z.infer<typeof jobCancelBodySchema>;
+export type ProfileContextBody = z.infer<typeof profileContextBodySchema>;
 
 /** Safe, stable text for one validation issue: `field: reason`. */
 export function formatIssue(issue: { path: readonly PropertyKey[]; message: string }): string {

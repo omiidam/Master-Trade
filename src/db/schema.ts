@@ -82,7 +82,8 @@ export type TableName =
   | 'files'
   | 'jobs'
   | 'market_data_bars'
-  | 'job_scratch';
+  | 'job_scratch'
+  | 'trading_context_versions';
 
 export type EntityKind = 'persistent' | 'transient';
 
@@ -641,7 +642,98 @@ export const SCHEMA: readonly EntityDefinition[] = [
     ],
     indexes: [{ name: 'job_scratch_expires_idx', columns: ['expires_at'] }],
   },
+  {
+    table: 'trading_context_versions',
+    kind: 'persistent',
+    description:
+      'Append-only history of the user-declared Trading Context. One row per version; the current context is the highest version for a user, so there is no second copy to drift. Columns carry identity, ordering and attribution only — the document itself is one JSON value validated by the shared Zod schema, because a column per field would duplicate the model and allow a half-written context.',
+    columns: [
+      pk(),
+      {
+        name: 'user_id',
+        type: 'uuid',
+        nullable: false,
+        references: fk('users', 'cascade'),
+      },
+      { name: 'version', type: 'integer', nullable: false, min: 1 },
+      {
+        name: 'context',
+        type: 'json',
+        nullable: false,
+        note: 'A TradingContext document: every declared field with its source and observation time.',
+      },
+      {
+        name: 'changed_by',
+        type: 'text',
+        nullable: false,
+        maxLength: 120,
+        note: 'user id or "system"; who caused this version',
+      },
+      createdAt(),
+    ],
+    indexes: [
+      {
+        name: 'trading_context_versions_user_version_idx',
+        columns: ['user_id', 'version'],
+        unique: true,
+      },
+    ],
+  },
 ];
+
+/**
+ * The tables migration `0001_initial` created.
+ *
+ * **Frozen on purpose.** `0001_initial` is generated from `SCHEMA`, so the moment a
+ * table is added to the schema its generated statements change — and the runner
+ * (`runner.ts`) refuses to run against a database whose recorded checksum no longer
+ * matches, which is how "never edit an applied migration" became enforceable rather
+ * than aspirational. This list pins what 0001 emits; a new table is a **new**
+ * migration built from `schemaSubset([...])`.
+ *
+ * `assertMigrationCoverage()` in `./migrations/index.js` asserts that the union of
+ * every migration's declared tables is exactly this set plus the later ones, so a
+ * declaration cannot exist without appearing in a migration.
+ */
+export const INITIAL_SCHEMA_TABLES: readonly TableName[] = [
+  'users',
+  'credentials',
+  'sessions',
+  'settings',
+  'curricula',
+  'lessons',
+  'lesson_progress',
+  'exams',
+  'exam_attempts',
+  'conversations',
+  'messages',
+  'memory_records',
+  'memory_versions',
+  'memory_embeddings',
+  'trading_rules',
+  'rule_evaluations',
+  'approvals',
+  'audit_records',
+  'files',
+  'jobs',
+  'market_data_bars',
+  'job_scratch',
+];
+
+/**
+ * The declarations for a named set of tables, in schema order.
+ *
+ * Used by the migrations so each one emits exactly the tables it introduced. Order
+ * is re-derived by `orderedEntities` at generation time, so a subset still emits its
+ * tables parents-first.
+ */
+export function schemaSubset(
+  tables: readonly TableName[],
+  schema: readonly EntityDefinition[] = SCHEMA,
+): EntityDefinition[] {
+  const wanted = new Set(tables);
+  return schema.filter((entity) => wanted.has(entity.table));
+}
 
 export const SCHEMA_BY_TABLE: Readonly<Record<TableName, EntityDefinition>> = Object.fromEntries(
   SCHEMA.map((entity) => [entity.table, entity]),

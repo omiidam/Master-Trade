@@ -37,6 +37,8 @@ export interface HealthCheckDeps {
   /** Store identity and durability, reported rather than assumed. */
   jobStoreKind: string;
   durableJobs: boolean;
+  /** True when a repository bundle exists, so a profile can actually be stored. */
+  profileStore: boolean;
   eventBus: EventBus;
   agent: AgentService;
   /** Provider ids registered with the LLM gateway (usually just 'scripted'). */
@@ -155,6 +157,21 @@ export function defaultHealthChecks(deps: HealthCheckDeps): HealthCheck[] {
       return {
         status: status.driverAvailable ? 'degraded' : 'fail',
         detail: `${status.detail}. Schema, migrations and repositories are implemented; the server does not open a handle in this phase.`,
+      };
+    }),
+
+    check('profile.store', false, () => {
+      if (!deps.profileStore) {
+        return {
+          status: 'degraded',
+          detail:
+            'No repository bundle is configured, so the profile and trading context cannot be read or stored: the routes answer PROVIDER_UNAVAILABLE rather than keeping an in-memory copy that a restart would lose.',
+        };
+      }
+      return {
+        status: 'ok',
+        detail:
+          'Trading context versions are append-only: a change appends n+1 and no earlier version is rewritten.',
       };
     }),
 

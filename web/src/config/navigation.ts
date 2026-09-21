@@ -29,6 +29,7 @@ export const APP_PAGE_IDS = [
   'exams',
   'lab',
   'activity',
+  'profile',
   'settings',
 ] as const;
 
@@ -44,6 +45,7 @@ export type NavIconName =
   | 'clipboard'
   | 'flask'
   | 'settings'
+  | 'user'
   | 'shield'
   | 'activity'
   | 'bell';
@@ -132,6 +134,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     description:
       'The live event stream and the background-task queue, with their provenance and their failures',
     icon: 'activity',
+    group: 'system',
+  },
+  {
+    id: 'profile',
+    label: 'Profile',
+    description:
+      'What you have declared about your trading, with a source and a freshness state for every field',
+    icon: 'user',
     group: 'system',
   },
   {

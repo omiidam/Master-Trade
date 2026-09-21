@@ -29,7 +29,7 @@ import { SCHEMA, type EntityDefinition, type TableName } from './schema.js';
 
 /** Bounded context that owns a table. Matches the repository file name. */
 export type Owner =
-  'identity' | 'academy' | 'agent' | 'memory' | 'governance' | 'audit' | 'platform';
+  'identity' | 'academy' | 'agent' | 'memory' | 'governance' | 'audit' | 'platform' | 'profile';
 
 export type Mutability = 'append-only' | 'mutable' | 'versioned' | 'tombstone';
 
@@ -249,6 +249,15 @@ export const OWNERSHIP: readonly TableOwnership[] = [
     backup: 'not-backed-up',
     personalData: false,
     rule: 'Intermediate payloads with an expiry; losing it costs a recomputation, nothing else.',
+  },
+  {
+    table: 'trading_context_versions',
+    owner: 'profile',
+    mutability: 'append-only',
+    retention: 'by-user-request',
+    backup: 'backed-up',
+    personalData: true,
+    rule: 'The user declares their own context; a new version is appended and no earlier version is ever rewritten, so the context an answer was given from stays recoverable.',
   },
 ];
 

@@ -204,3 +204,17 @@ export type { RetryKind, RetryStateProps } from './realtime/RetryState';
 
 export { CancelTaskControl } from './realtime/CancelTaskControl';
 export type { CancelTaskControlProps } from './realtime/CancelTaskControl';
+
+// Phase 5.2 — the user profile and declared trading context.
+export {
+  ClarifyingPrompts,
+  CompletenessMeter,
+  ContextStatusBadge,
+  FactRow,
+  FactSourceBadge,
+  ProfileEditor,
+  STATUS_LABEL,
+  STATUS_EXPLANATION,
+  formatFieldValue,
+} from './profile';
+export type { ClarifyingPromptsProps, FactRowProps, ProfileEditorProps } from './profile';

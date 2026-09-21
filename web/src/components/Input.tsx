@@ -21,13 +21,22 @@ export interface FieldProps {
   label: string;
   hint?: string;
   error?: string;
-  children: (props: { id: string; 'aria-describedby': string | undefined }) => ReactNode;
+  children: (props: {
+    id: string;
+    'aria-describedby': string | undefined;
+    /** Set only when there is an error: a control is never marked invalid by default. */
+    'aria-invalid': true | undefined;
+  }) => ReactNode;
   className?: string;
 }
 
 /**
  * Label + hint + error wiring. The render-prop form exists so the input, its
- * label and its `aria-describedby` are impossible to mismatch.
+ * label, its `aria-describedby` and its invalid state are impossible to mismatch.
+ *
+ * `aria-invalid` is part of the wiring rather than left to each caller: a message
+ * that is announced as a description without the field being marked invalid tells a
+ * screen-reader user what went wrong without telling them where.
  */
 export function Field({ label, hint, error, children, className }: FieldProps) {
   const id = useId();
@@ -37,7 +46,11 @@ export function Field({ label, hint, error, children, className }: FieldProps) {
       <label htmlFor={id} className="block text-caption font-medium text-text-muted">
         {label}
       </label>
-      {children({ id, 'aria-describedby': describedBy })}
+      {children({
+        id,
+        'aria-describedby': describedBy,
+        'aria-invalid': error ? true : undefined,
+      })}
       {error ? (
         <p id={`${id}-error`} className="text-caption text-danger">
           {error}

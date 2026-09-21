@@ -619,8 +619,8 @@ kinds, 12 event contracts, 4 deterministic tools, 10 web pages, 433 tests).
   (`min`, never a mean); conflicts are surfaced, not silently resolved; insufficient input
   descends an L1–L5 ladder and never skips upward; **more information is not automatically
   better**. Corollary that the roadmap respects: the required profile inputs (capital, risk
-  tolerance, horizon, holdings, constraints) have **no durable store yet**, which places User
-  Profile _before_ Portfolio Engine.
+  tolerance, horizon, holdings, constraints) have **no durable store yet**, which placed User
+  Profile _before_ Portfolio Engine — and Phase 5.2 delivered that store.
 - [ADR-0042](./adr/ADR-0042-portfolio-output-is-analysis-not-advice.md) —
   `DEC-PRODUCT-3-NOT-ADVICE`. Portfolio output is analysis of a composition the user
   described. The system does not resolve the user's ambiguity and does not issue personalized
@@ -642,5 +642,21 @@ licensing review.
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
 | **Requires validation** — where general information ends and regulated advice begins | Before any §3 capability ships in a market; needs qualified counsel per jurisdiction |
 | **Requires validation** — market-data licensing and redistribution                   | Before integrating any real historical or live provider                              |
-| **Requires validation** — subscription/billing, refunds, tax, stored value           | Before the credits module is built                                                   |
-| **Requires validation** — data-protection duties vs. audit-trail retention           | Before the export/hard-delete surfaces land                                          |
+| **Requires validation** — subscription/billing, refunds, tax, stored value           | Before the credits module is built                                                   |     | **Requires validation** — data-protection duties vs. audit-trail retention | Before the export/hard-delete surfaces land |
+
+## Phase 5.2 — user profile and trading context
+
+- [ADR-0043](./adr/ADR-0043-the-trading-context-is-derived-append-only-and-never-defaulted.md) —
+  `DEC-PROFILE-1-DERIVED-STATUS`. A trading context is a versioned, append-only document of
+  field-level declarations: status is derived on read and never stored, a value is never
+  defaulted, and the version is the server's. This closes the ADR-0041 §8 dependency that put
+  User Profile before Portfolio Engine.
+
+The domain model, schema, ownership and access rules, validation rules, freshness policy and
+deferrals are in
+[user-profile-and-trading-context.md](./user-profile-and-trading-context.md). Undeferred items
+recorded there: **no hard delete or export surface** (retention is `by-user-request`), **no
+application-level encryption at rest**, only filesystem/database-level. Both are gated on the
+data-protection review that ADR-0042 already treats as a release condition. The constraint
+refusal check is a **vocabulary** check on prose: it catches the words in its pattern and nothing
+else, and is one of several reasons nothing in the system can execute.

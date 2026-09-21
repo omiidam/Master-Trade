@@ -151,3 +151,16 @@ defect against ADR-0041. The product scope they sit inside is
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | -------- |
 | [0041](./ADR-0041-input-quality-gates-the-output.md)          | Output quality is bounded by input quality: confidence is the **weakest** required input (`min`, never a mean), conflicts are surfaced rather than resolved, and insufficient input descends the L1–L5 ladder without skipping upward | `DEC-PRODUCT-2-INPUT-QUALITY` | Accepted |
 | [0042](./ADR-0042-portfolio-output-is-analysis-not-advice.md) | Portfolio output is analysis of a composition the user described; the system never resolves the user's ambiguity and never issues personalized investment advice, and jurisdiction review is a release gate                           | `DEC-PRODUCT-3-NOT-ADVICE`    | Accepted |
+
+## Phase 5.2 — the durable home for declared inputs
+
+ADR-0041 §8 required a durable store before the capabilities that consume it are built. This is
+that store, and the decision below is how it honours the four rules that cannot be applied after
+the fact (provenance kept, conflicts detectable, status recomputable, gaps recoverable).
+
+| ADR                                                                                  | Decision                                                                                                                                                                                                                | Decision id(s)                 | Status   |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | -------- |
+| [0043](./ADR-0043-the-trading-context-is-derived-append-only-and-never-defaulted.md) | A trading context is a versioned, **append-only** document of field-level declarations: status is **derived** on read (never stored), a value is **never defaulted**, and the version is the server's, not the caller's | `DEC-PROFILE-1-DERIVED-STATUS` | Accepted |
+
+The domain model, schema, ownership rules, validation rules, freshness policy and deferrals are
+in [user-profile-and-trading-context.md](../user-profile-and-trading-context.md).

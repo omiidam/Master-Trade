@@ -30,6 +30,8 @@ import { ERROR_STATUS, type ErrorCode } from '@shared/core/errors';
 import { IdFactory } from '@shared/core/ids';
 import { SHELL_TOKEN_HEADER } from '@shared/core/headers';
 import type { JobView } from '@shared/jobs/service';
+import type { ProfileData, ProfileWriteData } from '@shared/api/contracts';
+import type { TradingContext } from '@shared/profile/model';
 
 /** Where the API is, and what may talk to it. */
 export interface ApiConnection {
@@ -98,6 +100,10 @@ export class ApiError extends Error {
         return 'The local API is not answering. It may still be starting.';
       case 'NOT_IMPLEMENTED':
         return 'The backend reports this capability as not implemented yet.';
+      case 'VALIDATION_FAILED':
+        return this.message;
+      case 'CONFLICT':
+        return 'Something changed while this was being saved, so the change was not applied. Reload and try again.';
       default:
         return this.message;
     }
@@ -152,9 +158,32 @@ export class ApiClient {
     });
   }
 
+  /**
+   * The authenticated user's profile and current trading context.
+   *
+   * No subject is passed: the route reports the caller's own profile, so there is no
+   * parameter that could name another account.
+   */
+  async getProfile(): Promise<ProfileData> {
+    return this.request<ProfileData>('GET', '/v1/profile');
+  }
+
+  /**
+   * Replace the trading context, appending a new version.
+   *
+   * The whole document is sent rather than a patch: a merge would make "unchanged"
+   * and "forgotten" indistinguishable, and the profile rules forbid silently keeping
+   * a value the user did not restate.
+   */
+  async saveProfileContext(
+    context: Omit<TradingContext, 'version' | 'createdAt'>,
+  ): Promise<ProfileWriteData> {
+    return this.request<ProfileWriteData>('PUT', '/v1/profile', { body: { context } });
+  }
+
   /** One request, one typed outcome. */
   private async request<T>(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PUT',
     path: string,
     options: { body?: unknown } = {},
   ): Promise<T> {

@@ -13,6 +13,7 @@ why the decisions were made.
 | **Technology decisions / architecture lock**      | **[technology-decisions.md](./technology-decisions.md)**                             |
 | Frontend implementation (shell, UI library)       | [frontend-foundation.md](./frontend-foundation.md)                                   |
 | Trading journal module                            | [journal.md](./journal.md)                                                           |
+| User profile and trading context                  | [user-profile-and-trading-context.md](./user-profile-and-trading-context.md)         |
 | Desktop shell, frontend, view models              | [desktop-and-frontend.md](./desktop-and-frontend.md)                                 |
 | API layer, contracts, auth/authz                  | [api-auth.md](./api-auth.md)                                                         |
 | AI layer, prompts, LLM abstraction                | [ai-and-llm.md](./ai-and-llm.md)                                                     |

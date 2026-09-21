@@ -48,6 +48,7 @@ import { logRequestCompleted, createLogging, type ServerLogging } from './loggin
 import { agentChatHandler } from './handlers/agent.js';
 import { healthHandler, readinessHandler } from './handlers/health.js';
 import { jobCancelHandler, jobGetHandler, jobListHandler } from './handlers/jobs.js';
+import { profileReadHandler, profileWriteHandler } from './handlers/profile.js';
 import {
   assertRouteCoverage,
   assertSocketCoverage,
@@ -228,6 +229,7 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
       realtime,
       jobStoreKind: jobStore.kind,
       durableJobs: jobStore.durable,
+      profileStore: deps.repositories !== undefined,
     }),
     { now: deps.now, startedAt: deps.now === undefined ? undefined : deps.now() },
   );
@@ -287,6 +289,14 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     'job.list': jobListHandler(jobService) as AnyHandler,
     'job.get': jobGetHandler(jobService) as AnyHandler,
     'job.cancel': jobCancelHandler(jobService) as AnyHandler,
+    'profile.read': profileReadHandler({
+      repositories: deps.repositories,
+      now: deps.now,
+    }) as AnyHandler,
+    'profile.write': profileWriteHandler({
+      repositories: deps.repositories,
+      now: deps.now,
+    }) as AnyHandler,
   };
 
   registerRoutes(app, { handlers, pipeline });
