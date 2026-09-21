@@ -27,6 +27,11 @@ matrix, data-flow diagrams, security boundaries — plus per-layer documents
 vector-memory, observability, desktop-and-frontend, desktop-shell,
 risks-and-deferred) and [ADRs](./docs/adr/).
 
+Product scope, the eight core modules and their boundaries, and the
+capability-by-capability roadmap (every item labelled Implemented / Planned /
+Deferred / Requires validation):
+[docs/product-vision-system-architecture.md](./docs/product-vision-system-architecture.md).
+
 ## Technology baseline (locked, Phase 3.1)
 
 | Layer    | Locked choice                                                                                                                        |

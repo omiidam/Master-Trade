@@ -598,3 +598,49 @@ advisories; no `pg` driver for the deferred PostgreSQL mode.
 **Recommended Phase 5 start:** the session/issuance slice, which turns `/v1/jobs` from a
 `401` into live data and lets Activity connect for real — the machinery behind it is already
 built and currently verified only in-process.
+
+## Phase 5.1 — product vision and system architecture (complete)
+
+Documentation and architecture planning only. **No production feature was implemented, and
+no module, dependency, test or configuration changed.**
+
+**Produced.** [product-vision-system-architecture.md](./product-vision-system-architecture.md)
+— product vision, target users, capability map, the eight core modules with their data
+ownership and boundaries, the three priority systems, the input-quality flow, the context map,
+safety/privacy/compliance, and a dependency-ordered roadmap. Every capability carries one of
+four labels (**Implemented** / **Planned** / **Deferred** / **Requires validation**), and the
+counts in it were read from the code (31 operations, 22 tables, 7 ownership contexts, 10 job
+kinds, 12 event contracts, 4 deterministic tools, 10 web pages, 433 tests).
+
+**Two decisions, both constraining what the system may conclude rather than how it is built:**
+
+- [ADR-0041](./adr/ADR-0041-input-quality-gates-the-output.md) — `DEC-PRODUCT-2-INPUT-QUALITY`.
+  Output quality is bounded by input quality; confidence is the **weakest** required input
+  (`min`, never a mean); conflicts are surfaced, not silently resolved; insufficient input
+  descends an L1–L5 ladder and never skips upward; **more information is not automatically
+  better**. Corollary that the roadmap respects: the required profile inputs (capital, risk
+  tolerance, horizon, holdings, constraints) have **no durable store yet**, which places User
+  Profile _before_ Portfolio Engine.
+- [ADR-0042](./adr/ADR-0042-portfolio-output-is-analysis-not-advice.md) —
+  `DEC-PRODUCT-3-NOT-ADVICE`. Portfolio output is analysis of a composition the user
+  described. The system does not resolve the user's ambiguity and does not issue personalized
+  investment advice; a constraint breach is reported as a breach, not an instruction to
+  correct it. No profitability or predictive claim. Jurisdiction review is a release gate.
+
+**Naming hazard this phase identified and resolved in the roadmap.** `src/evaluation` is an
+**invariant harness** (it checks that statements are labelled, runs are deterministic and
+execution is refused). It is _not_ a decision evaluator, and `rule.evaluate` has no
+statistical engine behind it. The two are now named separately — _invariant harness_ vs
+_decision evaluator_ — so a later phase cannot build on the wrong one.
+
+**Deferred by dependency, not by preference** (recorded with reasons in the architecture
+document §7.3): Portfolio Intelligence before User Profile; decision evaluation before
+recorded decisions exist; premium before its compliance review; real market data before its
+licensing review.
+
+| Item                                                                                 | Trigger to revisit                                                                   |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| **Requires validation** — where general information ends and regulated advice begins | Before any §3 capability ships in a market; needs qualified counsel per jurisdiction |
+| **Requires validation** — market-data licensing and redistribution                   | Before integrating any real historical or live provider                              |
+| **Requires validation** — subscription/billing, refunds, tax, stored value           | Before the credits module is built                                                   |
+| **Requires validation** — data-protection duties vs. audit-trail retention           | Before the export/hard-delete surfaces land                                          |

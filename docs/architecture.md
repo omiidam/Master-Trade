@@ -7,20 +7,23 @@ training-only: no live trading, no broker execution, no automatic rule activatio
 This document is the top-level map. Each layer has its own document; ADRs record
 why the decisions were made.
 
-| Area | Document |
-| -------------------------------------------- | -------------------------------------------------------- || **Technology decisions / architecture lock** | **[technology-decisions.md](./technology-decisions.md)** |
-| Frontend implementation (shell, UI library) | [frontend-foundation.md](./frontend-foundation.md) |
-| Trading journal module | [journal.md](./journal.md) |
-| Desktop shell, frontend, view models | [desktop-and-frontend.md](./desktop-and-frontend.md) |
-| API layer, contracts, auth/authz | [api-auth.md](./api-auth.md) |
-| AI layer, prompts, LLM abstraction | [ai-and-llm.md](./ai-and-llm.md) |
-| Database, entities, migrations, file storage | [database-and-storage.md](./database-and-storage.md) |
-| Background jobs, WebSocket layer | [jobs-and-realtime.md](./jobs-and-realtime.md) |
-| Market-data abstraction | [market-data.md](./market-data.md) |
-| Vector memory | [vector-memory.md](./vector-memory.md) |
-| Logging, audit, observability | [observability.md](./observability.md) |
-| Risks, trade-offs, deferred work | [risks-and-deferred.md](./risks-and-deferred.md) |
-| Architecture Decision Records | [adr/](./adr/) |
+| Area                                              | Document                                                                             |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Product vision, module boundaries, roadmap**    | **[product-vision-system-architecture.md](./product-vision-system-architecture.md)** |
+| **Technology decisions / architecture lock**      | **[technology-decisions.md](./technology-decisions.md)**                             |
+| Frontend implementation (shell, UI library)       | [frontend-foundation.md](./frontend-foundation.md)                                   |
+| Trading journal module                            | [journal.md](./journal.md)                                                           |
+| Desktop shell, frontend, view models              | [desktop-and-frontend.md](./desktop-and-frontend.md)                                 |
+| API layer, contracts, auth/authz                  | [api-auth.md](./api-auth.md)                                                         |
+| AI layer, prompts, LLM abstraction                | [ai-and-llm.md](./ai-and-llm.md)                                                     |
+| Database, entities, migrations, file storage      | [database-and-storage.md](./database-and-storage.md)                                 |
+| Background jobs, WebSocket layer                  | [jobs-and-realtime.md](./jobs-and-realtime.md)                                       |
+| Market-data abstraction                           | [market-data.md](./market-data.md)                                                   |
+| Vector memory                                     | [vector-memory.md](./vector-memory.md)                                               |
+| Logging, audit, observability                     | [observability.md](./observability.md)                                               |
+| Where the build actually stands (Phase 4 handoff) | [phase-4-handoff.md](./phase-4-handoff.md)                                           |
+| Risks, trade-offs, deferred work                  | [risks-and-deferred.md](./risks-and-deferred.md)                                     |
+| Architecture Decision Records                     | [adr/](./adr/)                                                                       |
 
 ## 1. High-level architecture
 

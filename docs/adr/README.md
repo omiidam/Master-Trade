@@ -138,3 +138,16 @@ with severity, evidence and dispositions).
 The Phase 4 handoff — status per area, the VPS install path, known limitations and the
 recommended Phase 5 start — is recorded in
 [phase-4-handoff.md](../phase-4-handoff.md).
+
+## Phase 5.1 — product vision and the boundaries it needs
+
+Two decisions that constrain what the system may _conclude_, not how it is built. Both are
+normative wording: a surface that phrases a measurement as an instruction to a specific user
+is a defect against ADR-0042, and a capability that assumes a missing required input is a
+defect against ADR-0041. The product scope they sit inside is
+[product-vision-system-architecture.md](../product-vision-system-architecture.md).
+
+| ADR                                                           | Decision                                                                                                                                                                                                                              | Decision id(s)                | Status   |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | -------- |
+| [0041](./ADR-0041-input-quality-gates-the-output.md)          | Output quality is bounded by input quality: confidence is the **weakest** required input (`min`, never a mean), conflicts are surfaced rather than resolved, and insufficient input descends the L1–L5 ladder without skipping upward | `DEC-PRODUCT-2-INPUT-QUALITY` | Accepted |
+| [0042](./ADR-0042-portfolio-output-is-analysis-not-advice.md) | Portfolio output is analysis of a composition the user described; the system never resolves the user's ambiguity and never issues personalized investment advice, and jurisdiction review is a release gate                           | `DEC-PRODUCT-3-NOT-ADVICE`    | Accepted |
