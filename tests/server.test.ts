@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   createServer,
   assertRouteCoverage,
+  reportBootRefusal,
+  startServer,
   PENDING_ROUTES,
   type ServerDeps,
 } from '../src/server/index.js';
@@ -10,7 +12,7 @@ import { AgentService } from '../src/agent/service.js';
 import { ApprovalWorkflow } from '../src/agent/approval.js';
 import { SessionService, bearerToken } from '../src/auth/sessions.js';
 import { MemoryLogSink } from '../packages/shared/src/core/logging.js';
-import { PolicyViolationError } from '../packages/shared/src/core/errors.js';
+import { AppError, PolicyViolationError } from '../packages/shared/src/core/errors.js';
 import { DEFAULT_CONFIG, resolveConfig, type ConfigOverrides } from '../src/core/config.js';
 
 const FIXED_NOW = 1_700_000_000_000;
@@ -422,6 +424,51 @@ describe('server foundation', () => {
       safety: { ...DEFAULT_CONFIG.safety, liveTradingEnabled: true },
     };
     expect(() => createServer({ config: unsafe as never })).toThrow(PolicyViolationError);
+  });
+
+  it('reports a pre-logger boot refusal on stderr instead of exiting silently', async () => {
+    // The preconditions run before a logger exists, so a refusal used to leave the
+    // process exiting non-zero with no output at all. The entry point must say why.
+    const lines: string[] = [];
+    const spy = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation((chunk: unknown) => (lines.push(String(chunk)), true));
+    const unsafe = {
+      ...DEFAULT_CONFIG,
+      safety: { ...DEFAULT_CONFIG.safety, liveTradingEnabled: true },
+    };
+    try {
+      await expect(startServer({ config: unsafe as never })).rejects.toThrow(PolicyViolationError);
+    } finally {
+      spy.mockRestore();
+    }
+
+    const written = lines.join('');
+    expect(written.endsWith('\n')).toBe(true);
+    const record = JSON.parse(written.trim()) as {
+      level: string;
+      event: string;
+      code: string;
+      message: string;
+      details: { violations?: string[] };
+    };
+    expect(record.level).toBe('error');
+    expect(record.event).toBe('server.refused');
+    expect(record.code).toBe('POLICY_VIOLATION');
+    expect(record.message).toMatch(/liveTradingEnabled/);
+    expect(record.details.violations?.join(' ')).toMatch(/liveTradingEnabled/);
+  });
+
+  it('never writes a credential-shaped value into a refusal record', () => {
+    const lines: string[] = [];
+    reportBootRefusal(new AppError('INTERNAL', 'bad key sk-abcdef123456 was rejected'), {
+      write: (chunk: string) => lines.push(chunk),
+    });
+
+    const written = lines.join('');
+    expect(written).not.toContain('sk-abcdef123456');
+    expect(written).toContain('[redacted]');
+    expect(written).toContain('server.refused');
   });
 
   it('provable route coverage: pipeline required, catalogue complete', () => {

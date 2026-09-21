@@ -128,3 +128,13 @@ in Phase 4.4. Documents naming those paths describe the phase that wrote them.
 The Phase 4.6 audit is recorded in
 [security-and-integration-audit.md](../security-and-integration-audit.md) (findings F-1…F-6,
 with severity, evidence and dispositions).
+
+## Phase 4.7 — final validation and handoff
+
+| ADR                                                                  | Decision                                                                                                                                      | Decision id(s)         | Status   |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | -------- |
+| [0040](./ADR-0040-a-refusal-is-reported-before-the-logger-exists.md) | A refusal that happens before a logger exists is written to `stderr` as one structured, redacted record, and the process still exits non-zero | `DEC-SERVER-3-REFUSAL` | Accepted |
+
+The Phase 4 handoff — status per area, the VPS install path, known limitations and the
+recommended Phase 5 start — is recorded in
+[phase-4-handoff.md](../phase-4-handoff.md).

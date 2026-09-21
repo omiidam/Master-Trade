@@ -82,7 +82,11 @@ These are enforced by tests and must stay green on every push:
   `401` (even on a public route), and an approval-gated operation is `451`
   before it can reach its handler;
 - configuration refuses to start on an unsafe value, and a session token never
-  appears in a log record.
+  appears in a log record;
+- a refusal to start is **never silent**: the preconditions run before a logger can
+  exist, so a refused boot writes one structured, redacted record to `stderr` and
+  exits non-zero (`reportBootRefusal`, `tests/server.test.ts` — see
+  [ADR-0040](./adr/ADR-0040-a-refusal-is-reported-before-the-logger-exists.md)).
 
 ## Native engine / optional dependencies (Tailwind oxide)
 

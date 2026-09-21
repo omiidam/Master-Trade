@@ -7,7 +7,8 @@
 
 export { createServer, assertServerPreconditions, bootWarnings } from './app.js';
 export type { ServerDeps, ServerInstance } from './app.js';
-export { startServer } from './start.js';
+export { startServer, reportBootRefusal } from './start.js';
+export type { RefusalSink } from './start.js';
 export { installErrorHandlers, toHttpFailure, correlationIdFor } from './errors.js';
 export { createLogging, logRequestCompleted, PinoLogSink, PINO_REDACT_PATHS } from './logging.js';
 export type { LoggingOptions, ServerLogging } from './logging.js';

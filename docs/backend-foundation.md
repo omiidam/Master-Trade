@@ -106,6 +106,23 @@ out. Every failure leaves through it and produces the same envelope:
   never the original thrown value, never a provider payload. Unknown paths get
   the same envelope with `NOT_FOUND` (404).
 
+### A boot refusal is reported, never silent
+
+The start-up preconditions — `assertSafeConfig()`, the unsafe-environment refusal,
+`assertNoHardlineOperations()`, `assertApiCatalogue()` and `loadInstructions()` — all
+run inside `createServer()`, **before** `createLogging()` builds from the very
+configuration they are checking. That ordering is the guarantee, so it stands.
+
+The consequence is that a refusal has no logger to go through, and until Phase 4.7 it
+had no output either: `node dist/src/server/start.js` with
+`MASTER_TRADE_API_HOST=0.0.0.0` exited **1 with nothing on stdout or stderr**. The
+entry point now calls `reportBootRefusal()`, which writes **one structured, redacted
+record** with event `server.refused` directly to `stderr` and then re-throws, so the
+exit code is unchanged and the `listen` failure path (which does have a logger) is not
+double-reported. `src/server/start.ts` exports it with an injectable stream, which is
+how it is tested without spawning a process. See
+[ADR-0040](./adr/ADR-0040-a-refusal-is-reported-before-the-logger-exists.md).
+
 ## 5. Validation
 
 Zod schemas in `src/api/schemas.ts` are the only runtime validator; Fastify's own

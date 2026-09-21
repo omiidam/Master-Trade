@@ -561,3 +561,40 @@ the clock it owns. See [ADR-0039](./adr/ADR-0039-one-clock-per-authorization-dec
 pass, no dependency was upgraded, no mock was introduced, and the trading safety flags were
 left exactly as they were — they are typed as the literal `false`, so they cannot be set
 without a compile error, and `assertSafeConfig` refuses to start if either is ever `true`.
+
+## Phase 4.7 — final validation and handoff (complete)
+
+Full record: [phase-4-handoff.md](./phase-4-handoff.md). Phase 4 is complete; **433 tests in
+30 files**, `npm run validate` exit 0 from a clean `npm ci`, production-scope audit 0
+vulnerabilities.
+
+**Fixed — one defect, on the safety refusal path.** The start-up preconditions
+(`assertSafeConfig`, the unsafe-env refusal, `assertNoHardlineOperations`,
+`assertApiCatalogue`, `loadInstructions`) run before a logger can exist, because the logger
+is built _from_ the configuration being validated. `startServer()` nonetheless constructed
+the server outside its `try`, so any refusal propagated to the module-level guard and the
+process exited **1 with no output at all** — reproduced against the built artifact with
+`MASTER_TRADE_API_HOST=0.0.0.0`. It failed closed, so it was never a security hole; it was a
+diagnosability defect on the one path whose whole purpose is to refuse loudly, and it made a
+VPS `npm run api` failure uninvestigable. `now`-style fix: one exported
+`reportBootRefusal()` writing a structured, redacted record to `stderr`, with an injectable
+stream so it is testable, plus two tests ([ADR-0040](./adr/ADR-0040-a-refusal-is-reported-before-the-logger-exists.md)).
+
+**Why it survived:** it is only observable in a **separate process**. Every test drove
+`createServer()` in-process and asserted the throw; `startServer()` had no test at all.
+
+**VPS compatibility confirmed (Ubuntu 24.04, 2 vCPU, 4 GB, 25 GB).** `rm -rf node_modules &&
+npm ci` exits 0, then `npm run validate` exits 0. Node >= 22.5 (`node:sqlite`). **No native
+build on the production path**: `better-sqlite3` is absent from the lockfile entirely, and
+`@tailwindcss/oxide`'s `linux-x64-gnu`/`-musl` platform packages are present as optional
+dependencies with `.npmrc` `include=optional` guarding them. No env file is needed; every
+`MASTER_TRADE_*` value has a safe default and unknown names are rejected.
+
+**Blockers to a production claim (none code-level):** no compiled desktop bundle (no Rust
+toolchain here or in CI, so the shell is policy-verified and never executed); no session
+issued to a browser, so the live realtime path is unproven end-to-end; 5 dev-only
+advisories; no `pg` driver for the deferred PostgreSQL mode.
+
+**Recommended Phase 5 start:** the session/issuance slice, which turns `/v1/jobs` from a
+`401` into live data and lets Activity connect for real — the machinery behind it is already
+built and currently verified only in-process.
