@@ -82,8 +82,18 @@ function collector(socket: { on: (event: string, cb: (...args: never[]) => void)
     settle: async (ms = 40): Promise<void> => {
       await new Promise((resolve) => setTimeout(resolve, ms));
     },
-    /** Wait for the close event, bounded: a shutdown is asynchronous by nature. */
-    waitForClose: async (ms = 250): Promise<void> => {
+    /**
+     * Wait for the close event, bounded: a shutdown is asynchronous by nature.
+     *
+     * Poll for the close rather than sleeping a fixed duration and *hoping* it has
+     * landed. The server resolves its deadlines against real time, so under CPU
+     * contention the frame arrives later than any constant we could pick — a fixed
+     * `settle()` here reads `undefined` from `closes.at(-1)` and fails a test whose
+     * subject is not timing. Polling returns as soon as the close arrives, so the
+     * bound costs nothing on the happy path and is generous enough for a loaded
+     * runner; a close that never arrives still fails the caller's assertion.
+     */
+    waitForClose: async (ms = 2000): Promise<void> => {
       const deadline = Date.now() + ms;
       while (closes.length === 0 && Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, 5));
@@ -113,7 +123,7 @@ describe('websocket transport', () => {
 
     const refused = await app.injectWS('/ws', loopback);
     const refusedFrames = collector(refused as never);
-    await refusedFrames.settle();
+    await refusedFrames.waitForClose();
     expect(refusedFrames.ofType('welcome')).toHaveLength(0);
     expect(refusedFrames.closes.at(-1)?.code).toBe(CLOSE_CODES.UNAUTHORIZED);
     refused.close();
@@ -230,7 +240,7 @@ describe('websocket transport', () => {
     const socket = await app.injectWS('/ws', loopback);
     const frames = collector(socket as never);
 
-    await frames.settle(120);
+    await frames.waitForClose();
     expect(frames.closes.at(-1)?.code).toBe(CLOSE_CODES.AUTH_TIMEOUT);
     expect(frames.ofType('welcome')).toHaveLength(0);
     await server.close();
@@ -245,13 +255,13 @@ describe('websocket transport', () => {
     const socket = await app.injectWS('/ws', loopback);
     const frames = collector(socket as never);
     socket.send(JSON.stringify({ t: 'auth', token: unprivileged }));
-    await frames.settle(60);
+    await frames.waitForClose();
     expect(frames.closes.at(-1)?.code).toBe(CLOSE_CODES.UNAUTHORIZED);
 
     const wrongVersion = await app.injectWS('/ws', loopback);
     const versionFrames = collector(wrongVersion as never);
     wrongVersion.send(JSON.stringify({ t: 'auth', token, protocolVersion: 7 }));
-    await versionFrames.settle(60);
+    await versionFrames.waitForClose();
     expect(versionFrames.closes.at(-1)?.code).toBe(CLOSE_CODES.PROTOCOL_VIOLATION);
     await server.close();
   });

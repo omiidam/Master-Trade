@@ -29,5 +29,23 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
+    /**
+     * Timeouts sized for the runner, not for an idle developer machine.
+     *
+     * Every suite under `tests/` boots real infrastructure: a Fastify instance
+     * through `inject`, a real SQLite file, a real WebSocket session. The vitest
+     * default of 5000ms is a wall-clock assumption about how fast that boot is —
+     * and the stated deployment target is a 2-core / 4GB VPS. Under CPU
+     * contention a suite that finishes in ~800ms on an idle machine was measured
+     * at 6628ms, so `usage-api.test.ts` failed with "Test timed out in 5000ms"
+     * while asserting nothing about timing.
+     *
+     * This raises the *budget*, not the bar: no assertion is relaxed, no test is
+     * skipped, and a test that hangs still fails — just later. Kept generous
+     * rather than tuned to the slowest machine observed, because a timeout should
+     * never be the thing that decides whether the code is correct.
+     */
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 });
