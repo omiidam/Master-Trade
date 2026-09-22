@@ -247,3 +247,12 @@ See [realtime-and-jobs.md](./docs/realtime-and-jobs.md) and
 - New trading rules require a recorded human approval before activation.
 - Secrets live in the OS keychain; configuration holds `SecretRef` only and
   logging redacts credentials recursively.
+
+## Testing
+
+`npm run validate` is the gate: format, both typechecks, the full suite, both builds and the
+desktop verification. The suite is 51 files and 921 tests across seven layers, from pure-engine
+arithmetic to end-to-end product flows, the transport boundary and the deployment posture —
+including the responsive contract for every screen. How it is structured, what each layer proves,
+the flake and dependency invariants, and the gaps it does not close are in
+[docs/product-foundation-test-strategy.md](./docs/product-foundation-test-strategy.md).

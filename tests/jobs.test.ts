@@ -237,7 +237,19 @@ describe('job lifecycle', () => {
   it('stops a running job cooperatively and does not overwrite the cancellation', async () => {
     const h = harness();
     let observed = false;
+    /**
+     * Resolved by the handler the moment it starts.
+     *
+     * The cancellation below has to land *while* the handler is running, and the way to know
+     * that is for the handler to say so — not to sleep for a few milliseconds and hope the
+     * handler got there first. A settle delay is a bet on how fast the machine is; this is not.
+     */
+    let started: () => void = () => undefined;
+    const begun = new Promise<void>((resolve) => {
+      started = resolve;
+    });
     h.queue.register('dataset.process', async (_job, context) => {
+      started();
       // A long job that polls the checkpoint the way a real handler must.
       for (let i = 0; i < 200; i++) {
         await new Promise((resolve) => setTimeout(resolve, 1));
@@ -251,8 +263,8 @@ describe('job lifecycle', () => {
 
     const { job } = await enqueue(h, 'dataset.process');
     const running = h.queue.runOnce();
-    // Let the handler start, then cancel while it is running.
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    // Cancel while it is running, having waited for the handler to actually be running.
+    await begun;
     await h.queue.cancel(job.id, owner);
     await running;
 
@@ -445,18 +457,32 @@ describe('job worker pool', () => {
 
   it('reports a handler that is still running at the drain deadline', async () => {
     const h = harness();
+    /**
+     * The handler blocks until this test releases it.
+     *
+     * "Still running at the deadline" then holds by construction rather than by being slower
+     * than a constant: the handler cannot finish until the assertion has been made, so a loaded
+     * runner cannot turn this into a passing test that no longer tests anything.
+     */
+    let release: () => void = () => undefined;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     h.queue.register('report.generate', async (_job, context) => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await blocked;
       return { aborted: context.signal.aborted };
     });
     await enqueue(h, 'report.generate');
     const pool = new JobWorkerPool({
       queue: h.queue,
       drainTimeoutMs: 1,
-      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      // Injected, so the drain deadline is the only clock this test reads.
+      sleep: async () => undefined,
     });
-    await pool.tick();
+    const ticked = await pool.tick();
+    expect(ticked).toBe(1);
     // The drain deadline passes while the handler is still working.
     expect(await pool.stop()).toBe(1);
+    release();
   });
 });

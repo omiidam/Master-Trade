@@ -91,8 +91,10 @@ export function ResearchCard({ experiment, onOpen, className }: ResearchCardProp
 
         <p className="text-caption text-text-muted">{experiment.method}</p>
 
+        {/* Mobile-first: three metrics stack on a phone and become a row on a tablet, so the
+            sample size never shrinks to the point where the figure is unreadable. */}
         {experiment.metrics ? (
-          <dl className="grid grid-cols-3 gap-2 text-caption">
+          <dl className="grid grid-cols-1 gap-2 text-caption sm:grid-cols-3">
             <div className="rounded-[var(--radius-control)] border border-border px-2.5 py-2">
               <dt className="flex items-center gap-1 text-text-faint">
                 <Sigma size={12} aria-hidden />

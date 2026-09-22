@@ -68,7 +68,10 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
       <CardContent className="space-y-3">
         <p className="text-caption text-text-muted">{exam.summary}</p>
 
-        <dl className="grid grid-cols-3 gap-2 text-caption">
+        {/* Mobile-first: three labelled facts stack on a phone and become a row on a
+            tablet, where there is room for them side by side without shrinking the
+            label to the point of wrapping mid-word. */}
+        <dl className="grid grid-cols-1 gap-2 text-caption sm:grid-cols-3">
           <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-2.5 py-2">
             <dt className="flex items-center gap-1 text-text-faint">
               <HelpCircle size={12} aria-hidden />

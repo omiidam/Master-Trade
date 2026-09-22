@@ -451,3 +451,33 @@ asset mapping, usage rules and the responsive behaviour per surface:
 
 **Detailed posture, data classification and the items that need professional review:**
 [security-and-privacy.md](./security-and-privacy.md).
+
+## 15. Product foundation testing (Phase 5.9)
+
+**The suite is a layered contract, not a coverage number.** Fifty-one files and 921 tests sit in
+seven layers, and the layering is deliberate: a domain rule and the route that exposes it are
+checked by different suites, so a change to one cannot satisfy both by accident. Pure-engine
+arithmetic (`portfolio`, `quality`, `usage`, `capabilities`) has no clock, no network and no
+database handle; the API layer boots a real Fastify instance over a real migrated SQLite file; the
+frontend layer reads the shipped `.tsx` as text and asserts what a surface may compute, claim,
+expose and lay out.
+
+**The joins between phases are asserted, not assumed.** `tests/product-flows.test.ts` walks the five
+flows end to end through the real routes — the profile write the quality gate reads, the gate's
+verdict the agent turn stops on, the capability pipeline's refusal naming its stage, and the credit
+ledger left where it found it by a turn that was refused. A per-phase suite structurally cannot see
+that seam; this is the suite that does.
+
+**The responsive contract is checked for every screen.** All fourteen pages render inside one frame,
+every grid starts at one column, every wide table scrolls inside its own container, and the fixed
+pixel widths that remain are an allow-list with a stated reason each — eleven of them, and a twelfth
+anywhere fails the build. The audit found three real defects of one class (a three-column stat row
+with no narrow-screen layout) and they were fixed rather than exempted.
+
+**Regressions are guarded offline where the dependency is critical.** The dev toolchain must stay
+deduped and patched, the tests may not focus, skip without a documented environment guard, or wait a
+fixed duration to synchronise, and the scripts may not force or swallow a failure. The trading
+boundary is asserted against the **source tree** as well as the configuration.
+
+**Detailed strategy, per-area coverage and the gaps this phase did not close:**
+[product-foundation-test-strategy.md](./product-foundation-test-strategy.md).

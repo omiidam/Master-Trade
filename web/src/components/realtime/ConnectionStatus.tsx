@@ -140,8 +140,10 @@ export function ConnectionStatus({
         ) : null}
       </div>
       {detail ? <p className="mt-1 text-caption opacity-90">{detail}</p> : null}
+      {/* Mobile-first: the counters stack on a phone so a two-word label is never forced to
+          wrap mid-phrase, and become a row where there is width for three. */}
       {delivered !== undefined || invalidDropped !== undefined || staleDropped !== undefined ? (
-        <dl className="mt-3 grid grid-cols-3 gap-2 text-caption opacity-90">
+        <dl className="mt-3 grid grid-cols-1 gap-2 text-caption opacity-90 sm:grid-cols-3">
           <div>
             <dt className="text-text-faint">Events delivered</dt>
             <dd className="num">{delivered ?? 0}</dd>
