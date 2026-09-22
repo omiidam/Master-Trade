@@ -5,14 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#05070b" />
+    <meta name="application-name" content="Master Trade" />
     <meta
       name="description"
-      content="Master Trade — desktop trading training workstation. Interface preview, mock data only, no live trading."
+      content="Master Trade — trading intelligence workstation. Structured analysis over declared data; live trading and broker execution are disabled by design."
     />
+
+    <!--
+      Browser identity. Every file named here is generated from one approved source by
+      `scripts/build-brand-assets.mjs`; nothing is hand-exported, and
+      `tests/brand.test.ts` fails if a referenced file stops existing. The compact mark is
+      used here because these surfaces are 16–192 px, where the full lockup's wordmark is
+      unreadable. /og-image.png is the one place with room for the whole thing.
+    -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="/favicon-16.png" sizes="16x16" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Master Trade" />
+    <meta property="og:title" content="Master Trade — trading intelligence workstation" />
+    <meta
+      property="og:description"
+      content="Structured trading analysis, portfolio intelligence and decision evaluation over declared data. Live trading and broker execution are disabled by design."
+    />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Master Trade — mark, wordmark and tagline." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="/og-image.png" />
+
     <title>Master Trade — Workstation Preview</title>
+    <style>
+      /*
+        First paint. This is static markup inside #root, which React replaces the moment it
+        mounts: there is no script here, because the shell's content security policy allows
+        no inline scripts, and a splash that needed one could not run in the desktop build.
+        It exists so the window never flashes an empty frame, and so the first thing on
+        screen is the product's own name rather than a blank rectangle.
+      */
+      html,
+      body {
+        margin: 0;
+        background: #05070b;
+        color: #e6edf5;
+      }
+      #brand-boot {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        font:
+          400 14px/1.5 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      #brand-boot img {
+        width: 72px;
+        height: 72px;
+        border-radius: 12px;
+        border: 1px solid #1c2430;
+      }
+      #brand-boot p {
+        margin: 0;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+      #brand-boot span {
+        color: #7c8a9c;
+        font-size: 12px;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="brand-boot">
+        <img src="/icon-192.png" width="72" height="72" alt="" />
+        <p>Master Trade</p>
+        <span>Starting the workstation…</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

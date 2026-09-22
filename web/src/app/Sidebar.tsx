@@ -20,6 +20,7 @@ import type { ReactNode } from 'react';
 import { NAV_ARIA_LABEL, NAV_GROUPS, NAV_SECTIONS } from '../config/navigation';
 import type { NavIconName } from '../config/navigation';
 import { Badge } from '../components/Badge';
+import { BrandLockup } from '../components/brand';
 import { Button, IconButton } from '../components/Button';
 import { Tooltip } from '../components/Tooltip';
 import { cn } from '../lib/cn';
@@ -65,18 +66,10 @@ export function Sidebar() {
       )}
     >
       <div className="flex items-center gap-2.5 px-3 py-4">
-        <span
-          aria-hidden
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-[var(--radius-control)] bg-[linear-gradient(140deg,var(--color-primary),var(--color-info))] text-primary-fg shadow-glow"
-        >
-          <span className="text-body font-bold">M</span>
-        </span>
-        {collapsed ? null : (
-          <div className="min-w-0">
-            <p className="truncate text-body font-semibold text-text">Master Trade</p>
-            <p className="truncate text-caption text-text-faint">Training workstation</p>
-          </div>
-        )}
+        {/* The real mark, at the rail's own size. Collapsed it stands alone (with its
+            accessible name); expanded the wordmark sits beside it, which is the only
+            place the product's name needs to be announced once. */}
+        <BrandLockup markSize={36} markOnly={collapsed} />
         {compactShell ? null : (
           <IconButton
             label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}

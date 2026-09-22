@@ -236,3 +236,24 @@ The capability model, the catalogue, the lifecycle, the readiness gate, the orch
 the permission and credit boundary, the provenance and memory policy, the structured result, the
 portfolio and evaluation integrations, the responsive/mobile architecture and the security
 posture are in [capability-integration.md](../capability-integration.md).
+
+## Phase 5.8 — the transport boundary, and the brand as an artifact
+
+Phase 5.7 gave the API a capability pipeline and left almost nothing in front of it. Phase 5.8 adds
+the three boundaries that run **before** authentication — response headers, a loopback-only origin
+policy that refuses a foreign origin rather than merely withholding CORS headers, and a per-client
+rate limit counted before the session lookup — and closes one real disclosure gap: a message this
+codebase did not author no longer reaches the caller, while the log keeps it and the correlation id
+joins the two. The same phase replaced the placeholder brand with one committed source image that
+every icon, favicon, launcher asset and link preview is generated from, because a logo is a build
+artifact and a second drawing of it is a logo that drifts.
+
+| ADR                                                                        | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Decision id(s)                     | Status   |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------- |
+| [0048](./ADR-0048-the-transport-boundary-refuses-before-authentication.md) | Headers, origin policy and rate limiting are mounted before every route and apply to failures as well as successes; a foreign origin is **refused**, not merely denied headers; the limit is keyed on the peer address and counted **before** authentication, with a bounded bucket table; an **unvouched** error message is replaced in the body and kept in the log, joined by the correlation id; the trading boundary is asserted against the **source tree**, not only the configuration; no TLS here and no new dependency, both deliberately | `DEC-TRANSPORT-1-REFUSE-FIRST`     | Accepted |
+| [0049](./ADR-0049-the-brand-is-one-source-generated-not-drawn.md)          | One committed source image and a **dependency-free** generator; the crop box is **measured** on every test run; icons are the mark alone, the full lockup appears once (the OG card); the interface's wordmark is **live text**, not a raster; the mark is decorative unless it is the only name; identity is declared and every path is checked; stale instructions are deleted rather than annotated                                                                                                                                              | `DEC-BRAND-1-ONE-SOURCE-GENERATED` | Accepted |
+
+The transport boundary, the data classification, secret management, the incident assumptions and
+every item that needs professional review are in
+[security-and-privacy.md](../security-and-privacy.md). The asset set, the usage rules and the
+identity mapping are in [brand-assets.md](../brand-assets.md).

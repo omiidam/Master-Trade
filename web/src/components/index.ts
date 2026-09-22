@@ -11,6 +11,11 @@
 export { Badge, EpistemicBadge, ProvenanceBadge } from './Badge';
 export type { BadgeProps, BadgeTone } from './Badge';
 
+// Brand marks (Phase 5.8). Both render the generated icon set, so the interface, the
+// browser tab and the desktop launcher show one logo rather than three lookalikes.
+export { BrandLockup, BrandMark } from './brand';
+export type { BrandLockupProps, BrandMarkProps } from './brand';
+
 export { Button, IconButton } from './Button';
 export type { ButtonProps, ButtonSize, ButtonVariant } from './Button';
 

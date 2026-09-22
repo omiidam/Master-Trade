@@ -42,6 +42,19 @@ function mapTransportError(statusCode: number, message: string): AppError | null
   }
 }
 
+/**
+ * What an unexpected failure says to the caller.
+ *
+ * A message we did not write is not a message we can vouch for: `toAppError` copies an
+ * arbitrary thrown value's text, which for a driver error is a file path, for a provider
+ * error is a payload, and for a leaky library is a connection string. So the *body* is
+ * replaced while the log keeps the real text, and the correlation id in both is what joins
+ * them. Errors this codebase raises deliberately keep their own message, because those are
+ * written to be shown.
+ */
+export const INTERNAL_MESSAGE =
+  'An internal error occurred. Quote the correlation id when reporting it.';
+
 export function toHttpFailure(error: unknown, correlationId: string): HttpFailure {
   const statusCode = (error as { statusCode?: unknown } | null)?.statusCode;
   const mapped =
@@ -49,10 +62,19 @@ export function toHttpFailure(error: unknown, correlationId: string): HttpFailur
       ? mapTransportError(statusCode, (error as Error).message ?? '')
       : null;
   const appError = mapped ?? toAppError(error);
+  // `mapped` and an `AppError` both carry a message this codebase chose; anything else
+  // arrived from a library, a driver or a socket, and is redacted.
+  const authored = mapped !== null || error instanceof AppError;
   return {
     status: appError.status,
     code: appError.code,
-    response: errorResponse(appError, correlationId),
+    response: authored
+      ? errorResponse(appError, correlationId)
+      : {
+          ok: false,
+          error: { code: 'INTERNAL', message: INTERNAL_MESSAGE },
+          correlationId,
+        },
     logMessage: appError.message,
   };
 }

@@ -783,3 +783,28 @@ Two properties this phase added and would defend in review:
 And one thing this phase refused to add: **a capability that exists only to look impressive.** Every
 entry in the catalogue names an engine or names itself `coming-soon`; there is no capability whose
 result would be a paragraph with nothing behind it.
+
+## Phase 5.8 — security, privacy and brand foundation
+
+**Complete and verified.** Five findings were closed: an unexpected internal failure echoed the raw
+thrown message to the caller (the one real disclosure gap — `toHttpFailure` now redacts a message
+this codebase did not author, keeping it in the log); no HTTP rate limit existed; no security headers
+and no CORS policy existed; and the trading boundary and the file-name sanitiser were asserted only
+against the configuration and never against traversal shapes. 45 new tests cover them
+(`tests/security.test.ts`, `tests/brand.test.ts`), the full suite is 841 tests in 47 files, and
+`npm audit` and `npm audit --omit=dev` both report 0 vulnerabilities.
+
+### Deferred, with the reason it is deferred
+
+| Item                                                                     | Why it is not done now                                                                                                               | Trigger                                               |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| TLS termination                                                          | The API binds loopback and its clients are local; a certificate lifecycle would add risk without an attacker to stop                 | Any non-loopback deployment                           |
+| Per-route or per-principal rate-limit tiers                              | One window per client address is proportionate to a single local user; tiering needs a real usage distribution to tune against       | Beta with real users                                  |
+| Trusted-proxy position                                                   | `trustProxy: false` is correct for loopback and wrong behind a reverse proxy, and it must change **together with** the limiter's key | Reverse proxy, i.e. with TLS                          |
+| Audit retention enforcement                                              | `observability.auditRetentionDays` is declared; no purge job acts on it                                                              | Before accepting real user data                       |
+| User-initiated data deletion                                             | The credit ledger and context versions are append-only by design, so erasure needs a documented exception rather than a delete       | Before accepting real user data — **Requires review** |
+| Incident runbook and centralized log retention                           | The log sink is local, so a lost machine is a lost log                                                                               | Before any hosted deployment                          |
+| Hosted-provider prompt-injection evaluation                              | No hosted provider is registered; the default adapter is offline and scripted                                                        | Registering a provider                                |
+| `src-tauri/icons/icon.icns`                                              | Only `tauri icon` produces the macOS container, and only on macOS. Reported as a warning by `desktop:verify`, never an error         | First macOS release                                   |
+| Absolute `og:image` URL                                                  | Correct as a relative path for a locally served build                                                                                | Public origin                                         |
+| Multi-factor auth, session listing, first-run data disclosure and export | They add factors to the same session service and depend on a real user surface                                                       | Beta                                                  |

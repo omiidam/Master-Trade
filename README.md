@@ -26,8 +26,19 @@ matrix, data-flow diagrams, security boundaries — plus per-layer documents
 (api-auth, ai-and-llm, database-and-storage, jobs-and-realtime, market-data,
 vector-memory, observability, desktop-and-frontend, desktop-shell,
 user-profile-and-trading-context, input-quality-and-data-reliability,
-usage-credits-and-premium, portfolio-intelligence, risks-and-deferred) and
+usage-credits-and-premium, portfolio-intelligence, capability-integration,
+security-and-privacy, brand-assets, risks-and-deferred) and
 [ADRs](./docs/adr/).
+
+Security and privacy posture, data classification, secret handling and every item
+that needs professional review before production:
+[docs/security-and-privacy.md](./docs/security-and-privacy.md). Brand asset
+mapping and usage rules: [docs/brand-assets.md](./docs/brand-assets.md).
+
+```bash
+npm run brand:assets      # regenerate every icon/favicon/launcher asset from one source
+npm run brand:measure     # print the measured bounding box of the mark in that source
+```
 
 Product scope, the eight core modules and their boundaries, and the
 capability-by-capability roadmap (every item labelled Implemented / Planned /

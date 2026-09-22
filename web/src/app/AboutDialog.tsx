@@ -1,4 +1,5 @@
 import { Badge } from '../components/Badge';
+import { BrandLockup } from '../components/brand';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { MOCK_DATA_NOTICE, MOCK_GENERATED_AT } from '../mock/data';
@@ -37,6 +38,9 @@ export function AboutDialog() {
       }
     >
       <div className="space-y-5">
+        {/* This dialog is where the interface explains itself, so it is where the full
+            lockup belongs: the mark and the wordmark, at the size the product uses. */}
+        <BrandLockup markSize={44} subtitle="Smarter trading. Bigger possibilities." />
         <div className="grid gap-4 sm:grid-cols-2">
           <section>
             <h3 className="text-body font-medium text-text">Real in this build</h3>

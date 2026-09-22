@@ -37,6 +37,18 @@ export interface ApiConfig {
   shellToken: SecretRef | null;
   /** Requests from outside the loopback interface are refused. Not a setting. */
   enforceLoopback: true;
+  /**
+   * Browser origins allowed to call the API. Loopback only: a public origin in this
+   * list would turn a local API into a remotely reachable one, so `assertSafeConfig`
+   * refuses the configuration rather than the request.
+   */
+  corsAllowedOrigins: readonly string[];
+  /**
+   * Requests per minute per client address, counted before authentication. Off would
+   * mean an unauthenticated caller can drive unbounded work, so it is on by default
+   * and a zero limit is a configuration violation.
+   */
+  rateLimit: { enabled: boolean; requestsPerMinute: number };
 }
 
 export interface LlmEndpointConfig {
@@ -145,6 +157,18 @@ export const DEFAULT_CONFIG: AppConfig = {
     maxBodyBytes: 2_000_000,
     shellToken: null,
     enforceLoopback: true,
+    corsAllowedOrigins: [
+      'http://127.0.0.1:5173',
+      'http://localhost:5173',
+      'http://127.0.0.1:4173',
+      'http://localhost:4173',
+      'http://127.0.0.1:4317',
+      'http://localhost:4317',
+    ],
+    // Generous for a single local user, and low enough that a runaway loop or a
+    // scripted flood is refused rather than served. The desktop shell and the test
+    // suite never approach it; a browser demo page does not either.
+    rateLimit: { enabled: true, requestsPerMinute: 600 },
   },
   ai: {
     primary: {
@@ -221,6 +245,25 @@ const LOOPBACK_HOSTS: ReadonlySet<string> = new Set([
   '::ffff:127.0.0.1',
 ]);
 
+/**
+ * Whether an `Origin` header names a loopback host.
+ *
+ * Lives here, next to `LOOPBACK_HOSTS`, because it is the same guarantee applied to a
+ * second spelling: the API binds loopback, refuses non-loopback peers, and accepts only
+ * loopback browser origins. A single definition is what keeps those three in step.
+ */
+export function isLoopbackOrigin(origin: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  const host = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  return LOOPBACK_HOSTS.has(host) || host.startsWith('127.') || host.startsWith('::ffff:127.');
+}
+
 export function assertSafeConfig(config: AppConfig): void {
   const violations: string[] = [];
   if (!LOOPBACK_HOSTS.has(config.api.host.trim().toLowerCase())) {
@@ -228,6 +271,14 @@ export function assertSafeConfig(config: AppConfig): void {
   }
   if (config.api.enforceLoopback !== true) {
     violations.push('api.enforceLoopback must be true');
+  }
+  for (const origin of config.api.corsAllowedOrigins) {
+    if (!isLoopbackOrigin(origin)) {
+      violations.push(`api.corsAllowedOrigins must be loopback origins (received ${origin})`);
+    }
+  }
+  if (config.api.rateLimit.requestsPerMinute <= 0) {
+    violations.push('api.rateLimit.requestsPerMinute must be > 0');
   }
   if (config.safety.liveTradingEnabled) violations.push('safety.liveTradingEnabled must be false');
   if (config.safety.brokerExecutionEnabled) {

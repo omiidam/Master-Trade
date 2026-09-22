@@ -50,6 +50,7 @@ import { workflowApprovalGate, type ApprovalGate } from './approval.js';
 import { defaultHealthChecks } from './checks.js';
 import { HealthRegistry } from './health.js';
 import { installErrorHandlers } from './errors.js';
+import { installSecurity, type InstalledSecurity } from './security.js';
 import { logRequestCompleted, createLogging, type ServerLogging } from './logging.js';
 import { agentChatHandler } from './handlers/agent.js';
 import { healthHandler, readinessHandler } from './handlers/health.js';
@@ -121,6 +122,11 @@ export interface ServerDeps {
   /** Realtime limits, so a test can shorten the authentication deadline. */
   realtimeLimits?: Partial<RealtimeLimits>;
   /**
+   * Replace the transport rate limiter, so a test can drive the refusal path without
+   * issuing six hundred requests or waiting a minute.
+   */
+  rateLimiter?: InstalledSecurity['rateLimiter'];
+  /**
    * The usage store. Defaults to durable when a database handle is open and in-process
    * otherwise, and the difference is reported by the readiness check rather than hidden:
    * "credits survive a restart" is either true for this deployment or it is not.
@@ -145,6 +151,8 @@ export interface ServerInstance {
   /** The metering service, exposed so a test can assert on the ledger it holds. */
   usage: UsageService;
   usageStore: UsageStore;
+  /** Transport security, exposed so a test can assert on the limiter it holds. */
+  security: InstalledSecurity;
   routes: readonly RouteEntry[];
   bootWarnings: readonly string[];
   close(): Promise<void>;
@@ -369,6 +377,16 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
 
   const tracked = trackRegisteredRoutes(app);
 
+  // Transport security comes first: the headers, the origin check and the rate limit are
+  // all in front of authentication, so an unauthenticated flood is refused before it can
+  // make the process do any work.
+  const security = installSecurity(app, {
+    config,
+    logger,
+    ...(deps.now === undefined ? {} : { now: deps.now }),
+    ...(deps.rateLimiter === undefined ? {} : { rateLimiter: deps.rateLimiter }),
+  });
+
   app.addHook('onRequest', async (request) => {
     request.mtStartedAt = Date.now();
   });
@@ -527,6 +545,7 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     agent,
     usage,
     usageStore,
+    security,
     routes: routeEntries(handlers),
     bootWarnings: warnings,
     close: async () => {

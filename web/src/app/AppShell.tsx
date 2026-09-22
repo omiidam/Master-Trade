@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { ReactNode } from 'react';
+import { BrandMark } from '../components/brand';
 import { FADE_UP } from '../design/motion';
 import { useUiStore } from '../store/ui';
 import { Sidebar } from './Sidebar';
@@ -48,9 +49,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             </motion.div>
           </AnimatePresence>
         </main>
-        <footer className="border-t border-border px-5 py-3 text-caption text-text-faint">
-          Master Trade · training workstation · live trading and broker execution are disabled by
-          design · no order capability exists in this application
+        <footer className="flex items-center gap-2 border-t border-border px-5 py-3 text-caption text-text-faint">
+          {/* The footer is a public surface of the product, so it carries the mark —
+              decorative here, because the sentence beside it already names Master Trade. */}
+          <BrandMark size={18} />
+          <span>
+            Master Trade · training workstation · live trading and broker execution are disabled by
+            design · no order capability exists in this application
+          </span>
         </footer>
       </div>
     </div>

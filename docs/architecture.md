@@ -416,3 +416,38 @@ request → resolution → validation → quality → readiness → permission
 No execution capability exists, `liveTradingEnabled` and `brokerExecutionEnabled`
 remain disabled, and no model has a vote on readiness, permission or cost. Details:
 [capability-integration.md](./capability-integration.md).
+
+## 14. Security, privacy and brand identity (Phase 5.8)
+
+Phase 5.8 added nothing to the product's capability surface and two things to its guarantees.
+
+**The transport boundary.** Three hooks run before any route and apply to every reply, including
+failures: a fixed header set (`nosniff`, no framing, `no-referrer`, same-origin resource policy, a
+restrictive permissions policy, and `Cache-Control: no-store`), a **loopback-only** origin policy
+that refuses a foreign origin outright rather than merely withholding CORS headers, and a per-client
+sliding-window rate limit counted **before** the session lookup so an unauthenticated flood is
+refused as a flood. The allow-list cannot be widened: `assertSafeConfig` refuses to boot with a
+non-loopback origin in it. See `src/server/security.ts` and ADR-0048.
+
+**Error redaction.** A failure's response body now carries a message only when this codebase wrote
+it. An unexpected throw — a driver error holding a file path, a provider payload — is replaced with a
+generic message in the body while the log keeps the full text, joined by the correlation id that is
+in both. The error _path_ was already audited; the error _text_ now is too.
+
+**The trading boundary is asserted against the source.** `tests/security.test.ts` fails if any
+shipped file enables live trading, broker execution, remote storage, sensitive files or model tool
+authority, if any route names an order, trade, execution, broker, position or fill, or if any shipped
+source file matches a high-signal credential shape. `liveTradingEnabled` and `brokerExecutionEnabled`
+remain `false` by type, by default and by a boot check.
+
+**Brand identity is a build artifact.** One committed source image
+(`assets/brand/master-trade-logo-source.png`) and one dependency-free generator produce every icon,
+favicon, apple-touch icon, PWA manifest icon, desktop launcher icon and the Open Graph card. The
+in-app mark is that same generated icon, so the interface, the browser tab and the desktop launcher
+cannot show three different logos; the wordmark in the interface is live text so it inherits the type
+scale and mirrors in RTL. The mark is decorative unless it is the only name for the product. Full
+asset mapping, usage rules and the responsive behaviour per surface:
+[brand-assets.md](./brand-assets.md), ADR-0049.
+
+**Detailed posture, data classification and the items that need professional review:**
+[security-and-privacy.md](./security-and-privacy.md).
