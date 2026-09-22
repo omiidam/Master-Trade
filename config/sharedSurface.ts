@@ -24,10 +24,17 @@ import { resolve } from 'node:path';
  */
 export const SHARED_SURFACE: Readonly<Record<string, string>> = {
   '@shared/api/contracts': 'packages/shared/src/api/contracts.ts',
+  // The capability *model*, not the registry. The registry is the server's declaration and reaches a
+  // client through `GET /v1/capabilities`, already resolved; shipping the declaration itself across
+  // the boundary would be a second copy of the catalogue, and the boundary test refuses an entry
+  // the frontend does not consume — which is how the two stay one thing.
+  '@shared/capabilities/model': 'packages/shared/src/capabilities/model.ts',
   '@shared/core/errors': 'packages/shared/src/core/errors.ts',
   '@shared/core/headers': 'packages/shared/src/core/headers.ts',
   '@shared/core/ids': 'packages/shared/src/core/ids.ts',
   '@shared/core/provenance': 'packages/shared/src/core/provenance.ts',
+  '@shared/decisions/model': 'packages/shared/src/decisions/model.ts',
+  '@shared/decisions/readiness': 'packages/shared/src/decisions/readiness.ts',
   '@shared/desktop/ipc': 'packages/shared/src/desktop/ipc.ts',
   '@shared/frontend/viewModels': 'packages/shared/src/frontend/viewModels.ts',
   '@shared/jobs/service': 'packages/shared/src/jobs/service.ts',

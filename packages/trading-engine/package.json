@@ -9,6 +9,7 @@
     "./framework": "./src/framework.ts",
     "./risk": "./src/risk.ts",
     "./marketData": "./src/marketData.ts",
-    "./portfolio": "./src/portfolio.ts"
+    "./portfolio": "./src/portfolio.ts",
+    "./evaluation": "./src/evaluation.ts"
   }
 }

@@ -36,6 +36,7 @@ import type { AsyncModelAdapter } from './asyncModel.js';
 import type { ContextSection } from './context.js';
 import type { StructuredSummary } from '../llm/summary.js';
 import type { AnalysisReadinessDecision } from '../../packages/shared/src/quality/readiness.js';
+import type { CapabilityResult } from '../../packages/shared/src/capabilities/model.js';
 
 export interface AgentStatementView {
   kind: EpistemicKind;
@@ -54,6 +55,14 @@ export interface AgentTurn {
   reason?: string;
   /** The gate's verdict, when the request named an analysis. */
   readiness?: AnalysisReadinessDecision | null;
+  /**
+   * The structured capability result, when the request named a capability (Phase 5.7).
+   *
+   * Attached on both outcomes because a refusal is a complete result: it carries the state, the
+   * stage that stopped it and what would change the answer, in the same shape a completed one
+   * carries. A client needs no error path of its own.
+   */
+  capability?: CapabilityResult | null;
 }
 
 /**
@@ -130,6 +139,8 @@ export interface AgentAsyncTurn {
   } | null;
   latencyMs: number | null;
   reason?: string;
+  /** The structured capability result, when the request named a capability (Phase 5.7). */
+  capability?: CapabilityResult | null;
 }
 
 /**
@@ -184,6 +195,8 @@ export class AgentService {
        * analysis *was* requested and no decision could be produced, which is a refusal.
        */
       readiness?: AnalysisReadinessDecision | null;
+      /** The structured capability result, echoed back on both outcomes. */
+      capability?: CapabilityResult | null;
     } = {},
   ): Promise<AgentAsyncTurn> {
     const refusal = options.readiness === undefined ? null : refusalFor(options.readiness);
@@ -205,6 +218,7 @@ export class AgentService {
         latencyMs: null,
         reason: refusal,
         readiness: options.readiness ?? null,
+        capability: options.capability ?? null,
       };
     }
 
@@ -225,6 +239,7 @@ export class AgentService {
         latencyMs: null,
         reason: outcome.reason,
         readiness,
+        capability: options.capability ?? null,
       };
     }
     const statements: AgentStatementView[] = outcome.statements.map((statement) => ({
@@ -245,11 +260,19 @@ export class AgentService {
       usage: outcome.usage,
       latencyMs: outcome.latencyMs,
       readiness,
+      capability: options.capability ?? null,
     };
   }
 
   /** Run one turn. Never throws for a refused request: that is a `blocked` turn. */
-  run(message: string, options: { readiness?: AnalysisReadinessDecision | null } = {}): AgentTurn {
+  run(
+    message: string,
+    options: {
+      readiness?: AnalysisReadinessDecision | null;
+      /** The structured capability result, echoed back on both outcomes. */
+      capability?: CapabilityResult | null;
+    } = {},
+  ): AgentTurn {
     const refusal = options.readiness === undefined ? null : refusalFor(options.readiness);
     if (refusal !== null) {
       return {
@@ -262,6 +285,7 @@ export class AgentService {
         model: this.model,
         reason: refusal,
         readiness: options.readiness ?? null,
+        capability: options.capability ?? null,
       };
     }
 
@@ -278,6 +302,7 @@ export class AgentService {
         model: this.model,
         reason: outcome.reason,
         readiness,
+        capability: options.capability ?? null,
       };
     }
     const statements: AgentStatementView[] = outcome.statements.map((statement) => ({
@@ -298,6 +323,7 @@ export class AgentService {
       // succeeded is the same dishonesty as not gating at all — which is exactly what the
       // sync path did before this line existed.
       readiness,
+      capability: options.capability ?? null,
     };
   }
 

@@ -26,6 +26,7 @@ export const APP_PAGE_IDS = [
   'research',
   'journal',
   'portfolio',
+  'evaluation',
   'academy',
   'exams',
   'lab',
@@ -41,6 +42,7 @@ export type NavIconName =
   | 'gauge'
   | 'coins'
   | 'pie-chart'
+  | 'blocks'
   | 'sparkles'
   | 'brain'
   | 'microscope'
@@ -117,6 +119,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     description:
       'Declare what you hold and read the deterministic valuation: allocation, cost basis, concentration and exposure, with every gap named rather than filled',
     icon: 'pie-chart',
+    group: 'workspace',
+  },
+  {
+    id: 'evaluation',
+    label: 'Evaluation',
+    description:
+      'Record what you decided and read what the recorded prices say happened — with what could not be measured named rather than filled — and the capability catalogue behind it',
+    icon: 'blocks',
     group: 'workspace',
   },
   {

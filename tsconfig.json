@@ -17,10 +17,13 @@
     "types": ["node"],
     "paths": {
       "@shared/api/contracts": ["./packages/shared/src/api/contracts.js"],
+      "@shared/capabilities/model": ["./packages/shared/src/capabilities/model.js"],
       "@shared/core/errors": ["./packages/shared/src/core/errors.js"],
       "@shared/core/headers": ["./packages/shared/src/core/headers.js"],
       "@shared/core/ids": ["./packages/shared/src/core/ids.js"],
       "@shared/core/provenance": ["./packages/shared/src/core/provenance.js"],
+      "@shared/decisions/model": ["./packages/shared/src/decisions/model.js"],
+      "@shared/decisions/readiness": ["./packages/shared/src/decisions/readiness.js"],
       "@shared/desktop/ipc": ["./packages/shared/src/desktop/ipc.js"],
       "@shared/frontend/viewModels": ["./packages/shared/src/frontend/viewModels.js"],
       "@shared/jobs/service": ["./packages/shared/src/jobs/service.js"],

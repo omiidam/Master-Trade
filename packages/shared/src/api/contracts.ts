@@ -39,12 +39,18 @@ import {
   type QualityAssessBody,
   type LessonCompleteBody,
   type ReadinessQuery,
+  decisionEvaluateBodySchema,
+  decisionListQuerySchema,
+  decisionParamsSchema,
+  decisionWriteBodySchema,
   jobCancelBodySchema,
   jobListQuerySchema,
   jobParamsSchema,
   usageAdjustBodySchema,
   usageHistoryQuerySchema,
   usageSubscriptionBodySchema,
+  type DecisionEvaluateBody,
+  type DecisionWriteBody,
   type JobCancelBody,
   type RuleActivateBody,
   type RuleProposeBody,
@@ -52,6 +58,16 @@ import {
   type UsageSubscriptionBody,
 } from './schemas.js';
 import type { AnalysisReadinessDecision } from '../quality/readiness.js';
+import type { DecisionReadinessDecision, EvaluationReadiness } from '../decisions/readiness.js';
+import type {
+  DecisionEvaluationReason,
+  DecisionEvaluationReport,
+  DecisionKind,
+  DecisionRecord,
+  DecisionType,
+  EvaluationOutcome,
+} from '../decisions/model.js';
+import type { CapabilityState } from '../capabilities/model.js';
 import type { QualityReport } from '../quality/model.js';
 import type {
   Portfolio,
@@ -504,6 +520,257 @@ const portfolioWriteRoute: ApiRoute<PortfolioWriteBody, PortfolioViewData> = {
 };
 
 /* ------------------------------------------------------------------ */
+/* Recorded decisions and their evaluation (Phase 5.6)                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One row of the decision list.
+ *
+ * `latest` is the most recent *attempt* and what it concluded, never a verdict on the decision:
+ * `evaluated` means an evaluation exists, and an outcome describes what the recorded prices did.
+ * Nothing on this row is a score, which is why there is no field that could hold one.
+ */
+export interface DecisionSummaryView {
+  id: string;
+  type: DecisionType;
+  kind: DecisionKind;
+  symbol: string | null;
+  assetClass: string | null;
+  currency: string;
+  decidedAt: string;
+  updatedAt: string;
+  /** The record's own version. An evaluation names the version it read. */
+  version: number;
+  /** The newest evaluation, or `null` when the record has never been evaluated. */
+  latest: {
+    outcome: EvaluationOutcome;
+    readiness: EvaluationReadiness;
+    evaluatedAt: string;
+    reason: DecisionEvaluationReason;
+  } | null;
+}
+
+/**
+ * `GET /v1/decisions`
+ *
+ * No subject parameter exists, in the path or the query, so reading another account's decisions is
+ * not expressible. `total` is served beside the page because a bounded list without a total is a
+ * list a reader cannot tell from a complete one.
+ */
+export interface DecisionListData {
+  decisions: DecisionSummaryView[];
+  total: number;
+  asOf: string;
+  note: string;
+}
+
+/**
+ * One evaluation *attempt*.
+ *
+ * Note what is absent: **no figures**. That is the Phase 5.6 rule and it is worth restating here,
+ * because this is the shape a client would be tempted to extend — an evaluation row records the
+ * verdict, the rule and the finding codes against the version they were read from, and every
+ * number is recomputed from the record whenever it is shown. Storing a total would let a corrected
+ * price leave a stale one behind.
+ */
+export interface DecisionEvaluationView {
+  id: string;
+  reason: DecisionEvaluationReason;
+  evaluatedAt: string;
+  outcome: EvaluationOutcome;
+  readiness: EvaluationReadiness;
+  /** The rule that produced the verdict, as a stable code. */
+  decidedBy: string;
+  findingCodes: string[];
+  decisionVersion: number;
+}
+
+/**
+ * The whole reading of one decision: the record, the two gates' verdicts and the history.
+ *
+ * `readiness` carries both layers — the Phase 5.3 verdict on the caller's declared inputs, and the
+ * record's own reading — because the second can only narrow the first, and a client that saw only
+ * one would not be able to tell which of the two refused it.
+ */
+export interface DecisionViewData {
+  decision: DecisionRecord;
+  readiness: DecisionReadinessDecision;
+  /**
+   * The evaluation computed *now*, from the prices on the record.
+   *
+   * `null` when the gate refuses: a blocked record produces no figures at all rather than zeroed
+   * ones, because a zero is a measurement and a refusal is not.
+   */
+  report: DecisionEvaluationReport | null;
+  evaluations: DecisionEvaluationView[];
+  asOf: string;
+  note: string;
+}
+
+const decisionReadRoute: ApiRoute<Record<string, unknown> | undefined, DecisionListData> = {
+  id: 'decision.list',
+  method: 'GET',
+  path: '/v1/decisions',
+  version: API_VERSION,
+  operation: 'decision.read',
+  auth: 'required',
+  summary: 'List the caller’s own recorded decisions, newest first.',
+  validateBody: zodValidator(emptyBodySchema),
+  validateQuery: zodValidator(decisionListQuerySchema) as (
+    raw: unknown,
+  ) => ValidationResult<Record<string, unknown>>,
+};
+
+const decisionGetRoute: ApiRoute<Record<string, unknown> | undefined, DecisionViewData> = {
+  id: 'decision.get',
+  method: 'GET',
+  path: '/v1/decisions/:decisionId',
+  version: API_VERSION,
+  operation: 'decision.read',
+  auth: 'required',
+  summary: 'Read one recorded decision with its readiness verdict and evaluation history.',
+  validateBody: zodValidator(emptyBodySchema),
+  validateParams: zodValidator(decisionParamsSchema),
+};
+
+/**
+ * `POST /v1/decisions`
+ *
+ * Recording is a **create**, and the id is the server's. That is the isolation rule stated as a
+ * route shape: a client cannot name a row into existence, so the response returns the id it minted
+ * and every later call addresses that. It is deliberately not a `PUT` on a client-chosen path — a
+ * `PUT` that ignored the path it was sent to would be a URL that names something other than the
+ * resource it addresses.
+ */
+const decisionRecordRoute: ApiRoute<DecisionWriteBody, DecisionViewData> = {
+  id: 'decision.record',
+  method: 'POST',
+  path: '/v1/decisions',
+  version: API_VERSION,
+  operation: 'decision.write',
+  auth: 'required',
+  summary:
+    'Record a decision. Prices, risk parameters and expectations are the caller’s own; nothing computed can be supplied, and the server mints the id.',
+  validateBody: zodValidator(decisionWriteBodySchema),
+};
+
+/**
+ * `PUT /v1/decisions/:decisionId`
+ *
+ * Amends a decision the caller already owns. It cannot create one: an id that has never existed is
+ * a 404 rather than an insert, because a create-that-upserts is a way to write a row whose
+ * provenance nobody can establish.
+ */
+const decisionWriteRoute: ApiRoute<DecisionWriteBody, DecisionViewData> = {
+  id: 'decision.write',
+  method: 'PUT',
+  path: '/v1/decisions/:decisionId',
+  version: API_VERSION,
+  operation: 'decision.write',
+  auth: 'required',
+  summary:
+    'Amend one recorded decision. The id must already exist for this account; a client cannot name a row into existence.',
+  validateParams: zodValidator(decisionParamsSchema),
+  validateBody: zodValidator(decisionWriteBodySchema),
+};
+
+const decisionEvaluateRoute: ApiRoute<DecisionEvaluateBody, DecisionViewData> = {
+  id: 'decision.evaluate',
+  method: 'POST',
+  path: '/v1/decisions/:decisionId/evaluate',
+  version: API_VERSION,
+  operation: 'decision.evaluate',
+  auth: 'required',
+  summary:
+    'Evaluate one recorded decision with the deterministic engine over the prices on its own record.',
+  validateParams: zodValidator(decisionParamsSchema),
+  validateBody: zodValidator(decisionEvaluateBodySchema),
+};
+
+/* ------------------------------------------------------------------ */
+/* Capabilities (Phase 5.7)                                            */
+/* ------------------------------------------------------------------ */
+
+/** One module, with what it contributes and which capabilities compose it. */
+export interface CapabilityModuleView {
+  id: string;
+  label: string;
+  role: string;
+  composedBy: string[];
+}
+
+/**
+ * One declared capability, as the surface renders it.
+ *
+ * `state` is the decision and `stateReason` is its wording, both computed on the server: the client
+ * performs no resolution, no permission check and no entitlement lookup, so a frontend restriction
+ * can never stand in for an authorization. `availability` is separate from `state` because "the
+ * inputs are ready" and "this is built" are two claims.
+ */
+export interface CapabilityView {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  categoryLabel: string;
+  modules: string[];
+  analysisType: string | null;
+  feature: string | null;
+  operation: string | null;
+  engineCapability: string | null;
+  modelMayRequest: boolean;
+  humanOnly: boolean;
+  availability: string;
+  riskLevel: string;
+  riskMeaning: string;
+  outputs: string[];
+  producesFigures: boolean;
+  memoryPolicy: string;
+  claims: string[];
+  provenance: { requiresProvenance: boolean; permitted: string[]; statement: string };
+  /** The resolved state for the calling account, and why. */
+  state: CapabilityState;
+  stateReason: string;
+}
+
+/** The declared pipeline, served so the documentation and the behaviour cannot drift apart. */
+export interface CapabilityStageView {
+  id: string;
+  label: string;
+  meaning: string;
+  blocks: string;
+}
+
+/**
+ * `GET /v1/capabilities`
+ *
+ * The catalogue, with the caller's own readiness verdict for every gated type. The catalogue is
+ * public configuration; the verdicts are the caller's declarations and are computed per request.
+ * There is no subject parameter, so no account can read another's readiness.
+ */
+export interface CapabilitiesViewData {
+  capabilities: CapabilityView[];
+  modules: CapabilityModuleView[];
+  stages: CapabilityStageView[];
+  /** One verdict per declared analysis type, from the caller's own context. */
+  readiness: AnalysisReadinessDecision[];
+  asOf: string;
+  note: string;
+}
+
+const capabilityReadRoute: ApiRoute<Record<string, unknown> | undefined, CapabilitiesViewData> = {
+  id: 'capability.read',
+  method: 'GET',
+  path: '/v1/capabilities',
+  version: API_VERSION,
+  operation: 'quality.assess',
+  auth: 'required',
+  summary:
+    'Read the declared capability catalogue with the calling account’s readiness for each gated capability.',
+  validateBody: zodValidator(emptyBodySchema),
+};
+
+/* ------------------------------------------------------------------ */
 /* Usage, credits and subscription                                     */
 /* ------------------------------------------------------------------ */
 
@@ -754,6 +1021,12 @@ export const API_ROUTES: readonly AnyApiRoute[] = [
   qualityAssessRoute,
   portfolioReadRoute,
   portfolioWriteRoute,
+  decisionReadRoute,
+  decisionGetRoute,
+  decisionRecordRoute,
+  decisionWriteRoute,
+  decisionEvaluateRoute,
+  capabilityReadRoute,
   usageStatusRoute,
   usageHistoryRoute,
   usageAdjustRoute,

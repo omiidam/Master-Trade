@@ -358,3 +358,43 @@ export type {
   QualityBadgeKind,
   ValidationIssueListProps,
 } from './quality';
+
+// Decision evaluation (Phases 5.6/5.7). Presentation only: no component here measures, ranks or
+// grades a decision, and no component labels a figure it did not receive already labelled.
+export {
+  DecisionCard,
+  DecisionReadinessPanel,
+  DecisionSummary,
+  EvaluationHistory,
+  EvaluationLimitationsPanel,
+  EvaluationSummary,
+  ExpectedVsActualPanel,
+  FigureRow,
+  HypotheticalScenarioBadge,
+  ObservationCard,
+  BASE_READINESS_TONE,
+  CONFIDENCE_LABEL,
+  CONFIDENCE_TONE,
+  EVALUATION_OUTCOME_LABEL,
+  EVALUATION_OUTCOME_MEANING,
+  EVALUATION_READINESS_LABEL,
+  EVALUATION_READINESS_MEANING,
+  EVALUATION_READINESS_TONE,
+  KIND_TONE,
+  OBSERVATION_TONE,
+  OUTCOME_TONE,
+  figureClass,
+  figureSign,
+} from './decisions';
+
+// Capability catalogue (Phase 5.7). The browser resolves nothing here: every state and reason is
+// the server's, because a frontend restriction is never an authorization.
+export {
+  CapabilityCard,
+  CapabilityPipeline,
+  CapabilityStateBadge,
+  CapabilitySummary,
+  ModuleMap,
+  STATE_LABEL,
+  STATE_TONE,
+} from './capabilities';

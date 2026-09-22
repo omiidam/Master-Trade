@@ -55,6 +55,7 @@ export const FEATURE_IDS = [
   'agent.chat',
   'quality.assess',
   'portfolio.composition',
+  'decision.evaluation',
   'portfolio.analysis',
   'research.report',
   'backtest.run',
@@ -150,6 +151,20 @@ export const FEATURES: readonly FeatureDefinition[] = [
     state: 'available',
     stateReason: null,
     operation: 'portfolio.read',
+    usesModel: false,
+  },
+  {
+    id: 'decision.evaluation',
+    label: 'Decision evaluation',
+    description:
+      'Measuring a recorded decision against the prices on its own record: what happened, over what window, and which parts cannot be measured at all.',
+    category: 'portfolio-evaluation',
+    creditCost: 0,
+    costBasis:
+      'Zero. It runs no provider: the arithmetic is deterministic code over prices the record already carries, so it is free by construction — the ADR-0041 rule that a calculation must not stop working because a credit ran out.',
+    state: 'available',
+    stateReason: null,
+    operation: 'decision.evaluate',
     usesModel: false,
   },
   {

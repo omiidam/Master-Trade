@@ -41,6 +41,16 @@ import type {
 } from '@shared/api/contracts';
 import type { PortfolioDocumentBody } from '@shared/portfolio/model';
 import type { AnalysisType } from '@shared/quality/readiness';
+import type {
+  DecisionEvaluationReason,
+  DecisionKind,
+  DecisionRecordInput,
+} from '@shared/decisions/model';
+import type {
+  CapabilitiesViewData,
+  DecisionListData,
+  DecisionViewData,
+} from '@shared/api/contracts';
 import type { FieldKey } from '@shared/profile/model';
 import type { TradingContext } from '@shared/profile/model';
 
@@ -262,6 +272,82 @@ export class ApiClient {
    */
   async savePortfolio(document: PortfolioDocumentBody): Promise<PortfolioViewData> {
     return this.request<PortfolioViewData>('PUT', '/v1/portfolio', { body: document });
+  }
+
+  /**
+   * The caller's own recorded decisions.
+   *
+   * No subject is passed, for the same reason as the profile, usage and portfolio routes: a
+   * decision belongs to the authenticated principal, so there is no parameter that could name
+   * another account. `total` comes back with the page, so a surface can tell a filtered page
+   * from a complete list.
+   */
+  async listDecisions(
+    filter: { limit?: number; offset?: number; symbol?: string; kind?: DecisionKind } = {},
+  ): Promise<DecisionListData> {
+    const query = new URLSearchParams();
+    if (filter.limit !== undefined) query.set('limit', String(filter.limit));
+    if (filter.offset !== undefined) query.set('offset', String(filter.offset));
+    if (filter.symbol !== undefined) query.set('symbol', filter.symbol);
+    if (filter.kind !== undefined) query.set('kind', filter.kind);
+    const suffix = query.size > 0 ? `?${query.toString()}` : '';
+    return this.request<DecisionListData>('GET', `/v1/decisions${suffix}`);
+  }
+
+  /**
+   * One decision, with the composed readiness verdict and the evaluation computed now.
+   *
+   * `report` arrives already measured and already labelled — realised, unrealised, hypothetical
+   * or incomplete — so the surface formats nothing and classifies nothing. A refusal arrives as
+   * `report: null` beside the reasons, which is an answer rather than an error.
+   */
+  async getDecision(decisionId: string): Promise<DecisionViewData> {
+    return this.request<DecisionViewData>('GET', `/v1/decisions/${encodeURIComponent(decisionId)}`);
+  }
+
+  /**
+   * Record or amend one decision.
+   *
+   * The id travels in the path and the body is the declaration only. No computed value is sent,
+   * because the record schema has no field for one — a client that could report its own return or
+   * its own outcome would be a client reporting its own results.
+   */
+  async saveDecision(decisionId: string, record: DecisionRecordInput): Promise<DecisionViewData> {
+    return this.request<DecisionViewData>(
+      'PUT',
+      `/v1/decisions/${encodeURIComponent(decisionId)}`,
+      { body: record },
+    );
+  }
+
+  /**
+   * Ask for a decision to be evaluated.
+   *
+   * `reason` is a closed vocabulary rather than free text: an evaluation is append-only, so a
+   * history reads as a sequence of intentions, and a free-text note would be a row nobody can
+   * summarise. The engine runs on the server over the prices on the record; the response carries
+   * the new reading.
+   */
+  async evaluateDecision(
+    decisionId: string,
+    reason?: DecisionEvaluationReason,
+  ): Promise<DecisionViewData> {
+    return this.request<DecisionViewData>(
+      'POST',
+      `/v1/decisions/${encodeURIComponent(decisionId)}/evaluate`,
+      { body: reason === undefined ? {} : { reason } },
+    );
+  }
+
+  /**
+   * The declared capability catalogue, with the caller's own readiness for each gated capability.
+   *
+   * Every `state` is the server's. The browser resolves no capability, checks no permission and
+   * looks up no entitlement — a frontend restriction is never the authorization, and a frontend
+   * verdict about readiness would be a second opinion nobody asked for.
+   */
+  async getCapabilities(): Promise<CapabilitiesViewData> {
+    return this.request<CapabilitiesViewData>('GET', '/v1/capabilities');
   }
 
   /** One request, one typed outcome. */

@@ -70,7 +70,7 @@ describe('schema declarations', () => {
   });
 
   it('declare every table from the Phase 2 entity overview', () => {
-    expect(SCHEMA).toHaveLength(30);
+    expect(SCHEMA).toHaveLength(32);
     expect(SCHEMA.map((entity) => entity.table)).toContain('audit_records');
     expect(SCHEMA.map((entity) => entity.table)).toContain('memory_records');
     // Phase 5.2 added the append-only Trading Context history.
@@ -83,6 +83,11 @@ describe('schema declarations', () => {
     // Phase 5.5 added the declared portfolio, its current positions and the append-only
     // history of its composition.
     for (const table of ['portfolios', 'portfolio_positions', 'portfolio_snapshots']) {
+      expect(SCHEMA.map((entity) => entity.table)).toContain(table);
+    }
+    // Phase 5.6 added the recorded decisions and the append-only history of the readings
+    // taken from them.
+    for (const table of ['decisions', 'decision_evaluations']) {
       expect(SCHEMA.map((entity) => entity.table)).toContain(table);
     }
     for (const entity of SCHEMA) {
@@ -273,9 +278,14 @@ describe('dialects and DDL', () => {
     expect(order).toHaveLength(SCHEMA.length);
     // Drops run the other way round.
     const drops = dropSchemaSql(DIALECTS.sqlite);
-    expect(drops[0]).toContain('DROP TABLE IF EXISTS "portfolio_snapshots"');
+    expect(drops[0]).toContain('DROP TABLE IF EXISTS "decision_evaluations"');
     expect(drops.at(-1)).toContain('DROP TABLE IF EXISTS "users"');
-    // Every table that references users — usage and portfolio alike — is dropped first.
+    // A child is dropped before its parent, so the phase-5.6 pair runs before `decisions`
+    // and `decisions` before the portfolios it may reference.
+    expect(position('decision_evaluations')).toBeGreaterThan(position('decisions'));
+    expect(position('decisions')).toBeGreaterThan(position('portfolios'));
+    // Every table that references users — usage, portfolio and decision alike — is
+    // dropped first.
     const ownedTables: TableName[] = [
       'subscriptions',
       'credit_accounts',
@@ -284,6 +294,8 @@ describe('dialects and DDL', () => {
       'portfolios',
       'portfolio_positions',
       'portfolio_snapshots',
+      'decisions',
+      'decision_evaluations',
     ];
     for (const table of ownedTables) {
       expect(position(table)).toBeGreaterThan(position('users'));
@@ -379,7 +391,7 @@ describe('migration registry', () => {
 
   it('validates ids, versions and per-dialect statements', () => {
     expect(() => validateMigrationRegistry()).not.toThrow();
-    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3, 4]);
+    expect(MIGRATIONS.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5]);
     expect(() => assertMigrationCoverage()).not.toThrow();
     expect(() =>
       validateMigrationRegistry([
@@ -462,11 +474,11 @@ describe('migrations against a real database', () => {
     const db = openInMemorySqlite();
     try {
       const plan = await migrationPlan(db);
-      expect(plan.pending).toHaveLength(4);
+      expect(plan.pending).toHaveLength(5);
       expect(plan.upToDate).toBe(false);
 
       const report = await migrate(db);
-      expect(report.appliedNow).toEqual([1, 2, 3, 4]);
+      expect(report.appliedNow).toEqual([1, 2, 3, 4, 5]);
       expect(report.upToDate).toBe(true);
       expect(report.applied[0]?.checksum).toHaveLength(64);
 
@@ -487,7 +499,7 @@ describe('migrations against a real database', () => {
 
       const second = await migrate(db);
       expect(second.appliedNow).toEqual([]);
-      expect(second.applied).toHaveLength(4);
+      expect(second.applied).toHaveLength(5);
     } finally {
       await db.close();
     }
@@ -574,8 +586,8 @@ describe('migrations against a real database', () => {
       // test is about ever runs. The fake is held in a named constant so the two
       // arrays cannot drift to different entries.
       const invented: Migration = {
-        id: '0005_add_something',
-        version: 5,
+        id: '0006_add_something',
+        version: 6,
         description: 'a migration that will be edited after being applied',
         up: () => ['CREATE TABLE "later_table" ("id" TEXT PRIMARY KEY)'],
         down: () => ['DROP TABLE "later_table"'],
@@ -590,7 +602,7 @@ describe('migrations against a real database', () => {
         },
       ];
       const plan = await migrationPlan(db, { migrations: edited });
-      expect(plan.tampered.map((entry) => entry.id)).toEqual(['0005_add_something']);
+      expect(plan.tampered.map((entry) => entry.id)).toEqual(['0006_add_something']);
       await expect(migrate(db, { migrations: edited })).rejects.toThrow(
         /changed after being applied/,
       );
@@ -676,7 +688,7 @@ describe('migrations against a real database', () => {
     const file = tempFile();
     const first = openSqlite({ file });
     const report = await migrate(first);
-    expect(report.appliedNow).toEqual([1, 2, 3, 4]);
+    expect(report.appliedNow).toEqual([1, 2, 3, 4, 5]);
     await first.execute(
       `INSERT INTO "users" ("id", "display_name", "timezone", "experience_level", "created_at", "updated_at") VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -725,7 +737,7 @@ describe('PostgreSQL production mode', () => {
     // Applying the migration through the injected client proves the production
     // path end to end: the same registry, the same repositories, different SQL.
     const report = await migrate(db);
-    expect(report.appliedNow).toEqual([1, 2, 3, 4]);
+    expect(report.appliedNow).toEqual([1, 2, 3, 4, 5]);
     const ddl = seen.map((entry) => entry.text).join('\n');
     expect(ddl).toContain('JSONB');
     expect(ddl).toContain('TIMESTAMPTZ');

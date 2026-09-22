@@ -46,6 +46,7 @@ import {
   type Holding,
   type TradingContext,
 } from '../packages/shared/src/profile/model.js';
+import { CAPABILITY_CATALOGUE } from '../packages/shared/src/capabilities/registry.js';
 
 const NOW = Date.parse('2026-09-21T12:00:00.000Z');
 const day = 86_400_000;
@@ -764,8 +765,30 @@ describe('the analysis requirement registry', () => {
   });
 
   it('marks a capability available only where something implements it', () => {
+    // Phase 5.7 corrected this set. Phase 5.5 built composition and left the flag reading
+    // `planned`, which made the agent path refuse a capability the product already had; the
+    // capability registry now *requires* this flag and its own availability to agree, and this
+    // pin is the second half of that rule — an exact set, so a capability that quietly became
+    // "available" without an implementation fails here.
     const available = ANALYSIS_REQUIREMENTS.filter((entry) => entry.capability === 'available');
-    expect(available.map((entry) => entry.type)).toEqual(['education.explain']);
+    expect(available.map((entry) => entry.type)).toEqual([
+      'education.explain',
+      'portfolio.composition',
+      'decision.evaluation',
+    ]);
+
+    // And every available type has a registry entry that agrees about existing, with a named
+    // engine wherever the capability produces figures.
+    for (const entry of available) {
+      const capability = CAPABILITY_CATALOGUE.find(
+        (candidate) => candidate.analysisType === entry.type,
+      );
+      expect(capability, entry.type).toBeDefined();
+      expect(capability?.availability, entry.type).toBe('available');
+      if (capability?.producesFigures) {
+        expect(capability.engineCapability, entry.type).not.toBeNull();
+      }
+    }
   });
 
   it('ships the meaning of every readiness outcome with the decision', () => {

@@ -12,6 +12,7 @@ import { ExamsPage } from './pages/ExamsPage';
 import { JournalPage } from './pages/JournalPage';
 import { MemoryPage } from './pages/MemoryPage';
 import { PortfolioPage } from './pages/PortfolioPage';
+import { EvaluationPage } from './pages/EvaluationPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ResearchPage } from './pages/ResearchPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -34,6 +35,8 @@ function renderPage(page: AppPageId) {
       return <JournalPage />;
     case 'portfolio':
       return <PortfolioPage />;
+    case 'evaluation':
+      return <EvaluationPage />;
     case 'academy':
       return <AcademyPage />;
     case 'exams':

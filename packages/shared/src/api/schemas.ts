@@ -17,6 +17,11 @@
 
 import { z } from 'zod';
 import { portfolioDocumentInputSchema } from '../portfolio/model.js';
+import {
+  DECISION_EVALUATION_REASONS,
+  DECISION_KINDS,
+  decisionRecordSchema,
+} from '../decisions/model.js';
 import { FIELD_KEYS, tradingContextSchema } from '../profile/model.js';
 import { ANALYSIS_TYPES } from '../quality/readiness.js';
 import { MAX_MOVEMENT } from '../usage/credits.js';
@@ -71,6 +76,20 @@ export const agentChatBodySchema = z.strictObject({
    * blocked input set means no model is consulted at all (ADR-0044).
    */
   analysisType: z.enum(ANALYSIS_TYPES_AS_ENUM).optional(),
+  /**
+   * The declared capability the message is asking for, when it is asking for one (Phase 5.7).
+   *
+   * A plain bounded string rather than an enum, deliberately: an unknown id must reach the
+   * registry and be refused there, because capabilities are deny-by-default and a schema that
+   * rejected an undeclared id would answer "unknown capability" instead of "nobody declared
+   * it". `tests/capabilities.test.ts` pins that distinction.
+   *
+   * Supplying it changes the pipeline: the registry resolves it, the input gate runs for the
+   * analysis type it declares, the role table's answer for its own operation is checked, and its
+   * entitlement is resolved — all before a model is consulted. A refusal becomes a blocked turn
+   * carrying the stage that produced it.
+   */
+  capabilityId: z.string().trim().min(3).max(64).optional(),
   /**
    * The caller's own name for *this attempt*, when it may be retried.
    *
@@ -127,6 +146,27 @@ export const proposalParamsSchema = z.strictObject({
 /** Background jobs (Phase 3.7). */
 export const jobParamsSchema = z.strictObject({
   jobId: identifier,
+});
+
+/** Recorded decisions (Phase 5.6). */
+export const decisionParamsSchema = z.strictObject({
+  decisionId: identifier,
+});
+
+/**
+ * `GET /v1/decisions` filters. `limit` is bounded for the same reason the job list's is:
+ * an unbounded read is a way to make the server do unbounded work.
+ */
+export const decisionListQuerySchema = z.strictObject({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).max(100_000).optional(),
+  symbol: z.string().trim().min(1).max(20).optional(),
+  kind: z.enum(DECISION_KINDS).optional(),
+});
+
+/** Why a fresh evaluation was asked for. A closed vocabulary, never free text. */
+export const decisionEvaluateBodySchema = z.strictObject({
+  reason: z.enum(DECISION_EVALUATION_REASONS).optional(),
 });
 
 /**
@@ -243,6 +283,18 @@ export const usageSubscriptionBodySchema = z.strictObject({
  */
 export const portfolioWriteBodySchema = portfolioDocumentInputSchema;
 
+/**
+ * `POST /v1/decisions` and `PUT /v1/decisions/:decisionId`
+ *
+ * The declaration of a decision. Strict for the same reason the portfolio document is,
+ * and for one more: this record is what an evaluation is computed from, so a key the
+ * schema ignored would be a user believing they had recorded evidence the engine never
+ * read. There is no id, no status and no figure in the body — the server mints the id,
+ * derives the status from the evaluation history, and computes every number. A client
+ * that could send a result would be a client reporting its own performance.
+ */
+export const decisionWriteBodySchema = decisionRecordSchema;
+
 /** GET routes carry no body; accept nothing but an empty object. */
 export const emptyBodySchema = z.union([z.undefined(), z.record(z.string(), z.unknown())]);
 
@@ -260,6 +312,10 @@ export type UsageHistoryQuery = z.infer<typeof usageHistoryQuerySchema>;
 export type UsageAdjustBody = z.infer<typeof usageAdjustBodySchema>;
 export type UsageSubscriptionBody = z.infer<typeof usageSubscriptionBodySchema>;
 export type PortfolioWriteBody = z.infer<typeof portfolioWriteBodySchema>;
+export type DecisionWriteBody = z.infer<typeof decisionWriteBodySchema>;
+export type DecisionParams = z.infer<typeof decisionParamsSchema>;
+export type DecisionListQuery = z.infer<typeof decisionListQuerySchema>;
+export type DecisionEvaluateBody = z.infer<typeof decisionEvaluateBodySchema>;
 
 /** Safe, stable text for one validation issue: `field: reason`. */
 export function formatIssue(issue: { path: readonly PropertyKey[]; message: string }): string {

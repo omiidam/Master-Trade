@@ -90,7 +90,9 @@ export type TableName =
   | 'usage_events'
   | 'portfolios'
   | 'portfolio_positions'
-  | 'portfolio_snapshots';
+  | 'portfolio_snapshots'
+  | 'decisions'
+  | 'decision_evaluations';
 
 export type EntityKind = 'persistent' | 'transient';
 
@@ -1137,6 +1139,172 @@ export const SCHEMA: readonly EntityDefinition[] = [
         unique: true,
       },
       { name: 'portfolio_snapshots_user_idx', columns: ['user_id', 'created_at'] },
+    ],
+  },
+  {
+    table: 'decisions',
+    kind: 'persistent',
+    description:
+      'A recorded portfolio decision: what was decided, when, on what evidence, and whether it actually happened. The whole validated record is held as one JSON value in `document`, with columns only for the things a query must filter or order by — a column per field would duplicate the domain model and allow a half-written record, and a half-written record is one whose evaluation would describe a decision the user did not make. There is deliberately **no status column**: `recorded | evaluated | incomplete | blocked` is a reading of the latest evaluation row, and storing it would be storing the result of a computation beside the inputs it came from.',
+    columns: [
+      pk(),
+      {
+        name: 'user_id',
+        type: 'uuid',
+        nullable: false,
+        references: fk('users', 'cascade'),
+        note: 'The owner. Every repository method filters on it, and no route accepts a user id.',
+      },
+      {
+        name: 'portfolio_id',
+        type: 'uuid',
+        nullable: true,
+        references: fk('portfolios', 'set null'),
+        note: 'Present when the decision is about a composition rather than a symbol. Set to null rather than deleted with the portfolio, because the decision happened.',
+      },
+      {
+        name: 'symbol',
+        type: 'text',
+        nullable: true,
+        maxLength: 20,
+        note: 'Present when the decision is about one instrument. Exactly one of this and portfolio_id is expected, and the model reports when neither is.',
+      },
+      {
+        name: 'type',
+        type: 'text',
+        nullable: false,
+        values: [
+          'buy',
+          'sell',
+          'hold',
+          'rebalance',
+          'allocation-change',
+          'risk-adjustment',
+          'hypothetical-scenario',
+        ],
+      },
+      {
+        name: 'kind',
+        type: 'text',
+        nullable: false,
+        values: ['executed', 'planned', 'hypothetical'],
+        note: 'Whether the decision happened. This is the column the whole feature turns on: a hypothetical record may never be read as performance.',
+      },
+      { name: 'decided_at', type: 'timestamp', nullable: false },
+      { name: 'period_start_at', type: 'timestamp', nullable: false },
+      {
+        name: 'period_end_at',
+        type: 'timestamp',
+        nullable: true,
+        note: 'Null while the evaluation window is still open; the reading then ages the record against the caller’s clock rather than a stored one.',
+      },
+      {
+        name: 'currency',
+        type: 'text',
+        nullable: false,
+        maxLength: 3,
+        note: 'The currency the decision is reported in. A price in another one is a finding, not a conversion.',
+      },
+      {
+        name: 'version',
+        type: 'integer',
+        nullable: false,
+        min: 1,
+        note: 'Incremented on every edit so an evaluation row can name the record it read. The content of an older version is not kept — see the deferral note in docs/decision-evaluation.md.',
+      },
+      {
+        name: 'document',
+        type: 'json',
+        nullable: false,
+        note: 'A DecisionRecord, validated by the shared schema before it is written. Prices, assumptions, expectations and risk parameters live here as one value.',
+      },
+      {
+        name: 'changed_by',
+        type: 'text',
+        nullable: false,
+        maxLength: 120,
+        note: 'user id or "system"; an unattributed record is not reviewable.',
+      },
+      createdAt(),
+      updatedAt(),
+    ],
+    indexes: [
+      { name: 'decisions_user_decided_idx', columns: ['user_id', 'decided_at'] },
+      { name: 'decisions_portfolio_idx', columns: ['portfolio_id'] },
+      { name: 'decisions_symbol_idx', columns: ['user_id', 'symbol'] },
+    ],
+  },
+  {
+    table: 'decision_evaluations',
+    kind: 'persistent',
+    description:
+      'Append-only history of evaluations that were *attempted*: the readiness verdict, the outcome classification, the rule that decided it and the finding codes, all as of an instant. **No measured figure is stored** — not a return, not an R multiple, not a drawdown. Every number is recomputed from the record each time it is asked for, so a stored total cannot drift away from the prices it came from. What is kept is the part that cannot be recomputed: that an evaluation happened, when, on which version of the record, and what it refused.',
+    columns: [
+      pk(),
+      {
+        name: 'decision_id',
+        type: 'uuid',
+        nullable: false,
+        references: fk('decisions', 'cascade'),
+      },
+      {
+        name: 'user_id',
+        type: 'uuid',
+        nullable: false,
+        references: fk('users', 'cascade'),
+        note: 'Denormalised so the ownership check on a history read is one comparison rather than a join.',
+      },
+      {
+        name: 'decision_version',
+        type: 'integer',
+        nullable: false,
+        min: 1,
+        note: 'The version of the record this reading was taken from.',
+      },
+      {
+        name: 'readiness',
+        type: 'text',
+        nullable: false,
+        values: [
+          'READY_FOR_EVALUATION',
+          'READY_WITH_LIMITATIONS',
+          'INCOMPLETE_OUTCOME_DATA',
+          'REQUIRES_CLARIFICATION',
+          'BLOCKED',
+        ],
+      },
+      {
+        name: 'outcome',
+        type: 'text',
+        nullable: false,
+        values: ['realised', 'unrealised', 'hypothetical', 'simulated', 'incomplete'],
+        note: 'What a figure from this record would have been. Stored because it is a classification of the record at an instant, not a measurement.',
+      },
+      {
+        name: 'decided_by',
+        type: 'text',
+        nullable: false,
+        maxLength: 80,
+        note: 'The stable rule code that produced the verdict, so a decision can be reproduced from a log.',
+      },
+      {
+        name: 'finding_codes',
+        type: 'json',
+        nullable: false,
+        note: 'The codes, in the order the gate ordered them. Codes only: a finding’s `detail` is written by the code that raised it, and the record’s own prose is never copied into a log.',
+      },
+      {
+        name: 'reason',
+        type: 'text',
+        nullable: false,
+        values: ['requested', 'refresh', 'reassessment'],
+        note: 'Why this evaluation exists, so a history reads as a sequence of intentions rather than a list of timestamps.',
+      },
+      createdAt(),
+    ],
+    indexes: [
+      { name: 'decision_evaluations_decision_idx', columns: ['decision_id', 'created_at'] },
+      { name: 'decision_evaluations_user_idx', columns: ['user_id', 'created_at'] },
     ],
   },
 ];

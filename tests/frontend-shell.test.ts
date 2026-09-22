@@ -68,6 +68,10 @@ describe('frontend shell', () => {
       // (overview, holdings, allocation, observations, quality, declare) are internal tabs,
       // so the sidebar does not grow a sub-tree for it.
       'portfolio',
+      // Phase 5.7: one entry for the recorded decisions, their evaluation, and the capability
+      // catalogue behind them. Its sections (decisions, capabilities) are internal tabs, so the
+      // sidebar does not grow a sub-tree for it.
+      'evaluation',
       'academy',
       'exams',
       'lab',

@@ -2,6 +2,7 @@ import { ToolRegistry } from './framework.js';
 import { positionSizeTool, rMultipleTool } from './risk.js';
 import { smaTool, syntheticSeriesTool } from './marketData.js';
 import { portfolioComposeTool } from './portfolio.js';
+import { decisionEvaluateTool } from './evaluation.js';
 
 /** Build the default Phase 1 registry (all deterministic, side-effect free). */
 export function defaultToolRegistry(): ToolRegistry {
@@ -11,6 +12,7 @@ export function defaultToolRegistry(): ToolRegistry {
   registry.register(syntheticSeriesTool);
   registry.register(smaTool);
   registry.register(portfolioComposeTool);
+  registry.register(decisionEvaluateTool);
   return registry;
 }
 
@@ -35,3 +37,26 @@ export {
   SHORT_HORIZON_CONCENTRATION_PERCENT,
 } from './portfolio.js';
 export type { InsightInput, PortfolioAnalysis, PortfolioComposeInput } from './portfolio.js';
+
+/*
+ * Phase 5.6 adds `decision.evaluate`, registered through the same path as the two before it: a
+ * figure the model may describe is reached by a tool whose capability is declared in the
+ * permission table, never by an import the agent makes for itself.
+ */
+export {
+  buildDecisionReport,
+  computeDecisionMetrics,
+  decisionEvaluateTool,
+  deriveDecisionObservations,
+  directionOf,
+  evaluateDecision,
+  maxDrawdown,
+  round,
+} from './evaluation.js';
+export type {
+  DecisionEvaluateInput,
+  DecisionEvaluation,
+  DecisionMetrics,
+  EvaluationInput,
+  PathPoint,
+} from './evaluation.js';

@@ -46,6 +46,13 @@ export const PHASE1_PERMISSIONS: PermissionRule[] = [
   },
   {
     subject: 'model',
+    capability: 'decision.evaluate',
+    allowed: true,
+    rationale:
+      'The model may ask for a recorded decision to be measured, and the arithmetic is done by deterministic code over the prices the user recorded. The result says what happened and which parts could not be measured; the model may not produce an outcome figure itself, and no figure here is a prediction.',
+  },
+  {
+    subject: 'model',
     capability: 'education.explain',
     allowed: true,
     rationale: 'Core teaching purpose of the agent.',

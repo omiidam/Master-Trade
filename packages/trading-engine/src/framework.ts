@@ -16,6 +16,7 @@ export type ToolCapability =
   | 'marketData.synthetic'
   | 'risk.calculate'
   | 'portfolio.calculate'
+  | 'decision.evaluate'
   | 'education.explain'
   | 'memory.write'
   | 'backtest.run';

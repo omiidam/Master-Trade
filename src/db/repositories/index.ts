@@ -20,6 +20,7 @@ import { createPlatformRepository, PlatformRepository } from './platform.js';
 import { createAgentRepository, AgentRepository } from './agent.js';
 import { createProfileRepository, ProfileRepository } from './profile.js';
 import { createPortfolioRepository, PortfolioRepository } from './portfolio.js';
+import { createDecisionRepository, DecisionRepository } from './decision.js';
 import { createUsageRepository, UsageRepository } from './usage.js';
 import { OWNERSHIP_BY_TABLE, type Owner } from '../ownership.js';
 import type { TableName } from '../schema.js';
@@ -41,6 +42,17 @@ export type {
   ReplacePortfolioInput,
   StoredPortfolio,
 } from './portfolio.js';
+export { DecisionRepository, createDecisionRepository, EVALUATION_REASONS } from './decision.js';
+export type {
+  AmendDecisionInput,
+  DecisionEvaluationRow,
+  DecisionRow,
+  EvaluationReason,
+  ListDecisionsOptions,
+  RecordDecisionInput,
+  RecordEvaluationInput,
+  StoredDecision,
+} from './decision.js';
 export { UsageRepository, createUsageRepository } from './usage.js';
 export type {
   ApplyCreditInput,
@@ -80,6 +92,10 @@ export const REPOSITORY_MODULES: readonly { owner: Owner; tables: readonly Table
     owner: 'portfolio',
     tables: ['portfolios', 'portfolio_positions', 'portfolio_snapshots'],
   },
+  {
+    owner: 'decision',
+    tables: ['decisions', 'decision_evaluations'],
+  },
 ];
 
 export interface Repositories {
@@ -94,6 +110,7 @@ export interface Repositories {
   profile: ProfileRepository;
   usage: UsageRepository;
   portfolio: PortfolioRepository;
+  decision: DecisionRepository;
 }
 
 export interface RepositoryOptions {
@@ -126,6 +143,7 @@ export function createRepositories(db: SqlExecutor, options: RepositoryOptions =
     profile: createProfileRepository(db, shared),
     usage: createUsageRepository(db, shared),
     portfolio: createPortfolioRepository(db, shared),
+    decision: createDecisionRepository(db, shared),
   };
 }
 

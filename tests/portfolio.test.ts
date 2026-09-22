@@ -780,7 +780,10 @@ describe('portfolio readiness', () => {
     expect(question?.blocking).toBe(true);
   });
 
-  it('says the capability is planned rather than available', () => {
+  it('reports the capability flag the requirement registry declares, per scope', () => {
+    // Phase 5.7 corrected this flag: composition is built (engine, routes, store and surface), so
+    // it reports `available`, while risk is still declared and unbuilt. The exact set is pinned so
+    // a flag that drifts away from what exists is caught here rather than in a user's request.
     for (const scope of PORTFOLIO_SCOPES) {
       const decision = assessPortfolioReadiness({
         scope,
@@ -788,7 +791,7 @@ describe('portfolio readiness', () => {
         portfolio: portfolio([weighted('a', 100)]),
         now: NOW,
       });
-      expect(decision.capability).toBe('planned');
+      expect(decision.capability).toBe(scope === 'portfolio.composition' ? 'available' : 'planned');
       expect(decision.scope).toBe(scope);
     }
   });

@@ -217,3 +217,22 @@ The domain model, the calculation rules, the readiness matrix, the provenance an
 policy, the storage split, the API and metering boundary, the surface, and the prerequisites of a
 future market-data provider are in
 [portfolio-intelligence.md](../portfolio-intelligence.md).
+
+## Phase 5.7 — capabilities are declared, and the pipeline is a plan
+
+Phase 5.1 asked for a platform where the Agent Core does not own every responsibility. Phase 5.7
+answers it with a **capability**: a declared unit of work naming the modules it composes, the
+inputs that gate it, the operation the role table decides, the credits it costs, the engine that
+computes its figures, and what it explicitly does not claim. Undeclared means nonexistent, the
+catalogue is cross-checked against every other registry at boot, and the eleven-stage flow is a
+**pure plan** rather than a chain of awaits — so a refusal names the stage it stopped at, and a
+request refused before the engine holds no credits.
+
+| ADR                                                                        | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Decision id(s)                          | Status   |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | -------- |
+| [0047](./ADR-0047-capabilities-are-declared-and-the-pipeline-is-a-plan.md) | Capabilities are **declared code** and deny-by-default; the catalogue is cross-checked against the requirement, feature and role tables at boot; the pipeline is a **plan** whose refusal names the stage; readiness precedes permission precedes entitlement precedes the engine, so a refusal never moves a credit; availability and readiness are separate axes; `modelMayRequest` makes the LLM boundary declared; one result shape for a run and a refusal; deterministic work is free and nothing execution-shaped exists | `DEC-CAPABILITY-1-DECLARED-AND-PLANNED` | Accepted |
+
+The capability model, the catalogue, the lifecycle, the readiness gate, the orchestration order,
+the permission and credit boundary, the provenance and memory policy, the structured result, the
+portfolio and evaluation integrations, the responsive/mobile architecture and the security
+posture are in [capability-integration.md](../capability-integration.md).

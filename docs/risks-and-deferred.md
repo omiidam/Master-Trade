@@ -756,3 +756,30 @@ And one thing this phase refused to add: a "risk score". A single number for ris
 meaning, invites comparison between people's portfolios, and reads as advice. The answer to "how
 risky is this" is a set of observations with their evidence and their limitations, or it is
 nothing.
+
+## Phase 5.6–5.7 — decision evaluation, and the capability system
+
+Phase 5.6 gave a recorded decision a deterministic measurement; Phase 5.7 gave every module one
+unit of work and one path to travel. The risks below are the ones the two phases leave open.
+
+| Kind                                    | Item                                                                                                                                                                                                    | Trigger to revisit                                                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Limitation** — no price provider      | An evaluation measures what the prices _on the record_ say. Both ends must carry an observation time, so a record with a bare number is `INCOMPLETE_OUTCOME_DATA` rather than approximately measured.   | A market-data provider with provenance, which would let an outcome be resolved from a series instead of typed once. |
+| **Limitation** — no risk-adjusted half  | Drawdown over a valid series is computed; Sharpe-like ratios, beta and benchmark-relative figures are not, because none of them is defined without a benchmark series.                                  | The provider above plus a declared benchmark.                                                                       |
+| **Deferred** — capability run history   | Runs are audited but not stored as records: `GET /v1/capabilities` reports states, not a history of attempts.                                                                                           | Replay, or a user-visible "what did the platform do for me" view.                                                   |
+| **Deferred** — job requester            | `CapabilityRequester` declares `job` and no job requests a capability yet, so that path is typed but untravelled.                                                                                       | The first scheduled capability (`dataset.process`, `research.report`).                                              |
+| **Deferred** — mobile navigation        | The shell collapses to an icon rail below 1100px rather than a drawer or bottom bar. It is usable at 375px and it is what every existing surface uses.                                                  | Evidence that the rail is insufficient on a phone; a drawer is a shell change, not a per-page one.                  |
+| **Known gap** — model-narrated analysis | `portfolio.risk`, `market.structure`, `research.report` and `backtest.run` are declared and `coming-soon` with no engine. The catalogue says so, the surface says so, and each refuses before any work. | A market-data provider with provenance, then the engine for each.                                                   |
+
+Two properties this phase added and would defend in review:
+
+- **A refusal costs nothing.** The credit reservation sits in the engine stage, so a request refused
+  at readiness, permission or entitlement holds no credits — the plan contains no movement at all.
+  A refusal is also audited like any other attempt, so the absence of a charge is visible.
+- **A missing figure is never a zero.** `null` is a state with a reason attached (`not measurable`,
+  `not stated`, `price-stale`, `price-unverified`), and the surfaces are tested for the absence of
+  the shortcuts — `?? 0`, a bare dash, or a difference the engine did not report.
+
+And one thing this phase refused to add: **a capability that exists only to look impressive.** Every
+entry in the catalogue names an engine or names itself `coming-soon`; there is no capability whose
+result would be a paragraph with nothing behind it.

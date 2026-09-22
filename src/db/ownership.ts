@@ -38,7 +38,8 @@ export type Owner =
   | 'platform'
   | 'profile'
   | 'usage'
-  | 'portfolio';
+  | 'portfolio'
+  | 'decision';
 
 export type Mutability = 'append-only' | 'mutable' | 'versioned' | 'tombstone';
 
@@ -330,6 +331,24 @@ export const OWNERSHIP: readonly TableOwnership[] = [
     backup: 'backed-up',
     personalData: true,
     rule: 'Append-only history. No repository method updates or deletes a version: a composition that was analysed has to stay recoverable exactly as it was, so a later edit cannot rewrite what an earlier answer was based on.',
+  },
+  {
+    table: 'decisions',
+    owner: 'decision',
+    mutability: 'mutable',
+    retention: 'by-user-request',
+    backup: 'backed-up',
+    personalData: true,
+    rule: 'A decision the user recorded about their own portfolio. Mutable because its author may correct it, and deleted with the account. No measured figure is stored beside it: every return, R multiple and drawdown is recomputed from the prices on the record, so a corrected price cannot leave a stale number looking correct.',
+  },
+  {
+    table: 'decision_evaluations',
+    owner: 'decision',
+    mutability: 'append-only',
+    retention: 'by-user-request',
+    backup: 'backed-up',
+    personalData: true,
+    rule: 'Append-only history of evaluations that were attempted. No repository method updates or deletes a row: what a record was refused for on a given instant is a fact about that instant, and recomputing it from a later version of the record would give the later answer. Codes and verdicts are stored; no measured figure is.',
   },
 ];
 

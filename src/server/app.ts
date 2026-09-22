@@ -54,6 +54,14 @@ import { logRequestCompleted, createLogging, type ServerLogging } from './loggin
 import { agentChatHandler } from './handlers/agent.js';
 import { healthHandler, readinessHandler } from './handlers/health.js';
 import { jobCancelHandler, jobGetHandler, jobListHandler } from './handlers/jobs.js';
+import {
+  decisionEvaluateHandler,
+  decisionGetHandler,
+  decisionListHandler,
+  decisionRecordHandler,
+  decisionWriteHandler,
+} from './handlers/decision.js';
+import { capabilityReadHandler } from './handlers/capability.js';
 import { portfolioReadHandler, portfolioWriteHandler } from './handlers/portfolio.js';
 import { profileReadHandler, profileWriteHandler } from './handlers/profile.js';
 import { decideReadiness, loadContext, qualityAssessHandler } from './handlers/quality.js';
@@ -417,6 +425,45 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
       now: deps.now,
     }) as AnyHandler,
     'portfolio.write': portfolioWriteHandler({
+      repositories: deps.repositories,
+      marketData,
+      now: deps.now,
+    }) as AnyHandler,
+    // The decision surface. Writing a declaration is not metered and evaluating one is, which is
+    // the same split the portfolio routes use and for the same reason: the feature the catalogue
+    // prices names the operation that runs the arithmetic (`decision.evaluate`), and an attempt
+    // is recorded even when it costs nothing, so the usage history is a record of what the
+    // platform did rather than only of what it charged.
+    'decision.list': decisionListHandler({
+      repositories: deps.repositories,
+      now: deps.now,
+    }) as AnyHandler,
+    'decision.get': decisionGetHandler({
+      repositories: deps.repositories,
+      marketData,
+      now: deps.now,
+    }) as AnyHandler,
+    'decision.record': decisionRecordHandler({
+      repositories: deps.repositories,
+      marketData,
+      now: deps.now,
+    }) as AnyHandler,
+    'decision.write': decisionWriteHandler({
+      repositories: deps.repositories,
+      marketData,
+      now: deps.now,
+    }) as AnyHandler,
+    'decision.evaluate': decisionEvaluateHandler({
+      repositories: deps.repositories,
+      marketData,
+      usage,
+      featureId: FEATURES_BY_ID['decision.evaluation'].id,
+      now: deps.now,
+    }) as AnyHandler,
+    // The capability catalogue. Read-only, and it resolves no permission of its own: `state`
+    // describes the caller's declared inputs and whether the capability exists, while whether a
+    // role may run it is decided per request by the pipeline.
+    'capability.read': capabilityReadHandler({
       repositories: deps.repositories,
       marketData,
       now: deps.now,

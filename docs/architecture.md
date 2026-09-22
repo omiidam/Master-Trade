@@ -17,6 +17,7 @@ why the decisions were made.
 | Input quality and the analysis-readiness gate     | [input-quality-and-data-reliability.md](./input-quality-and-data-reliability.md)     |
 | Usage credits, plans and premium                  | [usage-credits-and-premium.md](./usage-credits-and-premium.md)                       |
 | Portfolio intelligence (declared, never stored)   | [portfolio-intelligence.md](./portfolio-intelligence.md)                             |
+| Capabilities, orchestration, evaluation surface   | [capability-integration.md](./capability-integration.md)                             |
 | Desktop shell, frontend, view models              | [desktop-and-frontend.md](./desktop-and-frontend.md)                                 |
 | API layer, contracts, auth/authz                  | [api-auth.md](./api-auth.md)                                                         |
 | AI layer, prompts, LLM abstraction                | [ai-and-llm.md](./ai-and-llm.md)                                                     |
@@ -383,3 +384,35 @@ No trading capability was added, no permission was relaxed, and the Model /
 Tools / Instructions separation plus the approval gates are untouched. Details:
 [backend-foundation.md](./backend-foundation.md),
 [ADR-0022](./adr/ADR-0022-local-api-trust-boundary.md).
+
+## 13. Capability integration (Phase 5.7)
+
+Phases 5.2–5.6 each built one module. Phase 5.7 gave them one unit of work and one
+path: a **capability** is declared code naming the modules it composes, the analysis
+type that gates it, the operation the role table decides, the credits it costs, the
+engine that owns its arithmetic, and what it explicitly does not claim.
+
+```
+request → resolution → validation → quality → readiness → permission
+        → entitlement → engine → evidence → explanation → result → audit
+```
+
+- **Deny-by-default.** An undeclared id does not exist; there is no fuzzy match and no
+  fallback capability ([ADR-0047](./adr/ADR-0047-capabilities-are-declared-and-the-pipeline-is-a-plan.md)).
+- **The pipeline is a plan, not a call chain.** `planCapabilityRun` is pure, so a
+  refusal names the stage it stopped at as a value the API returns.
+- **Order is load-bearing.** Readiness precedes permission (nobody is told they lack
+  authority for something their inputs cannot support); permission precedes
+  entitlement (authority is not affordability); entitlement precedes the engine, so a
+  refused request holds no credits at all.
+- **The catalogue is cross-checked at boot** against the requirement table, the feature
+  catalogue and the role table, and a `high-impact` capability that would cite
+  unverified memory fails the check rather than shipping.
+- **The surface derives nothing.** One sidebar entry with two internal tabs renders the
+  structured result — including absences with their reasons — and performs no arithmetic.
+  Responsive behaviour is the shared system's (icon rail below 1100px, mobile-first
+  grids, the one table inside its own scroll container), enforced by tests.
+
+No execution capability exists, `liveTradingEnabled` and `brokerExecutionEnabled`
+remain disabled, and no model has a vote on readiness, permission or cost. Details:
+[capability-integration.md](./capability-integration.md).

@@ -121,6 +121,24 @@ export const OPERATIONS = {
     false,
     "Declare or replace the authenticated user's own portfolio composition",
   ),
+  'decision.read': op(
+    'decision.read',
+    'normal',
+    false,
+    "Read the authenticated user's own recorded decisions and the readings taken from them",
+  ),
+  'decision.write': op(
+    'decision.write',
+    'sensitive',
+    false,
+    "Record, amend or remove the authenticated user's own portfolio decisions",
+  ),
+  'decision.evaluate': op(
+    'decision.evaluate',
+    'normal',
+    false,
+    'Evaluate a decision the authenticated user recorded, from the prices on the record',
+  ),
   'marketData.read': op('marketData.read', 'normal', false, 'Read normalized market data'),
   'marketData.ingest': op(
     'marketData.ingest',
@@ -192,6 +210,12 @@ const student: OperationId[] = [
   // account — the isolation is structural rather than checked.
   'portfolio.read',
   'portfolio.write',
+  // The same shape for decisions: a learner records their own and reads their own back, so
+  // there is no id to point at somebody else's. Evaluating one runs deterministic code over
+  // prices the caller supplied, which is why it needs no write grant either.
+  'decision.read',
+  'decision.write',
+  'decision.evaluate',
 ];
 
 const coach: OperationId[] = [
@@ -231,6 +255,10 @@ const observer: OperationId[] = [
   'usage.read',
   // Reading a composition is a read; declaring one is not granted to this role at all.
   'portfolio.read',
+  // An observer may read decisions and see them evaluated — an evaluation changes nothing and
+  // records no order — but may not record, amend or remove one.
+  'decision.read',
+  'decision.evaluate',
 ];
 
 /** A background worker: infrastructure capabilities only. */

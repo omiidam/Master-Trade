@@ -201,12 +201,17 @@ export interface MarketDataRequirement {
 }
 
 export type AnalysisType =
-  'education.explain' | 'portfolio.composition' | 'portfolio.risk' | 'market.structure';
+  | 'education.explain'
+  | 'portfolio.composition'
+  | 'portfolio.risk'
+  | 'decision.evaluation'
+  | 'market.structure';
 
 export const ANALYSIS_TYPES: readonly AnalysisType[] = [
   'education.explain',
   'portfolio.composition',
   'portfolio.risk',
+  'decision.evaluation',
   'market.structure',
 ];
 
@@ -296,7 +301,11 @@ export const ANALYSIS_REQUIREMENTS: readonly AnalysisRequirement[] = [
     type: 'portfolio.composition',
     label: 'Describe your composition',
     description: 'Describe what you hold, by allocation, with no forward view.',
-    capability: 'planned',
+    // Corrected in Phase 5.7. Phase 5.5 built this capability — the engine, the routes,
+    // the store and the surface all exist — and left the flag reading `planned`, which
+    // made the API refuse through the agent path a capability the product already had.
+    // The registry check now *requires* this flag and the capability catalogue to agree.
+    capability: 'available',
     inputs: [
       {
         field: 'holdings',
@@ -396,6 +405,55 @@ export const ANALYSIS_REQUIREMENTS: readonly AnalysisRequirement[] = [
       },
     ],
     note: 'There is no profitability or predictive claim to be found here, and no position sizing.',
+  },
+  {
+    type: 'decision.evaluation',
+    label: 'Evaluate a recorded decision',
+    description:
+      'Measure what happened to a decision you recorded, from the prices on the record, and name plainly the parts that cannot be measured.',
+    capability: 'available',
+    inputs: [
+      {
+        field: 'horizon',
+        necessity: 'helpful',
+        whenAbsent: 'limit',
+        whenStale: 'limit',
+        whenConflicting: 'limit',
+        // The assumption is a *labelled* one and it is only about what the window can be
+        // compared with. It never reaches a figure: the outcome comes from the record.
+        assumable: {
+          permitted: true,
+          statement: 'no horizon declared, so the window measured is compared with nothing',
+        },
+        why: 'Whether a window can say anything about method depends on how long the decision was meant to run for.',
+      },
+      {
+        field: 'riskTolerance',
+        necessity: 'helpful',
+        whenAbsent: 'limit',
+        whenStale: 'limit',
+        whenConflicting: 'limit',
+        assumable: {
+          permitted: true,
+          statement:
+            'no risk tolerance declared, so the planned risk is reported without comment on it',
+        },
+        why: 'The R multiple is computed from the planned risk on the record. A declared tolerance sharpens whether that risk was in character — it never supplies the number.',
+      },
+      {
+        field: 'markets',
+        necessity: 'helpful',
+        whenAbsent: 'limit',
+        whenStale: 'limit',
+        whenConflicting: 'limit',
+        assumable: {
+          permitted: true,
+          statement: 'no markets declared, so the outcome is not read in a market context',
+        },
+        why: 'An outcome is easier to read in the market it happened in.',
+      },
+    ],
+    note: 'Every figure comes from prices someone recorded, and every figure is labelled with what it is — realised, unrealised, hypothetical or incomplete. Nothing about the outcome is predicted, and no figure exists without both ends of the measurement.',
   },
   {
     type: 'market.structure',

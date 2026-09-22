@@ -6,10 +6,13 @@
   "type": "module",
   "exports": {
     "./api/contracts": "./src/api/contracts.ts",
+    "./capabilities/model": "./src/capabilities/model.ts",
     "./core/errors": "./src/core/errors.ts",
     "./core/headers": "./src/core/headers.ts",
     "./core/ids": "./src/core/ids.ts",
     "./core/provenance": "./src/core/provenance.ts",
+    "./decisions/model": "./src/decisions/model.ts",
+    "./decisions/readiness": "./src/decisions/readiness.ts",
     "./desktop/ipc": "./src/desktop/ipc.ts",
     "./frontend/viewModels": "./src/frontend/viewModels.ts",
     "./jobs/service": "./src/jobs/service.ts",

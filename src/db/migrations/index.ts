@@ -19,6 +19,7 @@ import { initialMigration } from './0001_initial.js';
 import { tradingContextMigration } from './0002_trading_context.js';
 import { usageAndSubscriptionMigration } from './0003_usage_and_subscription.js';
 import { portfolioIntelligenceMigration } from './0004_portfolio_intelligence.js';
+import { decisionEvaluationMigration } from './0005_decision_evaluation.js';
 import { validateMigrations, type Migration } from './types.js';
 
 export const MIGRATIONS: readonly Migration[] = [
@@ -26,6 +27,7 @@ export const MIGRATIONS: readonly Migration[] = [
   tradingContextMigration,
   usageAndSubscriptionMigration,
   portfolioIntelligenceMigration,
+  decisionEvaluationMigration,
 ];
 
 export function validateMigrationRegistry(migrations: readonly Migration[] = MIGRATIONS): void {

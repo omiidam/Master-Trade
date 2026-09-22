@@ -21,6 +21,16 @@
 import type { AgentChatBody } from '../../../packages/shared/src/api/schemas.js';
 import type { AgentAsyncTurn, AgentService, AgentTurn } from '../../agent/service.js';
 import type { AnalysisReadinessDecision } from '../../../packages/shared/src/quality/readiness.js';
+import {
+  planCapabilityRun,
+  resultFromPlan,
+  type CapabilityRunPlan,
+} from '../../../packages/shared/src/capabilities/orchestration.js';
+import { resolveCapability } from '../../../packages/shared/src/capabilities/registry.js';
+import type { CapabilityResult } from '../../../packages/shared/src/capabilities/model.js';
+import { authorize, type Principal } from '../../../packages/shared/src/auth/model.js';
+import { defaultToolRegistry } from '../../../packages/trading-engine/src/index.js';
+import type { EntitlementDecision } from '../../../packages/shared/src/usage/entitlements.js';
 import type { EventBus } from '../../../packages/shared/src/realtime/events.js';
 import type { Logger } from '../../../packages/shared/src/core/logging.js';
 import { AppError } from '../../../packages/shared/src/core/errors.js';
@@ -44,6 +54,14 @@ export interface AgentChatResponseData {
    * limitations the answer must be read against.
    */
   readiness?: AgentAsyncTurn['readiness'];
+  /**
+   * The structured capability result, present only when the request named a capability.
+   *
+   * Rendered as data, never parsed out of the reply: the state, the calculations, the
+   * limitations and the next actions are all fields, so a client shows what the server decided
+   * rather than reading prose to guess at it.
+   */
+  capability?: CapabilityResult | null;
   /** What the turn cost, and why. Absent only when the server does not meter turns. */
   usage?: {
     operationKey: string;
@@ -77,6 +95,44 @@ export function agentChatHandler(
     | undefined,
   metering?: AgentMetering | undefined,
 ): RouteHandler<AgentChatBody, AgentChatResponseData> {
+  /*
+   * The deterministic engines this process actually holds, asked of the registry rather than
+   * assumed. A capability whose engine is not registered here is refused at the plan's
+   * validation stage, which is the honest answer: the arithmetic it declares is not available in
+   * this deployment, and producing the answer without it would be producing it from prose.
+   */
+  const registeredEngines = [
+    ...new Set(
+      defaultToolRegistry()
+        .list()
+        .flatMap((tool) => tool.descriptor.capabilities as readonly string[]),
+    ),
+  ];
+
+  /**
+   * Resolve one capability's entitlement, or `null` when there is no metering to resolve against.
+   *
+   * `status()` computes every declared feature's decision from the stored plan, the subscription
+   * status and the role table's own answers, so this reads the server's answer rather than
+   * forming a second one. A capability with no declared feature needs none: it is not metered, and
+   * asking about a feature that does not exist would be a refusal manufactured out of nothing.
+   */
+  const entitlementOf = async (
+    featureId: string | null,
+    principal: Principal | null,
+  ): Promise<EntitlementDecision | null> => {
+    if (featureId === null) return null;
+    if (metering === undefined || principal === null) return null;
+    try {
+      const status = await metering.service.status(principal);
+      return status.features.find((entry) => entry.feature.id === featureId)?.decision ?? null;
+    } catch {
+      // A store that cannot be read yields no entitlement, which the plan treats as a refusal.
+      // Falling back to "allowed" would be the one way a capability could run unmetered.
+      return null;
+    }
+  };
+
   return async ({ context, body }) => {
     /*
      * Run the turn. Everything about what a turn *is* lives in here, so the metered and
@@ -96,6 +152,101 @@ export function agentChatHandler(
        * it; that would make "the model never sees what the gate refused" false on exactly
        * the deployments least able to afford it.
        */
+      /*
+       * A request that names a **capability** goes through the registry first (Phase 5.7).
+       *
+       * The declared order is applied here and nowhere else: resolution (deny-by-default, plus
+       * whether a model may ask for it at all), validation (does this deployment hold the engine
+       * it binds), the gate for the analysis type it declares, the role table's answer for **its
+       * own** operation, and its entitlement. Only then is a model consulted — and on a refusal it
+       * is not consulted at all, because there is no inference to argue with.
+       *
+       * The engine stage is not a second call: the deterministic tool runs *inside* the turn, on
+       * the orchestrator's permission-checked tool path, which is the only route allowed to
+       * compute a figure. This plan's job is to prove that route exists before the model is asked
+       * to use it.
+       */
+      if (body.capabilityId !== undefined) {
+        const principal = context.principal;
+        const declared = resolveCapability(body.capabilityId);
+        const analysisType = declared?.analysisType ?? null;
+        const gatedReadiness =
+          analysisType === null || decide === undefined || principal === null
+            ? null
+            : await decide(principal.id, analysisType);
+        const entitlement = await entitlementOf(declared?.feature ?? null, principal);
+        // The **request's own clock**, not `Date.now()`: the pipeline judged this request against
+        // `context.startedAt`, and a session that was active for the pipeline must not be expired
+        // a millisecond later by a second reading of the clock. One request, one instant.
+        const permissionGranted =
+          declared?.operation === null || declared?.operation === undefined
+            ? true
+            : principal !== null &&
+              authorize(principal, declared.operation, context.startedAt).allowed;
+
+        const plan: CapabilityRunPlan = planCapabilityRun({
+          capabilityId: body.capabilityId,
+          requester: 'user',
+          readiness: gatedReadiness,
+          permissionGranted,
+          entitlement,
+          registeredEngineCapabilities: registeredEngines,
+        });
+        const capability = resultFromPlan(plan);
+
+        context.logger.info(
+          'capability resolved for an agent turn',
+          {
+            capabilityId: plan.requestedId,
+            resolved: plan.capability !== null,
+            state: plan.state,
+            outcome: plan.outcome,
+            stoppedAt: plan.stoppedAt,
+            code: plan.refusals[0]?.code ?? null,
+            analysisType,
+            readiness: gatedReadiness?.readiness ?? null,
+            decidedBy: plan.decidedBy,
+            engineConsulted: plan.outcome === 'run',
+          },
+          'capability.resolve',
+        );
+
+        if (plan.outcome === 'refuse') {
+          // The refusal *is* the reply, in the shape the service already speaks for a blocked
+          // turn, with the structured result attached so the surface can render the stage, the
+          // reasons and the next actions without parsing the sentence.
+          return {
+            status: 'blocked',
+            reply: plan.refusals[0]?.reason ?? 'The capability was refused.',
+            epistemicKind: 'uncertainty',
+            reason: plan.refusals[0]?.reason ?? 'The capability was refused.',
+            statements: [],
+            toolResultCount: 0,
+            agentState: service.state(),
+            model: 'none',
+            readiness: gatedReadiness,
+            capability,
+          };
+        }
+
+        const turn = service.run(body.message, {
+          readiness: gatedReadiness,
+          capability,
+        });
+        context.logger.info(
+          'capability turn completed',
+          {
+            status: turn.status,
+            capabilityId: plan.requestedId,
+            state: plan.state,
+            readiness: turn.readiness?.readiness ?? null,
+            toolResultCount: turn.toolResultCount,
+          },
+          'agent.turn.capability',
+        );
+        return turn;
+      }
+
       if (body.analysisType !== undefined) {
         const principal = context.principal;
         const readiness =
@@ -152,6 +303,7 @@ export function agentChatHandler(
         statements: turn.statements,
         note: OFFLINE_NOTE,
         ...(turn.readiness === undefined ? {} : { readiness: turn.readiness }),
+        ...(turn.capability === undefined ? {} : { capability: turn.capability }),
         ...(usage === undefined ? {} : { usage }),
       },
     });
