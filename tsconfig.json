@@ -51,6 +51,7 @@
     "config/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts",
+    "vitest.browser.config.ts",
     "web/src/config/**/*.ts",
     "web/src/design/**/*.ts",
     "web/src/mock/**/*.ts"

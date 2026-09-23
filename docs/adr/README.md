@@ -257,3 +257,21 @@ The transport boundary, the data classification, secret management, the incident
 every item that needs professional review are in
 [security-and-privacy.md](../security-and-privacy.md). The asset set, the usage rules and the
 identity mapping are in [brand-assets.md](../brand-assets.md).
+
+Phase 5.10 closed the gap Phase 5.9 recorded against itself. Every responsive, branding and state rule
+was asserted against the shipped source text, and none of those assertions could answer a question a
+layout engine decides — whether a page scrolls sideways on a phone, whether a control is big enough to
+hit, whether the logo loaded, whether a screen rendered at all. The suite now drives the browser the
+host already has, over the DevTools Protocol, using Node's built-in `WebSocket`, so the invariant this
+repository maintains deliberately — no second toolchain in the dependency graph — survives intact. The
+first honest run found a real defect the text rules had passed: a tab strip that could not wrap,
+overflowing five screens on a phone.
+
+| ADR                                                       | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Decision id(s)                   | Status   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | -------- |
+| [0050](./ADR-0050-the-browser-is-driven-not-installed.md) | The browser is **driven, not installed**: a Chromium-family browser already on the host, over the DevTools Protocol, with no new dependency; the **built** application is served over real HTTP rather than the dev server; the suite is **excluded from the hermetic run** and asserted to stay excluded; every wait is a bounded poll and a page switch is awaited on the **rendered heading**, not on `aria-current`; probes **name the offending element** rather than the symptom; a missing browser is a **named skip**, never a failure | `DEC-E2E-1-DRIVEN-NOT-INSTALLED` | Accepted |
+
+The layer it adds, what it measures and the limitation it does **not** close are in
+[product-foundation-test-strategy.md](../product-foundation-test-strategy.md). What was verified for
+the Foundation as a whole, and what was not, is in
+[product-foundation-handoff.md](../product-foundation-handoff.md).

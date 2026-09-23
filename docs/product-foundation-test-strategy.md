@@ -17,10 +17,17 @@ suite delivers is worse than no document:
 ## 1. Running it
 
 ```bash
-npm run validate     # format:check → typecheck → typecheck:web → test → build → build:web → desktop:verify
-npm test             # the suite alone
+npm run validate     # format:check → typecheck → typecheck:web → test → build → build:web → desktop:verify → test:e2e
+npm test             # the hermetic suite alone: no network, no browser, no build needed
+npm run test:e2e     # the browser suite: needs web/dist and an installed Chromium-family browser
 npm run audit:prod   # production dependency audit
 ```
+
+`test:e2e` is last in `validate` on purpose: it renders the **built** application, so `build:web`
+must have produced `web/dist` first. The browser suite is excluded from the hermetic run
+(`vitest.config.ts`), and `tests/test-hygiene.test.ts` asserts that exclusion holds — otherwise the
+broad `tests` include would collect it and `npm test` would quietly come to require both a build and
+a browser.
 
 `validate` is the gate. It is the same sequence a release must pass, and `tests/test-hygiene.test.ts`
 asserts that it still contains every one of those steps — so a step cannot be dropped from the
@@ -29,13 +36,17 @@ entry point while the individual scripts remain.
 **Verified at the end of Phase 5.9:** 51 suites, 921 tests, all passing; run twice in full and the
 timing-sensitive subset three more times, with no flakes observed.
 
+**Verified at the end of Phase 5.10:** 52 hermetic suites, 927 tests, plus 27 rendered-browser tests
+in a second config — 954 in total. Every gate in `npm run validate` passes end to end, and the browser
+matrix renders 7 widths × 14 pages (98 rendered pages) with no horizontal overflow.
+
 ---
 
 ## 2. Testing architecture
 
-Seven layers, each in `tests/`, each with a different reason to exist. The layering is deliberate:
-a domain rule and the route that exposes it are checked by different suites, so a change to one
-cannot satisfy both by accident.
+Eight layers, each with a different reason to exist. The layering is deliberate: a domain rule and
+the route that exposes it are checked by different suites, so a change to one cannot satisfy both by
+accident. The last layer is the one Phase 5.9 could not build and Phase 5.10 did.
 
 | Layer                          | What it holds                                                                                                                                          | Representative suites                                                                                                                             |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -46,6 +57,7 @@ cannot satisfy both by accident.
 | **End-to-end product flows**   | The joins between phases, in the order a user reaches them.                                                                                            | `product-flows.test.ts` (30)                                                                                                                      |
 | **Frontend source contracts**  | The shipped `.tsx` read as text: what a surface may compute, claim, expose and lay out.                                                                | `frontend-responsive.test.ts` (21), `frontend-evaluation.test.ts` (20), `frontend-journal.test.ts` (33), `frontend-modules.test.ts` (26)          |
 | **Security and deployment**    | The transport boundary, redaction, the trading boundary, and what the deployment depends on.                                                           | `security.test.ts` (26), `production-readiness.test.ts` (19), `test-hygiene.test.ts` (10), `brand.test.ts` (19)                                   |
+| **Rendered browser**           | The **built** application in a real browser over the DevTools Protocol: resolved layout, touch targets, real key events, live asset delivery.          | `tests/browser/e2e.test.ts` (27), driven by `tests/browser/driver.ts` (no dependency — see ADR-0050)                                              |
 
 Two conventions carry across all of them:
 
@@ -381,14 +393,20 @@ nothing per test — they read files and pure functions rather than booting infr
 
 Stated plainly, because each one is a place where a real defect could still pass:
 
-1. **Source assertions are not rendered assertions.** The responsive, brand and state rules are
-   checked against the shipped `.tsx`, so a correct class list on an element the browser does not
-   receive as expected is invisible here.
-2. **Conditional coverage.** The database suites, the bundle check and the Tailwind oxide check are
-   each guarded by their environment. A green run on a machine without the native driver means
-   fewer tests ran, and vitest reports those as skipped rather than passing.
+1. **Source assertions are not rendered assertions.** ~~The responsive, brand and state rules are
+   checked against the shipped `.tsx`~~ — **closed for layout and branding in Phase 5.10.** The
+   responsive matrix, touch-target sizes, text clipping, RTL mirroring, keyboard focus, image loading
+   and live asset delivery are now measured in a real browser (`tests/browser/e2e.test.ts`), and
+   doing so found a genuine defect the source-text rules had passed: a tab strip that could not wrap,
+   overflowing five screens on a phone. What remains uncovered by a browser is **appearance** rather
+   than geometry, and the state exhibits that pages render as labelled fixtures (see items 2 and 6).
+2. **Conditional coverage.** The database suites, the bundle check, the Tailwind oxide check and now
+   the browser suite are each guarded by their environment. A green run on a machine without the
+   native driver, or without an installed browser, means fewer tests ran, and vitest reports those as
+   skipped rather than passing.
 3. **No real network, by design.** Provider adapters are tested against a fetch double, so a change
-   in a provider's actual response would not be caught until integration.
+   in a provider's actual response would not be caught until integration. The browser suite does not
+   change this: it serves a static build over loopback and talks to no API.
 4. **A single worker and no contention.** The suite does not run under the CPU contention the
    timeout budget exists for, so the budget is reasoned about rather than measured in place.
 5. **Legal and compliance items remain unverified.** §14 of `security-and-privacy.md` lists what

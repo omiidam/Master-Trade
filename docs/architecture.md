@@ -481,3 +481,46 @@ boundary is asserted against the **source tree** as well as the configuration.
 
 **Detailed strategy, per-area coverage and the gaps this phase did not close:**
 [product-foundation-test-strategy.md](./product-foundation-test-strategy.md).
+
+---
+
+## 12. The Foundation is verified as a browser renders it (Phase 5.10)
+
+Phase 5.9 verified the interface with 921 tests and recorded the one limitation it could not close:
+the responsive, branding and state rules were asserted against the shipped `.tsx` **as text**. A
+source-text assertion can prove that a class is present; it cannot answer a question a layout engine
+decides — whether a page scrolls sideways on a phone, whether a control is big enough to hit, whether
+the logo loaded, whether a screen rendered at all.
+
+**The browser is driven, not installed** ([ADR-0050](./adr/ADR-0050-the-browser-is-driven-not-installed.md)).
+A Chromium-family browser already on the host is launched with `--remote-debugging-port` and driven
+over the DevTools Protocol by ~250 lines in `tests/browser/driver.ts`, using Node's built-in
+`WebSocket` for transport. No dependency is added — which matters here, because
+`tests/dependency-graph.test.ts` exists specifically to fail if a second, vulnerable toolchain
+reappears in the graph.
+
+**The build is served, not the dev server.** `web/dist` over a loopback `node:http` fixture, so the
+suite exercises the hashed asset names, the manifest and the favicon exactly as a browser receives
+them, with no watcher or cold transform between an assertion and the thing asserted.
+
+**The suite is excluded from the hermetic run**, and `tests/test-hygiene.test.ts` asserts that the
+exclusion holds, because the broad `tests` include would otherwise collect it and `npm test` would
+quietly come to require a build and an installed browser.
+
+**What the first honest run found.** A tab strip was a plain flex row with no wrapping and no overflow
+handling. Because a tab strip's width is set by its content, it became the widest thing on the page and
+on a phone **the document itself scrolled sideways** — five screens, up to 179 px, across twelve pages
+that use `Tabs`. The text-based rules had passed it. The defect that hid it was in the harness: the
+first version waited on `aria-current`, which the sidebar flips immediately, while the workspace swaps
+children inside `AnimatePresence mode="wait"` — so the measurement described the page _before_ the one
+requested. Waiting on the rendered heading is what exposed it.
+
+**What it measures.** 7 widths × 14 pages = 98 rendered pages, asserting zero horizontal overflow with
+offending elements named, touch targets against the WCAG 2.2 minimum, accessible names and image
+alternatives, text clipping, RTL mirroring, real key events (including `:focus-visible` and `Escape` on
+a dialog), live HTTP delivery of every brand asset with magic-byte checks, a manifest a browser could
+install from, and the product posture as the user reads it on screen.
+
+**Handoff, debt and the checkpoint: **
+[product-foundation-handoff.md](./product-foundation-handoff.md),
+[technical-debt.md](./technical-debt.md), [release-baseline.json](./release-baseline.json).

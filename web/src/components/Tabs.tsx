@@ -36,16 +36,30 @@ export function Tabs({
       onValueChange={onValueChange}
       className={cn('flex flex-col gap-4', className)}
     >
+      {/*
+        A tab strip is the one control whose width is set by its *content*, not by the
+        layout: the labels are fixed and the count grows with the page. Left as a plain
+        flex row it therefore became the widest thing on the page, and on a phone the
+        document itself scrolled sideways — which is how five screens (Memory, Research,
+        Exams, Activity, Settings) failed the Phase 5.10 browser matrix.
+
+        Scrolling is the fix rather than wrapping. Wrapping would turn a one-line control
+        into a two-row block of pills at unpredictable widths, changing the design on the
+        screens that need it most; a horizontal scroll keeps the strip one row and keeps
+        every tab reachable. `w-full` bounds the scroller and `min-w-0` lets it shrink
+        inside its parent, and the triggers stop shrinking so a long label cannot squash
+        its neighbours down to initials.
+      */}
       <RadixTabs.List
         aria-label={ariaLabel}
-        className="flex items-center gap-1 rounded-[var(--radius-control)] border border-border bg-surface-sunken p-1"
+        className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain rounded-[var(--radius-control)] border border-border bg-surface-sunken p-1"
       >
         {items.map((item) => (
           <RadixTabs.Trigger
             key={item.id}
             value={item.id}
             className={cn(
-              'inline-flex items-center gap-2 rounded-[calc(var(--radius-control)-2px)] px-3 py-1.5',
+              'inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[calc(var(--radius-control)-2px)] px-3 py-1.5',
               'text-caption font-medium text-text-muted transition-colors',
               'hover:text-text data-[state=active]:bg-surface-raised data-[state=active]:text-text',
               'data-[state=active]:shadow-panel',

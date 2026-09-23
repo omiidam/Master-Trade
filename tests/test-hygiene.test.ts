@@ -27,10 +27,21 @@ import { describe, expect, it } from 'vitest';
 
 const read = (path: string): string => readFileSync(path, 'utf8');
 
-const TEST_FILES = readdirSync('tests')
-  .filter((name) => name.endsWith('.test.ts'))
-  .map((name) => `tests/${name}`)
-  .sort();
+/**
+ * Every test file the project runs — including the browser suite.
+ *
+ * `tests/browser/` is listed explicitly rather than by a recursive walk, and it has to be
+ * listed at all: it runs from a second config, so it is exactly the kind of suite that
+ * quietly stops being covered by a guard that only looks in one place.
+ */
+const TEST_FILES = [
+  ...readdirSync('tests')
+    .filter((name) => name.endsWith('.test.ts'))
+    .map((name) => `tests/${name}`),
+  ...readdirSync(join('tests', 'browser'))
+    .filter((name) => name.endsWith('.test.ts'))
+    .map((name) => `tests/browser/${name}`),
+].sort();
 
 /**
  * This file is excluded from the pattern scans below.
@@ -44,6 +55,16 @@ const SCANNED = TEST_FILES.filter((path) => path !== SELF);
 
 /** A fixed-duration wait: `setTimeout(resolve, 5)`. */
 const FIXED_WAIT = /setTimeout\(resolve, \d+\)/g;
+
+/**
+ * The forms that actually skip a test.
+ *
+ * Anchored on the runner's own names rather than on any `.skip`. The looser version
+ * matched a property access — `shell.skipHref`, read off a measurement — which skips
+ * nothing, and a guard that fires on unrelated identifiers is a guard people learn to
+ * work around instead of obeying. Every form `vitest` honours is still covered.
+ */
+const SKIP_FORM = /\b(it|test|describe)\.skip\b/;
 
 /** The three shapes a wait is allowed to take. */
 const PERMITTED_WAIT_CONTEXT = [/register\(/, /sleep:/, /settle/, /deadline/, /Date\.now\(\) </];
@@ -67,20 +88,31 @@ describe('no test can be silently skipped', () => {
     for (const path of SCANNED) {
       const source = read(path);
       for (const [index, line] of source.split('\n').entries()) {
-        if (!/\.skip\b/.test(line) || isComment(line)) continue;
-        // The guard shape: `available ? it : it.skip`, `declared.length === 0 ? it.skip : it`.
-        // A bare `it.skip(` is a test that was turned off and left off.
+        if (!SKIP_FORM.test(line) || isComment(line)) continue;
+        // The guard shape: `available ? it : it.skip`, `declared.length === 0 ? it.skip : it`,
+        // or a whole suite behind an environment check
+        // (`noBrowser ? describe.skip : describe`). A bare `it.skip(` or `describe.skip(`
+        // is a test that was turned off and left off.
         expect(
-          /\?\s*it(\.skip)?\s*:/.test(line),
+          /\?\s*(it|describe)(\.skip)?\s*:/.test(line),
           `${path}:${index + 1} skips unconditionally: ${line.trim()}`,
         ).toBe(true);
       }
     }
   });
 
-  it('declares every test file to the runner, so none can be excluded by omission', () => {
+  it('declares every test file to a runner, so none can be excluded by omission', () => {
     const config = read('vitest.config.ts');
     expect(config).toMatch(/include:\s*\['tests\/\*\*\/\*\.test\.ts'\]/);
+
+    // The browser suite is declared to its own config...
+    const browser = read('vitest.browser.config.ts');
+    expect(browser).toMatch(/include:\s*\['tests\/browser\/\*\*\/\*\.test\.ts'\]/);
+
+    // ...and excluded from the hermetic run, which must not come to depend on a build or
+    // on a browser being installed. Without the exclusion the broad `tests/**` include
+    // above would collect it, and `npm test` would stop being runnable on a clean clone.
+    expect(config).toMatch(/exclude:\s*\[[^\]]*'tests\/browser\/\*\*'/);
   });
 });
 

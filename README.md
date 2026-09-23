@@ -35,10 +35,28 @@ that needs professional review before production:
 [docs/security-and-privacy.md](./docs/security-and-privacy.md). Brand asset
 mapping and usage rules: [docs/brand-assets.md](./docs/brand-assets.md).
 
+**The Product Foundation (Phases 5.1–5.10)** — what exists, what was verified and
+how, what is not done and what a next phase may assume:
+[docs/product-foundation-handoff.md](./docs/product-foundation-handoff.md). The
+real remaining items are in [docs/technical-debt.md](./docs/technical-debt.md), and
+the machine-readable checkpoint is
+[docs/release-baseline.json](./docs/release-baseline.json).
+
 ```bash
 npm run brand:assets      # regenerate every icon/favicon/launcher asset from one source
 npm run brand:measure     # print the measured bounding box of the mark in that source
 ```
+
+```bash
+npm test                  # the hermetic suite: no network, no browser, no build needed
+npm run test:e2e          # drive the real browser over the DevTools Protocol; needs web/dist
+npm run validate          # every gate, in the right order: format, types, tests, builds, e2e
+```
+
+The browser suite needs a Chromium-family browser already installed and a built
+`web/dist`; set `MASTER_TRADE_E2E_BROWSER` to point at a specific binary. Without a
+browser it skips by name rather than failing, and `npm test` is unaffected either way
+([ADR-0050](./docs/adr/ADR-0050-the-browser-is-driven-not-installed.md)).
 
 Product scope, the eight core modules and their boundaries, and the
 capability-by-capability roadmap (every item labelled Implemented / Planned /
