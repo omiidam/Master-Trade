@@ -48,7 +48,12 @@ export function AgentWorkspacePage() {
         </>
       }
     >
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      {/* A responsive grid must declare a zero-minimum base track. Declaring it only at `xl`
+          leaves the implicit `auto` track below that breakpoint, whose minimum is the item's
+          min-content — so one long unbreakable label inside a card sets the page's *minimum*
+          width and the document scrolls sideways on a phone. `grid-cols-1` is
+          `minmax(0,1fr)`, the same minimum the `xl` template already declares. */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <ErrorState
             severity="warning"

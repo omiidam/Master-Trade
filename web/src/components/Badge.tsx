@@ -28,8 +28,15 @@ export function Badge({ tone = 'neutral', icon, dot, className, children, ...res
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2 py-0.5',
-        'text-caption font-medium leading-5 whitespace-nowrap',
+        'inline-flex max-w-full items-center gap-1.5 rounded-[var(--radius-pill)] border px-2 py-0.5',
+        // A pill must fit the box it is in, whatever its label is. `whitespace-nowrap` made the
+        // label an unbreakable run, so one long one (a source id such as
+        // "risk.positionSize (not yet connected)") became a *minimum width* for every ancestor:
+        // the row could not wrap it, the card could not shrink past it, and a page column that
+        // sized its track from content carried that minimum to the document. Wrapping the label
+        // (and breaking a token that cannot fit) keeps a pill on one line wherever it fits and
+        // lets it take two lines where it does not, instead of widening the page.
+        'text-caption font-medium leading-5 whitespace-normal break-words',
         TONES[tone],
         className,
       )}

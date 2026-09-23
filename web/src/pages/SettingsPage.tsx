@@ -179,7 +179,7 @@ export function SettingsPage() {
               </div>
               <Monitor size={15} aria-hidden className="text-text-faint" />
             </CardHeader>
-            <CardContent className="grid gap-2 sm:grid-cols-2">
+            <CardContent className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <ReadOnlyValue
                 label="Local API"
                 value={

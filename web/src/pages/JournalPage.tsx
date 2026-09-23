@@ -269,7 +269,7 @@ export function JournalPage() {
       >
         {/* Overview ------------------------------------------------------- */}
         <JournalTabPanel value="overview">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {mockJournalStats.map((stat) => (
               <JournalStatCard
                 key={stat.id}
@@ -293,7 +293,7 @@ export function JournalPage() {
             title="Performance"
             description="Every chart states its scope, and every one can be expanded to full screen."
           >
-            <div className="grid gap-4 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
               <PerformanceChart
                 title={mockEquityCurve.title}
                 description={mockEquityCurve.description}
@@ -345,7 +345,7 @@ export function JournalPage() {
             title="Planned versus actual"
             description="The comparison the journal exists for: what was intended against what happened."
           >
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <PerformanceChart
                 title="Planned R:R against realised average R"
                 description="Planned reward-to-risk is the dashed reference; the bars are what the records realised, per setup."
@@ -460,7 +460,7 @@ export function JournalPage() {
 
         {/* Add trade ------------------------------------------------------ */}
         <JournalTabPanel value="add">
-          <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <TradeForm onCancel={() => setTab('history')} className="xl:col-span-1" />
             <div className="space-y-4">
               <Card tone="sunken">
@@ -598,7 +598,7 @@ export function JournalPage() {
                     {RESULT_LABEL[selected.result]}
                   </Badge>
                 </CardHeader>
-                <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <SummaryCell
                     label="Realised R"
                     value={
@@ -1010,7 +1010,7 @@ export function JournalPage() {
                 description="A journal with records but no lessons is a log. The lessons appear here as they are written."
               />
             ) : (
-              <div className="grid gap-4 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                 {reviewedTrades.map((trade) => (
                   <Card key={trade.id} tone="sunken">
                     <CardHeader>

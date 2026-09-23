@@ -164,7 +164,7 @@ export function UsagePage() {
                   Counted from the ledger rather than from a stored counter, so a corrected charge
                   cannot leave the count wrong.
                 </p>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {usage.features
                     .filter((feature) => feature.periodLimit !== null)
                     .map((feature) => (
@@ -186,7 +186,7 @@ export function UsagePage() {
               </CardContent>
             </Card>
 
-            <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {(
                 [
                   ['Granted', usage.totals.granted, 'Allowances added, including the period grant'],

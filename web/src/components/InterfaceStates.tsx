@@ -72,7 +72,9 @@ export function InterfaceStatesPanel({
 }: InterfaceStatesPanelProps) {
   return (
     <Section title={title} description={description} className={className}>
-      <div className="grid gap-4 lg:grid-cols-3">
+      {/* `grid-cols-1` is the zero-minimum base track: without it the implicit `auto`
+          track below `lg` cannot shrink past its item's min-content. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {states.map((state, index) => (
           <Reveal key={state} index={index}>
             <Card tone="sunken" className="h-full">

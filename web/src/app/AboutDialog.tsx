@@ -41,7 +41,7 @@ export function AboutDialog() {
         {/* This dialog is where the interface explains itself, so it is where the full
             lockup belongs: the mark and the wordmark, at the size the product uses. */}
         <BrandLockup markSize={44} subtitle="Smarter trading. Bigger possibilities." />
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <section>
             <h3 className="text-body font-medium text-text">Real in this build</h3>
             <ul className="mt-2 space-y-1.5">
