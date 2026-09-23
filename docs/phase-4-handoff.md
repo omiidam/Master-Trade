@@ -131,8 +131,9 @@ WebSocket upgrades in-process. A browser-level E2E is deferred (§7) — the hon
 that no session can yet be issued to a browser.
 
 **The one warning** is the updater placeholder signing key
-(`src-tauri/tauri.conf.json` → `updater.pubkey`), a release-time prerequisite, not a code
-defect. It is reported as a warning rather than hidden.
+(`src-tauri/tauri.conf.json` → `plugins.updater.pubkey`; reported as `signing.update-key`
+since Phase 6.5, which turned it into a release gate rather than a note), a release-time
+prerequisite, not a code defect. It is reported as a warning rather than hidden.
 
 ## 5. The defect found in this phase
 

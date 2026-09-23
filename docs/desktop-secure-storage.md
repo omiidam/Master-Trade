@@ -236,13 +236,14 @@ Credential handling itself falls under the security-review items already tracked
 
 ## 11. Deferred to Phase 6.5 / 6.6
 
-| Phase | Deferred                                                                                                                                                                                   |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 6.5   | installer, signing and notarisation (which is what makes the keychain _entry_ trustworthy to the OS), auto-update                                                                          |
-| 6.6   | final hardening and release QA: a native build that exercises the keychain for real, code-signing verification, and an end-to-end check that a signed build can read a credential it wrote |
-| Later | a credential management screen; automatic rotation and expiry; a control-socket credential channel instead of the process environment                                                      |
+| Phase | Deferred                                                                                                                                                                                                                                                                                                                                                                      |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.5   | **implemented**: the packaging gate, the signing boundary (which makes a placeholder updater key a production **error**) and the update state machine — [desktop-release.md](./desktop-release.md). Still deferred: installer code signing and notarisation, which is what makes the keychain _entry_ trustworthy to the OS (TDR-20), and the native updater adapter (TDR-21) |
+| 6.6   | final hardening and release QA: a native build that exercises the keychain for real, code-signing verification, and an end-to-end check that a signed build can read a credential it wrote                                                                                                                                                                                    |
+| Later | a credential management screen; automatic rotation and expiry; a control-socket credential channel instead of the process environment                                                                                                                                                                                                                                         |
 
-Nothing in 6.5 or 6.6 was started here. Live trading and broker execution remain disabled:
+Phases 6.5 and 6.6 have since been addressed separately (6.5 in full, 6.6 not started). Live
+trading and broker execution remain disabled:
 `liveTradingEnabled` and `brokerExecutionEnabled` are literal `false`, asserted by `safety` and
 `release-baseline`.
 

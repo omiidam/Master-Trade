@@ -52,9 +52,11 @@ project's existing permission thinking.
 ### Identity and version agreement
 
 `productName` is **Master Trade**, the identifier is `app.mastertrade.desktop`, and the version is
-checked to be **the same string** in `package.json`, `tauri.conf.json` and `src-tauri/Cargo.toml`.
-Three files, one number: `npm run desktop:verify` reports `version.agreement` and fails if they
-diverge, because a bundle whose version disagrees with its own manifest cannot be updated reliably.
+checked to be **the same string** in `package.json`, `tauri.conf.json`, `src-tauri/Cargo.toml` and
+`src/core/config.ts` — four surfaces since Phase 6.5, which also gave the version one authoritative
+source and a `release:sync-version` command that writes the mirrors. `npm run desktop:verify`
+reports `version.agreement` and fails if they diverge, because a bundle whose version disagrees with
+its own manifest cannot be updated reliably.
 
 ### Window foundation
 
@@ -367,10 +369,16 @@ crossing the boundary; and a vault that reads once at startup and releases on sh
 desktop permission _workflows_ (a user-facing grant/revoke surface), a credential management screen
 and automatic rotation.
 
-Deferred to **6.5:** the installer, auto-update and release packaging. The `updater` plugin block in
-`tauri.conf.json` is a **declared placeholder** — its endpoint uses the reserved `.invalid` TLD and
-its key is `REPLACE_WITH_RELEASE_PUBLIC_KEY_BEFORE_FIRST_RELEASE`. Phase 6.1 made that placeholder a
-release blocker _in production_; it did not implement updating.
+Implemented in **6.5:** the Windows packaging foundation, the release gate and the safe auto-update
+foundation. `packaging.ts` holds every rule about the bundle and is shared by `desktop:verify`
+(development severity) and `release:preflight` (release severity); `signing.ts` makes absent,
+placeholder or malformed signing material an **error** in production; `version.ts` gives the version
+one source and three checked mirrors; `update.ts` is a nine-state machine whose `updated` state
+requires reading the installed version back. See [desktop-release.md](./desktop-release.md).
+
+Still deferred from 6.5: the installer is not code-signed (a different capability from the update
+signature — TDR-20), no native `UpdatePort` adapter exists yet (TDR-21), no bundle has been produced
+on a machine with a Rust toolchain (TDR-18), and nothing renders update state.
 
 Deferred to **6.6:** full desktop hardening and release QA.
 

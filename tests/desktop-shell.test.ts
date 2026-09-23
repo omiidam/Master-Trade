@@ -482,7 +482,9 @@ describe('tauri source verification', () => {
 
   it('reports the placeholder update key as a release blocker, not a development failure', async () => {
     const report = await verifyDesktopShell({ root });
-    const updater = report.checks.find((check) => check.id === 'updater.pubkey');
+    // `signing.update-key` since Phase 6.5: the rule lives in `signing.ts`, which the release
+    // preflight also uses, so there is one id and one implementation for it.
+    const updater = report.checks.find((check) => check.id === 'signing.update-key');
     expect(updater?.severity).toBe('warning');
     expect(report.errors).toBe(0);
   });

@@ -35,7 +35,12 @@
     "desktop:icons": "tauri icon assets/brand/master-trade-logo-source.png",
     "desktop:verify": "node dist/src/desktop/cli.js",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build"
+    "desktop:build": "tauri build",
+    "release:check": "node dist/src/desktop/release-cli.js version-check",
+    "release:sync-version": "node dist/src/desktop/release-cli.js version-sync",
+    "release:signing": "node dist/src/desktop/release-cli.js signing",
+    "release:preflight": "node dist/src/desktop/release-cli.js preflight",
+    "desktop:package": "node dist/src/desktop/release-cli.js preflight && tauri build"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

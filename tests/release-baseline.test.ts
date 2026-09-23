@@ -19,6 +19,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG, resolveConfig } from '../src/core/config.js';
+import { describesSignedProductionRelease, reviewSigning } from '../src/desktop/signing.js';
 
 interface Baseline {
   productFoundation: string;
@@ -39,6 +40,12 @@ interface Baseline {
     clippedTextElements: number;
   };
   publicDemo: { deployed: boolean; reason: string };
+  signing: {
+    updatePublicKey: string;
+    updateEndpointsReachable: boolean;
+    productionReleaseSigned: boolean;
+    reason: string;
+  };
   safety: {
     liveTradingEnabled: boolean;
     brokerExecutionEnabled: boolean;
@@ -95,6 +102,32 @@ describe('the release baseline', () => {
     expect(DEFAULT_CONFIG.safety.brokerExecutionEnabled).toBe(false);
     expect(resolveConfig().safety.liveTradingEnabled).toBe(false);
     expect(resolveConfig().safety.brokerExecutionEnabled).toBe(false);
+  });
+
+  it('does not claim a signed production release, and agrees with the module that decides', () => {
+    // The claim that matters most in this area: a checkpoint saying "signed" while the build
+    // refuses to produce a release is the shape of a lie that survives review. Both halves are
+    // asserted — the flag, and the module's own verdict — so the file cannot be edited into
+    // agreement with itself.
+    const conf = JSON.parse(readFileSync('src-tauri/tauri.conf.json', 'utf8')) as unknown;
+    const production = reviewSigning(conf, 'production');
+
+    expect(baseline.signing.productionReleaseSigned).toBe(false);
+    expect(describesSignedProductionRelease(conf, 'production')).toBe(false);
+    expect(production.releasable).toBe(false);
+    expect(production.blockers.length).toBeGreaterThan(0);
+
+    // The recorded key state is the module's finding, not a second opinion about it.
+    const key = production.aspects.find((aspect) => aspect.id === 'signing.update-key');
+    expect(baseline.signing.updatePublicKey).toBe(key?.state);
+    const reachable = production.aspects.find(
+      (aspect) => aspect.id === 'signing.update-endpoints-reachable',
+    );
+    expect(baseline.signing.updateEndpointsReachable).toBe(reachable?.state === 'valid');
+
+    // And a development run is never a signed release, however good the key looks.
+    expect(describesSignedProductionRelease(conf, 'development')).toBe(false);
+    expect(baseline.signing.reason).toMatch(/placeholder/);
   });
 
   it('does not claim a deployment that does not exist', () => {

@@ -1,0 +1,131 @@
+# The release gate, and the Windows package that comes after it.
+#
+# This is not CI. `ci.yml` validates every push; this workflow is triggered by a human (or by a
+# version tag) because it is the only place a *release* is produced, and a release has
+# requirements a commit does not.
+#
+# The order matters, and it is the whole design:
+#
+#   1. `gate` runs `npm run release:preflight` with MASTER_TRADE_ENVIRONMENT=production. That is
+#      what makes a placeholder update key an **error** rather than a warning. A tree carrying one
+#      is refused here, before anything is built, because a build with a placeholder key still
+#      starts and still checks and then refuses every genuine update forever — the failure surfaces
+#      on a user's machine months later, which is too late.
+#   2. `package` cannot start until `gate` passes, and its first step fails with a readable message
+#      when the signing secret is absent rather than skipping the signing.
+#
+# What is deliberately *not* here
+# -------------------------------
+#   - No signing key. `TAURI_SIGNING_PRIVATE_KEY` comes from a repository secret and is never a
+#     file in the tree; `package.no-signing-material` (src/desktop/packaging.ts) fails the gate if
+#     a key of any kind is ever committed.
+#   - No `continue-on-error`, and no `if: always()` on the gate. A release that proceeds past a
+#     failed signing check is the exact outcome this file exists to prevent.
+#   - No `npm audit fix`, no test skipping, no assertion relaxation to make this pass. If the gate
+#     fails, the fix belongs in the tree.
+#
+# Honest status: the `package` job has never completed a real release, because no production
+# signing key exists for this project yet (docs/release-baseline.json records that as a fact rather
+# than an aspiration). The gate job is exercised by `npm run release:preflight` on every machine and
+# is covered by tests/desktop-signing.test.ts; the packaging job is a described path, not a
+# verified one.
+
+name: Release gate
+
+on:
+  # A human asks for it. There is no way to reach a release by pushing to a branch.
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'release runs the production gate and packages; report only inspects the tree.'
+        required: true
+        default: report
+        type: choice
+        options: [report, release]
+  # A version tag is a release intent, so it runs the production gate.
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # 22.5+ for `node:sqlite`, matching ci.yml.
+          node-version: 24
+      - run: npm ci
+      # The verifier and the release CLI are both compiled output, so the gate needs a build.
+      - run: npm run build
+      # The version surfaces, the bundle identity, the icons, the sidecar declaration, the bundle
+      # hygiene rules and the signing material — the same rules `desktop:verify` reports, at
+      # release severity. Fails closed: a tree that is not releasable exits non-zero.
+      - name: Release preflight
+        run: npm run release:preflight
+        env:
+          MASTER_TRADE_ENVIRONMENT: production
+      # Recorded so a release can be reproduced: which version, which surfaces, which aspects.
+      - name: Release inventory
+        if: always()
+        run: |
+          npm run release:check
+          npm run release:signing
+        env:
+          MASTER_TRADE_ENVIRONMENT: production
+        continue-on-error: true
+
+  package:
+    needs: gate
+    # Only for a real release: a `report` run stops at the gate, which is what a maintainer
+    # checking whether the tree is nearly ready wants.
+    if: github.event_name == 'push' || inputs.mode == 'release'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+      # Tauri's own CLI, for `tauri build`. `npm ci` also installs it when it is a devDependency.
+      - run: npm ci
+      # Fail loudly and readably when the key is missing, rather than building an unsigned release
+      # or skipping the step. An unsigned Windows bundle is not a release, so there is nothing
+      # useful to do here without it.
+      - name: Require the update signing key
+        shell: bash
+        run: |
+          if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY is not set for this repository."
+            echo "A Windows release must be signed: the updater refuses an artifact it cannot"
+            echo "verify, so an unsigned bundle would be un-updatable. Add the key as a repository"
+            echo "secret (Settings -> Secrets and variables -> Actions) and re-run, or run this"
+            echo "workflow with mode=report to inspect the tree without releasing."
+            exit 1
+          fi
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      - name: Bundle the API sidecar
+        run: npm run build:sidecar
+      # The packaging gate again, on the machine that actually builds: `desktop:package` refuses to
+      # bundle a tree the preflight rejects, so the gate cannot be bypassed by invoking `tauri`
+      # directly in a later step.
+      - name: Package
+        run: npm run desktop:package
+        env:
+          MASTER_TRADE_ENVIRONMENT: production
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # The key's own passphrase, where one was set.
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      # The installers and the update signature. Not published anywhere automatically: where the
+      # update endpoint serves them from is a release decision, and `tauri.conf.json` names the
+      # endpoint the app will ask.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: master-trade-windows
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/**/*.sig
+          if-no-files-found: error

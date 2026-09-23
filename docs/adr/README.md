@@ -329,3 +329,22 @@ own rules are machine-checked instead — namespace, naming, single keyring file
 Architecture, keychain strategy, namespace rules, the IPC and permission model, the lifecycle,
 failure behaviour, the browser fallback, assumptions and limitations are in
 [desktop-secure-storage.md](../desktop-secure-storage.md).
+
+## Phase 6.5 — a release is refused, not warned about
+
+Three failures in this phase share a shape: invisible until the product is on someone else's
+machine, and by then the artifact is out. A version written in four files, three of which the
+verifier checked. A placeholder signing key, which does not stop a build from starting — it makes it
+refuse every genuine update forever, while reporting "up to date". And a source map, because
+`vite.config.ts` had `sourcemap: true` and `web/dist` is not a public directory: it is what the
+desktop bundle ships, so the installer carried a map of the entire frontend.
+
+Phase 6.5 made `package.json` the one version source with three checked mirrors, moved every rule
+about the bundle into one module that two callers share (`desktop:verify` at development severity,
+`release:preflight` at release severity), made signing material fail closed in production, and gave
+the updater a state machine whose `updated` state requires reading the installed version back and
+finding it equals the target. No `.pem`, `.key` or `.sig` file may exist anywhere in the tree, and
+release metadata is asserted against the module that decides whether a release is signed.
+
+Packaging, the version surfaces, the signing boundary, the update lifecycle, CI requirements and
+every limitation are in [desktop-release.md](../desktop-release.md).

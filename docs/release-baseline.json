@@ -28,6 +28,13 @@
     "deployed": false,
     "reason": "No public deployment exists. No domain, no DNS record, no certificate and no host were configured in Phases 5.1–5.10, so public-demo validation was not performed and is not claimed."
   },
+  "signing": {
+    "$comment": "Phase 6.5. Asserted against src/desktop/signing.ts by tests/release-baseline.test.ts, so this file cannot claim a signed production release while that module refuses one.",
+    "updatePublicKey": "placeholder",
+    "updateEndpointsReachable": false,
+    "productionReleaseSigned": false,
+    "reason": "The updater public key in src-tauri/tauri.conf.json is still the placeholder and its endpoint uses the reserved .invalid TLD, so no production release can be produced from this tree and none is claimed. The key itself is not in the repository and must never be: it belongs in a CI secret or on the release machine."
+  },
   "safety": {
     "liveTradingEnabled": false,
     "brokerExecutionEnabled": false,

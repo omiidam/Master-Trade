@@ -11,3 +11,25 @@ data/
 *.db
 *.db-wal
 *.db-shm
+
+# The sidecar binary is staged here by `npm run build:sidecar` (Phase 6.5). It is a
+# build artefact of `dist/`, never authored, and `tauri build` bundles it from here.
+# Rust build output itself is ignored by `src-tauri/.gitignore`, which owns those
+# paths; naming them again here would be two places to keep in step.
+src-tauri/binaries/
+
+# Installer output. A packaged bundle is a release artefact, not a source file.
+*.msi
+*.appx
+*.nupkg
+
+# Release signing material. There is none in this repository and there must never
+# be: a release key belongs in a CI secret or on the release machine, and
+# `package.no-signing-material` (src/desktop/packaging.ts) fails the build if one
+# ever appears. Listed here so an accidental `git add .` cannot stage one first.
+*.pem
+*.key
+*.p12
+*.pfx
+*.p8
+*.sig

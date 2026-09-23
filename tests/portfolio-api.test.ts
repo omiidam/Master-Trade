@@ -552,10 +552,37 @@ describe('what the log and the ledger record', () => {
       const text = h.sink.records.map((record) => JSON.stringify(record)).join('\n');
 
       // A holding can be somebody's entire financial position, so none of it is logged.
+      //
+      // The three string checks read the whole frame, which is safe because a symbol, a name and a
+      // source label cannot occur inside a timestamp. The price cannot be checked that way: it is
+      // the bare number 120, and the frame contains ISO timestamps with millisecond precision and
+      // `durationMs` values — so a substring match made this assertion depend on whether a
+      // millisecond happened to be `.120Z`. It fired exactly that way on 2026-09-23. The price is
+      // therefore compared as a number, over the log payloads, with the timing fields excluded
+      // because a duration is not portfolio data.
       expect(text).not.toContain('VOO');
       expect(text).not.toContain('Secret name');
-      expect(text).not.toContain('120');
       expect(text).not.toContain('user-stated');
+
+      const portfolioValues: unknown[] = [];
+      const collect = (value: unknown, key = ''): void => {
+        if (key === 'durationMs' || key === 'time') return;
+        if (Array.isArray(value)) {
+          value.forEach((entry) => collect(entry));
+          return;
+        }
+        if (value && typeof value === 'object') {
+          for (const [name, entry] of Object.entries(value)) collect(entry, name);
+          return;
+        }
+        portfolioValues.push(value);
+      };
+      for (const record of h.sink.records) collect(record.data);
+
+      // Fields the log payload carries, as numbers, are what a leak would look like.
+      expect(portfolioValues).not.toContain(120); // the price
+      expect(portfolioValues).not.toContain(10); // the quantity
+      expect(portfolioValues).not.toContain(100); // the average entry price
       // Counts and codes are logged, which is what makes the line useful at all.
       expect(text).toContain('portfolio.read');
       expect(text).toContain('portfolio.write');

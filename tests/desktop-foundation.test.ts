@@ -405,7 +405,9 @@ describe('the environment mode is load-bearing, not a label', () => {
 
   it('treats a placeholder update key as a release blocker only in production', async () => {
     const development = await verifyDesktopShell({ root, env: {} });
-    const devKey = development.checks.find((check) => check.id === 'updater.pubkey');
+    // The id moved from `updater.pubkey` in Phase 6.5, when the rule moved into `signing.ts`
+    // so the verifier and `npm run release:preflight` could not disagree about it.
+    const devKey = development.checks.find((check) => check.id === 'signing.update-key');
     expect(development.environment.environment).toBe('development');
     expect(devKey?.ok).toBe(false);
     expect(devKey?.severity).toBe('warning');
@@ -415,7 +417,7 @@ describe('the environment mode is load-bearing, not a label', () => {
       root,
       env: { [DESKTOP_ENVIRONMENT_VAR]: 'production' },
     });
-    const prodKey = production.checks.find((check) => check.id === 'updater.pubkey');
+    const prodKey = production.checks.find((check) => check.id === 'signing.update-key');
     expect(production.environment.environment).toBe('production');
     // The same fact, a different severity: a development build must not ship and a release
     // cannot exist. This is what makes the mode do something.
@@ -428,16 +430,27 @@ describe('the environment mode is load-bearing, not a label', () => {
       root,
       env: { [DESKTOP_ENVIRONMENT_VAR]: 'production' },
     });
-    const endpoint = production.checks.find((check) => check.id === 'environment.update-endpoint');
+    // `signing.update-endpoints-reachable` since Phase 6.5 (it was `environment.update-endpoint`).
+    const endpoint = production.checks.find(
+      (check) => check.id === 'signing.update-endpoints-reachable',
+    );
     // The committed endpoint uses the reserved `.invalid` TLD, which can never resolve.
     expect(endpoint?.ok).toBe(false);
     expect(endpoint?.severity).toBe('error');
     expect(endpoint?.detail).toMatch(/\.invalid/);
 
+    // The mode changes the *weight*, not the fact. Since Phase 6.5 the aspect's state is the same
+    // in both modes — the endpoint is unreachable either way — and `severity` is what makes a
+    // production run refuse it. Asserting the pair is what proves the mode is load-bearing rather
+    // than a label: identical finding, different verdict.
     const development = await verifyDesktopShell({ root, env: {} });
-    expect(development.checks.find((check) => check.id === 'environment.update-endpoint')?.ok).toBe(
-      true,
+    const devEndpoint = development.checks.find(
+      (check) => check.id === 'signing.update-endpoints-reachable',
     );
+    expect(devEndpoint?.ok).toBe(false);
+    expect(devEndpoint?.severity).toBe('warning');
+    expect(devEndpoint?.detail).toMatch(/\.invalid/);
+    expect(development.errors).toBe(0);
   });
 
   it('requires a production run to declare itself', async () => {

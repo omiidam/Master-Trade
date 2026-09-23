@@ -135,17 +135,18 @@ npm run validate         # format:check, both typechecks, tests, both builds, ve
 `desktop:verify` is the interesting one. It parses the real files and checks, among
 others:
 
-| Check                      | What it proves                                                   |
-| -------------------------- | ---------------------------------------------------------------- |
-| `capabilities.policy:*`    | every granted permission is on the allow-list, none is forbidden |
-| `capabilities.required`    | the permissions the code depends on are actually granted         |
-| `commands.contract-parity` | Rust commands and `ipc.ts` match **in both directions**          |
-| `shell.spawn-location`     | `Command::new` appears only in `sidecar.rs`                      |
-| `port.agreement`           | 4317 in Rust, TypeScript and the backend default                 |
-| `config.schema-parity`     | the Rust and TypeScript config key sets agree                    |
-| `version.agreement`        | `package.json` = `tauri.conf.json` = `Cargo.toml`                |
-| `csp.present`              | the CSP exists and is restrictive                                |
-| `updater.pubkey`           | a placeholder signing key is a **warning**, a release blocker    |
+| Check                      | What it proves                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `capabilities.policy:*`    | every granted permission is on the allow-list, none is forbidden                            |
+| `capabilities.required`    | the permissions the code depends on are actually granted                                    |
+| `commands.contract-parity` | Rust commands and `ipc.ts` match **in both directions**                                     |
+| `shell.spawn-location`     | `Command::new` appears only in `sidecar.rs`                                                 |
+| `port.agreement`           | 4317 in Rust, TypeScript and the backend default                                            |
+| `config.schema-parity`     | the Rust and TypeScript config key sets agree                                               |
+| `version.agreement`        | four surfaces agree: `package.json`, `tauri.conf.json`, `Cargo.toml`, `src/core/config.ts`  |
+| `csp.present`              | the CSP exists and is restrictive                                                           |
+| `signing.update-key`       | a placeholder signing key is a **warning**, a release blocker                               |
+| `package.*`                | bundle identity, icons, sidecar, and the release-hygiene rules (§3 of `desktop-release.md`) |
 
 It prints a section for what it cannot cover — the native build, runtime window
 timing, keychain round-trips, the bundled binary, code signing — so a green
@@ -201,8 +202,9 @@ let `src/storage/files.ts` own the mapping.
 
 - **No compiled bundle.** No Rust toolchain here, so `cargo build`, signing and
   notarisation are unexercised. The verifier says so in its own report.
-- **Update signing key is a placeholder.** `updater.pubkey` is a warning until a
-  real key is configured; the updater must not ship before then.
+- **Update signing key is a placeholder.** `signing.update-key` is a warning until a
+  real key is configured, and an error in a production preflight; the updater must not
+  ship before then. Phase 6.5 made this a release gate — see `desktop-release.md` §3.
 - **Icons are placeholders** (`src-tauri/icons/README.md`) — `tauri build` needs
   real ones.
 - **Keychain access is unverified at runtime.** The command and the contract are

@@ -26,6 +26,7 @@ matrix, data-flow diagrams, security boundaries — plus per-layer documents
 (api-auth, ai-and-llm, database-and-storage, jobs-and-realtime, market-data,
 vector-memory, observability, desktop-and-frontend, desktop-shell,
 desktop-architecture, desktop-runtime, desktop-storage, desktop-secure-storage,
+desktop-release,
 user-profile-and-trading-context, input-quality-and-data-reliability,
 usage-credits-and-premium, portfolio-intelligence, capability-integration,
 security-and-privacy, brand-assets, risks-and-deferred) and
@@ -220,7 +221,7 @@ compared with Rust, and any credential-shaped key in it is **refused**, not
 filtered ([ADR-0031](./docs/adr/ADR-0031-desktop-config-appdata-keychain.md)).
 
 ```bash
-npm run desktop:verify   # 22 policy/parity checks; no Rust toolchain needed
+npm run desktop:verify        # policy, parity and release checks; no Rust toolchain needed
 desktop:dev / desktop:build   # require Rust; see docs/desktop-shell.md
 ```
 
@@ -228,6 +229,22 @@ The shell is **source-complete and policy-verified, not compiled** — there is 
 Rust toolchain in this environment. The verifier prints what that leaves
 uncovered. See [desktop-shell.md](./docs/desktop-shell.md) for the development
 guide and [ADR-0029…0031](./docs/adr/).
+
+A release has its own gate, because the failures it prevents only appear after the
+artifact is out: a version written in four files, a placeholder update key (which
+does not stop a build — it makes it refuse every genuine update forever), and a
+source map, which this repository was shipping inside the installer until the
+check existed. `src/desktop/packaging.ts` and `signing.ts` hold those rules and are
+shared by the verifier (development severity) and `release:preflight` (release
+severity, fails closed). The update lifecycle is a state machine whose `updated`
+state requires reading the installed version back — [ADR-0055](./docs/adr/ADR-0055-a-release-is-refused-not-warned-about.md),
+[desktop-release.md](./docs/desktop-release.md).
+
+```bash
+npm run release:check          # do the four version surfaces agree?
+npm run release:signing        # is the update signing material usable?
+npm run release:preflight      # refuse to package an unreleasable tree (--dev to inspect)
+```
 
 ## Realtime and background jobs (Phase 3.7)
 
