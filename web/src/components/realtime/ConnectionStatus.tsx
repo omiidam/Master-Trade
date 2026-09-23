@@ -99,8 +99,15 @@ export function ConnectionStatus({
         role="status"
         aria-label={`Event stream: ${presentation.label}`}
         title={detail ?? presentation.label}
+        // `leading-5` is declared rather than inherited, for the same reason `Badge` declares it:
+        // an inherited line-height is a multiple of whatever font the host happened to fall back
+        // to, which makes this pill's height a property of the machine. At 1.55 it came out at
+        // 23.05px — under the 24px minimum target — and only cleared the floor because the
+        // `<button>` wrapping it contributed a fraction of a pixel of its own baseline space,
+        // which a different font does not. A declared 20px line box makes it 26px anywhere, and
+        // matches the sibling pills it sits beside in the shell.
         className={cn(
-          'inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-2 py-0.5 text-caption',
+          'inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-2 py-0.5 text-caption leading-5',
           TONE_CLASSES[presentation.tone],
           className,
         )}
