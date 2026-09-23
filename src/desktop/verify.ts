@@ -29,6 +29,11 @@ import {
 } from './capabilities.js';
 import { SHELL_COMMANDS, SHELL_PROTOCOL_VERSION } from '../../packages/shared/src/desktop/ipc.js';
 import { PROCESS_POLICY, PROCESS_STATES } from '../../packages/shared/src/desktop/process.js';
+import {
+  KNOWN_CREDENTIALS,
+  SECRET_NAMESPACE,
+  SECRET_NAMESPACE_PREFIX,
+} from '../../packages/shared/src/desktop/secrets.js';
 import { DESKTOP_API_PORT } from './sidecar.js';
 import { DEFAULT_DESKTOP_CONFIG } from './config.js';
 import { DEFAULT_CONFIG } from '../core/config.js';
@@ -441,6 +446,83 @@ export async function verifyDesktopShell(options: VerifyOptions): Promise<Verifi
     onlyRust.length === 0 && onlyTs.length === 0
       ? `${rustSurface.length} commands registered, matching src/desktop/ipc.ts`
       : `Rust-only: [${onlyRust.join(', ')}]; TypeScript-only: [${onlyTs.join(', ')}]`,
+  );
+
+  // ── credential boundary (Phase 6.4) ──────────────────────────────────────
+  //
+  // The keychain is the one place a secret exists in the clear, so the assertions about it are
+  // machine-checked rather than described. None of these executes the Rust (see `unverifiable`);
+  // all of them refuse a build whose keychain access is wider than the contract allows.
+  const secretsSource = (await readTextOrNull(join(tauriDir, 'src', 'secrets.rs'))) ?? '';
+  const rustNamespace = /pub const NAMESPACE: &str = "([^"]+)";/.exec(secretsSource)?.[1] ?? '';
+  add(
+    'secrets.namespace-agreement',
+    rustNamespace.length > 0 && rustNamespace === SECRET_NAMESPACE_PREFIX,
+    rustNamespace === SECRET_NAMESPACE_PREFIX
+      ? `the keychain namespace "${rustNamespace}" matches the shared contract`
+      : `rust="${rustNamespace || 'missing'}" shared="${SECRET_NAMESPACE_PREFIX}"`,
+  );
+
+  // One file may touch the keychain crate. A second one is how two wrappers with different
+  // validation rules appear, and the weaker one is always the one a later change reaches for.
+  const keyringFiles: string[] = [];
+  for (const file of await readdir(join(tauriDir, 'src'))) {
+    if (!file.endsWith('.rs')) continue;
+    const source = (await readTextOrNull(join(tauriDir, 'src', file))) ?? '';
+    if (/keyring/.test(source)) keyringFiles.push(file);
+  }
+  add(
+    'secrets.single-keyring-file',
+    keyringFiles.length === 1 && keyringFiles[0] === 'secrets.rs',
+    keyringFiles.length === 1 && keyringFiles[0] === 'secrets.rs'
+      ? 'only secrets.rs reaches the OS keychain'
+      : `the keychain crate is also referenced in: ${keyringFiles.filter((f) => f !== 'secrets.rs').join(', ') || 'nothing'}`,
+  );
+
+  // Naming: a command that can touch a credential is a `secure_store_*` command, so the surface
+  // that reaches the keychain is one prefix long and visible in a diff.
+  const credentialedCommands = commandsSource
+    .split('#[tauri::command]')
+    .slice(1)
+    .map((block) => ({
+      name: /fn\s+([a-z0-9_]+)/.exec(block)?.[1] ?? '',
+      touches: /secrets::/.test(block),
+    }))
+    .filter((entry) => entry.touches && entry.name.length > 0)
+    .map((entry) => entry.name);
+  const misnamedCommands = credentialedCommands.filter((name) => !name.startsWith('secure_store_'));
+  add(
+    'secrets.commands-narrow',
+    misnamedCommands.length === 0 && credentialedCommands.length > 0,
+    misnamedCommands.length === 0
+      ? `${credentialedCommands.length} credential command(s), all under the secure_store_ prefix`
+      : `commands reaching the keychain outside that prefix: ${misnamedCommands.join(', ')}`,
+  );
+
+  // No enumeration: nothing may list, dump or export what is stored. `secure_store_has` answers
+  // about one named credential and is the only existence question the surface can ask.
+  const enumerating = [...SHELL_COMMANDS, ...rustSurface].filter((name) =>
+    /(list|dump|export|all)[-_]?secrets?|secrets?[-_]?(list|dump|export)/i.test(name),
+  );
+  add(
+    'secrets.no-enumeration',
+    enumerating.length === 0 && !/pub fn\s+(list|all)_/.test(secretsSource),
+    enumerating.length === 0
+      ? `no command enumerates credentials; ${KNOWN_CREDENTIALS.length} credential(s) are declared in the contract`
+      : `enumerating command(s): ${enumerating.join(', ')}`,
+  );
+
+  const declaredNamespaced = KNOWN_CREDENTIALS.every((credential, index) =>
+    index === KNOWN_CREDENTIALS.findIndex((other) => other.id === credential.id)
+      ? credential.id.startsWith(SECRET_NAMESPACE_PREFIX)
+      : true,
+  );
+  add(
+    'secrets.credentials-namespaced',
+    declaredNamespaced && SECRET_NAMESPACE.length > 0,
+    declaredNamespaced
+      ? `every declared credential lives under "${SECRET_NAMESPACE_PREFIX}"`
+      : 'a declared credential is outside the namespace',
   );
 
   // ── process spawning stays in one file ───────────────────────────────────

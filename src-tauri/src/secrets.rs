@@ -11,11 +11,27 @@
 
 const SERVICE: &str = "app.mastertrade.desktop";
 
-/// Only keychain-shaped names are accepted, so a command cannot be used to probe
-/// arbitrary keychain entries.
+/// Every key must live under this prefix (Phase 6.4).
+///
+/// The service name already separates us from other applications' entries; the *key* prefix is
+/// the second half of that, and it is what makes the namespace a property of the credential
+/// rather than of the code that happens to call this module. `SECRET_NAMESPACE_PREFIX` in
+/// `packages/shared/src/desktop/secrets.ts` is the same string, and `desktop:verify` fails the
+/// build if the two drift.
+pub const NAMESPACE: &str = "master-trade/";
+
+/// Only namespaced, keychain-shaped names are accepted, so a command cannot be used to probe
+/// arbitrary keychain entries, address another application's namespace, or name a path. There is
+/// deliberately **no enumeration**: nothing in this module can list what is stored.
 pub fn validate_key(key: &str) -> Result<(), String> {
-    let ok = !key.is_empty()
-        && key.len() <= 120
+    if !key.starts_with(NAMESPACE) {
+        return Err(format!(
+            "credential names must be namespaced under {NAMESPACE:?}"
+        ));
+    }
+    let ok = key.len() <= 120
+        && !key.split('/').any(|segment| segment == "..")
+        && !key.contains('\\')
         && key
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-' | '/'));

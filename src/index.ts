@@ -65,3 +65,9 @@ export * from './storage/disk.js';
 export * from './desktop/data-paths.js';
 export * from './desktop/initialize.js';
 export * from './desktop/file-store.js';
+
+/* Phase 6.4: desktop secure storage. Credential names, the validated store and the
+   vault that holds a value: the OS keychain stays behind one port, and the API
+   process reads what the shell injected rather than a file of its own. */
+export * from './desktop/secure-store.js';
+export * from './desktop/credential-vault.js';

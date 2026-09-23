@@ -357,8 +357,13 @@ content-addressed byte store and a metadata-owning file store — [desktop-stora
 What remains deferred from 6.3 is **backup and restore**, migrating an existing repository `data/`
 database into app-data, per-owner quota enforcement, and encryption at rest (which is 6.4's subject).
 
-Deferred to **6.4:** secure-storage and OS keychain integration as a managed workflow, and advanced
-desktop permission workflows.
+Phase **6.4** gave the keychain the contract it lacked: declared, namespaced credentials; one port in
+front of the keychain with an injected-environment implementation for the API process, which cannot
+reach a keychain itself; `secure_store_has` so a screen can render "configured" without a value
+crossing the boundary; and a vault that reads once at startup and releases on shutdown —
+[desktop-secure-storage.md](./desktop-secure-storage.md). What remains deferred from 6.4 is advanced
+desktop permission _workflows_ (a user-facing grant/revoke surface), a credential management screen
+and automatic rotation.
 
 Deferred to **6.5:** the installer, auto-update and release packaging. The `updater` plugin block in
 `tauri.conf.json` is a **declared placeholder** — its endpoint uses the reserved `.invalid` TLD and

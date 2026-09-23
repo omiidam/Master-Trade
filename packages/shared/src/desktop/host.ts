@@ -30,6 +30,13 @@ export interface SecureStore {
   get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
   delete(key: string): Promise<void>;
+  /**
+   * Existence only (Phase 6.4, protocol v3).
+   *
+   * Added so a screen can render "configured" without the value entering the WebView: asking
+   * `get` just to compare it against `null` puts a credential in page state for no reason.
+   */
+  has(key: string): Promise<boolean>;
 }
 
 export interface OfflineCache {
@@ -116,6 +123,9 @@ export function memoryDesktopHost(
       },
       async delete(key) {
         secrets.delete(key);
+      },
+      async has(key) {
+        return secrets.has(key);
       },
     },
     cache: {

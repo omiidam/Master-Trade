@@ -27,6 +27,7 @@
       "@shared/desktop/ipc": ["./packages/shared/src/desktop/ipc.js"],
       "@shared/desktop/process": ["./packages/shared/src/desktop/process.js"],
       "@shared/desktop/runtime": ["./packages/shared/src/desktop/runtime.js"],
+      "@shared/desktop/secrets": ["./packages/shared/src/desktop/secrets.js"],
       "@shared/desktop/startup": ["./packages/shared/src/desktop/startup.js"],
       "@shared/frontend/viewModels": ["./packages/shared/src/frontend/viewModels.js"],
       "@shared/jobs/service": ["./packages/shared/src/jobs/service.js"],

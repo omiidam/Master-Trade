@@ -108,11 +108,16 @@ export async function apiHandshake(): Promise<{ apiBaseUrl: string; token: strin
   }
 }
 
-/** Credential state for the settings screen: configured or not, never the value. */
+/**
+ * Credential state for the settings screen: configured or not, never the value.
+ *
+ * Asks `has` rather than comparing a read against `null`: the question is about state, and a read
+ * would put the secret into page state — and into a promise result — purely to answer it.
+ */
 export async function credentialConfigured(key: string): Promise<boolean> {
   if (!inDesktopShell()) return false;
   try {
-    return (await shellBridge().secureStore.get(key)) !== null;
+    return await shellBridge().secureStore.has(key);
   } catch {
     return false;
   }

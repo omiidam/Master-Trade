@@ -167,6 +167,8 @@ describe('the shell command contract is deny-by-default', () => {
       'secure_store_set',
       'secure_store_get',
       'secure_store_delete',
+      // Phase 6.4: existence without the value, so "configured" can be rendered without a read.
+      'secure_store_has',
       'cache_get',
       'cache_set',
       'cache_clear',

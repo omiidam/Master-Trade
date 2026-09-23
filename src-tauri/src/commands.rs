@@ -62,7 +62,11 @@ pub struct ExportResult {
 /// v2 (Phase 6.2): `sidecarState` (four strings) became `runtime`, the structured report of the
 /// API process. `SHELL_PROTOCOL_VERSION` in `packages/shared/src/desktop/ipc.ts` carries the
 /// same number, and `npm run desktop:verify` fails if the two disagree.
-pub const PROTOCOL_VERSION: u32 = 2;
+///
+/// v3 (Phase 6.4): `secure_store_has` was added, so a screen can report "configured" without the
+/// credential value crossing the IPC boundary at all. The command list grew by exactly one, and
+/// there is still no command that lists, dumps or exports credentials.
+pub const PROTOCOL_VERSION: u32 = 3;
 
 fn platform_name() -> String {
     if cfg!(target_os = "windows") {
@@ -148,6 +152,18 @@ pub async fn secure_store_get(key: String) -> Result<Option<String>, String> {
 #[tauri::command]
 pub async fn secure_store_delete(key: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || secrets::delete(&key))
+        .await
+        .map_err(|e| format!("credential store task failed: {e}"))?
+}
+
+/// Whether a credential exists, **without returning it** (protocol v3).
+///
+/// The status card needs to say "configured"; it never needs the value. Answering from the
+/// keychain directly means a screen that only wants to display state does not have to hold a
+/// secret in the WebView to decide what to render.
+#[tauri::command]
+pub async fn secure_store_has(key: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || secrets::has(&key))
         .await
         .map_err(|e| format!("credential store task failed: {e}"))?
 }
@@ -282,6 +298,7 @@ pub fn handlers() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         secure_store_set,
         secure_store_get,
         secure_store_delete,
+        secure_store_has,
         cache_get,
         cache_set,
         cache_clear,

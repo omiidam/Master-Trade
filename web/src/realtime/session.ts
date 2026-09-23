@@ -20,6 +20,7 @@
  * anonymously.
  */
 
+import { SESSION_TOKEN_CREDENTIAL } from '@shared/desktop/secrets';
 import { websocketUrlFor } from './client.js';
 
 export type SessionSource = 'shell' | 'dev-override';
@@ -59,8 +60,14 @@ export interface SessionEnv {
   devOverride?: { apiBaseUrl?: string | undefined; token?: string | undefined } | undefined;
 }
 
-/** The key the auth slice stores the local session under. Read-only for the page. */
-export const SESSION_TOKEN_KEY = 'session-token';
+/**
+ * The declared credential the auth slice reads the local session from. Read-only for the page.
+ *
+ * Phase 6.4 namespaced every credential under `master-trade/`, and the name now comes from the
+ * shared secret contract rather than a literal here, so the key the page asks for and the key the
+ * shell is allowed to store cannot drift apart.
+ */
+export const SESSION_TOKEN_KEY = SESSION_TOKEN_CREDENTIAL;
 
 function fromDevOverride(env: SessionEnv): SessionResolution | null {
   const override = env.devOverride;

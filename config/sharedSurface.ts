@@ -44,6 +44,9 @@ export const SHARED_SURFACE: Readonly<Record<string, string>> = {
   // consumed by the frontend (`web/src/desktop/`) rather than merely existing: the boundary
   // test refuses a declared entry nothing imports, which is how this stays one list.
   '@shared/desktop/runtime': 'packages/shared/src/desktop/runtime.ts',
+  // Credential names, validation and the unavailable fallback (Phase 6.4). Consumed by the
+  // frontend, which must ask for a credential by its declared name rather than a free-form key.
+  '@shared/desktop/secrets': 'packages/shared/src/desktop/secrets.ts',
   '@shared/desktop/startup': 'packages/shared/src/desktop/startup.ts',
   '@shared/frontend/viewModels': 'packages/shared/src/frontend/viewModels.ts',
   '@shared/jobs/service': 'packages/shared/src/jobs/service.ts',

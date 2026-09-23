@@ -29,6 +29,12 @@ import type {
   SecureStore,
 } from './host.js';
 import { initialSupervisorStatus, type SupervisorStatus } from './process.js';
+// Credential names and their validation live in the secret contract (Phase 6.4) and are
+// re-exported here so this file stays the single description of the command surface. The rules
+// are not restated: a second copy is a second thing to keep in step.
+import { assertSecretKey } from './secrets.js';
+
+export { SECRET_KEY_PATTERN, assertSecretKey, assertKnownCredential } from './secrets.js';
 
 /** The command names the shell registers and the frontend may call. */
 export const SHELL_COMMANDS = [
@@ -37,6 +43,8 @@ export const SHELL_COMMANDS = [
   'secure_store_set',
   'secure_store_get',
   'secure_store_delete',
+  // Existence without the value: the status card asks this, never `get`.
+  'secure_store_has',
   'cache_get',
   'cache_set',
   'cache_clear',
@@ -57,8 +65,12 @@ export type ShellCommand = (typeof SHELL_COMMANDS)[number];
  * could previously say "starting" but not "it crashed and is coming back", so an interface
  * could not tell a slow start from a recovery. The Rust side carries the same number and
  * `npm run desktop:verify` fails if the two disagree.
+ *
+ * v3 (Phase 6.4): `secure_store_has` was added, so a screen can report "configured" without the
+ * credential value crossing this boundary. The surface grew by one command; there is still no
+ * command that lists, dumps or exports credentials.
  */
-export const SHELL_PROTOCOL_VERSION = 2;
+export const SHELL_PROTOCOL_VERSION = 3;
 
 /** Refuse a command that is not part of the contract. */
 export function assertShellCommand(name: string): asserts name is ShellCommand {
@@ -71,23 +83,13 @@ export function assertShellCommand(name: string): asserts name is ShellCommand {
   }
 }
 
-/** Keychain entries are namespaced, and the key must look like an identifier. */
-export const SECRET_KEY_PATTERN = /^[a-z0-9][a-z0-9._/-]{0,119}$/i;
-/** Cache keys are the same shape: no path characters, no spaces. */
+/** Cache keys are the same shape as credential keys: no path characters, no spaces. */
 export const CACHE_KEY_PATTERN = /^[a-z0-9][a-z0-9._:-]{0,119}$/i;
 /** A cached value may not become an arbitrary file store. */
 export const MAX_CACHE_VALUE_BYTES = 512 * 1024;
 /** An exported report is bounded, and its extension is on a list. */
 export const MAX_EXPORT_BYTES = 8 * 1024 * 1024;
 export const EXPORT_EXTENSIONS = ['.md', '.json', '.csv', '.txt'] as const;
-
-export function assertSecretKey(key: string): void {
-  if (!SECRET_KEY_PATTERN.test(key)) {
-    throw new AppError('VALIDATION_FAILED', `invalid credential key "${key}"`, {
-      details: { key },
-    });
-  }
-}
 
 export function assertCacheKey(key: string): void {
   if (!CACHE_KEY_PATTERN.test(key)) {
@@ -221,6 +223,10 @@ export function createShellBridge(invoke: InvokeFn): ShellBridge {
       assertSecretKey(key);
       await call<void>('secure_store_delete', { key });
     },
+    async has(key) {
+      assertSecretKey(key);
+      return (await call<boolean>('secure_store_has', { key })) === true;
+    },
   };
 
   const cache: OfflineCache = {
@@ -300,6 +306,9 @@ export function browserShellBridge(): ShellBridge {
       get: async () => null,
       set: async () => unsupported('Storing a credential'),
       delete: async () => unsupported('Deleting a credential'),
+      // "Nothing is stored here" is the honest answer, and it is not an error: the page is simply
+      // not a runtime with a keychain.
+      has: async () => false,
     },
     cache: {
       get: async () => null,
