@@ -525,6 +525,29 @@ export async function verifyDesktopShell(options: VerifyOptions): Promise<Verifi
       : 'a declared credential is outside the namespace',
   );
 
+  // A secret is not Brain memory (ADR-0054, docs/desktop-secure-storage.md §9). The reasoning
+  // path and the memory store take values from a caller; a credential reaches them only if one
+  // of them *asks for it*, and the way that starts is an import. Refusing the import is what
+  // makes the isolation structural rather than a property of today's call sites, and it is the
+  // half of the invariant a test cannot hold on its own: tests/desktop-secure-storage.test.ts
+  // asserts the same absence by driving a real turn, and this one refuses the build.
+  const reasoningRoots = ['src/agent', 'src/memory'];
+  const credentialReference = /(?:secure-store|credential-vault|desktop\/secrets)[.'"/]/;
+  const reasoningLeaks: string[] = [];
+  for (const dir of reasoningRoots) {
+    for (const file of await listTypeScriptFiles(root, dir)) {
+      const source = (await readTextOrNull(join(root, file))) ?? '';
+      if (credentialReference.test(source)) reasoningLeaks.push(file);
+    }
+  }
+  add(
+    'secrets.isolated-from-reasoning',
+    reasoningLeaks.length === 0,
+    reasoningLeaks.length === 0
+      ? 'no file under src/agent or src/memory reaches the credential layer'
+      : `the credential layer is imported by the reasoning path: ${reasoningLeaks.join(', ')}`,
+  );
+
   // ── process spawning stays in one file ───────────────────────────────────
   const rustFiles = (await readdir(join(tauriDir, 'src'))).filter((name) => name.endsWith('.rs'));
   const spawners: string[] = [];

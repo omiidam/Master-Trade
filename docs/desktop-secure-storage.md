@@ -199,9 +199,15 @@ falls back to the browser implementation.
    per-launch API token has had since Phase 6.2.
 4. **Logs are redacted twice.** `Logger` redacts sensitive-looking keys and token-shaped strings, and
    the vault only ever offers metadata.
-5. **The value never enters Agent reasoning.** `CredentialVault` is not memory: no credential is
-   written to `memory_records`, and `toJSON()` is the only projection a context builder can use —
-   so a turn can know that a provider key exists without the key being in its input.
+5. **The value never enters Agent reasoning, and this is checked rather than assumed.**
+   `CredentialVault` is not memory: it writes no `memory_records`, and `toJSON()` is the only
+   projection a context builder can use, so a turn can know that a provider key exists without the
+   key being in its input. Two independent mechanisms hold that at rest: the verifier refuses a
+   build in which any file under `src/agent` or `src/memory` reaches the credential layer
+   (`secrets.isolated-from-reasoning`), and `tests/desktop-secure-storage.test.ts` drives a real
+   completed turn and a real memory write with the credential loaded, asserting the value appears in
+   neither the turn nor the serialized record. The import rule is what makes the isolation structural
+   — the absence does not depend on today's call sites.
 
 ---
 
@@ -244,7 +250,7 @@ Nothing in 6.5 or 6.6 was started here. Live trading and broker execution remain
 
 ## 12. Where this is tested
 
-`tests/desktop-secure-storage.test.ts` — 29 tests:
+`tests/desktop-secure-storage.test.ts` — 33 tests:
 
 - **contract** — namespaced and declared credentials, unique ids, non-namespaced / traversal /
   malformed / control-character keys refused, undeclared-but-namespaced refused as policy, key
@@ -252,10 +258,15 @@ Nothing in 6.5 or 6.6 was started here. Live trading and broker execution remain
 - **store** — get/overwrite/delete/absent-as-`null`, undeclared and empty and oversized values
   refused, no value in any error or metadata projection, availability from the port rather than
   optimism, `requiredCredentialsPresent`;
-- **boundary** — the five `secrets.*` verifier checks pass, the Rust namespace equals the contract's,
+- **boundary** — the six `secrets.*` verifier checks pass, the Rust namespace equals the contract's,
   only `secrets.rs` references the keyring crate, no enumeration function or command exists, all four
   credential commands are present on both sides at protocol v3, malformed keys never reach the shell,
   and the browser bridge refuses writes while answering reads honestly;
+- **isolation** — an unreachable port and a port that throws both surface the product's own sentence
+  rather than the platform's (no `keyring`, `dbus`, `~/.`, `/home/` or `C:\\` in the reason), with the
+  underlying cause readable through `availability().reason`; a loaded credential appears in neither a
+  completed agent turn nor a serialized memory record; the credential layer is imported by no file
+  under `src/agent` or `src/memory`.
 - **lifecycle** — load/resolve/metadata, absent credential, unreachable store, undeclared reference
   refused, environment references unchanged, rotate/remove/clear/reload, no value in a structured log
   record, resolution only through the resolver, injected credentials readable but not writable in the

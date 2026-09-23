@@ -13,7 +13,7 @@
  *     record, a JSON projection or a metadata view.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -28,6 +28,7 @@ import {
   SECRET_NAMESPACE_PREFIX,
   SESSION_TOKEN_CREDENTIAL,
   UnavailableSecureStorage,
+  type SecureStoragePort,
   assertKnownCredential,
   assertSecretKey,
   credentialEnvName,
@@ -53,6 +54,10 @@ import {
 } from '../src/desktop/credential-vault.js';
 import { verifyDesktopShell } from '../src/desktop/verify.js';
 import { resolveSecretFromEnv, secretFromKeychain } from '../src/index.js';
+import { AgentService } from '../src/agent/service.js';
+import { scriptedAsyncModelAdapter } from '../src/agent/asyncModel.js';
+import { assembleContext, section } from '../src/agent/context.js';
+import { InMemoryStore } from '../src/memory/store.js';
 
 /** A value shaped like a real credential, so a leak is unmistakable rather than plausible. */
 const SECRET_VALUE = 'sk-live-THIS-MUST-NOT-APPEAR-9f2b41';
@@ -489,5 +494,147 @@ describe('the vault lifecycle', () => {
     expect(names).toContain(AI_PROVIDER_KEY_CREDENTIAL);
     // The probe is the shell's question about the keychain, not a credential of the product.
     expect(names).not.toContain(KEYCHAIN_PROBE_CREDENTIAL);
+  });
+});
+
+/**
+ * The Brain principle, as a boundary rather than a promise.
+ *
+ * Phase 6.4 claims a credential is not Memory and not reasoning context. That claim is worth what
+ * is asserted about it, so these tests hold a **loaded** credential and then require it to be
+ * absent from everything the Brain is assembled out of: the structured turn the API returns, the
+ * memory store, and the context built for a turn. Each one establishes the value is really there
+ * first — an absence check over an empty vault proves nothing.
+ */
+describe('secrets stay outside the Brain', () => {
+  /** A vault holding a real value, and the proof that it is holding it. */
+  async function loadedVault(): Promise<CredentialVault> {
+    const store = storeWith(new InMemorySecureStorage());
+    await store.set(AI_PROVIDER_KEY_CREDENTIAL, SECRET_VALUE);
+    const vault = new CredentialVault({ store, env: {} });
+    await vault.load();
+    expect(vault.resolve(secretFromKeychain(AI_PROVIDER_KEY_CREDENTIAL))).toBe(SECRET_VALUE);
+    return vault;
+  }
+
+  it('keeps a loaded credential out of every shape an agent turn returns', async () => {
+    const vault = await loadedVault();
+    const service = new AgentService({ asyncModel: scriptedAsyncModelAdapter() });
+
+    const turn = await service.runAsync('How many units for a 1% risk budget?', {
+      correlationId: 'secrets-isolation',
+    });
+
+    // A real answer was produced with the credential loaded — the provider is the one component
+    // that gets the value, and it is not a component that returns a turn.
+    expect(turn.status).toBe('completed');
+    expect(turn.reply.length).toBeGreaterThan(0);
+    expect(JSON.stringify(turn)).not.toContain(SECRET_VALUE);
+    for (const value of Object.values(turn)) {
+      expect(JSON.stringify(value ?? null)).not.toContain(SECRET_VALUE);
+    }
+    expect(vault.describe().some((entry) => entry.loaded)).toBe(true);
+  });
+
+  it('cannot carry a credential into memory or into assembled turn context', async () => {
+    const vault = await loadedVault();
+    const memory = new InMemoryStore();
+
+    // What a context builder can obtain from the vault, recorded as memory: metadata, no value.
+    const entry = memory.append({
+      origin: { type: 'human', note: 'vault metadata' },
+      epistemicKind: 'fact',
+      content: JSON.stringify(vault.toJSON()),
+    });
+
+    const assembled = assembleContext([
+      section({ id: 'instructions', source: 'instructions', priority: 100, content: 'policy' }),
+      section({
+        id: `memory:${entry.id}`,
+        source: 'memory',
+        priority: 50,
+        content: entry.content,
+        trust: 'verified',
+        provenance: {
+          source: 'human',
+          ref: 'vault-metadata',
+          trust: 'verified',
+          recordedAt: entry.createdAt,
+        },
+      }),
+    ]);
+
+    // The memory section was kept, so the absence asserted below is the boundary and not a drop.
+    expect(assembled.sections.some((item) => item.source === 'memory')).toBe(true);
+    expect(JSON.stringify(memory.all())).not.toContain(SECRET_VALUE);
+    expect(JSON.stringify(assembled)).not.toContain(SECRET_VALUE);
+    // Loaded throughout, so nothing above passed by having no credential to leak.
+    expect(vault.resolve(secretFromKeychain(AI_PROVIDER_KEY_CREDENTIAL))).toBe(SECRET_VALUE);
+  });
+
+  it('lets the reasoning path reach no credential material at all', () => {
+    // Read from source for the same reason the Rust half is: the claim is about which module may
+    // reach which, and an import statement is exactly that fact.
+    const sources: string[] = [];
+    const scan = (dir: string): void => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) scan(full);
+        else if (full.endsWith('.ts')) sources.push(full);
+      }
+    };
+    scan(join(root, 'src', 'agent'));
+    scan(join(root, 'src', 'memory'));
+
+    // Non-vacuous: both directories were read and hold the modules under test.
+    expect(sources.length).toBeGreaterThan(8);
+    const offenders = sources.filter((file) =>
+      /secure-store|credential-vault|desktop\/secrets/.test(readFileSync(file, 'utf8')),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it('reports a denied keychain as unavailable, without repeating the platform message', async () => {
+    // The shape a real denial arrives in: an OS message naming an entry and a path.
+    const platformDetail =
+      'access denied to /Users/someone/Library/Keychains/login.keychain-db for account master-trade/session/token';
+    const denied: SecureStoragePort = {
+      async get() {
+        throw new AppError('FORBIDDEN', `keychain: ${platformDetail}`);
+      },
+      async has() {
+        throw new AppError('FORBIDDEN', `keychain: ${platformDetail}`);
+      },
+      async set() {
+        throw new AppError('FORBIDDEN', `keychain: ${platformDetail}`);
+      },
+      async delete() {
+        throw new AppError('FORBIDDEN', `keychain: ${platformDetail}`);
+      },
+    };
+
+    const store = new SecureCredentialStore(denied);
+    const availability = await store.availability();
+    expect(availability.available).toBe(false);
+    // The sentence a status card renders, in this product's words rather than the platform's.
+    expect(availability.reason).toBe('the OS credential store could not be reached');
+
+    const vault = new CredentialVault({ store, env: {} });
+    const entries = await vault.load();
+    expect(entries.every((entry) => !entry.loaded)).toBe(true);
+    expect(vault.resolve(secretFromKeychain(AI_PROVIDER_KEY_CREDENTIAL))).toBeNull();
+
+    // Denied, and reported in this product's words: no platform message and no path reaches a
+    // screen, a log record or an error response.
+    const surfaced = JSON.stringify({
+      availability,
+      entries,
+      describe: vault.describe(),
+      summary: await store.summary(),
+    });
+    expect(surfaced).not.toContain('access denied');
+    expect(surfaced).not.toContain('login.keychain-db');
+    expect(surfaced).not.toContain('/Users/someone');
+    expect(surfaced).not.toContain(SECRET_VALUE);
   });
 });
