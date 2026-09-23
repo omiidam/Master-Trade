@@ -25,6 +25,7 @@ Full documentation: [docs/architecture.md](./docs/architecture.md) — component
 matrix, data-flow diagrams, security boundaries — plus per-layer documents
 (api-auth, ai-and-llm, database-and-storage, jobs-and-realtime, market-data,
 vector-memory, observability, desktop-and-frontend, desktop-shell,
+desktop-architecture,
 user-profile-and-trading-context, input-quality-and-data-reliability,
 usage-credits-and-premium, portfolio-intelligence, capability-integration,
 security-and-privacy, brand-assets, risks-and-deferred) and

@@ -275,3 +275,22 @@ The layer it adds, what it measures and the limitation it does **not** close are
 [product-foundation-test-strategy.md](../product-foundation-test-strategy.md). What was verified for
 the Foundation as a whole, and what was not, is in
 [product-foundation-handoff.md](../product-foundation-handoff.md).
+
+Phase 6.1 arrived at a desktop shell that already worked and aligned it. Two modules were answering
+"is this the desktop shell?" with different predicates — the IPC contract accepted the legacy
+`__TAURI__` global, the frontend bridge tested only `__TAURI_INTERNALS__` — so a WebView exposing
+only the legacy global was the shell to one half of the codebase and a browser to the other. There
+is now one predicate in one place. A second lifecycle machine was tempting and wrong: the shell's
+own nine-state machine sequences the process, while a pure function narrows the shell's _report_
+into the five states an interface branches on, and refuses to call anything READY over a failed
+initialisation. And the shell now declares which environment it is in, because the mode decides
+which assurances are required: a placeholder update signing key stops a development build from
+shipping and stops a release from existing, and that is one fact with two severities.
+
+| ADR                                                          | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Decision id(s)                      | Status   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | -------- |
+| [0051](./ADR-0051-the-shell-hosts-and-the-domain-decides.md) | **One predicate, one wrapper**: `@shared/desktop/runtime` owns detection and delegates to the IPC contract, so the two cannot drift; the **startup state is a narrowing** of the shell's own report into `STARTING`/`READY`/`STOPPING`/`STOPPED`/`ERROR`, never a second machine, and never `READY` over a missing required capability or a failure hidden behind a quit; **environment modes are declared and refused when unrecognised**, production must declare itself, and the mode is **load-bearing** (a placeholder update key is a warning in development and an error in production); **no domain logic enters the shell** and no Tauri API is required to run the web product | `DEC-DESKTOP-6-RUNTIME-AND-STARTUP` | Accepted |
+
+The shell's purpose, the Web/Desktop boundary, the IPC and permission model, the lifecycle, the
+configuration modes, what this phase implemented, what is deferred to 6.2–6.6 and the known
+limitations are all in [desktop-architecture.md](../desktop-architecture.md).

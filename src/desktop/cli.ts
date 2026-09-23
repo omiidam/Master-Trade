@@ -23,6 +23,13 @@ const root = resolve(here, '..', '..', '..');
 const report = await verifyDesktopShell({ root });
 
 console.log('Master Trade — desktop shell verification\n');
+// Which mode was verified, said out loud. Release blockers are severity-dependent, so a
+// green report that does not name its environment is ambiguous.
+console.log(
+  `Environment: ${report.environment.environment}${
+    report.environment.declared ? '' : ' (not declared; the default)'
+  }\n`,
+);
 for (const check of report.checks) {
   const mark = check.ok ? 'PASS' : check.severity === 'warning' ? 'WARN' : 'FAIL';
   console.log(`${mark}  ${check.id}\n      ${check.detail}`);

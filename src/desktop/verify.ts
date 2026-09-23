@@ -31,6 +31,12 @@ import { SHELL_COMMANDS } from '../../packages/shared/src/desktop/ipc.js';
 import { DESKTOP_API_PORT } from './sidecar.js';
 import { DEFAULT_DESKTOP_CONFIG } from './config.js';
 import { DEFAULT_CONFIG } from '../core/config.js';
+import {
+  DESKTOP_ENVIRONMENT_VAR,
+  isProduction,
+  resolveDesktopEnvironment,
+  type DesktopEnvironmentResolution,
+} from './environment.js';
 
 export type CheckSeverity = 'error' | 'warning';
 
@@ -47,11 +53,21 @@ export interface VerificationReport {
   unverifiable: string[];
   errors: number;
   warnings: number;
+  /** Which environment this report describes, and whether it was declared. */
+  environment: DesktopEnvironmentResolution;
 }
 
 export interface VerifyOptions {
   /** Repository root (the directory containing `src-tauri/`). */
   root: string;
+  /**
+   * The environment to verify *as*, injected so this is deterministic.
+   *
+   * Defaults to `process.env`. Injection is what makes the production rules testable: a
+   * test can ask "would a production launch pass?" without setting one in the runner and
+   * carefully unsetting it again.
+   */
+  env?: Record<string, string | undefined>;
 }
 
 async function readJson(path: string): Promise<unknown> {
@@ -118,6 +134,34 @@ export async function verifyDesktopShell(options: VerifyOptions): Promise<Verifi
   ): void => {
     checks.push({ id, ok, severity, detail });
   };
+
+  // ── environment mode ─────────────────────────────────────────────────────
+  //
+  // The mode decides which assurances are required, so it is verified before anything it
+  // constrains. Two rules, and neither is a formality:
+  //
+  //   1. an unrecognised value is refused rather than coerced, because guessing the mode is
+  //      how a development build becomes a release;
+  //   2. a production run must *declare* itself, so this process's mode never depends on
+  //      whether someone remembered to export a variable.
+  const environment = resolveDesktopEnvironment(options.env ?? process.env);
+  const production = isProduction(environment.environment);
+
+  add(
+    'environment.recognised',
+    environment.violations.length === 0,
+    environment.violations[0] ??
+      `${DESKTOP_ENVIRONMENT_VAR}=${
+        environment.declared ? environment.environment : `unset (treating this run as development)`
+      }`,
+  );
+  add(
+    'environment.declared-in-production',
+    !production || environment.declared,
+    production
+      ? 'a production run must declare its environment explicitly'
+      : 'not a production run, so an undeclared environment is expected',
+  );
 
   // ── capability files ──────────────────────────────────────────────────────
   const capabilityDir = join(tauriDir, 'capabilities');
@@ -315,19 +359,36 @@ export async function verifyDesktopShell(options: VerifyOptions): Promise<Verifi
     const updater = ((conf.plugins ?? {}) as Record<string, unknown>).updater as
       Record<string, unknown> | undefined;
     const pubkey = typeof updater?.pubkey === 'string' ? updater.pubkey : '';
+    // A placeholder signing key stops a development build from shipping and stops a release
+    // from existing. That is one fact with two severities, and the environment is what
+    // decides which — this is the check that makes the mode load-bearing rather than a label.
     add(
       'updater.pubkey',
       pubkey.length > 0 && !pubkey.startsWith('REPLACE_WITH'),
       pubkey.startsWith('REPLACE_WITH')
-        ? 'the updater public key is still the placeholder; replace it before the first release'
+        ? production
+          ? 'the updater public key is still the placeholder; a production build cannot verify an update signature with it'
+          : 'the updater public key is still the placeholder; replace it before the first release'
         : 'an updater public key is configured',
-      'warning',
+      production ? 'error' : 'warning',
     );
     const endpoints = Array.isArray(updater?.endpoints) ? (updater.endpoints as string[]) : [];
     add(
       'updater.https-only',
       endpoints.length > 0 && endpoints.every((endpoint) => endpoint.startsWith('https://')),
       `update endpoints: ${endpoints.join(', ') || 'none'}`,
+    );
+    //
+    // The endpoint is checked for a reserved placeholder host in production only. `.invalid`
+    // is guaranteed never to resolve (RFC 2606), so an update endpoint there is a debug
+    // artefact: harmless while developing, and a shipped build that can never be updated.
+    const placeholderEndpoints = endpoints.filter((endpoint) => /\.invalid(\/|:|$)/.test(endpoint));
+    add(
+      'environment.update-endpoint',
+      !production || placeholderEndpoints.length === 0,
+      placeholderEndpoints.length === 0
+        ? 'every update endpoint resolves to a real host'
+        : `refused in production: ${placeholderEndpoints.join(', ')} uses the reserved .invalid TLD`,
     );
   }
 
@@ -407,11 +468,13 @@ export async function verifyDesktopShell(options: VerifyOptions): Promise<Verifi
     checks,
     errors,
     warnings,
+    environment,
     unverifiable: [
       'the native build: no Rust toolchain is required for this report, so `cargo build` and the bundle are not exercised here',
       'runtime behaviour of the shell: window show timing, keychain access and single-instance focus need a built app',
       'the bundled sidecar binary: `npm run build:sidecar` produces it, and its presence is checked at launch, not here',
-      'the updater endpoint and signing key: a placeholder key is reported as a warning until a real one is configured',
+      'the updater endpoint and signing key: a placeholder key is a warning in development and an error in production, but neither check proves a real key can verify a real signature',
+      'the desktop environment of the built binary: this report verifies the environment it was asked to verify as, not the one a packaged app will set',
       'code signing and notarisation for distribution',
       'the rasterisation of the brand source: `npm run brand:assets` produces the icons, and this report only checks that the paths resolve',
     ],

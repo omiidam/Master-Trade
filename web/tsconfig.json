@@ -26,6 +26,8 @@
       "@shared/decisions/model": ["../packages/shared/src/decisions/model.js"],
       "@shared/decisions/readiness": ["../packages/shared/src/decisions/readiness.js"],
       "@shared/desktop/ipc": ["../packages/shared/src/desktop/ipc.js"],
+      "@shared/desktop/runtime": ["../packages/shared/src/desktop/runtime.js"],
+      "@shared/desktop/startup": ["../packages/shared/src/desktop/startup.js"],
       "@shared/frontend/viewModels": ["../packages/shared/src/frontend/viewModels.js"],
       "@shared/jobs/service": ["../packages/shared/src/jobs/service.js"],
       "@shared/marketdata/provider": ["../packages/shared/src/marketdata/provider.js"],

@@ -36,6 +36,11 @@ export const SHARED_SURFACE: Readonly<Record<string, string>> = {
   '@shared/decisions/model': 'packages/shared/src/decisions/model.ts',
   '@shared/decisions/readiness': 'packages/shared/src/decisions/readiness.ts',
   '@shared/desktop/ipc': 'packages/shared/src/desktop/ipc.ts',
+  // Where the UI is running, in one function, and the startup state it derives. Both are
+  // consumed by the frontend (`web/src/desktop/`) rather than merely existing: the boundary
+  // test refuses a declared entry nothing imports, which is how this stays one list.
+  '@shared/desktop/runtime': 'packages/shared/src/desktop/runtime.ts',
+  '@shared/desktop/startup': 'packages/shared/src/desktop/startup.ts',
   '@shared/frontend/viewModels': 'packages/shared/src/frontend/viewModels.ts',
   '@shared/jobs/service': 'packages/shared/src/jobs/service.ts',
   '@shared/marketdata/provider': 'packages/shared/src/marketdata/provider.ts',

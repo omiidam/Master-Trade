@@ -1,8 +1,10 @@
 # Desktop Shell — Development Guide
 
-How to build, run, extend and verify the Tauri shell around Master Trade. The
-decisions behind it are in [desktop-and-frontend.md](./desktop-and-frontend.md);
-this document is the working guide.
+How to build, run, extend and verify the Tauri shell around Master Trade. This
+document is the working guide; the architecture — the shell's purpose, the Web/Desktop
+boundary, the IPC and permission model, the lifecycle, the configuration modes and what
+is deferred — is in [desktop-architecture.md](./desktop-architecture.md), and the
+shell-versus-Electron decision is in [desktop-and-frontend.md](./desktop-and-frontend.md).
 
 > **Status:** the shell is source-complete and policy-verified. It has not been
 > compiled here, because this repository and its CI have no Rust toolchain. Every
