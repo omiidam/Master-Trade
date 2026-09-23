@@ -242,6 +242,8 @@ export class SidecarSupervisor {
   private process: SidecarProcess | null = null;
   private currentPlan: SidecarPlan | null = null;
   private current: SupervisorStatus = initialSupervisorStatus();
+  /** The in-flight stop, so concurrent shutdowns share one and the child is signalled once. */
+  private stopping: Promise<void> | null = null;
   private failures = 0;
   /** When the current process last answered health; the origin of `uptimeMs`. */
   private healthySince: number | null = null;
@@ -614,7 +616,27 @@ export class SidecarSupervisor {
    * catch an exception to learn the outcome.
    */
   async handleExit(code: number | null): Promise<ProcessState> {
+    const previous = this.current.state;
     this.process = null;
+
+    // An exit reported when no process was being watched must not be fatal to the caller.
+    //
+    // `crashed` is only reachable from a state where a process was running, which is exactly the
+    // right transition table for a *live* supervisor — but a supervision loop keeps calling this
+    // after the restart budget is gone (`error`) or after a deliberate stop (`stopped`), and the
+    // illegal transition then escaped as an unhandled throw (VULN-005, end-of-Phase-6 security
+    // gate). A supervisor whose failure path can crash the loop that is meant to be watching it is
+    // worse than one that reports the terminal state, so that is what it does: no transition, no
+    // failure counted against a budget that has already been spent, and the exit recorded.
+    if (!canTransition(previous, 'crashed')) {
+      this.options.logger?.warn(
+        'an exit was reported when no API process was being watched',
+        { code, state: previous },
+        'desktop.sidecar.exit.ignored',
+      );
+      return this.current.state;
+    }
+
     const uptime = this.uptimeMs();
 
     // A process that ran stably and then died is a new incident. Refresh the budget, so a
@@ -693,6 +715,26 @@ export class SidecarSupervisor {
    * `lastError` so the failure is visible rather than swallowed.
    */
   async stop(): Promise<void> {
+    // One stop, however many callers ask for it at once.
+    //
+    // Concurrent shutdown is real — a window close racing an explicit quit — and the second caller
+    // used to reach `move('stopping')` from `stopping`, which is not a legal move, so the failure
+    // surfaced as an unhandled illegal transition on an exit path (VULN-006, end-of-Phase-6
+    // security gate). The in-flight promise is shared instead: the child is signalled once, every
+    // caller resolves on the same outcome, and `restart()` after a completed stop still stops
+    // normally because the promise is cleared when it settles.
+    const inFlight = this.stopping;
+    if (inFlight !== null) return inFlight;
+    const attempt = this.stopOnce();
+    this.stopping = attempt;
+    try {
+      await attempt;
+    } finally {
+      this.stopping = null;
+    }
+  }
+
+  private async stopOnce(): Promise<void> {
     const child = this.process;
     if (!child) {
       if (this.current.state !== 'idle') {

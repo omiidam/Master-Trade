@@ -179,10 +179,16 @@ function position(
             value: price,
             currency: 'USD' as const,
             observedAt,
+            // A declared price is `user`/`unverified` — what the web client sends and what the
+            // declaration schema accepts (VULN-002, end-of-Phase-6 security gate): only this product
+            // may label a price as provider-sourced or raise its trust. This fixture used to declare
+            // `market-data`/`verified`, so it was exercising the very claim the schema now refuses.
+            // Nothing below depends on the label — the metrics, the gaps and the freshness findings
+            // are all still produced — so this was a convenience rather than a capability.
             provenance: {
-              source: 'market-data' as const,
+              source: 'user' as const,
               ref: 'fixture/series',
-              trust: 'verified' as const,
+              trust: 'unverified' as const,
               recordedAt: observedAt,
             },
           },

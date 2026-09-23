@@ -191,6 +191,30 @@ export class PortfolioRepository {
     }
     const document = parsed.data;
 
+    // A declared price may not claim a provenance the caller cannot have.
+    //
+    // `portfolioDeclaredPriceSchema` already refuses this at the API boundary (VULN-002,
+    // end-of-Phase-6 security gate), but this is the single function that writes a price row, and
+    // the stored shape has to keep accepting what the product itself produces. Stating the rule
+    // here means the guarantee belongs to the writer rather than to whichever caller happens to
+    // validate first: no row can be written whose provenance says `market-data`, `system` or a
+    // raised trust level unless the product itself decided it — and nothing can, yet.
+    for (const position of document.positions) {
+      const provenance = position.price?.provenance;
+      if (provenance === undefined) continue;
+      if (
+        provenance.source === 'system' ||
+        provenance.source === 'market-data' ||
+        provenance.trust !== 'unverified'
+      ) {
+        throw new AppError(
+          'POLICY_VIOLATION',
+          'A declared price may not claim a source or a trust level only this product can produce.',
+          { details: { field: 'positions.price.provenance', symbol: position.symbol } },
+        );
+      }
+    }
+
     // Duplicate symbols are refused at the boundary rather than stored and reported
     // later. The engine would treat them as ambiguous — which is honest — but the moment
     // to tell the user is now, not when a figure is missing.

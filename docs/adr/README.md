@@ -371,3 +371,24 @@ that proves it and marking, as `NOT_AVAILABLE`, the checks this host cannot exer
 The startup and shutdown sequences, the failure table, the handshake, the evidence matrix, the
 release checklist and every validation this environment cannot perform are in
 [desktop-release-qa.md](../desktop-release-qa.md).
+
+## Phase 6.7 — trust is granted, not asserted
+
+Phase 6 closed with an attack simulation rather than a review: 150 adversarial cases in ten stages,
+run against the finished desktop line. It found the same defect three times in three registers — a
+label accepted from the party it labels. An update could keep a `verified` label after its content was
+replaced; a caller could declare a portfolio price as `market-data`/`authoritative` and have the
+readiness layer stop reporting that no provider supplied the label; a malformed instruction module
+could carry authorizing text in a field the safety scan never read.
+
+[ADR-0057](./ADR-0057-trust-is-granted-by-the-product-not-asserted-by-content.md) states the rule that
+closes all three: a trust or provenance label is produced by the product from the act that created the
+data, never read from the content, the caller or the document it describes. Raising a label stays
+`promote()`'s job, the declaration schema is narrower than the stored one, and the rule is enforced by
+the writer as well as by the validator in front of it.
+
+The method, the ten stages, the gate criteria, the severity model, the sandbox and synthetic-data
+boundary, the one `NOT_APPLICABLE` declaration, the six fixed findings with their regression cases, the
+eleven cases that measured the wrong thing and were corrected, and every limitation of the run are in
+[security-gate.md](../security-gate.md). The findings are kept permanently, with root cause and
+re-test result, in [security-knowledge-base.md](../security-knowledge-base.md).

@@ -26,9 +26,20 @@ export const REDACTED = '[redacted]';
 const SENSITIVE_KEY =
   /(api[_-]?key|apikey|secret|password|passwd|token|authorization|cookie|credential|private[_-]?key|session[_-]?id|session[_-]?secret)/i;
 
-/** Value shapes that are almost always credentials. */
+/**
+ * Value shapes that are almost always credentials.
+ *
+ * Key-based redaction cannot see a secret that arrives *inside* a sentence — "the provider rejected
+ * the token mt_s_…" names no sensitive key — so this list is the second half of the rule, and it
+ * has to know the shapes this product actually mints. It did not know its own session-token prefix
+ * (VULN-004, end-of-Phase-6 security gate): a session token interpolated into a log message was
+ * written verbatim, while the same token under a key named `token` was redacted. The prefix is
+ * therefore here, spelled out rather than imported — this module lives in `packages/shared`, which
+ * may not depend on `src/`, and a redaction rule that only works when a boundary is crossed is not
+ * a redaction rule. `src/auth/sessions.ts` owns the value; this owns the shape a sink must refuse.
+ */
 const SECRET_VALUE =
-  /(\bsk-[A-Za-z0-9]{6,}|\bAKIA[0-9A-Z]{12,}|\beyJ[A-Za-z0-9._-]{10,}|\bbearer\s+\S+|\bgh[pousr]_[A-Za-z0-9]{10,})/gi;
+  /(\bsk-[A-Za-z0-9]{6,}|\bAKIA[0-9A-Z]{12,}|\beyJ[A-Za-z0-9._-]{10,}|\bbearer\s+\S+|\bgh[pousr]_[A-Za-z0-9]{10,}|\bmt_s_[A-Za-z0-9_-]{8,})/gi;
 
 const MAX_DEPTH = 6;
 

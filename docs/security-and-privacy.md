@@ -271,12 +271,35 @@ is lost — **Requires review** before any hosted deployment.
 | 4   | No test proved the trading boundary at the source level — only the configuration was asserted                                         | **Low** (assurance gap)             | `tests/security.test.ts` asserts no route names a trading action and no source file enables live trading, broker execution, remote storage or model tool authority |
 | 5   | No test proved the file-name sanitiser against traversal shapes                                                                       | **Low** (assurance gap)             | Six traversal shapes, plus owner isolation and sensitive-category refusal                                                                                          |
 
+### 12.1 What the end-of-Phase-6 security gate fixed
+
+Phase 6 closed with an attack simulation — 150 adversarial cases in ten stages — rather than a review.
+The method, the gate criteria, the sandbox boundary and every limitation are in
+[security-gate.md](./security-gate.md); each finding below is kept permanently, with root cause,
+regression case and re-test result, in [security-knowledge-base.md](./security-knowledge-base.md).
+
+| #   | Finding                                                                                                                                                                                            | Severity                           | Fix                                                                                                                                                          | Regression |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| 1   | An update could keep a `verified` trust label after its text was replaced with model-authored content, which `query({ minTrust: 'verified' })` then returned                                       | **High** (trust laundering)        | `upsert` takes the lower of the trust the incoming write earned and the stored trust; raising stays `promote()`'s job                                        | SEC-087    |
+| 2   | A declared portfolio price could assert `market-data`/`authoritative` provenance, which the read path returned as the price's own and which suppressed the `price-unverified` readiness limitation | **Medium** (caller-asserted trust) | `portfolioDeclaredPriceSchema` narrows the declaration to `user`/`derived` + `unverified`, and `PortfolioRepository.replace` refuses the claim independently | SEC-093    |
+| 3   | An instruction set whose module carried its text outside `content` loaded without the safety scan seeing it                                                                                        | **Medium** (policy bypass)         | `loadInstructions` validates the document shape before the safety scan reads it                                                                              | SEC-016    |
+| 4   | A session token interpolated into a log _message_ was written verbatim — `SECRET_VALUE` knew other vendors' formats but not this product's own prefix                                              | **Medium** (log disclosure)        | `SECRET_VALUE` recognises `mt_s_…`; the fixture's synthetic secret is shaped the same way                                                                    | SEC-035    |
+| 5   | `SidecarSupervisor.handleExit` threw an illegal transition when called after the restart budget was exhausted                                                                                      | **Medium** (failure path)          | The call returns the current state instead of transitioning; the normal path is unchanged                                                                    | SEC-129    |
+| 6   | Concurrent `stop()` calls collided in the state machine (`stopping -> stopping`)                                                                                                                   | **Medium** (shutdown race)         | The in-flight stop promise is shared, so the child is signalled once                                                                                         | SEC-131    |
+
+One case is `NOT_APPLICABLE` — per-principal memory ownership, because a memory record carries no
+owner in this build. It is reported in its own column and is **not** counted as a pass. Nothing in
+the gate supports the conclusion that the product is secure; see
+[security-gate.md](./security-gate.md) §14.
+
 ## 13. Verification
 
-`npm run validate` covers formatting, both typechecks, the full suite (47 files, 841 tests), both
-production builds and the desktop shell report (`0 errors`). Security-specific coverage lives in
-`tests/security.test.ts` (26 tests), with adjacent claims in `safety`, `realtime-ws`, `llm-registry`,
-`usage-api`, `portfolio-api`, `quality-api`, `database`, `desktop-shell` and `dependency-graph`.
+`npm run validate` covers formatting, both typechecks, the full suite, both production builds, the
+desktop shell report (`0 errors`) and the browser suite. Security-specific coverage lives in
+`tests/security.test.ts` (26 tests), the end-of-Phase-6 gate in `tests/security-gate` (150 attacks),
+and adjacent claims in `safety`, `realtime-ws`, `llm-registry`, `usage-api`, `portfolio-api`,
+`quality-api`, `database`, `desktop-shell`, `desktop-hardening`, `desktop-runtime` and
+`dependency-graph`.
 
 ## 14. Requires professional review before production
 

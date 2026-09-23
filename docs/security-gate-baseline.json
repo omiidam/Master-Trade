@@ -1,0 +1,72 @@
+{
+  "$comment": "The end-of-Phase-6 security gate, recorded. Every number here is asserted against an actual run of tests/security-gate by tests/security-gate/gate.test.ts, so this file cannot drift from the suite it describes. It is a checkpoint that a later security pass diffs against, not a claim that the product is secure — see docs/security-gate.md for what was tested, what was fixed and what remains.",
+  "phase": "6.7 (end-of-Phase-6 security gate)",
+  "harness": "tests/security-gate (harness.ts, fixtures.ts, stages-01-02.ts, stages-03-04.ts, stages-05-06.ts, stages-07-08.ts, stages-09-10.ts)",
+  "baseline": true,
+  "isMaximum": false,
+  "totalAttacks": 150,
+  "pass": 149,
+  "fail": 0,
+  "notApplicable": 1,
+  "stages": [
+    { "stage": 1, "attacks": 15, "pass": 15, "fail": 0, "notApplicable": 0, "cleared": true },
+    { "stage": 2, "attacks": 15, "pass": 15, "fail": 0, "notApplicable": 0, "cleared": true },
+    { "stage": 3, "attacks": 15, "pass": 15, "fail": 0, "notApplicable": 0, "cleared": true },
+    { "stage": 4, "attacks": 20, "pass": 20, "fail": 0, "notApplicable": 0, "cleared": true },
+    { "stage": 5, "attacks": 20, "pass": 20, "fail": 0, "notApplicable": 0, "cleared": true },
+    { "stage": 6, "attacks": 15, "pass": 14, "fail": 0, "notApplicable": 1, "cleared": true },
+    { "stage": 7, "attacks": 10, "pass": 10, "fail": 0, "notApplicable": 0, "cleared": true },
+    { "stage": 8, "attacks": 15, "pass": 15, "fail": 0, "notApplicable": 0, "cleared": true },
+    { "stage": 9, "attacks": 10, "pass": 10, "fail": 0, "notApplicable": 0, "cleared": true },
+    { "stage": 10, "attacks": 15, "pass": 15, "fail": 0, "notApplicable": 0, "cleared": true }
+  ],
+  "notApplicableAttacks": [
+    {
+      "id": "SEC-098",
+      "capability": "per-principal memory ownership",
+      "why": "MemoryMetadata carries subject, symbol and tags but no owner id, and the store is constructed per process. There is no field to authorize against, so an ownership attack has no target here.",
+      "futurePhase": "the phase that introduces multi-principal or shared memory"
+    }
+  ],
+  "findings": {
+    "$comment": "Confirmed vulnerabilities from this gate. VULN-001 was found and fixed before this run and is re-tested here (SEC-087); VULN-002 through VULN-006 were found by this run, fixed, and re-tested.",
+    "critical": 0,
+    "high": 1,
+    "medium": 5,
+    "low": 0,
+    "fixed": 6,
+    "accepted": 0,
+    "deferred": 0
+  },
+  "regressions": {
+    "$comment": "The baseline attacks that exist because a finding was fixed. They stay in the suite forever.",
+    "VULN-001": "SEC-087",
+    "VULN-002": "SEC-093",
+    "VULN-003": "SEC-016",
+    "VULN-004": "SEC-035",
+    "VULN-005": "SEC-129",
+    "VULN-006": "SEC-131"
+  },
+  "attacksChangedDuringThisGate": {
+    "$comment": "Cases whose *measurement* was wrong and were corrected, with no product change behind it. Recorded so the next pass can tell a corrected test from a weakened one: in each of these the boundary was already held, and the assertion had been measuring the wrong thing.",
+    "SEC-028": "a command-name scan matched `shell_status` and `shell_handshake` on the word `shell`.",
+    "SEC-060": "read a capability file that does not exist (default.json); the shipped grant is main.json.",
+    "SEC-078": "sent exactly the policy ceiling, which is allowed; now one byte past it.",
+    "SEC-080": "expected 404 for a job the principal may not read; the pipeline answers 403 first.",
+    "SEC-081": "expected a 4xx for a body that is valid by design; asserted a typed, leak-free envelope instead.",
+    "SEC-085": "expected assertSecretKey to enforce declaredness; that rule lives in assertKnownCredential.",
+    "SEC-124": "grepped config.ts for flag literals that live in DEFAULT_SAFETY_PROFILE.",
+    "SEC-126": "read a config path that does not exist and then sent fewer requests than the real limit.",
+    "SEC-127": "same, and issued its session outside the server it presented the token to.",
+    "SEC-143": "same missing capability file as SEC-060.",
+    "SEC-144": "read the echo of a caller-supplied correlation id as a secret leak."
+  },
+  "safety": {
+    "liveTradingEnabled": false,
+    "brokerExecutionEnabled": false,
+    "autonomousOrderPlacement": false,
+    "realSystemsAttacked": false,
+    "realFinancialActionExecuted": false,
+    "productionSecretsUsed": false
+  }
+}

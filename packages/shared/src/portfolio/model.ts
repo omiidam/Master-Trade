@@ -1223,6 +1223,37 @@ export const portfolioPriceSchema = z.strictObject({
   }),
 });
 
+/**
+ * A price as a *client* declares it — the write half of `portfolioPriceSchema`.
+ *
+ * `portfolioPriceSchema` is the **stored** shape, and the read path rebuilds it from the row, so it
+ * has to keep accepting what the product itself can produce: `system` and `market-data` sources, and
+ * a raised trust level. A declaration is a different question, and answering it with the stored
+ * schema was VULN-002 (end-of-Phase-6 security gate):
+ *
+ *   - a caller could declare `provenance.source: 'market-data'` with `trust: 'authoritative'`;
+ *   - `toRow()` stored those two strings verbatim, and `assemble()` handed them back as the
+ *     provenance of a price — so a number somebody typed arrived downstream described as a price
+ *     the system had obtained from the market and verified.
+ *
+ * That is the laundering `promoteTrust()` refuses on the memory path, reached through a different
+ * door. A person declaring a figure about their own account may say *whose figure it is* — theirs,
+ * or one they derived — and nothing more. `unverified` is therefore a literal, not an enum, and the
+ * two sources the product can produce are absent: raising trust is the product's decision, and no
+ * route is able to make it.
+ */
+export const portfolioDeclaredPriceSchema = z.strictObject({
+  value: z.number().finite().positive().max(MAX_PRICE),
+  currency: currencySchema,
+  observedAt: isoDate,
+  provenance: z.strictObject({
+    source: z.enum(['user', 'derived']),
+    ref: z.string().min(1).max(64),
+    trust: z.literal('unverified'),
+    recordedAt: isoDate,
+  }),
+});
+
 export const portfolioPositionSchema = z.strictObject({
   id: z.string().min(1).max(64),
   symbol: z.string().min(1).max(MAX_SYMBOL_LENGTH).regex(SYMBOL_PATTERN, 'invalid symbol'),
@@ -1256,8 +1287,13 @@ export type PortfolioDocumentInput = z.infer<typeof portfolioDocumentSchema>;
  * holding has an opinion about — and accepting one would let a client name a row that
  * belongs to somebody else. The server mints it, and the omission is the reason a
  * stored position's identity is never client-controlled.
+ *
+ * `price` is narrowed as well: the one field whose *provenance* a client could otherwise choose
+ * carries `portfolioDeclaredPriceSchema` here instead of the stored shape (VULN-002).
  */
-export const portfolioPositionInputSchema = portfolioPositionSchema.omit({ id: true });
+export const portfolioPositionInputSchema = portfolioPositionSchema
+  .omit({ id: true })
+  .extend({ price: portfolioDeclaredPriceSchema.nullable() });
 
 /** The body of a declaration: the stored document minus the position ids. */
 export const portfolioDocumentInputSchema = portfolioDocumentSchema

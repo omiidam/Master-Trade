@@ -20,6 +20,36 @@ export interface InstructionSet {
   modules: InstructionModule[];
 }
 
+/**
+ * Validate the *shape* of an instruction set before its text is scanned.
+ *
+ * The safety scan below reads `module.content`, so a module whose text sits under any other key was
+ * invisible to it — the set loaded, `renderInstructions` rendered `undefined`, and the
+ * authorization the scan exists to refuse was never seen (VULN-003, end-of-Phase-6 security gate).
+ *
+ * This is the rule that closes it: a module is `id`, `version` and `content`, all present and
+ * non-empty, and a set has at least one module. Validation runs first, so there is no document the
+ * scan can skip over: text that is not in `content` is a refusal, not a module the scan overlooked.
+ */
+function assertWellFormed(set: InstructionSet): void {
+  const modules = (set as { modules?: unknown } | null)?.modules;
+  if (!Array.isArray(modules) || modules.length === 0) {
+    throw new Error('an instruction set must declare at least one module');
+  }
+  for (const [index, module] of (modules as readonly unknown[]).entries()) {
+    const candidate = module as Partial<InstructionModule> | null;
+    for (const field of ['id', 'version', 'content'] as const) {
+      const value = candidate?.[field];
+      if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error(
+          `instruction module at index ${index} has no ${field}; a module is id, version and content, ` +
+            'and content is the only text the safety scan can read.',
+        );
+      }
+    }
+  }
+}
+
 /** Validates that an instruction set does not weaken the safety profile. */
 function assertSafetyCompliant(set: InstructionSet): void {
   // Detects *authorization* language, not mere mention (prohibitions are fine).
@@ -68,8 +98,9 @@ export const CORE_INSTRUCTIONS_V1: InstructionSet = {
   ],
 };
 
-/** Load and validate an instruction set. */
+/** Load and validate an instruction set: shape first, then the safety scan over its text. */
 export function loadInstructions(set: InstructionSet = CORE_INSTRUCTIONS_V1): InstructionSet {
+  assertWellFormed(set);
   assertSafetyCompliant(set);
   return set;
 }

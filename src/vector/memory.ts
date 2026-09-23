@@ -200,11 +200,29 @@ export class InMemoryVectorMemory implements VectorMemoryStore {
 
     const existing = input.id === undefined ? undefined : this.records.get(input.id);
     if (existing) {
+      // An update may replace the text; it may not improve what the record is *trusted* as.
+      //
+      // The create path below already forces model-authored material to `unverified`. The update
+      // path used to carry the existing trust over unchanged, so replacing the text of a
+      // `verified` record with model-authored content left the label intact — and the poisoned
+      // text was then returned by a `minTrust: 'verified'` query, i.e. laundered into the trusted
+      // retrieval tier. That is exactly the route `promoteTrust` refuses to take, reached through
+      // a different door (VULN-001, end-of-Phase-6 security gate; see
+      // docs/security-knowledge-base.md).
+      //
+      // The rule is one-sided on purpose: a write from a lower-trust source lowers the record, and
+      // a write from a higher-trust source does **not** raise it. Raising remains `promote`'s job,
+      // because that path requires an explicit verifier and records who verified it.
+      const incomingTrust: TrustLevel =
+        input.provenance.source === 'model' ? 'unverified' : input.provenance.trust;
+      const trust =
+        TRUST_ORDER[incomingTrust] < TRUST_ORDER[existing.trust] ? incomingTrust : existing.trust;
       const updated: VectorMemoryRecord = {
         ...existing,
         text: input.text,
         metadata: input.metadata,
         provenance: input.provenance,
+        trust,
         version: existing.version + 1,
         embedding,
         embeddingModel: this.embedder.model,
