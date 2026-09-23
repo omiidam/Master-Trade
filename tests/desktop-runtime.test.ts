@@ -817,9 +817,21 @@ describe('a real child process', () => {
     };
   }
 
-  /** A real child that announces itself, then idles until asked to leave. */
+  /**
+   * A real child that announces itself, then idles until asked to leave.
+   *
+   * The two details below are load-bearing, and both are about being able to *observe* the
+   * graceful path instead of racing it:
+   *
+   *   - the `SIGTERM` handler is registered synchronously on the first line and the announcement
+   *     is written on the second, so a test that has *read* the announcement knows the handler is
+   *     already live — and a prompt `stop()` after it is a delivered signal rather than a coin
+   *     toss against the child's boot;
+   *   - the handler leaves through the write callback, because `process.exit()` does not wait for
+   *     an in-flight write to a pipe — exiting first is how a child's last words go missing.
+   */
   const IDLE_SCRIPT = [
-    "process.on('SIGTERM', () => { console.log('graceful-exit'); process.exit(0); });",
+    "process.on('SIGTERM', () => { process.stdout.write('graceful-exit\\n', () => process.exit(0)); });",
     "console.log('api-listening');",
     'setInterval(() => {}, 1000);',
   ].join('\n');
@@ -904,6 +916,21 @@ describe('a real child process', () => {
     try {
       await supervisor.start();
       const pid = supervisor.status().pid as number;
+
+      // The barrier that makes this test mean what it claims. Readiness here comes from the
+      // *test's* health endpoint, not from the child, so `start()` resolving says nothing about
+      // the child: it may still be booting, with the `SIGTERM` handler on its first line not yet
+      // executed. A signal delivered into that window does not reach a handler at all — the
+      // default disposition kills the process outright — so a prompt `stop()` would be measuring
+      // the child's boot time, not the graceful path. Waiting for the child's own announcement,
+      // which it emits on the line *after* installing the handler, is the happens-before edge
+      // that closes it: the line can only arrive from a process whose handler is already live.
+      await waitUntil(
+        () => sink.records.some((record) => record.message.includes('api-listening')),
+        3_000,
+        'the child to announce itself',
+      );
+
       await supervisor.stop();
       expect(supervisor.currentState()).toBe('stopped');
       await waitUntil(async () => !(await isProcessAlive(pid)), 3_000, 'the child to have left');
