@@ -14,6 +14,7 @@
     "./decisions/model": "./src/decisions/model.ts",
     "./decisions/readiness": "./src/decisions/readiness.ts",
     "./desktop/ipc": "./src/desktop/ipc.ts",
+    "./desktop/process": "./src/desktop/process.ts",
     "./desktop/runtime": "./src/desktop/runtime.ts",
     "./desktop/startup": "./src/desktop/startup.ts",
     "./frontend/viewModels": "./src/frontend/viewModels.ts",

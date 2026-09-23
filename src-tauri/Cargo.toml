@@ -37,6 +37,15 @@ keyring = { version = "3", features = [
 # HTTP client for the shell — the shell makes no other outbound request.
 ureq = { version = "2", default-features = false, features = ["tls"] }
 
+# `SIGTERM`, for the graceful shutdown path in `sidecar::terminate`.
+#
+# `std::process::Child::kill` is `SIGKILL` on Unix — it cannot ask. Phase 6.2 found the shell
+# claiming a graceful stop it never performed, so the one binding needed to actually perform it
+# is declared here rather than worked around. Unix only; Windows keeps `TerminateProcess`,
+# which is all `std` offers there (see docs/desktop-runtime.md §11).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [features]
 # Kept so `cargo build --features custom-protocol` matches Tauri's own template.
 custom-protocol = ["tauri/custom-protocol"]

@@ -16,9 +16,21 @@
  * A UI cannot use it, for two reasons: it lives in `src/`, which the frontend may not
  * import, and its states describe the shell's internals rather than what a user needs to
  * know. So this module narrows the shell's own report — `ShellStatus`, which crosses the
- * boundary already — into the five states a screen can act on:
+ * boundary already — into the states a screen can act on:
  *
- *   `STARTING` → `READY` → `STOPPING` → `STOPPED`, and `ERROR` from anywhere.
+ *   `STARTING` → `READY` → `RECOVERING` → `STOPPING` → `STOPPED`, and `ERROR` from anywhere.
+ *
+ * `RECOVERING` arrived with Phase 6.2, when the shell gained a process supervisor. A crash
+ * mid-session had no honest state before it: `STARTING` would report a failure as progress,
+ * and `ERROR` would be false while a restart was still in flight. It is reported, and the
+ * reason names the failure, so a recovery is visible rather than silent.
+ *
+ * This function answers a *different question* from `runtimeStateOf` in `./process.js`, which
+ * is why both exist and neither replaces the other. `runtimeStateOf` answers "what is the API
+ * process doing?" and knows nothing but the process state. This answers "may this screen act
+ * as ready?", which also requires the host capabilities the app cannot ship without. They
+ * share one source — the same `SupervisorStatus` — and this one is built on the other, so the
+ * vocabulary cannot drift; only the extra question is added.
  *
  * There is exactly one source: the shell reports, this maps. Nothing here starts, stops or
  * supervises anything, and nothing here duplicates the shell's ordering.
@@ -37,15 +49,17 @@
 
 import { REQUIRED_DESKTOP_CAPABILITIES, type DesktopCapability } from './host.js';
 import type { ShellStatus } from './ipc.js';
+import { initialSupervisorStatus, isProcessReady, runtimeStateOf } from './process.js';
 import type { DesktopRuntime } from './runtime.js';
 
 /**
- * The five states a desktop screen branches on.
+ * The states a desktop screen branches on.
  *
  * Deliberately separate from `src/desktop/lifecycle.ts`'s `DesktopState`: those are the
  * shell's sequencing steps, these are what the user is owed.
  */
-export type DesktopStartupState = 'STARTING' | 'READY' | 'STOPPING' | 'STOPPED' | 'ERROR';
+export type DesktopStartupState =
+  'STARTING' | 'READY' | 'RECOVERING' | 'STOPPING' | 'STOPPED' | 'ERROR';
 
 export interface DesktopStartupView {
   state: DesktopStartupState;
@@ -111,9 +125,20 @@ export function desktopStartupState(input: StartupInput): DesktopStartupView {
     unavailable.some((entry) => entry.capability === capability),
   );
 
-  if (status.sidecarState === 'failed') {
+  // The process report, or the honest "nothing has been started" when a shell predates it.
+  // Falling back rather than throwing keeps this total: a v1 shell talking to a v2 interface
+  // reads as `unavailable`, which is true, instead of crashing the status card.
+  const report = status.runtime ?? initialSupervisorStatus();
+  const runtimeState = runtimeStateOf(report.state);
+  const processReason = report.lastError;
+  // Readiness needs the evidence, not just the claim. A report saying `ready` with a health of
+  // `unreachable` is a contradiction; the safe reading is "not answering yet", and it is exactly
+  // the false positive this module exists to refuse (Phase 6.1 §12, restated for a live process).
+  const ready = isProcessReady(report);
+
+  if (runtimeState === 'error') {
     // The shell's own reason if it gave one, so the user sees the cause rather than a code.
-    const detail = unavailable[0]?.reason;
+    const detail = processReason ?? unavailable[0]?.reason;
     return {
       state: 'ERROR',
       reason: detail
@@ -124,7 +149,7 @@ export function desktopStartupState(input: StartupInput): DesktopStartupView {
     };
   }
 
-  if (status.sidecarState === 'ready' && missingCapabilities.length > 0) {
+  if (ready && missingCapabilities.length > 0) {
     return {
       state: 'ERROR',
       reason: `The shell cannot provide ${missingCapabilities.join(', ')}.`,
@@ -134,6 +159,8 @@ export function desktopStartupState(input: StartupInput): DesktopStartupView {
   }
 
   if (stopping) {
+    // A requested quit outranks an in-flight recovery: the process is being stopped anyway, and
+    // reporting `RECOVERING` would suggest a restart the user has already cancelled.
     return {
       state: 'STOPPING',
       reason: 'Shutting down.',
@@ -142,7 +169,21 @@ export function desktopStartupState(input: StartupInput): DesktopStartupView {
     };
   }
 
-  if (status.sidecarState === 'ready') {
+  if (runtimeState === 'recovering' || (runtimeState === 'ready' && !ready)) {
+    const cause = runtimeState === 'ready' ? 'the local API is not answering health checks' : null;
+    return {
+      state: 'RECOVERING',
+      reason: processReason
+        ? `The local API stopped and is being restarted: ${processReason}`
+        : `${cause ?? 'The local API stopped'} and is being restarted.`,
+      // Deliberately null: the process's base URL is not currently answering, and handing it
+      // to a caller would invite a request against an API that is not there.
+      apiBaseUrl: null,
+      missingCapabilities,
+    };
+  }
+
+  if (ready) {
     return {
       state: 'READY',
       reason: null,
@@ -151,7 +192,7 @@ export function desktopStartupState(input: StartupInput): DesktopStartupView {
     };
   }
 
-  if (status.sidecarState === 'starting') {
+  if (runtimeState === 'starting') {
     return {
       state: 'STARTING',
       reason: 'Starting the local API.',
@@ -173,7 +214,12 @@ export function isStartupSettled(state: DesktopStartupState): boolean {
   return state === 'READY' || state === 'STOPPED' || state === 'ERROR';
 }
 
-/** True while the UI should show progress rather than content or an error. */
+/**
+ * True while the UI should show progress rather than content or an error.
+ *
+ * `RECOVERING` belongs here: it is a transient condition that resolves on its own, and a
+ * screen that treated it as settled would render stale content over an API that is down.
+ */
 export function isStartupPending(state: DesktopStartupState): boolean {
-  return state === 'STARTING' || state === 'STOPPING';
+  return state === 'STARTING' || state === 'STOPPING' || state === 'RECOVERING';
 }

@@ -20,14 +20,15 @@
 
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import {
   assertCapabilityAllowList,
   capabilityPermissionIds,
   missingRequiredPermissions,
   parseCapabilityFile,
 } from './capabilities.js';
-import { SHELL_COMMANDS } from '../../packages/shared/src/desktop/ipc.js';
+import { SHELL_COMMANDS, SHELL_PROTOCOL_VERSION } from '../../packages/shared/src/desktop/ipc.js';
+import { PROCESS_POLICY, PROCESS_STATES } from '../../packages/shared/src/desktop/process.js';
 import { DESKTOP_API_PORT } from './sidecar.js';
 import { DEFAULT_DESKTOP_CONFIG } from './config.js';
 import { DEFAULT_CONFIG } from '../core/config.js';
@@ -37,6 +38,42 @@ import {
   resolveDesktopEnvironment,
   type DesktopEnvironmentResolution,
 } from './environment.js';
+
+/** Every `.ts` file beneath `dir`, repository-relative, with forward slashes. */
+async function listTypeScriptFiles(root: string, dir: string): Promise<string[]> {
+  const found: string[] = [];
+  const walk = async (absolute: string): Promise<void> => {
+    for (const entry of await readdir(absolute, { withFileTypes: true })) {
+      const next = join(absolute, entry.name);
+      if (entry.isDirectory()) await walk(next);
+      else if (entry.name.endsWith('.ts')) {
+        found.push(
+          next
+            .slice(root.length + 1)
+            .split(sep)
+            .join('/'),
+        );
+      }
+    }
+  };
+  await walk(join(root, dir));
+  return found;
+}
+
+/** The `STATES` list mirrored in `sidecar.rs`, in declaration order. */
+function rustProcessStates(source: string): string[] {
+  const match = /pub const STATES: \[&str; \d+\] = \[([\s\S]*?)\];/.exec(source);
+  if (!match) return [];
+  return [...(match[1] ?? '').matchAll(/"([^"]+)"/g)].map((entry) => entry[1] ?? '');
+}
+
+/** A `Duration::from_millis(30_000)` constant, as a number. */
+function rustMillis(source: string, name: string): number {
+  const raw = new RegExp(
+    `pub const ${name}: Duration = Duration::from_millis\\(([\\d_]+)\\);`,
+  ).exec(source)?.[1];
+  return Number((raw ?? '0').split('_').join(''));
+}
 
 export type CheckSeverity = 'error' | 'warning';
 
@@ -433,6 +470,75 @@ export async function verifyDesktopShell(options: VerifyOptions): Promise<Verifi
     `rust=${rustPort || 'missing'} typescript=${DESKTOP_API_PORT} backend-default=${DEFAULT_CONFIG.api.port}`,
   );
 
+  // ── the process contract, held together across the two implementations ──
+  //
+  // Phase 6.2 added a supervisor to both halves. These four checks are why "mirrored" means
+  // something: a state the shell can report and the interface cannot name, or a deadline that
+  // differs between them, would be a status card that lies. None of them proves the Rust code
+  // runs (see `unverifiable`); all of them prove the two descriptions are one description.
+  const rustProtocol = Number(
+    /pub const PROTOCOL_VERSION: u32 = (\d+);/.exec(commandsSource)?.[1] ?? '0',
+  );
+  add(
+    'protocol.agreement',
+    rustProtocol === SHELL_PROTOCOL_VERSION,
+    `rust=${rustProtocol || 'missing'} typescript=${SHELL_PROTOCOL_VERSION}`,
+  );
+
+  const rustStates = rustProcessStates(rustSidecar);
+  const statesAgree =
+    rustStates.length > 0 && rustStates.join(',') === [...PROCESS_STATES].join(',');
+  add(
+    'process-state.agreement',
+    statesAgree,
+    statesAgree
+      ? `${rustStates.length} process states agree with @shared/desktop/process`
+      : `rust=[${rustStates.join(', ') || 'missing'}] typescript=[${[...PROCESS_STATES].join(', ')}]`,
+  );
+
+  const rustPolicy = {
+    readyTimeoutMs: rustMillis(rustSidecar, 'READY_TIMEOUT'),
+    pollIntervalMs: rustMillis(rustSidecar, 'POLL_INTERVAL'),
+    stopTimeoutMs: rustMillis(rustSidecar, 'STOP_TIMEOUT'),
+    stableUptimeMs: rustMillis(rustSidecar, 'STABLE_UPTIME'),
+    maxRestarts: Number(/pub const MAX_RESTARTS: u32 = (\d+);/.exec(rustSidecar)?.[1] ?? '0'),
+  };
+  const policyAgrees = (Object.keys(rustPolicy) as (keyof typeof rustPolicy)[]).every(
+    (key) => rustPolicy[key] === PROCESS_POLICY[key],
+  );
+  add(
+    'process.policy-agreement',
+    policyAgrees,
+    policyAgrees
+      ? 'every deadline and bound agrees between Rust and PROCESS_POLICY'
+      : `rust=${JSON.stringify(rustPolicy)} typescript=${JSON.stringify({
+          readyTimeoutMs: PROCESS_POLICY.readyTimeoutMs,
+          pollIntervalMs: PROCESS_POLICY.pollIntervalMs,
+          stopTimeoutMs: PROCESS_POLICY.stopTimeoutMs,
+          stableUptimeMs: PROCESS_POLICY.stableUptimeMs,
+          maxRestarts: PROCESS_POLICY.maxRestarts,
+        })}`,
+  );
+
+  // The one-spawner rule, extended to the Node side. `process.single-spawner` above holds the
+  // Rust half; this holds the half Phase 6.2 added, so a second place that can start a process
+  // cannot appear quietly in the TypeScript layer either.
+  const tsSpawners: string[] = [];
+  for (const file of await listTypeScriptFiles(root, 'src')) {
+    if (file === 'src/desktop/child-process.ts') continue;
+    const source = (await readTextOrNull(join(root, file))) ?? '';
+    // An *import* of the module, not the bare name: this file names it in the pattern below,
+    // and a check that flagged itself would be switched off rather than fixed.
+    if (/(?:from|import)\s*\(?\s*['"]node:child_process['"]/.test(source)) tsSpawners.push(file);
+  }
+  add(
+    'process.single-spawner.typescript',
+    tsSpawners.length === 0,
+    tsSpawners.length === 0
+      ? 'only src/desktop/child-process.ts may spawn a process'
+      : `process spawning also appears in: ${tsSpawners.join(', ')}`,
+  );
+
   // ── config schema parity ─────────────────────────────────────────────────
   const rustConfig = (await readTextOrNull(join(tauriDir, 'src', 'config.rs'))) ?? '';
   const rustKeys = rustConfigKeys(rustConfig);
@@ -472,6 +578,8 @@ export async function verifyDesktopShell(options: VerifyOptions): Promise<Verifi
     unverifiable: [
       'the native build: no Rust toolchain is required for this report, so `cargo build` and the bundle are not exercised here',
       'runtime behaviour of the shell: window show timing, keychain access and single-instance focus need a built app',
+      'the Rust supervisor actually running: `process-state.agreement` and `process.policy-agreement` prove the Rust source describes the same machine with the same deadlines, and nothing here compiles or executes it — the Node supervisor in `src/desktop/sidecar.ts`, exercised by tests/desktop-runtime.test.ts against a real child process, is what those claims are tested against',
+      'graceful termination on Windows: `sidecar::terminate` sends a real SIGTERM on Unix and falls back to TerminateProcess elsewhere, which is all `std` offers (TDR-12)',
       'the bundled sidecar binary: `npm run build:sidecar` produces it, and its presence is checked at launch, not here',
       'the updater endpoint and signing key: a placeholder key is a warning in development and an error in production, but neither check proves a real key can verify a real signature',
       'the desktop environment of the built binary: this report verifies the environment it was asked to verify as, not the one a packaged app will set',

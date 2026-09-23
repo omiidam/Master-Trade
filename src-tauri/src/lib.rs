@@ -15,9 +15,12 @@
 //! 5. ready                   the frontend calls shell_handshake for base URL + token
 //! ```
 //!
-//! On exit the child is stopped first, so SQLite closes through its own shutdown
-//! path rather than being killed mid-write (WAL makes a hard stop survivable; this
-//! makes it unnecessary).
+//! On exit the child is stopped first. On Unix that is a real `SIGTERM`, so the API's own
+//! shutdown hook runs and SQLite closes through its normal path. Windows has no signal to send
+//! — `std` offers only `TerminateProcess` — so there the child is terminated instead and WAL
+//! recovery is what makes it survivable. Phase 6.2 corrected this comment, which previously
+//! described a graceful stop that the code did not perform (`Child::kill` is `SIGKILL` on Unix).
+//! The remaining Windows limitation is recorded as TDR-12.
 
 mod cache;
 mod commands;
@@ -29,7 +32,7 @@ use cache::Cache;
 use config::DesktopConfig;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{Manager, RunEvent, WindowEvent};
 
 /// Shared shell state. Everything mutable lives behind a mutex; nothing here is
@@ -38,23 +41,26 @@ pub struct ShellState {
     pub data_dir: PathBuf,
     pub cache: Cache,
     pub plan: Mutex<Option<sidecar::SidecarPlan>>,
-    pub child: Mutex<Option<std::process::Child>>,
-    pub sidecar_state: Mutex<String>,
+    /// The API process and everything the interface is told about it (Phase 6.2).
+    ///
+    /// One mutex rather than a child plus a state string: the two were always read together
+    /// and could drift, so a status card could describe a process that no longer existed.
+    pub sidecar: Mutex<sidecar::Supervision>,
     /// When this launch's credential stops being honoured (informational).
     pub launch_deadline: String,
 }
 
 impl ShellState {
-    pub fn sidecar_state(&self) -> String {
-        self.sidecar_state
-            .lock()
-            .map(|state| state.clone())
-            .unwrap_or_else(|_| "failed".to_string())
-    }
-
-    fn set_sidecar_state(&self, value: &str) {
-        if let Ok(mut state) = self.sidecar_state.lock() {
-            *state = value.to_string();
+    /// The API process as the interface reads it. Never releases a poisoned lock: a shell that
+    /// cannot say what it is doing reports `error`, not silence.
+    pub fn sidecar_report(&self) -> sidecar::DesktopReport {
+        match self.sidecar.lock() {
+            Ok(guard) => guard.snapshot(),
+            Err(_) => sidecar::DesktopReport {
+                state: "error".into(),
+                last_error: Some("the shell's process state is poisoned".into()),
+                ..sidecar::DesktopReport::idle()
+            },
         }
     }
 
@@ -63,16 +69,20 @@ impl ShellState {
     }
 
     /// Stop the API process and wait for it. Called on every exit path.
+    ///
+    /// A real `SIGTERM` first, then a bounded wait, then forced termination, so the database
+    /// closes through SQLite's own path where that is possible. Moving the state out of `ready`
+    /// is also what tells the monitor loop to stop.
     fn stop_sidecar(&self) {
-        let mut guard = match self.child.lock() {
+        let mut guard = match self.sidecar.lock() {
             Ok(guard) => guard,
             Err(_) => return,
         };
-        if let Some(mut child) = guard.take() {
-            let _ = child.kill();
-            let _ = child.wait();
+        guard.set("stopping", None);
+        if let Some(mut child) = guard.child.take() {
+            sidecar::stop(&mut child);
         }
-        self.set_sidecar_state("stopped");
+        guard.set("stopped", None);
     }
 }
 
@@ -141,9 +151,8 @@ pub fn run() {
             app.manage(ShellState {
                 data_dir: data_dir.clone(),
                 cache,
-                plan: Mutex::new(Some(plan)),
-                child: Mutex::new(None),
-                sidecar_state: Mutex::new("starting".to_string()),
+                plan: Mutex::new(Some(plan.clone())),
+                sidecar: Mutex::new(sidecar::Supervision::new()),
                 launch_deadline: launch_deadline(),
             });
 
@@ -155,39 +164,59 @@ pub fn run() {
                 let plan = {
                     let guard = state.plan.lock().expect("plan mutex");
                     match guard.as_ref() {
-                        Some(plan) => sidecar::SidecarPlan {
-                            executable: plan.executable.clone(),
-                            args: plan.args.clone(),
-                            env: plan.env.clone(),
-                            cwd: plan.cwd.clone(),
-                            token: plan.token.clone(),
-                        },
+                        Some(plan) => plan.clone(),
                         None => return,
                     }
                 };
                 let base_url = plan.base_url();
+                let token = plan.token.clone();
 
-                let child = match plan.spawn() {
+                if let Ok(mut guard) = state.sidecar.lock() {
+                    guard.set("starting", None);
+                }
+
+                let mut child = match plan.spawn() {
                     Ok(child) => child,
                     Err(message) => {
-                        state.set_sidecar_state("failed");
+                        if let Ok(mut guard) = state.sidecar.lock() {
+                            guard.set("error", Some(message.clone()));
+                        }
                         eprintln!("[shell] {message}");
                         return;
                     }
                 };
-                {
-                    let mut guard = state.child.lock().expect("child mutex");
-                    *guard = Some(child);
+                let pid = child.id();
+                // Drain both pipes before the child is handed to the state. They are
+                // `Stdio::piped()`, and an unread pipe fills: the API would block on its own
+                // log line, which is a hang nobody would think to connect to logging.
+                if let Some(stdout) = child.stdout.take() {
+                    sidecar::forward_output(stdout, "api");
+                }
+                if let Some(stderr) = child.stderr.take() {
+                    sidecar::forward_output(stderr, "api");
+                }
+                if let Ok(mut guard) = state.sidecar.lock() {
+                    guard.child = Some(child);
+                    guard.report.pid = Some(pid);
+                    guard.set("health-checking", None);
                 }
 
-                let ready = sidecar::await_ready(&base_url, &plan.token, Duration::from_secs(30));
-                state.set_sidecar_state(if ready { "ready" } else { "failed" });
-                if !ready {
-                    eprintln!(
-                        "[shell] the API did not answer {base_url}/v1/health within 30s; \
+                let ready = sidecar::await_ready(&base_url, &token, sidecar::READY_TIMEOUT);
+                if ready {
+                    if let Ok(mut guard) = state.sidecar.lock() {
+                        guard.mark_ready(pid);
+                    }
+                } else {
+                    let message = format!(
+                        "the API did not answer {base_url}/v1/health within {}s; \
                          check that port {} is free",
+                        sidecar::READY_TIMEOUT.as_secs(),
                         sidecar::API_PORT
                     );
+                    if let Ok(mut guard) = state.sidecar.lock() {
+                        guard.set("error", Some(message.clone()));
+                    }
+                    eprintln!("[shell] {message}");
                     return;
                 }
 
@@ -197,6 +226,12 @@ pub fn run() {
                         let _ = window.set_focus();
                     }
                 }
+
+                // Hand the running API to its own thread. The shell spawned it and previously
+                // never looked at it again, so an API that died mid-session left the interface
+                // reporting `ready` for the rest of it.
+                let monitor = handle.clone();
+                std::thread::spawn(move || sidecar::supervise(monitor, plan));
             });
 
             Ok(())

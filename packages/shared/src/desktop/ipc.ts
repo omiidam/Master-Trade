@@ -28,6 +28,7 @@ import type {
   OfflineCache,
   SecureStore,
 } from './host.js';
+import { initialSupervisorStatus, type SupervisorStatus } from './process.js';
 
 /** The command names the shell registers and the frontend may call. */
 export const SHELL_COMMANDS = [
@@ -48,8 +49,16 @@ export const SHELL_COMMANDS = [
 
 export type ShellCommand = (typeof SHELL_COMMANDS)[number];
 
-/** Bumped when the command contract changes shape; the shell refuses a mismatch. */
-export const SHELL_PROTOCOL_VERSION = 1;
+/**
+ * Bumped when the command contract changes shape; the shell refuses a mismatch.
+ *
+ * v2 (Phase 6.2): `ShellStatus.sidecarState` — four strings — became `runtime`, the structured
+ * report of the API process (state, pid, health, uptime, restart count, last error). The shell
+ * could previously say "starting" but not "it crashed and is coming back", so an interface
+ * could not tell a slow start from a recovery. The Rust side carries the same number and
+ * `npm run desktop:verify` fails if the two disagree.
+ */
+export const SHELL_PROTOCOL_VERSION = 2;
 
 /** Refuse a command that is not part of the contract. */
 export function assertShellCommand(name: string): asserts name is ShellCommand {
@@ -149,7 +158,15 @@ export interface ShellStatus {
   appVersion: string;
   /** Loopback base URL the API is listening on, e.g. `http://127.0.0.1:4317`. */
   apiBaseUrl: string | null;
-  sidecarState: 'stopped' | 'starting' | 'ready' | 'failed';
+  /**
+   * The local API process, as the shell supervises it (Phase 6.2).
+   *
+   * A report, not a handle: there is no path, port, signal or command in here, so the same
+   * shape is safe to send to a page. `@shared/desktop/process` defines the states and says
+   * which of them may follow which; `@shared/desktop/startup` narrows this into the five
+   * states a screen branches on.
+   */
+  runtime: SupervisorStatus;
   /** Capabilities the shell reports as available at runtime. */
   capabilities: DesktopCapability[];
   /** Capabilities the shell expected but could not provide, with the reason. */
@@ -295,7 +312,9 @@ export function browserShellBridge(): ShellBridge {
         platform: 'windows',
         appVersion: '0.0.0',
         apiBaseUrl: null,
-        sidecarState: 'stopped',
+        // A browser has no API process and is not trying to start one: `idle`, which every
+        // screen renders as "unavailable". Never a forever-`starting`.
+        runtime: initialSupervisorStatus(),
         capabilities: [],
         unavailable: [
           { capability: 'secure-store', reason: 'not running in the desktop shell' },

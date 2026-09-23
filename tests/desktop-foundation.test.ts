@@ -35,6 +35,12 @@ import {
   isStartupPending,
   isStartupSettled,
 } from '../packages/shared/src/desktop/startup.js';
+import {
+  initialSupervisorStatus,
+  runtimeStateOf,
+  type ProcessState,
+  type SupervisorStatus,
+} from '../packages/shared/src/desktop/process.js';
 import { inDesktopShell, shellBridge } from '../web/src/desktop/bridge.js';
 import { DESKTOP_ENVIRONMENT_VAR, resolveDesktopEnvironment } from '../src/desktop/environment.js';
 import { verifyDesktopShell } from '../src/desktop/verify.js';
@@ -63,14 +69,29 @@ function withGlobals<T>(globals: Record<string, unknown>, body: () => T): T {
   }
 }
 
+/** An API-process report in a given state, healthy unless the state says otherwise. */
+function processStatus(
+  state: ProcessState,
+  overrides: Partial<SupervisorStatus> = {},
+): SupervisorStatus {
+  return {
+    ...initialSupervisorStatus(),
+    state,
+    health: state === 'ready' ? 'healthy' : 'unknown',
+    pid: state === 'idle' || state === 'stopped' ? null : 4242,
+    ...overrides,
+  };
+}
+
 /** A shell report that satisfies every required capability, unless overridden. */
 function shellStatus(overrides: Partial<ShellStatus> = {}): ShellStatus {
   return {
-    protocolVersion: 1,
+    // Phase 6.2 raised the protocol: `sidecarState` became the structured `runtime` report.
+    protocolVersion: 2,
     platform: 'windows',
     appVersion: '0.6.0-test',
     apiBaseUrl: 'http://127.0.0.1:4317',
-    sidecarState: 'ready',
+    runtime: processStatus('ready'),
     capabilities: ['secure-store', 'file-dialog', 'offline-cache', 'single-instance'],
     unavailable: [],
     ...overrides,
@@ -214,7 +235,7 @@ describe('the startup state a screen renders', () => {
   it('reports STARTING while the local API is coming up', () => {
     const view = desktopStartupState({
       runtime: 'desktop-tauri',
-      status: shellStatus({ sidecarState: 'starting', apiBaseUrl: null }),
+      status: shellStatus({ runtime: processStatus('health-checking'), apiBaseUrl: null }),
     });
     expect(view.state).toBe('STARTING');
   });
@@ -261,9 +282,14 @@ describe('the startup state a screen renders', () => {
     const view = desktopStartupState({
       runtime: 'desktop-tauri',
       status: shellStatus({
-        sidecarState: 'failed',
+        // Phase 6.2 gave the shell a real error field, so the supervisor's own reason is
+        // preferred over the capability list it previously stood in for. The claim is the same:
+        // the user sees the cause, not a code.
+        runtime: processStatus('error', { lastError: 'port 4317 was already in use' }),
         apiBaseUrl: null,
-        unavailable: [{ capability: 'offline-cache', reason: 'port 4317 was already in use' }],
+        unavailable: [
+          { capability: 'offline-cache', reason: 'the cache directory is not writable' },
+        ],
       }),
     });
     expect(view.state).toBe('ERROR');
@@ -284,7 +310,7 @@ describe('the startup state a screen renders', () => {
     // A user asking to quit is not evidence that the app started.
     const view = desktopStartupState({
       runtime: 'desktop-tauri',
-      status: shellStatus({ sidecarState: 'failed', apiBaseUrl: null }),
+      status: shellStatus({ runtime: processStatus('error'), apiBaseUrl: null }),
       stopping: true,
     });
     expect(view.state).toBe('ERROR');
@@ -293,10 +319,48 @@ describe('the startup state a screen renders', () => {
   it('reports STOPPED when the local API is not running', () => {
     const view = desktopStartupState({
       runtime: 'desktop-tauri',
-      status: shellStatus({ sidecarState: 'stopped', apiBaseUrl: null }),
+      status: shellStatus({ runtime: processStatus('stopped'), apiBaseUrl: null }),
     });
     expect(view.state).toBe('STOPPED');
     expect(isStartupSettled(view.state)).toBe(true);
+  });
+
+  it('reports RECOVERING while a crashed API is being restarted', () => {
+    // Phase 6.2. Before the supervisor existed there was no honest word for this: `STARTING`
+    // would present a crash as progress and `ERROR` would be false while the restart was live.
+    for (const state of ['crashed', 'restarting'] as const) {
+      const view = desktopStartupState({
+        runtime: 'desktop-tauri',
+        status: shellStatus({
+          runtime: processStatus(state, { lastError: 'the API exited with code 1' }),
+        }),
+      });
+      expect(view.state).toBe('RECOVERING');
+      expect(view.reason).toContain('exited with code 1');
+      // The dead process's URL is not handed out: a caller must not request against it.
+      expect(view.apiBaseUrl).toBeNull();
+      expect(isStartupPending(view.state)).toBe(true);
+      expect(isStartupSettled(view.state)).toBe(false);
+    }
+  });
+
+  it('separates the process state from the screen states', () => {
+    // One source, two questions. `runtimeStateOf` knows only the process; `desktopStartupState`
+    // additionally requires the host capabilities the app cannot ship without.
+    expect(runtimeStateOf('ready')).toBe('ready');
+    expect(runtimeStateOf('health-checking')).toBe('starting');
+    expect(runtimeStateOf('restarting')).toBe('recovering');
+    expect(runtimeStateOf('idle')).toBe('unavailable');
+    expect(runtimeStateOf('error')).toBe('error');
+
+    // A ready *process* with a missing required capability is not a ready screen.
+    const process = runtimeStateOf('ready');
+    expect(process).toBe('ready');
+    const view = desktopStartupState({
+      runtime: 'desktop-tauri',
+      status: shellStatus({ unavailable: [{ capability: 'secure-store', reason: 'no keychain' }] }),
+    });
+    expect(view.state).toBe('ERROR');
   });
 });
 
@@ -409,7 +473,9 @@ describe('the browser build keeps working without any Tauri API', () => {
     const status = await bridge.status();
 
     expect(status.apiBaseUrl).toBeNull();
-    expect(status.sidecarState).toBe('stopped');
+    // `idle`, which every screen renders as "unavailable": a browser has no API process and is
+    // not starting one, so it must never report a forever-`starting`.
+    expect(status.runtime.state).toBe('idle');
     // Both missing capabilities are named with a reason, which is what the Settings screen
     // renders. A browser that claimed a keychain would be the R18 failure in miniature.
     expect(status.unavailable.map((entry) => entry.capability)).toEqual([

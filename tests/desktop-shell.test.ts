@@ -177,7 +177,9 @@ describe('shell IPC contract', () => {
   it('reports the missing capabilities when running in a browser', async () => {
     const bridge = browserShellBridge();
     const status = await bridge.status();
-    expect(status.sidecarState).toBe('stopped');
+    // Phase 6.2: the four-value `sidecarState` became the structured `runtime` report, and a
+    // browser reports `idle` — no process, and none being started.
+    expect(status.runtime.state).toBe('idle');
     expect(status.apiBaseUrl).toBeNull();
     expect(status.unavailable.map((entry) => entry.capability)).toContain('secure-store');
     expect(status.protocolVersion).toBe(SHELL_PROTOCOL_VERSION);
@@ -383,7 +385,10 @@ describe('sidecar supervision', () => {
       sleep: async () => undefined,
     });
     await expect(failing.start()).rejects.toMatchObject({ code: 'PROVIDER_UNAVAILABLE' });
-    expect(failing.currentState()).toBe('failed');
+    // Phase 6.2 renamed the terminal state: `failed` became `error`, and the states between
+    // `starting` and `ready` became explicit (`health-checking`). The claim is unchanged — a
+    // spawn that never answers health is never `ready`, and the reason names the step.
+    expect(failing.currentState()).toBe('error');
     expect(failing.lastFailure()).toMatch(/did not answer/);
   });
 
@@ -403,8 +408,9 @@ describe('sidecar supervision', () => {
     await supervisor.start();
     expect(await supervisor.handleExit(1)).toBe('ready');
     expect(await supervisor.handleExit(1)).toBe('ready');
-    // Third unexpected exit exceeds the budget: no further spawn.
-    expect(await supervisor.handleExit(1)).toBe('failed');
+    // Third unexpected exit exceeds the budget: no further spawn, and the terminal state is
+    // `error` (renamed from `failed` in Phase 6.2).
+    expect(await supervisor.handleExit(1)).toBe('error');
     expect(spawns).toBe(3);
     expect(supervisor.lastFailure()).toMatch(/exited with code 1/);
   });

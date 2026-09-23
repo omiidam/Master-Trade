@@ -11,7 +11,7 @@
 //!     read that the settings screen calls;
 //!   * nothing here can start a process, open a socket or touch a broker.
 
-use crate::{secrets, ShellState};
+use crate::{secrets, sidecar, ShellState};
 use serde::Serialize;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, State};
@@ -23,7 +23,13 @@ pub struct ShellStatus {
     pub platform: String,
     pub app_version: String,
     pub api_base_url: Option<String>,
-    pub sidecar_state: String,
+    /// The API process as the shell supervises it (Phase 6.2, protocol v2).
+    ///
+    /// Replaced the four-value `sidecar_state`: the shell could say "starting" but not "it
+    /// crashed and is coming back", so an interface could not tell a slow start from a
+    /// recovery. A report only — no path, no signal, no port — because it is sent to the
+    /// WebView.
+    pub runtime: sidecar::DesktopReport,
     pub capabilities: Vec<String>,
     pub unavailable: Vec<UnavailableCapability>,
 }
@@ -51,7 +57,12 @@ pub struct ExportResult {
     pub cancelled: bool,
 }
 
-pub const PROTOCOL_VERSION: u32 = 1;
+/// Bumped when the command contract changes shape.
+///
+/// v2 (Phase 6.2): `sidecarState` (four strings) became `runtime`, the structured report of the
+/// API process. `SHELL_PROTOCOL_VERSION` in `packages/shared/src/desktop/ipc.ts` carries the
+/// same number, and `npm run desktop:verify` fails if the two disagree.
+pub const PROTOCOL_VERSION: u32 = 2;
 
 fn platform_name() -> String {
     if cfg!(target_os = "windows") {
@@ -79,12 +90,12 @@ fn unavailable_capabilities() -> Vec<UnavailableCapability> {
 #[tauri::command]
 pub fn shell_status(state: State<'_, ShellState>) -> Result<ShellStatus, String> {
     let plan = state.plan.lock().map_err(|_| "shell state is poisoned")?;
-    let sidecar_state = state.sidecar_state();
+    let runtime = state.sidecar_report();
     let mut unavailable = unavailable_capabilities();
-    if sidecar_state != "ready" {
+    if runtime.state != "ready" {
         unavailable.push(UnavailableCapability {
             capability: "notifications".into(),
-            reason: format!("the API is {sidecar_state}; job notifications need it"),
+            reason: format!("the API is {}; job notifications need it", runtime.state),
         });
     }
     Ok(ShellStatus {
@@ -92,7 +103,7 @@ pub fn shell_status(state: State<'_, ShellState>) -> Result<ShellStatus, String>
         platform: platform_name(),
         app_version: env!("CARGO_PKG_VERSION").to_string(),
         api_base_url: plan.as_ref().map(|plan| plan.base_url()),
-        sidecar_state,
+        runtime,
         capabilities: vec![
             "secure-store".into(),
             "file-dialog".into(),

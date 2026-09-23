@@ -13,11 +13,20 @@
 //! Readiness is proven by polling `/v1/health` on the loopback interface with that
 //! token. The window is shown only after it answers, so a slow start shows a
 //! splash rather than an empty workspace.
+//!
+//! Phase 6.2 turned "started" into "supervised": the process is watched after it comes up
+//! (`try_wait` in a monitor loop), a crash is reported as `crashed` and recovered as
+//! `restarting` within a bounded budget, and stopping asks politely before it insists. The
+//! states are the same nine `@shared/desktop/process` declares, and `DesktopReport` is the
+//! same shape the interface reads, so the shell and the UI cannot disagree about what is
+//! happening.
 
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
+
+use serde::Serialize;
 
 /// Fixed loopback port. It matches `api.port` in `src/core/config.ts` and the
 /// `connect-src` entry in `tauri.conf.json`; `npm run desktop:verify` asserts all
@@ -28,6 +37,35 @@ pub const TOKEN_ENV_NAME: &str = "MASTER_TRADE_SHELL_TOKEN_ENV";
 /// Environment variable carrying the per-launch token itself.
 pub const TOKEN_ENV: &str = "MASTER_TRADE_SHELL_TOKEN";
 
+/// The nine process states, mirrored from `@shared/desktop/process`.
+///
+/// `npm run desktop:verify` reads this list and fails if it differs from the TypeScript union,
+/// the same way it already compares the API port. A state the shell can report and the
+/// interface cannot name would be a status nobody can render.
+pub const STATES: [&str; 9] = [
+    "idle",
+    "starting",
+    "health-checking",
+    "ready",
+    "stopping",
+    "stopped",
+    "crashed",
+    "restarting",
+    "error",
+];
+
+/// The bounds, mirrored from `PROCESS_POLICY` in the shared surface.
+pub const READY_TIMEOUT: Duration = Duration::from_millis(30_000);
+pub const POLL_INTERVAL: Duration = Duration::from_millis(250);
+pub const STOP_TIMEOUT: Duration = Duration::from_millis(10_000);
+pub const MAX_RESTARTS: u32 = 3;
+pub const BASE_BACKOFF: Duration = Duration::from_millis(500);
+pub const MAX_BACKOFF: Duration = Duration::from_millis(10_000);
+pub const STABLE_UPTIME: Duration = Duration::from_millis(60_000);
+
+/// Cloneable because the monitor thread needs its own copy to respawn from, while
+/// `ShellState` keeps one for `shell_handshake`.
+#[derive(Clone)]
 pub struct SidecarPlan {
     pub executable: PathBuf,
     pub args: Vec<String>,
@@ -128,6 +166,179 @@ pub fn probe(base_url: &str, token: &str) -> bool {
     }
 }
 
+/// Watch a running API, and bring it back if it dies.
+///
+/// This is the piece the shell was missing. It spawned the API and never looked at it again,
+/// so an API that died an hour into a session left the interface reporting `ready` for the
+/// rest of it — the false positive this whole module exists to avoid. The loop watches
+/// liveness with `try_wait`, re-probes health so a wedged process is noticed too, and
+/// recovers within a bounded budget with growing backoff, so a broken binary fails visibly
+/// rather than spawning forever.
+///
+/// It returns when the process has been stopped deliberately (the state leaves `ready`) or
+/// when the budget is exhausted. Errors are reported through the state, never swallowed.
+pub fn supervise(app: tauri::AppHandle, plan: SidecarPlan) {
+    use tauri::Manager;
+
+    /// What the child was doing when we looked. `Copy` so it can be matched more than once
+    /// without a move.
+    #[derive(Clone, Copy)]
+    enum Seen {
+        Running,
+        Exited(Option<i32>),
+    }
+
+    let base_url = plan.base_url();
+    let token = plan.token.clone();
+    let mut health_misses: u32 = 0;
+
+    loop {
+        std::thread::sleep(POLL_INTERVAL);
+
+        let seen = {
+            let state = app.state::<crate::ShellState>();
+            let mut guard = match state.sidecar.lock() {
+                Ok(guard) => guard,
+                Err(_) => return,
+            };
+            // A deliberate stop moves the state out of `ready`, which is our signal to end.
+            if guard.report.state != "ready" && guard.report.state != "health-checking" {
+                return;
+            }
+            match guard.child.as_mut() {
+                None => return,
+                Some(child) => match child.try_wait() {
+                    Ok(Some(status)) => Seen::Exited(status.code()),
+                    Ok(None) => Seen::Running,
+                    Err(_) => Seen::Exited(None),
+                },
+            }
+        };
+
+        if let Seen::Running = seen {
+            // An API that is alive but no longer answers is not usable either. Eight consecutive
+            // misses at 250ms is two seconds of silence, well past a slow request.
+            if probe(&base_url, &token) {
+                health_misses = 0;
+                // Still healthy: go round again. `continue` matters here — without it a healthy
+                // process would fall through into the recovery path below and be restarted.
+                continue;
+            }
+            health_misses += 1;
+            if health_misses < 8 {
+                continue;
+            }
+            // Wedged: report it as a failure, then fall through to the same recovery a crash gets.
+            health_misses = 0;
+            let state = app.state::<crate::ShellState>();
+            if let Ok(mut guard) = state.sidecar.lock() {
+                guard.report.health = "unreachable".into();
+                guard.set("crashed", Some("the API stopped answering health checks".into()));
+            }
+        }
+
+        // A crash (or a wedged process) from here.
+        let allowed = {
+            let state = app.state::<crate::ShellState>();
+            let mut guard = match state.sidecar.lock() {
+                Ok(guard) => guard,
+                Err(_) => return,
+            };
+            // Reap whatever is left so the slot is free for the replacement.
+            if let Some(mut child) = guard.child.take() {
+                let _ = child.wait();
+            }
+            let code = match seen {
+                Seen::Exited(code) => code,
+                Seen::Running => None,
+            };
+            guard.note_crash(code)
+        };
+
+        if !allowed {
+            let state = app.state::<crate::ShellState>();
+            if let Ok(mut guard) = state.sidecar.lock() {
+                let reason = guard
+                    .report
+                    .last_error
+                    .clone()
+                    .unwrap_or_else(|| "the API exited repeatedly".to_string());
+                guard.set(
+                    "error",
+                    Some(format!(
+                        "{reason}; the restart budget of {MAX_RESTARTS} is exhausted"
+                    )),
+                );
+            }
+            eprintln!("[shell] the API restart budget is exhausted; not restarting again");
+            return;
+        }
+
+        let delay = {
+            let state = app.state::<crate::ShellState>();
+            match state.sidecar.lock() {
+                Ok(guard) => guard.backoff(),
+                Err(_) => return,
+            }
+        };
+        {
+            let state = app.state::<crate::ShellState>();
+            if let Ok(mut guard) = state.sidecar.lock() {
+                guard.set("restarting", None);
+            }
+        }
+        std::thread::sleep(delay);
+
+        let child = match plan.spawn() {
+            Ok(child) => child,
+            Err(message) => {
+                let state = app.state::<crate::ShellState>();
+                if let Ok(mut guard) = state.sidecar.lock() {
+                    guard.set("error", Some(message.clone()));
+                }
+                eprintln!("[shell] {message}");
+                return;
+            }
+        };
+        let pid = child.id();
+        // Drain the pipes. They are `Stdio::piped()`, so an unread pipe fills and the API
+        // blocks on its own log line — which is a hang nobody would connect to logging.
+        if let Some(stdout) = child.stdout.take() {
+            forward_output(stdout, "api");
+        }
+        if let Some(stderr) = child.stderr.take() {
+            forward_output(stderr, "api");
+        }
+        {
+            let state = app.state::<crate::ShellState>();
+            if let Ok(mut guard) = state.sidecar.lock() {
+                guard.child = Some(child);
+                guard.report.pid = Some(pid);
+                guard.report.health = "unknown".into();
+                guard.set("health-checking", None);
+            }
+        }
+
+        if await_ready(&base_url, &token, READY_TIMEOUT) {
+            let state = app.state::<crate::ShellState>();
+            if let Ok(mut guard) = state.sidecar.lock() {
+                guard.mark_ready(pid);
+            }
+            health_misses = 0;
+        } else {
+            let state = app.state::<crate::ShellState>();
+            if let Ok(mut guard) = state.sidecar.lock() {
+                guard.set(
+                    "error",
+                    Some("the API did not answer after a restart".into()),
+                );
+            }
+            eprintln!("[shell] the API did not answer after a restart; not trying again");
+            return;
+        }
+    }
+}
+
 /// Poll until the API answers or the deadline passes.
 pub fn await_ready(base_url: &str, token: &str, timeout: Duration) -> bool {
     let deadline = Instant::now() + timeout;
@@ -137,6 +348,185 @@ pub fn await_ready(base_url: &str, token: &str, timeout: Duration) -> bool {
         }
         std::thread::sleep(Duration::from_millis(250));
     }
+    false
+}
+
+/// What the interface is told about the API process.
+///
+/// A report, not a handle: no path, no port, no signal. That is what makes it safe to send to
+/// the WebView, and it is the Rust half of `SupervisorStatus`.
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DesktopReport {
+    pub state: String,
+    pub pid: Option<u32>,
+    pub health: String,
+    pub uptime_ms: u64,
+    pub restart_count: u32,
+    pub last_error: Option<String>,
+}
+
+impl DesktopReport {
+    pub fn idle() -> Self {
+        Self {
+            state: "idle".into(),
+            pid: None,
+            health: "unknown".into(),
+            uptime_ms: 0,
+            restart_count: 0,
+            last_error: None,
+        }
+    }
+}
+
+/// The supervisor's mutable state. One owner: `ShellState` behind its mutex.
+pub struct Supervision {
+    /// The child, or none when nothing is running. One owner: taking it out is how a stop and a
+    /// restart claim the process, so two paths cannot act on the same child.
+    pub child: Option<Child>,
+    pub report: DesktopReport,
+    pub failures: u32,
+    pub healthy_since: Option<Instant>,
+}
+
+impl Supervision {
+    pub fn new() -> Self {
+        Self {
+            child: None,
+            report: DesktopReport::idle(),
+            failures: 0,
+            healthy_since: None,
+        }
+    }
+
+    /// Move to a state, recording the reason.
+    ///
+    /// The transition table lives in the shared contract and is enforced there; duplicating it
+    /// here would be a second source of truth, so this records the move. The assertion keeps a
+    /// typo from becoming a state the interface cannot render.
+    pub fn set(&mut self, state: &str, last_error: Option<String>) {
+        assert!(STATES.contains(&state), "unknown process state: {state}");
+        self.report.state = state.to_string();
+        if let Some(message) = last_error {
+            self.report.last_error = Some(message);
+        }
+    }
+
+    pub fn mark_ready(&mut self, pid: u32) {
+        self.report.pid = Some(pid);
+        self.report.health = "healthy".into();
+        self.report.last_error = None;
+        self.healthy_since = Some(Instant::now());
+        self.set("ready", None);
+    }
+
+    /// Healthy uptime in milliseconds, or 0 while the API is not answering.
+    pub fn uptime_ms(&self) -> u64 {
+        match self.healthy_since {
+            Some(since) if self.report.state == "ready" => since.elapsed().as_millis() as u64,
+            _ => 0,
+        }
+    }
+
+    /// The report as the interface reads it, with uptime computed at the moment of asking.
+    pub fn snapshot(&self) -> DesktopReport {
+        DesktopReport {
+            uptime_ms: self.uptime_ms(),
+            ..self.report.clone()
+        }
+    }
+
+    /// Record a crash and decide whether a restart is allowed.
+    ///
+    /// A process that ran stably and then died is a new incident, so the budget is refreshed
+    /// only after `STABLE_UPTIME` of healthy uptime — otherwise a flapping process would retry
+    /// forever at one attempt per minute.
+    pub fn note_crash(&mut self, code: Option<i32>) -> bool {
+        let uptime = self.uptime_ms();
+        if self.healthy_since.is_some() && uptime >= STABLE_UPTIME.as_millis() as u64 {
+            self.failures = 0;
+        }
+        self.healthy_since = None;
+        self.failures += 1;
+        self.report.pid = None;
+        self.report.health = "unreachable".into();
+        let message = match code {
+            Some(code) => format!("the API exited with code {code}"),
+            None => "the API exited unexpectedly".to_string(),
+        };
+        self.set("crashed", Some(message));
+        self.failures <= MAX_RESTARTS
+    }
+
+    /// Backoff before the next attempt, growing and bounded.
+    pub fn backoff(&self) -> Duration {
+        let step = BASE_BACKOFF * 2u32.saturating_pow(self.failures.saturating_sub(1).min(8));
+        step.min(MAX_BACKOFF)
+    }
+}
+
+impl Default for Supervision {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Ask the API to stop, then insist.
+///
+/// On Unix this is a real `SIGTERM`, which the backend's own shutdown hook listens for so
+/// SQLite closes through its normal path. This used to be `Child::kill()` — an unconditional
+/// `SIGKILL` — while the comment above it claimed a graceful stop, which is the kind of gap
+/// that only shows up as a database that occasionally needs recovering.
+///
+/// Windows has no `SIGTERM`; `Child::kill()` there is `TerminateProcess` and is all `std`
+/// offers. That limitation is real and recorded (docs/desktop-runtime.md §11, TDR-12).
+pub fn terminate(child: &mut Child) -> bool {
+    #[cfg(unix)]
+    {
+        let pid = child.id() as i32;
+        // Safety: `kill` with a pid this process spawned. The child may already be gone, which
+        // returns an error we deliberately ignore — `wait_with_deadline` decides the outcome.
+        let sent = unsafe { libc::kill(pid, libc::SIGTERM) } == 0;
+        if sent {
+            return true;
+        }
+    }
+    child.kill().is_ok()
+}
+
+/// Wait for the child to exit, up to `timeout`. Returns true when it is gone.
+///
+/// Polling `try_wait` rather than blocking on `wait()`: a child that ignores `SIGTERM` must not
+/// be able to hang application exit, and the deadline is what makes the forced path reachable.
+pub fn wait_with_deadline(child: &mut Child, timeout: Duration) -> bool {
+    let deadline = Instant::now() + timeout;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => return true,
+            Ok(None) => {
+                if Instant::now() > deadline {
+                    return false;
+                }
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            // Cannot reap it: treat it as still running so the caller forces termination.
+            Err(_) => return false,
+        }
+    }
+}
+
+/// Stop the API: graceful first, bounded, then forced. Always leaves it dead.
+pub fn stop(child: &mut Child) -> bool {
+    terminate(child);
+    if wait_with_deadline(child, STOP_TIMEOUT) {
+        return true;
+    }
+    eprintln!(
+        "[shell] the API did not exit within {:?} and was terminated",
+        STOP_TIMEOUT
+    );
+    let _ = child.kill();
+    let _ = child.wait();
     false
 }
 

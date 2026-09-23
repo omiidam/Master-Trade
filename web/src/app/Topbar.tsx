@@ -6,6 +6,7 @@ import { Tooltip } from '../components/Tooltip';
 import { ConnectionStatus } from '../components/realtime/ConnectionStatus';
 import { findNavSection, PREVIEW_NOTICE } from '../config/navigation';
 import { useShellStatus } from '../desktop/useShellStatus';
+import { PROCESS_STATE_LABEL } from '@shared/desktop/process';
 import { useRealtimeStore } from '../realtime/store.js';
 import { useUiStore } from '../store/ui';
 
@@ -34,13 +35,15 @@ export function Topbar() {
   // Where this page is running is stated, never implied: in a browser there is no
   // keychain, no offline cache and no local API, and the shell says which of those
   // it currently has.
-  const apiReady = shell.status?.sidecarState === 'ready';
+  // The derived state, not the raw one: `runtimeState` already collapses the nine process states
+  // into the words a person reads, and it is the same value every other screen branches on.
+  const apiReady = shell.runtimeState === 'ready';
   const shellLabel = shell.loading
     ? 'Checking host…'
     : shell.inShell
       ? apiReady
         ? 'Desktop shell'
-        : `Desktop shell · API ${shell.status?.sidecarState ?? 'unknown'}`
+        : `Desktop shell · API ${shell.runtimeState}`
       : 'Browser preview';
   const shellTooltip = shell.loading
     ? 'Asking the desktop shell what it can do.'
@@ -49,7 +52,7 @@ export function Topbar() {
       : shell.inShell
         ? apiReady
           ? `Desktop shell v${shell.status?.appVersion ?? '?'} on ${shell.status?.platform ?? '?'}. The local API answers on ${shell.status?.apiBaseUrl ?? 'a loopback port'}.`
-          : `The bundled local API is ${shell.status?.sidecarState ?? 'not running'}; the interface stays usable but nothing is connected.`
+          : `${PROCESS_STATE_LABEL[shell.processState]} The interface stays usable but nothing is connected.`
         : 'Running in a browser: no OS keychain, no offline cache and no local API. Credentials cannot be stored from here.';
 
   return (

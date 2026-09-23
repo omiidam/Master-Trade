@@ -36,6 +36,10 @@ export const SHARED_SURFACE: Readonly<Record<string, string>> = {
   '@shared/decisions/model': 'packages/shared/src/decisions/model.ts',
   '@shared/decisions/readiness': 'packages/shared/src/decisions/readiness.ts',
   '@shared/desktop/ipc': 'packages/shared/src/desktop/ipc.ts',
+  // The API process's states, in one place (Phase 6.2). The Rust host mirrors them and the
+  // verifier compares the two lists, so this is a contract rather than a convenience: a state
+  // the shell can report and the interface cannot name would be an unrenderable status.
+  '@shared/desktop/process': 'packages/shared/src/desktop/process.ts',
   // Where the UI is running, in one function, and the startup state it derives. Both are
   // consumed by the frontend (`web/src/desktop/`) rather than merely existing: the boundary
   // test refuses a declared entry nothing imports, which is how this stays one list.

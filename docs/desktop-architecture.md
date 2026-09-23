@@ -297,9 +297,9 @@ establishes where the URL comes from.
 
 ---
 
-## 10. Phase 6.1 — implemented
+## 10. Phases 6.1 and 6.2 — implemented
 
-Everything below is new in this phase and covered by tests.
+Everything below is new in these phases and covered by tests.
 
 | Item                              | What changed                                                                                                                                                                                                                                                                                     |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -318,21 +318,38 @@ window configuration, the capability grant and the Rust command surface. Phase 6
 verified the foundation rather than rebuilding it, and `web/dist` still serves the same interface to
 browsers and to the shell.
 
+### Phase 6.2 — the local API process, supervised
+
+Full detail in [`desktop-runtime.md`](./desktop-runtime.md) and
+[ADR-0052](./adr/ADR-0052-one-process-machine-two-implementations.md).
+
+| Item                                 | What changed                                                                                                                                                                                                                            |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **One process vocabulary**           | `@shared/desktop/process` declares the nine states, the legal transitions, `SupervisorStatus`, `PROCESS_POLICY` and the five user-facing states. `sidecar.rs` mirrors the state list, the policy and the report shape.                  |
+| **The process is watched**           | The shell spawns the API and previously never looked at it again. `sidecar::supervise` now polls `try_wait`, treats eight consecutive health misses as a failure, and recovers within a bounded budget with 500 ms → 10 s backoff.      |
+| **A crash has an honest state**      | `crashed` and `restarting` are separate, so "it died" and "we are bringing it back" cannot be confused. `RECOVERING` was added to the startup states for the same reason.                                                               |
+| **A real graceful stop**             | `Child::kill()` is `SIGKILL` on Unix; the old comment claimed a graceful stop anyway. `sidecar::terminate` sends a real `SIGTERM` (Unix) and `sidecar::stop` bounds the wait before forcing. Windows keeps `TerminateProcess` (TDR-12). |
+| **The pipes are drained**            | The child's stdout and stderr were piped and never read, so the API could block on its own log line once the buffer filled. Both are forwarded, with the launch credential redacted.                                                    |
+| **Readiness needs evidence**         | `isProcessReady` requires `ready` **and** `healthy`, and `desktopStartupState` refuses `READY` on a report that claims one without the other.                                                                                           |
+| **Runtime crosses the IPC boundary** | `shell_status` returns `runtime: DesktopReport` — state, pid, health, uptime, restart count, safe error — replacing the four-value `sidecarState`. Protocol v2; `protocol.agreement` holds the two constants together.                  |
+| **The UI renders it**                | `useShellStatus` exposes the process state and polls at 1 s while something is happening and 5 s once settled, so a crash an hour in is still noticed. The Topbar and Settings render it.                                               |
+| **One spawner per layer**            | `process.single-spawner` (Rust) existed; `process.single-spawner.typescript` extends it to `src/**`, so only `child-process.ts` may import `node:child_process`.                                                                        |
+| **Tests**                            | `tests/desktop-runtime.test.ts`: 47 tests, including real child processes for the graceful signal, output redaction, crash→restart with a pid change and the orphan check.                                                              |
+
+**Not changed in 6.2:** the product layout and design system, the domain layer, the API's own
+behaviour, the database, the brand assets, the window configuration and the capability grant. The
+browser product is untouched and still builds and runs without Tauri.
+
 ---
 
-## 11. Phase 6.2+ — deferred
+## 11. Phase 6.3+ — deferred
 
-Named here so the boundary is explicit, and so nothing in Phase 6.1 is mistaken for it.
+Named here so the boundary is explicit, and so nothing in Phases 6.1–6.2 is mistaken for it.
 
-**Some process-management primitives already exist** from earlier desktop work and are _not_ part of
-this phase: `src/desktop/sidecar.ts` builds a fixed launch plan with a per-launch credential, refuses
-a short token or a bad port, polls `/v1/health` until the API answers, bounds its restarts and then
-fails instead of looping forever, and stops the child without masking a stop failure. Phase 6.1
-neither extended nor relied on them beyond the existing startup sequence.
-
-Deferred to **6.2** — the process supervisor as a first-class subsystem: policy-driven restart and
-crash recovery beyond the current bound, health monitoring surfaced _through_ the lifecycle into the
-UI, and start/stop/restart driven by the running application rather than only at launch.
+The process supervisor that earlier phases left as a set of primitives — a fixed launch plan, a
+per-launch credential, a health poll, a bounded restart — is now a first-class subsystem (Phase 6.2,
+§10 above): policy-driven recovery, health monitoring surfaced through the lifecycle into the UI, and
+graceful start/stop driven by the running application.
 
 Deferred to **6.3:** the full local database lifecycle, file management, backup and restore.
 
@@ -373,3 +390,11 @@ Stated plainly, because each one is a place where a defect could still pass.
 6. **`icon.icns` is generated outside this environment.** Only `tauri icon` produces the macOS
    container, and only on macOS. It is reported as a warning, never an error, and it is the one
    platform asset that cannot be produced here.
+7. **The Rust supervisor is described, not executed.** `process-state.agreement`,
+   `process.policy-agreement` and `protocol.agreement` prove that Rust and TypeScript describe one
+   machine with one set of deadlines; nothing compiles or runs the Rust side. The Node supervisor,
+   exercised against real child processes, is what those behaviours are tested against (TDR-13).
+8. **Windows has no graceful signal.** `std` offers only `TerminateProcess` there, so the API is
+   terminated rather than asked and SQLite may need WAL recovery (TDR-12).
+9. **Readiness is liveness, not contract version.** The health route answering with the right
+   credential is proved; a build or schema version match is not. A mismatched-but-alive API passes.

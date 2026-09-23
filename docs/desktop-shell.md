@@ -3,7 +3,8 @@
 How to build, run, extend and verify the Tauri shell around Master Trade. This
 document is the working guide; the architecture — the shell's purpose, the Web/Desktop
 boundary, the IPC and permission model, the lifecycle, the configuration modes and what
-is deferred — is in [desktop-architecture.md](./desktop-architecture.md), and the
+is deferred — is in [desktop-architecture.md](./desktop-architecture.md), the bundled API process
+and the states it is reported in are in [desktop-runtime.md](./desktop-runtime.md), and the
 shell-versus-Electron decision is in [desktop-and-frontend.md](./desktop-and-frontend.md).
 
 > **Status:** the shell is source-complete and policy-verified. It has not been

@@ -184,9 +184,9 @@ export function SettingsPage() {
                 label="Local API"
                 value={
                   shell.status?.apiBaseUrl
-                    ? `${shell.status.apiBaseUrl} · ${shell.status.sidecarState}`
+                    ? `${shell.status.apiBaseUrl} · ${shell.processState}`
                     : shell.inShell
-                      ? `not running (${shell.status?.sidecarState ?? 'unknown'})`
+                      ? `not running (${shell.processState})`
                       : 'not available in a browser'
                 }
                 hint="The bundled API binds 127.0.0.1 only, on a fixed port, with a per-launch token."
