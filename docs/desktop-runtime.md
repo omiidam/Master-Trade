@@ -221,13 +221,13 @@ running forever on the preview build.
 
 ## 12. Deferred to later phases
 
-| Phase         | Deferred                                                                                                   |
-| ------------- | ---------------------------------------------------------------------------------------------------------- |
-| 6.3           | backup and restore, quota enforcement, encryption at rest (see [desktop-storage.md](./desktop-storage.md)) |
-| 6.4           | secure storage and OS keychain integration, advanced desktop permission workflows                          |
-| 6.5           | installer, signing and notarisation, auto-update                                                           |
-| 6.6           | final hardening, release QA, build-version handshake                                                       |
-| Design system | visual redesign, new component library, shine/glow overhaul                                                |
+| Phase         | Deferred                                                                                                                                                                                        |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.3           | backup and restore, quota enforcement; **encryption at rest for the database and content store** is a separate item, still unscheduled ([desktop-storage.md](./desktop-storage.md), TDR-14)     |
+| 6.4           | advanced desktop permission _workflows_, a credential management surface, automatic rotation — the OS keychain itself is implemented ([desktop-secure-storage.md](./desktop-secure-storage.md)) |
+| 6.5           | installer, signing and notarisation, auto-update                                                                                                                                                |
+| 6.6           | final hardening, release QA, build-version handshake                                                                                                                                            |
+| Design system | visual redesign, new component library, shine/glow overhaul                                                                                                                                     |
 
 Phase 6.2 implemented none of these. Phase 6.3 has since implemented the local database lifecycle and
 the file-system layer ([desktop-storage.md](./desktop-storage.md)); the row above now names only what

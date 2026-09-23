@@ -355,7 +355,9 @@ Phase **6.3** established the local database lifecycle and the file-system layer
 the content store now live under the OS application-data directory, separated by environment, with a
 content-addressed byte store and a metadata-owning file store — [desktop-storage.md](./desktop-storage.md).
 What remains deferred from 6.3 is **backup and restore**, migrating an existing repository `data/`
-database into app-data, per-owner quota enforcement, and encryption at rest (which is 6.4's subject).
+database into app-data, per-owner quota enforcement, and **encryption at rest for the database and
+the content store** — which is a different capability from the OS keychain Phase 6.4 added, and is
+not scheduled (TDR-14).
 
 Phase **6.4** gave the keychain the contract it lacked: declared, namespaced credentials; one port in
 front of the keychain with an injected-environment implementation for the API process, which cannot

@@ -220,18 +220,23 @@ local database or write to a desktop path, because no frontend module can import
 
 ---
 
-## 9. Deferred to Phase 6.4+
+## 9. Deferred, by phase
 
-| Item                                                               | Phase               | Why it is not here                                                                     |
-| ------------------------------------------------------------------ | ------------------- | -------------------------------------------------------------------------------------- |
-| Secure storage, OS keychain, advanced desktop permission workflows | 6.4                 | A different concern: credentials, not content                                          |
-| Backup, restore, export, import                                    | 6.3 (partial)       | Needs a user-facing format and a retention decision; the store is already safe to copy |
-| Per-owner storage quota and eviction                               | 6.3 (partial)       | The policy holds a total-bytes ceiling; enforcement against it is not wired            |
-| Migrating an existing `data/` repository database into app-data    | 6.3 (partial)       | No existing desktop release has a database to migrate                                  |
-| Local encryption at rest                                           | 6.4                 | Key management is 6.4's subject; SQLCipher is a dependency decision                    |
-| Installer, signing, auto-update                                    | 6.5                 | —                                                                                      |
-| Final hardening and release QA                                     | 6.6                 | —                                                                                      |
-| Visual redesign, component library                                 | Design system phase | —                                                                                      |
+The rows are grouped by where the remaining work sits, and each says what it is _not_, because two
+distinct capabilities are easy to confuse here: **Phase 6.4 put credential values in the OS
+keychain**; it did **not** encrypt the database or the content store at rest. Those are separate,
+and this file's data is covered by neither (TDR-14).
+
+| Item                                                                           | Phase               | Why it is not here                                                                                                                                                                                |
+| ------------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backup, restore, export, import                                                | 6.3 (partial)       | Needs a user-facing format and a retention decision; the store is already safe to copy                                                                                                            |
+| Per-owner storage quota and eviction                                           | 6.3 (partial)       | The policy holds a total-bytes ceiling; enforcement against it is not wired                                                                                                                       |
+| Migrating an existing `data/` repository database into app-data                | 6.3 (partial)       | No existing desktop release has a database to migrate                                                                                                                                             |
+| **Encryption at rest for the database and the content store**                  | **Not scheduled**   | A different capability from the keychain: Phase 6.4 seals credential _values_ in the OS keychain; it does not encrypt this file or these blobs. SQLCipher would be a dependency decision (TDR-14) |
+| Credential management surface (grant/revoke UI), automatic credential rotation | 6.6 / later         | The OS keychain itself is **implemented** (Phase 6.4, [desktop-secure-storage.md](./desktop-secure-storage.md)); what is missing is the workflow surface around it                                |
+| Installer, signing, auto-update                                                | 6.5                 | —                                                                                                                                                                                                 |
+| Final hardening and release QA                                                 | 6.6                 | —                                                                                                                                                                                                 |
+| Visual redesign, component library                                             | Design system phase | —                                                                                                                                                                                                 |
 
 ---
 
