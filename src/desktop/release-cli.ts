@@ -8,6 +8,7 @@
  *   | `version-check`     | does every file agree on one version?                            |
  *   | `version-sync`      | make them agree, from `package.json`                              |
  *   | `signing`           | is the update signing material usable?                          |
+ *   | `qa`                | what is release-ready, and what can this host not validate?      |
  *   | `preflight`         | may this tree be packaged at all? (all of the above, plus more)  |
  *
  * **`preflight` fails closed.** It requires the run to *declare* itself a production release
@@ -27,6 +28,7 @@ import { pendingVersionWrites, readVersionSurfaces, VERSION_SOURCE_PATH } from '
 import { preflightPackaging, type PackagingCheck } from './packaging.js';
 import { reviewSigning, type SigningAspect } from './signing.js';
 import { DESKTOP_ENVIRONMENT_VAR, isProduction, resolveDesktopEnvironment } from './environment.js';
+import { formatQaReport, runReleaseQa } from './release-qa.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // dist/src/desktop/release-cli.js -> the repository root is three levels up.
@@ -207,12 +209,27 @@ function commandPreflight(args: string[]): number {
   return 0;
 }
 
+/**
+ * The release QA report (Phase 6.6).
+ *
+ * Exits non-zero only on a `FAIL`. `NOT_AVAILABLE` does not fail the command — it qualifies it,
+ * and it is printed as its own line so that a green exit cannot be read as "every step was
+ * exercised here". This is not a release gate: `preflight` is the command that refuses to
+ * package. This one answers "what is the state of the release path, and what did nobody check?"
+ */
+async function commandQa(): Promise<number> {
+  const report = await runReleaseQa({ root });
+  console.log(formatQaReport(report));
+  return report.releaseReady ? 0 : 1;
+}
+
 const [command = 'preflight', ...rest] = process.argv.slice(2);
 
-const commands: Record<string, () => number> = {
+const commands: Record<string, () => number | Promise<number>> = {
   'version-check': commandVersionCheck,
   'version-sync': commandVersionSync,
   signing: commandSigning,
+  qa: commandQa,
   preflight: () => commandPreflight(rest),
 };
 
@@ -224,9 +241,21 @@ if (!run) {
       `  version-check   report whether ${VERSION_SOURCE_PATH} and its mirrors agree\n` +
       '  version-sync    write the source version into every mirror\n' +
       '  signing         review the update signing material for this environment\n' +
+      '  qa              report what is release-ready and what this host cannot validate\n' +
       '  preflight       refuse to package a tree that is not releasable (--dev for a report)',
   );
   process.exitCode = 1;
 } else {
-  process.exitCode = run();
+  // `qa` is the only asynchronous command; the rest answer from the tree synchronously.
+  void Promise.resolve(run()).then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (error: unknown) => {
+      console.log(
+        `the release report failed: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+      process.exitCode = 1;
+    },
+  );
 }

@@ -49,6 +49,7 @@ import {
   type ProcessState,
   type SupervisorStatus,
 } from '../../packages/shared/src/desktop/process.js';
+import { isHandshakeCompatible, type HandshakeResult } from './handshake.js';
 
 export type { ProcessState, SupervisorStatus };
 
@@ -201,6 +202,20 @@ export interface SidecarSupervisorOptions {
   stopTimeoutMs?: number;
   /** Healthy uptime after which the restart budget is refreshed. */
   stableUptimeMs?: number;
+  /**
+   * The build-version handshake, run once health answers and *before* `ready` is reported.
+   *
+   * Readiness has three clauses (`docs/desktop-runtime.md` §4): the process is running, health
+   * passes, and the API is the contract this build expects. The first two were supervised from
+   * Phase 6.2; this is the third. Without it, an API left running by an earlier install answers
+   * `ready` and every request is served by code the window was not built against — with the
+   * protocol version unchanged, nothing else would notice.
+   *
+   * A result that is not compatible moves the machine to `error` and refuses the start, rather
+   * than being recorded as a warning beside a `ready` the app cannot honour. `handshake.ts`
+   * owns the rule; this option is only the seam it is asked through.
+   */
+  verifyVersion?: (plan: SidecarPlan) => Promise<HandshakeResult>;
   sleep?: (ms: number) => Promise<void>;
   /** Injectable clock, so uptime and stability are deterministic in tests. */
   now?: () => number;
@@ -407,9 +422,30 @@ export class SidecarSupervisor {
     // The pid is not a state change: we are already `starting`, and re-entering it would be an
     // illegal move that the table rightly refuses. Report the new fact and carry on.
     this.patch({ pid: child.pid ?? null });
+
+    // A `stop()` that arrived while the spawn was in flight has already settled the machine as
+    // `stopped`, and there is no edge from there to `health-checking`. Calling `move` would throw
+    // — but only *after* the child had been made `this.process`, leaving a running process that
+    // nothing supervises and that no later `stop()` can reach: an orphan, produced by a race
+    // rather than by a crash. So the child is stopped here, and the start is refused out loud.
+    // Phase 6.6 §Task 1: concurrent start/stop must end in a deterministic state and leave no
+    // process behind.
+    if (!canTransition(this.current.state, 'health-checking')) {
+      const message = `the start was abandoned while it was spawning; the supervisor is already ${this.current.state}`;
+      await this.discard(child);
+      this.options.logger?.warn(
+        message,
+        { state: this.current.state },
+        'desktop.sidecar.start.abandoned',
+      );
+      throw new AppError('POLICY_VIOLATION', message, {
+        details: { state: this.current.state },
+      });
+    }
     this.move('health-checking', { pid: child.pid ?? null });
 
     await this.awaitReady(plan);
+    await this.awaitMatchingBuild(plan);
     this.healthySince = this.now();
     this.move('ready', { health: 'healthy', uptimeMs: 0 });
     // A fresh start earns a fresh budget. A *restart* does not: see the class comment.
@@ -456,6 +492,82 @@ export class SidecarSupervisor {
     this.options.logger?.error(message, { port: plan.port }, 'desktop.sidecar.timeout');
     throw new AppError('PROVIDER_UNAVAILABLE', message, {
       details: { baseUrl: plan.baseUrl, timeoutMs: timeout, attempts: liveness },
+    });
+  }
+
+  /**
+   * Stop a child the supervisor has decided not to supervise.
+   *
+   * Used only on the abandoned-start path, where a process exists but the machine has already
+   * settled somewhere it cannot be adopted from. Graceful first, bounded, then forced — the same
+   * order as `stop()`, because a leaked process holding the port and the database is exactly what
+   * the forced fallback exists for.
+   */
+  private async discard(child: SidecarProcess): Promise<void> {
+    this.process = null;
+    // The report already named a pid for this child when it was spawned. It is about to be gone,
+    // so the report must stop naming it: a status card showing the pid of a process that is not
+    // running is the same class of lie as reporting an API it cannot reach.
+    this.patch({ pid: null });
+    const outcome = await this.withDeadline(child.stop(), this.stopTimeout());
+    if (outcome !== 'timeout') return;
+    try {
+      child.kill?.();
+    } catch {
+      // The state already says the start was refused; a failing kill is reported there.
+    }
+  }
+
+  /**
+   * Refuse `ready` unless the API is the build this shell shipped with.
+   *
+   * Health passing is not the same claim as "this is the right program": a stale API answers
+   * health perfectly well. So the version is checked *after* the API proves it is up (asking a
+   * process that is not listening would report a mismatch for the wrong reason) and *before*
+   * the state becomes `ready`.
+   *
+   * With no `verifyVersion` port the check is skipped, which is how the existing supervisor
+   * tests run unchanged — the shell that ships passes
+   * `checkVersionHandshake` through this seam, and `npm run desktop:verify` records whether the
+   * rule is present on the native side (TDR-13).
+   */
+  private async awaitMatchingBuild(plan: SidecarPlan): Promise<void> {
+    const verify = this.options.verifyVersion;
+    if (!verify) return;
+
+    let result: HandshakeResult;
+    try {
+      result = await verify(plan);
+    } catch (error) {
+      // The probe throwing is still a refusal: a handshake nobody could complete is not a
+      // licence to claim the versions match.
+      const message = `the build-version handshake could not be completed: ${
+        error instanceof AppError ? error.message : 'the version probe failed'
+      }`;
+      this.move('error', { lastError: message });
+      this.options.logger?.error(message, { port: plan.port }, 'desktop.sidecar.handshake.failed');
+      throw new AppError('PROVIDER_UNAVAILABLE', message, { details: { baseUrl: plan.baseUrl } });
+    }
+
+    if (isHandshakeCompatible(result)) {
+      this.options.logger?.debug(
+        "the API reported the shell's version",
+        { version: result.expected },
+        'desktop.sidecar.handshake.ok',
+      );
+      return;
+    }
+
+    const message = result.reason ?? 'the API and the shell are not the same build';
+    this.move('error', { health: 'healthy', lastError: message });
+    this.options.logger?.error(
+      'build-version handshake refused the start',
+      // The two versions, which are not secret; never the token, the base URL or a path.
+      { handshake: result.state, expected: result.expected, reported: result.reported },
+      'desktop.sidecar.handshake.mismatch',
+    );
+    throw new AppError('POLICY_VIOLATION', message, {
+      details: { handshake: result.state, expected: result.expected, reported: result.reported },
     });
   }
 

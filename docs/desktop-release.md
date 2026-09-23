@@ -304,16 +304,21 @@ None of this is Brain state, and the boundary is deliberate:
 3. **The release workflow has never completed a release.** The gate path is exercised by
    `release:preflight` and by tests; the packaging job is a described path.
 4. **No installer signature.** An update signature proves an artifact came from the project; it does
-   not stop an OS warning. Code signing is Phase 6.6.
+   not stop an OS warning. Phase 6.6 did not add code signing either — see
+   [desktop-release-qa.md](./desktop-release-qa.md) §10 and TDR-20.
 5. **No update UI.** `UpdateService` reports status and nothing renders it. Deliberate: this phase
    had to keep the existing UI untouched.
 6. **The native `UpdatePort` implementation is not written.** The plugin is registered in Rust; the
    adapter that drives it through this state machine arrives with the phase that renders it.
 
-**Deferred to Phase 6.6:** installer and code signing, notarisation, a native build that exercises
-the keychain and the updater for real, end-to-end release QA, and the update UI. **Not in scope for
-6.6 either:** rollback beyond what Tauri's updater provides, a background update daemon, and a custom
-update server — `tauri.conf.json` names the endpoint the app will ask, and no release infrastructure
-was built here.
+**Phase 6.6 delivered:** the release QA report (`npm run release:qa`), which maps every desktop
+scenario to the test that proves it and marks the checks this host cannot exercise; and the
+build-version handshake, which refuses to report the API ready unless it is the build the shell
+shipped — [desktop-release-qa.md](./desktop-release-qa.md).
+
+**Still deferred after 6.6:** installer and code signing, notarisation, a native build that exercises
+the keychain and the updater for real, and the update UI. **Also out of scope:** rollback beyond what
+Tauri's updater provides, a background update daemon, and a custom update server —
+`tauri.conf.json` names the endpoint the app will ask, and no release infrastructure was built here.
 
 Live trading and broker execution remain disabled. Nothing in this phase changed a safety flag.

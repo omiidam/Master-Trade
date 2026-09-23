@@ -39,6 +39,7 @@
     "release:check": "node dist/src/desktop/release-cli.js version-check",
     "release:sync-version": "node dist/src/desktop/release-cli.js version-sync",
     "release:signing": "node dist/src/desktop/release-cli.js signing",
+    "release:qa": "node dist/src/desktop/release-cli.js qa",
     "release:preflight": "node dist/src/desktop/release-cli.js preflight",
     "desktop:package": "node dist/src/desktop/release-cli.js preflight && tauri build"
   },

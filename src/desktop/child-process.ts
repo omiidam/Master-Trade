@@ -30,6 +30,23 @@ import type { SidecarPlan, SidecarProcess, SidecarSpawner } from './sidecar.js';
 /** The longest captured line forwarded; a runaway process cannot grow the log without bound. */
 export const MAX_CAPTURED_LINE = 4_000;
 
+/**
+ * The most output held back while waiting for a newline — 64 KiB, one pipe buffer.
+ *
+ * `MAX_CAPTURED_LINE` bounds each line that is *forwarded*, which is not the same thing as
+ * bounding this buffer. A child that writes megabytes with no newline in them — a stack trace
+ * printed without breaks, a `JSON.stringify` of something huge, a binary accidentally written to
+ * stdout — accumulates here, because the split loop only drains on `\n`. Phase 6.6 found the
+ * buffer unbounded: the shell process would grow to match whatever the API emitted. The pipe was
+ * always drained (so there was no deadlock); memory was not.
+ *
+ * Reaching this bound forwards what has arrived, truncated, and drops the remainder rather than
+ * growing: a shell that dies reporting a fault is worse than a shell that reports a truncated
+ * line and stays up. The record carries `truncated: true`, so the cut is visible rather than
+ * reading as the whole story.
+ */
+export const MAX_PENDING_BUFFER = 64 * 1024;
+
 /** Replace the launch credential anywhere it appears. */
 export function redactToken(line: string, token: string): string {
   if (token.length === 0) return line;
@@ -67,18 +84,34 @@ export function nodeSidecarSpawner(logger?: Logger): SidecarSpawner {
     const forward = (stream: NodeJS.ReadableStream, label: 'stdout' | 'stderr'): void => {
       let buffer = '';
       stream.setEncoding('utf8');
+      const emit = (line: string, truncated: boolean): void => {
+        logger?.debug(
+          redactToken(line, plan.token),
+          { stream: label, port: plan.port, ...(truncated ? { truncated: true } : {}) },
+          'desktop.sidecar.output',
+        );
+      };
       stream.on('data', (chunk: string) => {
         buffer += chunk;
         let index = buffer.indexOf('\n');
         while (index !== -1) {
-          const line = buffer.slice(0, index).slice(0, MAX_CAPTURED_LINE);
+          emit(buffer.slice(0, index).slice(0, MAX_CAPTURED_LINE), false);
           buffer = buffer.slice(index + 1);
-          logger?.debug(
-            redactToken(line, plan.token),
-            { stream: label, port: plan.port },
-            'desktop.sidecar.output',
-          );
           index = buffer.indexOf('\n');
+        }
+        // No newline arrived within the bound, so this line is not going to be completed here.
+        // Reporting it truncated — and saying by how much — is the difference between a cut
+        // stack trace and one that reads as the whole story.
+        if (buffer.length > MAX_PENDING_BUFFER) {
+          const held = buffer.length;
+          emit(buffer.slice(0, MAX_CAPTURED_LINE), true);
+          buffer = '';
+          logger?.debug(
+            'at least one line of child output had no newline within the capture bound and the ' +
+              'remainder was dropped',
+            { stream: label, heldBytes: held, boundBytes: MAX_PENDING_BUFFER },
+            'desktop.sidecar.output.truncated',
+          );
         }
       });
       stream.on('error', () => {

@@ -207,7 +207,24 @@ export interface ShellBridge extends DesktopHost {
 export function createShellBridge(invoke: InvokeFn): ShellBridge {
   const call = async <T>(command: ShellCommand, args?: Record<string, unknown>): Promise<T> => {
     assertShellCommand(command);
-    return invoke<T>(command, args);
+    try {
+      return await invoke<T>(command, args);
+    } catch (error) {
+      // An `AppError` is already typed and its message already curated (the browser bridge, or a
+      // command whose Rust side returned one), so it passes through with its reason intact.
+      if (error instanceof AppError) throw error;
+      // Anything else is the WebView's transport speaking — a Tauri error string, or a plain
+      // `Error` from a bridge under test. Neither is safe to render: a Tauri message can carry a
+      // path from the command that failed, and the renderer is the least trusted half of the
+      // application. So it is replaced by a curated failure that names the command for a
+      // developer and carries nothing from the original text (Phase 6.6 §Task 1: IPC errors stay
+      // typed and bounded).
+      throw new AppError(
+        'PROVIDER_UNAVAILABLE',
+        'The desktop shell could not complete this request.',
+        { details: { command } },
+      );
+    }
   };
 
   const secureStore: SecureStore = {

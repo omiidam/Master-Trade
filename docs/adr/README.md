@@ -348,3 +348,26 @@ release metadata is asserted against the module that decides whether a release i
 
 Packaging, the version surfaces, the signing boundary, the update lifecycle, CI requirements and
 every limitation are in [desktop-release.md](../desktop-release.md).
+
+## Phase 6.6 — the API must be the build the shell shipped
+
+One version per tree is not one version per _running application_: the shell's version comes from
+`tauri.conf.json` and `Cargo.toml`, the API's from the compiled config it reports at `/v1/health`.
+Phase 6.5 made the first consistent and left the second assumed, and every way they can disagree is
+silent — an installer built from a stale `dist/` that reports the old version at the one endpoint
+support reads, or an API left behind by an earlier install serving a window built against different
+code with the protocol version unchanged.
+
+[ADR-0056](./ADR-0056-the-api-must-be-the-build-the-shell-shipped.md) adds the third clause to
+readiness: the API must report the shell's own version, equality is the rule rather than a tolerance
+both artifacts are built from one machine-checked source, and a disagreement fails closed into
+`error` naming both versions instead of a warning beside a `ready` the application cannot honour.
+The failure boundaries were hardened in the same pass — a child-output buffer that had no bound, a
+`stop()` racing a spawn that could leak the new process, and a rejected IPC command that repeated the
+WebView's own error text — and `npm run release:qa` now answers the question no other check in the
+repository can: not _is it right?_ but _was it looked at?_, mapping every desktop scenario to the test
+that proves it and marking, as `NOT_AVAILABLE`, the checks this host cannot exercise.
+
+The startup and shutdown sequences, the failure table, the handshake, the evidence matrix, the
+release checklist and every validation this environment cannot perform are in
+[desktop-release-qa.md](../desktop-release-qa.md).

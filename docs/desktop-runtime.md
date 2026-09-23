@@ -210,9 +210,11 @@ running forever on the preview build.
 2. **Windows has no graceful signal.** `std::process::Child::kill` is `TerminateProcess` and `std`
    offers nothing else, so on Windows the API is terminated rather than asked. A real `SIGTERM` is
    sent on Unix. Recorded as TDR-12.
-3. **Readiness is liveness, not contract version.** The shell proves the health route answers with
-   the right credential; it does not compare an API schema or build version. A mismatched-but-alive
-   API would pass. (A build-version handshake is Phase 6.6 material.)
+3. **Readiness is liveness plus build version, not full contract compatibility.** The shell proves
+   the health route answers with the right credential **and** that the API reports the shell's own
+   version (Phase 6.6, [desktop-release-qa.md](./desktop-release-qa.md) §5). It still does not
+   compare an API _schema_: two builds that agree on their version are assumed to agree on the
+   protocol, which is exactly what `protocol.agreement` and the version mirrors are for.
 4. **No automatic update check or installer.** Declared placeholders only; `desktop:verify` reports a
    placeholder update key as a warning in development and an error in production.
 5. **The supervisor's monitor is the shell's, not the library's.** `SidecarSupervisor.handleExit` is
@@ -221,13 +223,13 @@ running forever on the preview build.
 
 ## 12. Deferred to later phases
 
-| Phase         | Deferred                                                                                                                                                                                                                                                                                                                |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 6.3           | backup and restore, quota enforcement; **encryption at rest for the database and content store** is a separate item, still unscheduled ([desktop-storage.md](./desktop-storage.md), TDR-14)                                                                                                                             |
-| 6.4           | advanced desktop permission _workflows_, a credential management surface, automatic rotation — the OS keychain itself is implemented ([desktop-secure-storage.md](./desktop-secure-storage.md))                                                                                                                         |
-| 6.5           | **implemented**: the packaging gate, the signing boundary and the update state machine are in [desktop-release.md](./desktop-release.md). Still deferred: installer code signing and notarisation (TDR-20), the native `UpdatePort` adapter (TDR-21), and a bundle produced on a machine with a Rust toolchain (TDR-18) |
-| 6.6           | final hardening, release QA, build-version handshake                                                                                                                                                                                                                                                                    |
-| Design system | visual redesign, new component library, shine/glow overhaul                                                                                                                                                                                                                                                             |
+| Phase         | Deferred                                                                                                                                                                                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 6.3           | backup and restore, quota enforcement; **encryption at rest for the database and content store** is a separate item, still unscheduled ([desktop-storage.md](./desktop-storage.md), TDR-14)                                                                                                                              |
+| 6.4           | advanced desktop permission _workflows_, a credential management surface, automatic rotation — the OS keychain itself is implemented ([desktop-secure-storage.md](./desktop-secure-storage.md))                                                                                                                          |
+| 6.5           | **implemented**: the packaging gate, the signing boundary and the update state machine are in [desktop-release.md](./desktop-release.md). Still deferred: installer code signing and notarisation (TDR-20), the native `UpdatePort` adapter (TDR-21), and a bundle produced on a machine with a Rust toolchain (TDR-18)  |
+| 6.6           | **implemented**: failure-boundary hardening, the build-version handshake and the release QA report are in [desktop-release-qa.md](./desktop-release-qa.md). Still deferred: a `cargo build` job in CI (TDR-13), a real Windows release pass (TDR-18), code signing (TDR-20) and the native `UpdatePort` adapter (TDR-21) |
+| Design system | visual redesign, new component library, shine/glow overhaul                                                                                                                                                                                                                                                              |
 
 Phase 6.2 implemented none of these. Phase 6.3 has since implemented the local database lifecycle and
 the file-system layer ([desktop-storage.md](./desktop-storage.md)); the row above now names only what

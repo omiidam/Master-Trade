@@ -33,6 +33,7 @@ import {
   SECRET_NAMESPACE,
   SECRET_NAMESPACE_PREFIX,
 } from '../../packages/shared/src/desktop/secrets.js';
+import { HANDSHAKE_STATES } from './handshake.js';
 import { preflightPackaging } from './packaging.js';
 import { reviewSigning } from './signing.js';
 import { DESKTOP_API_PORT } from './sidecar.js';
@@ -68,7 +69,19 @@ async function listTypeScriptFiles(root: string, dir: string): Promise<string[]>
 
 /** The `STATES` list mirrored in `sidecar.rs`, in declaration order. */
 function rustProcessStates(source: string): string[] {
-  const match = /pub const STATES: \[&str; \d+\] = \[([\s\S]*?)\];/.exec(source);
+  return rustStringList(source, 'STATES');
+}
+
+/**
+ * A `pub const <NAME>: [&str; n] = [...]` string list from Rust, in declaration order.
+ *
+ * One reader for both mirrored lists, so the process states and the handshake states are compared
+ * by the same code and a third list costs a constant rather than a copy of this function.
+ */
+function rustStringList(source: string, name: string): string[] {
+  const match = new RegExp(`pub const ${name}: \\[&str; \\d+\\] = \\[([\\s\\S]*?)\\];`).exec(
+    source,
+  );
   if (!match) return [];
   return [...(match[1] ?? '').matchAll(/"([^"]+)"/g)].map((entry) => entry[1] ?? '');
 }
@@ -558,6 +571,61 @@ export async function verifyDesktopShell(options: VerifyOptions): Promise<Verifi
       : `rust=[${rustStates.join(', ') || 'missing'}] typescript=[${[...PROCESS_STATES].join(', ')}]`,
   );
 
+  const typescriptSidecar =
+    (await readTextOrNull(join(root, 'src', 'desktop', 'sidecar.ts'))) ?? '';
+
+  // ── the build-version handshake, held together across the two implementations ──
+  //
+  // Phase 6.6 added a third clause to readiness: the API must be the build the shell shipped.
+  // These three checks are what make "mirrored" true for it. They prove the two halves describe
+  // one rule and that each half *applies* it — none of them compiles or runs the Rust code (see
+  // `unverifiable`), so a green here means "the same rule is written in both places", not "the
+  // packaged app refuses a mismatched API".
+  const rustHandshakeStates = rustStringList(rustSidecar, 'HANDSHAKE_STATES');
+  const handshakeStatesAgree =
+    rustHandshakeStates.length > 0 &&
+    rustHandshakeStates.join(',') === [...HANDSHAKE_STATES].join(',');
+  add(
+    'handshake.state-agreement',
+    handshakeStatesAgree,
+    handshakeStatesAgree
+      ? `${rustHandshakeStates.length} handshake states agree with src/desktop/handshake.ts`
+      : `rust=[${rustHandshakeStates.join(', ') || 'missing'}] typescript=[${[...HANDSHAKE_STATES].join(', ')}]`,
+  );
+
+  const healthHandler =
+    (await readTextOrNull(join(root, 'src', 'server', 'handlers', 'health.ts'))) ?? '';
+  add(
+    'handshake.api-reports-version',
+    /version:\s*config\.version/.test(healthHandler),
+    /version:\s*config\.version/.test(healthHandler)
+      ? 'GET /v1/health reports the compiled config version, which is what the handshake reads'
+      : 'GET /v1/health no longer reports the config version: the handshake has nothing to compare',
+  );
+
+  const typescriptGate =
+    /awaitMatchingBuild\(plan\)/.test(typescriptSidecar) &&
+    /isHandshakeCompatible\(result\)/.test(typescriptSidecar);
+  add(
+    'handshake.readiness-gate.typescript',
+    typescriptGate,
+    typescriptGate
+      ? 'the supervisor checks the handshake before reporting `ready`'
+      : 'src/desktop/sidecar.ts no longer gates `ready` on the handshake: a mismatched API would be reported as ready',
+  );
+
+  // The Rust half must do more than define the rule: it has to apply it between the health poll
+  // and `mark_ready`, or a packaged app would reach `ready` on an API from another build.
+  const rustGate = /let \(handshake_state, refusal\) = handshake\(/.test(rustSidecar);
+  const rustMarkReady = /mark_ready\(pid\)/.test(rustSidecar);
+  add(
+    'handshake.readiness-gate.rust',
+    rustGate && rustMarkReady,
+    rustGate && rustMarkReady
+      ? 'sidecar.rs applies the handshake after health and before mark_ready'
+      : 'sidecar.rs does not apply the handshake before mark_ready: the packaged app would report ready on a mismatched API',
+  );
+
   const rustPolicy = {
     readyTimeoutMs: rustMillis(rustSidecar, 'READY_TIMEOUT'),
     pollIntervalMs: rustMillis(rustSidecar, 'POLL_INTERVAL'),
@@ -633,6 +701,7 @@ export async function verifyDesktopShell(options: VerifyOptions): Promise<Verifi
       'runtime behaviour of the shell: window show timing, keychain access and single-instance focus need a built app',
       'the Rust supervisor actually running: `process-state.agreement` and `process.policy-agreement` prove the Rust source describes the same machine with the same deadlines, and nothing here compiles or executes it — the Node supervisor in `src/desktop/sidecar.ts`, exercised by tests/desktop-runtime.test.ts against a real child process, is what those claims are tested against',
       'graceful termination on Windows: `sidecar::terminate` sends a real SIGTERM on Unix and falls back to TerminateProcess elsewhere, which is all `std` offers (TDR-12)',
+      'the Rust build-version handshake actually running: `handshake.state-agreement`, `handshake.readiness-gate.rust` and `handshake.api-reports-version` prove the rule is written in both halves and that the health route still reports a version, and nothing here compiles or executes the Rust side — the decision itself is tested in TypeScript by tests/desktop-hardening.test.ts, against the same four states',
       'the bundled sidecar binary: `npm run build:sidecar` produces it, and its presence is checked at launch, not here',
       'the updater endpoint and signing key: a placeholder key is a warning in development and an error in production, but neither check proves a real key can verify a real signature — signing.ts reviews whether material is *usable*, and Tauri verifies a real signature at install time',
       'the packaging rules in release mode: `packaging.ts` is also what `npm run release:preflight` refuses on, so a check that passes here in development has not been tested at release severity',

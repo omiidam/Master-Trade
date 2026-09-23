@@ -166,6 +166,127 @@ pub fn probe(base_url: &str, token: &str) -> bool {
     }
 }
 
+/// The four handshake answers, mirrored from `HANDSHAKE_STATES` in `src/desktop/handshake.ts`.
+///
+/// `npm run desktop:verify` compares this list with the TypeScript one, the same way it compares
+/// the process states: an answer the shell can decide and the interface cannot name would be a
+/// status nobody can render, and a rule that exists on only one side is not a rule.
+pub const HANDSHAKE_STATES: [&str; 4] = [
+    "VERSION_OK",
+    "VERSION_MISMATCH",
+    "VERSION_UNAVAILABLE",
+    "VERSION_CHECK_FAILED",
+];
+
+/// The version this shell was built as.
+///
+/// `Cargo.toml` is a mirror of `package.json` — `version.agreement` fails if they disagree — so
+/// this is the shell's own answer to "which build am I?", read from the artifact rather than
+/// remembered from anywhere else.
+pub fn build_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
+/// Normalize a version the way `normalizeVersion` in `src/desktop/update.ts` does: a leading `v`
+/// is dropped, a missing minor or patch is padded with zero, and build metadata is ignored.
+///
+/// Returns `None` for anything that is not a version. Deliberately the same rule as the
+/// TypeScript half: two normalizers that disagree would refuse a start the other half accepts.
+pub fn normalize_version(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    let stripped = trimmed
+        .strip_prefix('v')
+        .or_else(|| trimmed.strip_prefix('V'))
+        .unwrap_or(trimmed);
+    if stripped.is_empty() {
+        return None;
+    }
+    let without_build = stripped.split('+').next().unwrap_or(stripped);
+    let (core, prerelease) = match without_build.split_once('-') {
+        Some((core, pre)) => (core, Some(pre)),
+        None => (without_build, None),
+    };
+    let mut parts = core.split('.');
+    let major = parts.next()?.parse::<u32>().ok()?;
+    let minor = parts.next().map_or(Some(0), |p| p.parse::<u32>().ok())?;
+    let patch = parts.next().map_or(Some(0), |p| p.parse::<u32>().ok())?;
+    if parts.next().is_some() {
+        return None;
+    }
+    match prerelease {
+        Some(pre) if !pre.is_empty() => Some(format!("{major}.{minor}.{patch}-{pre}")),
+        _ => Some(format!("{major}.{minor}.{patch}")),
+    }
+}
+
+/// The version the API reports, read from the authenticated liveness route.
+///
+/// The same route and the same token as `probe`, so "the API is up" and "the API is this build"
+/// are one request and cannot disagree. The three failure shapes are kept apart on purpose:
+/// `Err` is "could not ask", `Ok(None)` is "answered without a version", `Ok(Some)` is an answer.
+/// Collapsing them would file a broken probe under a missing field, which is a different fix.
+pub fn probe_version(base_url: &str, token: &str) -> Result<Option<String>, String> {
+    let url = format!("{base_url}/v1/health");
+    let response = ureq::get(&url)
+        .set("authorization", &format!("Bearer {token}"))
+        .timeout(Duration::from_millis(1_500))
+        .call()
+        .map_err(|_| "the API did not answer the version request".to_string())?;
+    if response.status() != 200 {
+        return Err(format!(
+            "the API answered the version request with status {}",
+            response.status()
+        ));
+    }
+    let body = response
+        .into_string()
+        .map_err(|_| "the API answer could not be read".to_string())?;
+    let parsed: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|_| "the API answered the version request with a body that is not JSON".to_string())?;
+    Ok(parsed
+        .get("version")
+        .and_then(|value| value.as_str())
+        .map(str::to_owned))
+}
+
+/// Decide the handshake, mirroring `decideHandshake` in `src/desktop/handshake.ts`.
+///
+/// Equality is the rule, not "compatible enough": both programs are built from one tree and one
+/// version source, so any difference means the bundle mixes two builds. The returned state is one
+/// of `HANDSHAKE_STATES` and the message names both versions — never a token, a URL or a path.
+pub fn handshake(base_url: &str, token: &str) -> (&'static str, Option<String>) {
+    match probe_version(base_url, token) {
+        Err(problem) => (
+            "VERSION_CHECK_FAILED",
+            Some(format!(
+                "the build-version handshake could not be completed: {problem}"
+            )),
+        ),
+        Ok(None) => (
+            "VERSION_UNAVAILABLE",
+            Some(format!(
+                "the API answered but reported no version; the shell is {}",
+                build_version()
+            )),
+        ),
+        Ok(Some(reported)) => match (normalize_version(&reported), normalize_version(build_version())) {
+            (Some(reported), Some(expected)) if reported == expected => ("VERSION_OK", None),
+            (Some(reported), Some(expected)) => (
+                "VERSION_MISMATCH",
+                Some(format!(
+                    "the API is version {reported} and the shell is {expected}; refusing to report ready"
+                )),
+            ),
+            _ => (
+                "VERSION_CHECK_FAILED",
+                Some(format!(
+                    "the API reported a version this build cannot read ({reported})"
+                )),
+            ),
+        },
+    }
+}
+
 /// Watch a running API, and bring it back if it dies.
 ///
 /// This is the piece the shell was missing. It spawned the API and never looked at it again,
@@ -320,6 +441,22 @@ pub fn supervise(app: tauri::AppHandle, plan: SidecarPlan) {
         }
 
         if await_ready(&base_url, &token, READY_TIMEOUT) {
+            // Readiness has three clauses: the process is running, health passes, and the API is
+            // the build this shell shipped. Health passing is not the same claim as "this is the
+            // right program" — a stale API left behind by an earlier install answers health
+            // perfectly well, and every request would then be served by code the window was not
+            // built against. So the version is checked here, after the API proves it is up and
+            // before the state becomes `ready`, and a mismatch is a refusal rather than a warning
+            // shown beside a `ready` the app cannot honour.
+            let (handshake_state, refusal) = handshake(&base_url, &token);
+            if let Some(message) = refusal {
+                let state = app.state::<crate::ShellState>();
+                if let Ok(mut guard) = state.sidecar.lock() {
+                    guard.set("error", Some(message.clone()));
+                }
+                eprintln!("[shell] {handshake_state}: {message}");
+                return;
+            }
             let state = app.state::<crate::ShellState>();
             if let Ok(mut guard) = state.sidecar.lock() {
                 guard.mark_ready(pid);

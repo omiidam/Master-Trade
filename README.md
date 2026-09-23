@@ -243,8 +243,15 @@ state requires reading the installed version back — [ADR-0055](./docs/adr/ADR-
 ```bash
 npm run release:check          # do the four version surfaces agree?
 npm run release:signing        # is the update signing material usable?
+npm run release:qa             # what is release-ready, and what can this host not validate?
 npm run release:preflight      # refuse to package an unreleasable tree (--dev to inspect)
 ```
+
+`release:qa` is the final report rather than a gate: it prints `PASS` / `WARN` / `FAIL` /
+`NOT_AVAILABLE` for every desktop check, maps each scenario the desktop must survive to the test
+that proves it, and lists what this machine could not exercise — a Windows-only path on a
+non-Windows host, an installer that was never bundled. `NOT_AVAILABLE` is never a pass. See
+[desktop-release-qa.md](./docs/desktop-release-qa.md).
 
 ## Realtime and background jobs (Phase 3.7)
 

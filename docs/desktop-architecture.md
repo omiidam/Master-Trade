@@ -380,7 +380,17 @@ Still deferred from 6.5: the installer is not code-signed (a different capabilit
 signature — TDR-20), no native `UpdatePort` adapter exists yet (TDR-21), no bundle has been produced
 on a machine with a Rust toolchain (TDR-18), and nothing renders update state.
 
-Deferred to **6.6:** full desktop hardening and release QA.
+Implemented in **6.6:** the failure-boundary hardening, the **build-version handshake** and the
+release QA report — [desktop-release-qa.md](./desktop-release-qa.md). Readiness gained its third
+clause (the API must be the build the shell shipped), the child-output capture bound and the
+abandoned-spawn path closed two leaks the earlier phases could not reach, the IPC bridge curates a
+rejected command instead of repeating the transport's text, and `npm run release:qa` maps every
+scenario the phase names to the test that proves it while marking what this host cannot exercise.
+
+Still deferred after 6.6: a `cargo build` job in CI, which is what would turn every described parity
+check into an executed one (TDR-13); a real Windows release pass — an installer produced, signed,
+installed and inspected (TDR-18); installer code signing and notarisation (TDR-20); and the native
+`UpdatePort` adapter with the update UI (TDR-21).
 
 Deferred to the **Design System phase:** the visual redesign, a new component system and the
 shine/glow/shadow/colour overhaul.
