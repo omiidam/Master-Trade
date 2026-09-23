@@ -57,3 +57,11 @@ export * from './config/loader.js';
    the repositories. `./db/index.js` opens nothing on import: `openDatabase()`
    is the only function that touches a driver. */
 export * from './db/index.js';
+
+/* Phase 6.3: desktop-local storage. Path resolution and initialization are shell
+   concerns; the disk content store and the metadata-integrated file store are
+   shell-and-server capabilities that keep each other honest. */
+export * from './storage/disk.js';
+export * from './desktop/data-paths.js';
+export * from './desktop/initialize.js';
+export * from './desktop/file-store.js';

@@ -351,7 +351,11 @@ per-launch credential, a health poll, a bounded restart — is now a first-class
 §10 above): policy-driven recovery, health monitoring surfaced through the lifecycle into the UI, and
 graceful start/stop driven by the running application.
 
-Deferred to **6.3:** the full local database lifecycle, file management, backup and restore.
+Phase **6.3** established the local database lifecycle and the file-system layer: the database and
+the content store now live under the OS application-data directory, separated by environment, with a
+content-addressed byte store and a metadata-owning file store — [desktop-storage.md](./desktop-storage.md).
+What remains deferred from 6.3 is **backup and restore**, migrating an existing repository `data/`
+database into app-data, per-owner quota enforcement, and encryption at rest (which is 6.4's subject).
 
 Deferred to **6.4:** secure-storage and OS keychain integration as a managed workflow, and advanced
 desktop permission workflows.

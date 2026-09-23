@@ -221,17 +221,19 @@ running forever on the preview build.
 
 ## 12. Deferred to later phases
 
-| Phase         | Deferred                                                                          |
-| ------------- | --------------------------------------------------------------------------------- |
-| 6.3           | local database lifecycle, file-system layer, backup and restore                   |
-| 6.4           | secure storage and OS keychain integration, advanced desktop permission workflows |
-| 6.5           | installer, signing and notarisation, auto-update                                  |
-| 6.6           | final hardening, release QA, build-version handshake                              |
-| Design system | visual redesign, new component library, shine/glow overhaul                       |
+| Phase         | Deferred                                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| 6.3           | backup and restore, quota enforcement, encryption at rest (see [desktop-storage.md](./desktop-storage.md)) |
+| 6.4           | secure storage and OS keychain integration, advanced desktop permission workflows                          |
+| 6.5           | installer, signing and notarisation, auto-update                                                           |
+| 6.6           | final hardening, release QA, build-version handshake                                                       |
+| Design system | visual redesign, new component library, shine/glow overhaul                                                |
 
-Phase 6.2 implemented none of these. Live trading, broker execution and autonomous order placement
-remain disabled: `liveTradingEnabled` and `brokerExecutionEnabled` are literal `false`, asserted by
-`safety` and `release-baseline` tests.
+Phase 6.2 implemented none of these. Phase 6.3 has since implemented the local database lifecycle and
+the file-system layer ([desktop-storage.md](./desktop-storage.md)); the row above now names only what
+6.3 left undone. Live trading, broker execution and autonomous order placement remain disabled:
+`liveTradingEnabled` and `brokerExecutionEnabled` are literal `false`, asserted by `safety` and
+`release-baseline` tests.
 
 ## 13. Where this is tested
 

@@ -215,6 +215,22 @@ export class PlatformRepository {
     return rows.reduce((total, row) => total + row.size_bytes, 0);
   }
 
+  /**
+   * How many metadata rows reference this content hash.
+   *
+   * Content is deduplicated by hash, so one blob can back several owners' rows. Deleting
+   * a row therefore must not delete the bytes while another row still points at them; this
+   * is the count that decides it, and it uses the declared `files_sha256_idx`.
+   */
+  countFilesWithHash(sha256: string): Promise<number> {
+    return this.files.count({ sha256 });
+  }
+
+  /** Every file row, newest first, bounded. Used by integrity/reconciliation scans. */
+  allFiles(limit = 10_000): Promise<FileRow[]> {
+    return this.files.findMany({}, { orderBy: 'created_at', direction: 'desc', limit });
+  }
+
   deleteFile(id: string): Promise<boolean> {
     return this.files.deleteById(id);
   }
