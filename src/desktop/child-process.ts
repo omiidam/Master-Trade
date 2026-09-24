@@ -40,10 +40,13 @@ export const MAX_CAPTURED_LINE = 4_000;
  * buffer unbounded: the shell process would grow to match whatever the API emitted. The pipe was
  * always drained (so there was no deadlock); memory was not.
  *
- * Reaching this bound forwards what has arrived, truncated, and drops the remainder rather than
+ * Reaching this bound forwards what has arrived, truncated, and keeps only the tail rather than
  * growing: a shell that dies reporting a fault is worse than a shell that reports a truncated
  * line and stays up. The record carries `truncated: true`, so the cut is visible rather than
- * reading as the whole story.
+ * reading as the whole story. The tail is kept — not just the head — because the end of an
+ * over-long line is where the interesting part tends to be (`npm`-style progress spam is the
+ * head; the error is the tail), and because discarding it would swallow whatever the child
+ * writes next if it lands in the same read.
  */
 export const MAX_PENDING_BUFFER = 64 * 1024;
 
@@ -83,6 +86,9 @@ export function nodeSidecarSpawner(logger?: Logger): SidecarSpawner {
 
     const forward = (stream: NodeJS.ReadableStream, label: 'stdout' | 'stderr'): void => {
       let buffer = '';
+      // True once the head of the current over-long, still-unterminated line has been forwarded.
+      // It stops the bound from forwarding the same head on every read while the run continues.
+      let headForwarded = false;
       stream.setEncoding('utf8');
       const emit = (line: string, truncated: boolean): void => {
         logger?.debug(
@@ -95,20 +101,34 @@ export function nodeSidecarSpawner(logger?: Logger): SidecarSpawner {
         buffer += chunk;
         let index = buffer.indexOf('\n');
         while (index !== -1) {
-          emit(buffer.slice(0, index).slice(0, MAX_CAPTURED_LINE), false);
+          const line = buffer.slice(0, index);
+          if (line.length <= MAX_CAPTURED_LINE && !headForwarded) {
+            emit(line, false);
+          } else {
+            // An over-long line: forward its head once, then always its tail, so the part that
+            // survived the cut is still visible and the next line is not swallowed with it.
+            if (!headForwarded) emit(line.slice(0, MAX_CAPTURED_LINE), true);
+            emit(line.length <= MAX_CAPTURED_LINE ? line : line.slice(-MAX_CAPTURED_LINE), true);
+          }
+          headForwarded = false;
           buffer = buffer.slice(index + 1);
           index = buffer.indexOf('\n');
         }
         // No newline arrived within the bound, so this line is not going to be completed here.
         // Reporting it truncated — and saying by how much — is the difference between a cut
-        // stack trace and one that reads as the whole story.
+        // stack trace and one that reads as the whole story. Only the tail is kept: the head has
+        // already been forwarded, and dropping the tail would also drop the start of whatever
+        // the child writes next if it shares this read.
         if (buffer.length > MAX_PENDING_BUFFER) {
           const held = buffer.length;
-          emit(buffer.slice(0, MAX_CAPTURED_LINE), true);
-          buffer = '';
+          if (!headForwarded) {
+            emit(buffer.slice(0, MAX_CAPTURED_LINE), true);
+            headForwarded = true;
+          }
+          buffer = buffer.slice(-MAX_CAPTURED_LINE);
           logger?.debug(
             'at least one line of child output had no newline within the capture bound and the ' +
-              'remainder was dropped',
+              'excess was dropped',
             { stream: label, heldBytes: held, boundBytes: MAX_PENDING_BUFFER },
             'desktop.sidecar.output.truncated',
           );
