@@ -8,6 +8,20 @@
  * and says plainly when the surface is a preview.
  */
 
+// The agent surface (Phase 7.2.1). Two primitives with a light of their own — the composer is
+// framed by a ring lit from above, the cards are lit from below, and everything else in the
+// product is top-lit. They live in their own family because both describe a surface that talks
+// back, which is not what a general-purpose control or card does.
+export {
+  AgentBadge,
+  AgentCard,
+  AgentCardItem,
+  AgentCardList,
+  AgentCheck,
+  MessageComposer,
+} from './agent';
+export type { AgentBadgeTone, AgentCardProps, ComposerTool, MessageComposerProps } from './agent';
+
 export { Badge, EpistemicBadge, ProvenanceBadge } from './Badge';
 export type { BadgeProps, BadgeShape, BadgeTone } from './Badge';
 
@@ -17,7 +31,7 @@ export { BrandLockup, BrandMark } from './brand';
 export type { BrandLockupProps, BrandMarkProps } from './brand';
 
 export { Button, IconButton } from './Button';
-export type { ButtonProps, ButtonSize, ButtonVariant } from './Button';
+export type { ButtonProps, ButtonShape, ButtonSize, ButtonVariant } from './Button';
 
 export {
   Card,

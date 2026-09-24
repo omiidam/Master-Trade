@@ -196,8 +196,9 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   {
     group: 'gradient',
     summary:
-      'The panel sheen, the loading sweep, the three control faces, the lit top edge and the ' +
-      'overlay veil. Structural, never decorative.',
+      'The panel sheen, the loading sweep, the three control faces, the lit top edge, the ' +
+      'overlay veil, the composer frame and the agent card’s under-light. Structural, never ' +
+      'decorative.',
     variables: [
       '--gradient-panel',
       '--gradient-sheen',
@@ -206,6 +207,11 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
       '--gradient-danger-fill',
       '--gradient-edge',
       '--gradient-veil',
+      '--gradient-ring',
+      '--gradient-specular',
+      '--gradient-agent-glow',
+      '--gradient-agent-ring',
+      '--gradient-agent-sheen',
     ],
   },
   {

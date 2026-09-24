@@ -20,6 +20,16 @@ export type ButtonVariant =
 
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
+/**
+ * The control's silhouette.
+ *
+ * A `pill` is a *commitment* shape rather than a size: it is used where a control is the only thing
+ * in its own row and closing a surface — the full-width action at the foot of an agent card. It
+ * lives here rather than as a `rounded-[…]` written at that call site so the two shapes cannot
+ * drift, and so the radius comes from the ladder either way.
+ */
+export type ButtonShape = 'default' | 'pill';
+
 /*
  * The control face.
  *
@@ -79,10 +89,14 @@ const SIZES: Record<ButtonSize, string> = {
   icon: 'h-9 w-9 px-0',
 };
 
+const SHAPES: Record<ButtonShape, string> = {
+  default: 'rounded-[var(--radius-control)]',
+  pill: 'rounded-[var(--radius-pill)]',
+};
+
 /** Shared by every variant, and conflict-free with all of them. */
 const BASE =
-  'relative inline-flex select-none items-center justify-center whitespace-nowrap ' +
-  'rounded-[var(--radius-control)] border font-medium ' +
+  'relative inline-flex select-none items-center justify-center whitespace-nowrap border font-medium ' +
   'transition-[background-color,border-color,color,box-shadow,filter,transform] ' +
   'duration-[var(--duration-fast)] ease-[var(--ease-standard)] ' +
   'disabled:pointer-events-none disabled:opacity-50';
@@ -90,6 +104,7 @@ const BASE =
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  shape?: ButtonShape;
   /** Render the child element instead of a <button> (e.g. an anchor). */
   asChild?: boolean;
   leadingIcon?: ReactNode;
@@ -107,6 +122,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({
   variant = 'secondary',
   size = 'md',
+  shape = 'default',
   asChild = false,
   leadingIcon,
   trailingIcon,
@@ -121,7 +137,14 @@ export function Button({
   return (
     <Component
       {...(label ? { 'aria-label': label } : {})}
-      className={cn(BASE, VARIANTS[variant], SIZES[size], fullWidth && 'w-full', className)}
+      className={cn(
+        BASE,
+        SHAPES[shape],
+        VARIANTS[variant],
+        SIZES[size],
+        fullWidth && 'w-full',
+        className,
+      )}
       {...(asChild ? {} : { type })}
       {...rest}
     >

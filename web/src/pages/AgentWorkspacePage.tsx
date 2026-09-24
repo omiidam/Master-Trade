@@ -6,21 +6,31 @@ import {
   Cpu,
   Database,
   Gavel,
+  Globe,
+  Grid2x2Plus,
   Info,
-  Send,
+  Paperclip,
   ShieldCheck,
   Sparkles,
   User,
   Wrench,
 } from 'lucide-react';
+import {
+  AgentBadge,
+  AgentCard,
+  AgentCardItem,
+  AgentCardList,
+  AgentCheck,
+  type ComposerTool,
+  MessageComposer,
+} from '../components/agent';
 import { Badge, EpistemicBadge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import { ErrorState } from '../components/ErrorState';
 import { InterfaceStatesPanel } from '../components/InterfaceStates';
-import { Field, ReadOnlyValue, Textarea } from '../components/Input';
+import { ReadOnlyValue } from '../components/Input';
 import { Reveal } from '../components/Reveal';
-import { Tooltip } from '../components/Tooltip';
 import { Workspace } from '../app/Workspace';
 import {
   EPISTEMIC_LABEL,
@@ -30,6 +40,39 @@ import {
 } from '../mock/data';
 import { formatTimestamp } from '../lib/format';
 import { useUiStore } from '../store/ui';
+
+/**
+ * The composer's tools, stated as data so each one carries why it is not available.
+ *
+ * None of these exists in this build, and that is the point: they are drawn disabled and explained
+ * rather than omitted, because the composer's shape is part of the design — and a tool that appears
+ * the moment it works is worse than one that was never there.
+ */
+const COMPOSER_TOOLS: readonly ComposerTool[] = [
+  {
+    label: 'Attach a file',
+    icon: <Paperclip size={15} aria-hidden />,
+    blockedReason: 'Attachments are not part of this build.',
+  },
+  {
+    label: 'Add an integration',
+    icon: <Grid2x2Plus size={15} aria-hidden />,
+    blockedReason:
+      'The tool registry is declared in the backend. Nothing on this screen can widen it.',
+  },
+  {
+    label: 'Fetch from the web',
+    icon: <Globe size={15} aria-hidden />,
+    blockedReason: 'The agent calls deterministic local tools only. It has no network access.',
+  },
+];
+
+/** Examples of what the surface is for. Labels, not shortcuts — see `MessageComposer`. */
+const COMPOSER_EXAMPLES: readonly string[] = [
+  'Size a position from a 1% risk budget',
+  'Why was this rule proposal rejected?',
+  'Review my last journal entry',
+];
 
 export function AgentWorkspacePage() {
   const setPage = useUiStore((state) => state.setPage);
@@ -140,49 +183,26 @@ export function AgentWorkspacePage() {
           />
 
           <Card>
-            <CardContent className="space-y-3">
-              <Field
-                label="Message"
-                hint="Sending is disabled: no provider is registered, and the interface must not imply a working model."
-              >
-                {({ id, 'aria-describedby': describedBy }) => (
-                  <Textarea
-                    id={id}
-                    aria-describedby={describedBy}
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                    placeholder="Ask about a lesson, a risk calculation or a past session…"
-                    disabled
-                  />
-                )}
-              </Field>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="max-w-xl text-caption text-text-faint">
-                  The agent may <em>request</em> tools; only the orchestrator runs them, after a
-                  permission check, and results are recorded with provenance.
-                </p>
-                <Tooltip content="Phase 3.3 wires a real provider behind the LLM gateway.">
-                  <span>
-                    <Button variant="primary" disabled leadingIcon={<Send size={14} aria-hidden />}>
-                      Send
-                    </Button>
-                  </span>
-                </Tooltip>
-              </div>
+            <CardContent>
+              <MessageComposer
+                label="Message to the training agent"
+                value={draft}
+                onValueChange={setDraft}
+                tools={COMPOSER_TOOLS}
+                examples={COMPOSER_EXAMPLES}
+                blockedReason="Sending is disabled: no provider is registered, and the interface must not imply a working model. The agent may request tools, but only the orchestrator runs them, after a permission check, and every result is recorded with provenance."
+              />
             </CardContent>
           </Card>
         </div>
 
         <aside className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div>
-                <CardTitle className="text-body">Run context</CardTitle>
-                <CardDescription>What the orchestrator would assemble</CardDescription>
-              </div>
-              <Cpu size={15} aria-hidden className="text-text-faint" />
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <AgentCard
+            title="Run context"
+            description="What the orchestrator would assemble"
+            icon={<Cpu size={15} aria-hidden />}
+          >
+            <div className="flex flex-col gap-3">
               <ReadOnlyValue label="Agent lifecycle state" value={mockSystemStatus.agentState} />
               <ReadOnlyValue
                 label="Provider"
@@ -194,97 +214,141 @@ export function AgentWorkspacePage() {
                 value={`$${mockSystemStatus.llmBudgetUsedUsd.toFixed(2)} of $25.00`}
                 hint="Requests are refused once the monthly budget is spent."
               />
-              <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2">
-                <p className="text-caption text-text-muted">Context sections</p>
-                <ul className="mt-1 space-y-1 text-caption text-text-faint">
-                  <li>Instructions — versioned, never dropped</li>
-                  <li>Memory — provenance required, unverified labelled uncertainty</li>
-                  <li>History — recent turns under a token budget</li>
-                  <li>Data — market data with a mandatory provenance label</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <div>
-                <CardTitle className="text-body">Tool request path</CardTitle>
-                <CardDescription>Model output never becomes action directly</CardDescription>
-              </div>
-              <Wrench size={15} aria-hidden className="text-text-faint" />
-            </CardHeader>
-            <CardContent>
-              <ol className="space-y-2 text-caption text-text-muted">
+            <div className="flex flex-col gap-2">
+              <p className="text-caption font-medium text-text-muted">Context sections</p>
+              <AgentCardList>
+                {[
+                  'Instructions — versioned, never dropped',
+                  'Memory — provenance required, unverified labelled uncertainty',
+                  'History — recent turns under a token budget',
+                  'Data — market data with a mandatory provenance label',
+                ].map((section) => (
+                  <AgentCardItem key={section} badge={<AgentCheck />}>
+                    {section}
+                  </AgentCardItem>
+                ))}
+              </AgentCardList>
+            </div>
+          </AgentCard>
+
+          <AgentCard
+            title="Tool request path"
+            description="Model output never becomes action directly"
+            icon={<Wrench size={15} aria-hidden />}
+          >
+            <div className="flex flex-col gap-3">
+              {/* A sequence, drawn as a sequence: check marks would say each step had already
+                  happened. The badge geometry is identical to the other cards, so the family holds
+                  together without pretending a pipeline is a list of results. */}
+              <AgentCardList ordered>
                 {[
                   'Model returns a tool-call request (arguments only).',
                   'Orchestrator checks the operation against the permission table.',
                   'Allowed: the deterministic tool runs and its result is recorded with provenance.',
                   'Denied: the run is blocked with a reason, and the attempt stays visible in the audit trail.',
                 ].map((step, index) => (
-                  <li key={step} className="flex gap-2">
-                    <span className="num shrink-0 text-text-faint">{index + 1}</span>
-                    <span>{step}</span>
-                  </li>
+                  <AgentCardItem
+                    key={step}
+                    badge={
+                      <AgentBadge tone="neutral">
+                        <span className="num text-micro">{index + 1}</span>
+                      </AgentBadge>
+                    }
+                  >
+                    {step}
+                  </AgentCardItem>
                 ))}
-              </ol>
-              <p className="mt-3 text-caption text-text-faint">
+              </AgentCardList>
+
+              <p className="text-caption text-text-faint">
                 The gateway holds no tool registry and exposes no execution method.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </AgentCard>
 
-          <Card>
-            <CardHeader>
-              <div>
-                <CardTitle className="text-body">Rule proposals</CardTitle>
-                <CardDescription>Idea → evaluation → human approval</CardDescription>
-              </div>
-              <Gavel size={15} aria-hidden className="text-text-faint" />
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2 text-caption text-text-muted">
-                <CheckCircle2 size={14} aria-hidden className="text-primary" />
-                Proposed rule
-              </div>
-              <div className="flex items-center gap-2 text-caption text-text-muted">
-                <BrainCircuit size={14} aria-hidden className="text-info" />
-                Deterministic evaluation attached
-              </div>
-              <div className="flex items-center gap-2 text-caption text-text-muted">
-                <Gavel size={14} aria-hidden className="text-warning" />
-                Awaiting your approval — self-approval is rejected
-              </div>
+          {/* The one active ring on the screen: this is the card that is waiting for a decision, and
+              a sweeping light is how a screen says "here" without a second badge. */}
+          <AgentCard
+            ring="active"
+            title="Rule proposals"
+            description="Idea → evaluation → human approval"
+            icon={<Gavel size={15} aria-hidden />}
+            action={
+              <Button
+                variant="primary"
+                shape="pill"
+                fullWidth
+                size="sm"
+                onClick={() => setPage('research')}
+              >
+                Review the research queue
+              </Button>
+            }
+          >
+            <div className="flex flex-col gap-3">
+              <AgentCardList>
+                <AgentCardItem
+                  badge={
+                    <AgentBadge tone="accent">
+                      <CheckCircle2 size={10} />
+                    </AgentBadge>
+                  }
+                >
+                  Proposed rule
+                </AgentCardItem>
+                <AgentCardItem
+                  badge={
+                    <AgentBadge tone="info">
+                      <BrainCircuit size={10} />
+                    </AgentBadge>
+                  }
+                >
+                  Deterministic evaluation attached
+                </AgentCardItem>
+                <AgentCardItem
+                  badge={
+                    <AgentBadge tone="warning">
+                      <Gavel size={10} />
+                    </AgentBadge>
+                  }
+                >
+                  Awaiting your approval — self-approval is rejected
+                </AgentCardItem>
+              </AgentCardList>
+
               <p className="text-caption text-text-faint">
                 Activation is impossible without a recorded human approval; automation cannot
                 self-authorize.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </AgentCard>
 
-          <Card tone="sunken">
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={15} aria-hidden className="text-primary" />
-                <span className="text-caption font-medium text-text">Unchanged guarantees</span>
-              </div>
-              <ul className="space-y-1 text-caption text-text-muted">
-                <li className="flex items-center gap-1.5">
-                  <Database size={12} aria-hidden className="text-text-faint" />
-                  Live trading: disabled
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <Database size={12} aria-hidden className="text-text-faint" />
-                  Broker execution: disabled
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <Database size={12} aria-hidden className="text-text-faint" />
-                  Model-authored memory can never become trusted knowledge
-                </li>
-              </ul>
+          <AgentCard
+            title="Unchanged guarantees"
+            description="What the agent cannot do, whatever it says"
+            icon={<ShieldCheck size={15} aria-hidden />}
+          >
+            <div className="flex flex-col gap-3">
+              <AgentCardList>
+                {[
+                  'Live trading: disabled',
+                  'Broker execution: disabled',
+                  'Model-authored memory can never become trusted knowledge',
+                ].map((guarantee) => (
+                  <AgentCardItem key={guarantee} badge={<AgentCheck />}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Database size={12} aria-hidden className="shrink-0 text-text-faint" />
+                      {guarantee}
+                    </span>
+                  </AgentCardItem>
+                ))}
+              </AgentCardList>
+
               <p className="text-caption text-text-faint">{MOCK_DATA_NOTICE}</p>
-            </CardContent>
-          </Card>
+            </div>
+          </AgentCard>
 
           <p className="flex items-start gap-1.5 text-caption text-text-faint">
             <Info size={13} aria-hidden className="mt-0.5 shrink-0" />

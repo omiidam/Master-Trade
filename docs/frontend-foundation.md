@@ -548,3 +548,104 @@ Two assertions were rewritten, and both became stronger:
 
 Nothing else in the 7.1 suite was touched, and its two load-bearing rules still hold:
 no call site writes a raw value, and every declared variable is inventoried.
+
+## 12. Phase 7.2.1 — the agent surface
+
+Two primitives, in their own family: `MessageComposer` and the `AgentCard` group
+(`AgentCard`, `AgentCardList`, `AgentCardItem`, `AgentBadge`, `AgentCheck`). They live in
+`web/src/components/agent/` because both describe a surface that _talks back_ — one takes
+a message, the others describe how a message would be handled — and neither is a
+general-purpose control or card. Their barrel re-exports from the library barrel, the way
+`brand/` already did.
+
+### The idea: this surface is lit from below
+
+Everything else in the product is top-lit. A panel is lifted by `--gradient-panel` and
+closed by `.edge-highlight`; a control is lifted by `--gradient-control` with its lit inset
+edge. The agent surface inverts that:
+
+- `--gradient-agent-ring` runs **0deg** — brightest along the bottom (0.26 white) and
+  falling to the plain border colour at the top — where `--gradient-panel` runs 180deg with
+  its sheen at the _top_.
+- `--gradient-agent-glow` carries two accent pools, both anchored **below** the card's own
+  bottom edge (`at 8% 114%`, `at 92% 108%`), so the light reads as coming off the floor
+  rather than out of the middle.
+- The composer's ring is the exception that proves the rule: it is lit from its
+  **upper-left** corner (`--gradient-ring` at 135deg) with a blurred specular gleam in that
+  same corner, because it is the thing _you_ act on.
+
+Same accent, read in a different direction. That is what makes the family recognisable in a
+screenshot without a badge or a label.
+
+### Both edges are padding, never `border-image`
+
+`border-image` ignores `border-radius`: the corners square off. So a radiused surface that
+needs a _gradient_ stroke draws it as a 1.5px (composer) or 1px (card) frame whose own
+background shows through the band the inner panel does not cover — and the inner radius is
+derived from the outer one (`calc(var(--radius-panel) - 1px)`) so the two can never drift.
+The contract suite now asserts product-wide that `border-image` appears in no code file,
+which is the rule that stops the next gradient edge from being written the other way.
+
+### The travelling light, and the bug it hid
+
+One card per screen may take `ring="active"`: a band sweeps the ring, meaning "this is the
+thing waiting for you". A page of sweeping borders is a page with no focus, so the page
+asserts it has exactly one, and the sweep is a slow 9s breath rather than a progress
+indicator. Under `prefers-reduced-motion` the global rule parks it.
+
+The band is a 200%-wide absolutely positioned `::before`. In an `overflow: visible` host
+that is not a decorative band at all — it paints across the page and counts toward the
+document's scroll width, which is a slow animation turning into a horizontally scrolling
+viewport. The host is clipped, and the assertion is written next to the width so the reason
+survives.
+
+### The composer that cannot send
+
+There is no provider in this build, so the composer is the honest case rather than the
+happy one:
+
+- `blockedReason` disables the field **and** the send control together, is rendered as
+  visible prose, and is the field's `aria-describedby` — so the reason is announced with the
+  field rather than only sitting beside it.
+- A tool is disabled **only** when it carries `blockedReason`, and the tooltip holds that
+  reason. The tooltip wraps the control rather than living on it: a disabled control is
+  `pointer-events: none` and could never open its own explanation.
+- The examples under the frame are `Badge shape="tag"` labels, not shortcuts. A chip that
+  looks pressable and fills or sends nothing is the affordance the rest of the file refuses
+  to ship, so nothing in that row acts.
+- The send control is the shared `Button` (`variant="primary"`, `size="icon"`, new
+  `shape="pill"`) with its glyph in an inset well. The reference draws that well as glass
+  with a backdrop blur, which has nothing to resolve over a smooth accent fill; it is the
+  inset alone, and the glyph is what lights up.
+
+One reference detail was deliberately dropped: it rotates the send glyph 45° on focus. A
+paper plane with a different heading when focused says nothing about sending, so hover and
+focus lift the face, light the glyph, and lean on the page-wide focus ring every other
+control already gets.
+
+### What the card keeps, and what it refuses
+
+The rows are an `ul` or an `ol`, chosen **once inside the component** from an `ordered`
+prop. The tool-request path is a sequence, and a list of check marks would say each step had
+already happened — so the semantics are decided where they cannot be got wrong at a call
+site. The marks themselves are `aria-hidden`: the sentence is the content, and a screen
+reader announcing "check" before every row of every card is noise.
+
+No fixed widths anywhere. The reference pins the composer at 260px; a fixed track is what
+turns a design into a horizontal scrollbar on a narrow screen, so the layout stays the
+grid's business. Verified at 390 / 834 / 1440 CSS px with no document overflow at any of
+them, and the card action takes `fullWidth` from the control's own flag rather than from a
+wrapper.
+
+The `pill` shape is a named `ButtonShape` rather than a `rounded-[...]` written at the
+call site, so the two shapes cannot drift and the radius still comes from the ladder.
+
+### What was not changed
+
+No chat functionality, message handling, transport or architecture. `MessageComposer`
+takes a value and reports a change — the same seam the surface already had. The suite
+asserts it holds no `fetch`, no `XMLHttpRequest`, no `EventSource`, no `WebSocket` and no
+state hook, so a visual primitive cannot quietly grow a client.
+
+The 7.1 and 7.2 suites were not weakened: the only additions are the new rules above.
+18 new assertions cover this phase, all read from source and offline.
