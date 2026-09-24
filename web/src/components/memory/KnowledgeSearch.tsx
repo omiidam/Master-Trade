@@ -58,7 +58,7 @@ export function KnowledgeSearch({
   const active = useMemo(() => new Set(activeFacets), [activeFacets]);
 
   return (
-    <Card className={className}>
+    <Card surface="data" className={className}>
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">{title}</CardTitle>

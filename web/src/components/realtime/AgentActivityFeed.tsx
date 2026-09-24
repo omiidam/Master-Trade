@@ -62,7 +62,7 @@ export function AgentActivityFeed({
   className,
 }: AgentActivityFeedProps): ReactNode {
   return (
-    <Card as="section" aria-label="Agent activity" className={className}>
+    <Card surface="data" as="section" aria-label="Agent activity" className={className}>
       {/*
         The card's name and its rule come from the shared header instead of a hand-rolled header
         element carrying a `border-b`. The whole row is one child so the icon, the title, the

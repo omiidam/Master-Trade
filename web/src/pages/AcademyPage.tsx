@@ -59,7 +59,7 @@ export function AcademyPage() {
       }
     >
       <Grid columns={3}>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Curriculum progress</CardTitle>
@@ -89,7 +89,7 @@ export function AcademyPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Exam average</CardTitle>
@@ -140,7 +140,17 @@ export function AcademyPage() {
                   {/* Modules reveal in order, so the six-month shape reads as a
                       sequence rather than appearing all at once. */}
                   <Reveal index={index}>
-                    <Card interactive className={cn(module.status === 'locked' && 'opacity-70')}>
+                    <Card
+                      surface={
+                        module.status === 'in-progress'
+                          ? 'featured'
+                          : module.status === 'locked'
+                            ? 'utility'
+                            : undefined
+                      }
+                      interactive
+                      className={cn(module.status === 'locked' && 'opacity-70')}
+                    >
                       <CardHeader divider>
                         <div className="flex items-start gap-3">
                           <span
@@ -198,7 +208,7 @@ export function AcademyPage() {
         </TabPanel>
 
         <TabPanel value="lessons" className="space-y-3">
-          <Card>
+          <Card surface="data">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Module 2 — Risk First</CardTitle>
@@ -239,7 +249,7 @@ export function AcademyPage() {
         <TabPanel value="exams" className="space-y-3">
           <Grid columns={3}>
             {mockExams.map((exam) => (
-              <Card key={exam.id}>
+              <Card surface="data" key={exam.id}>
                 <CardHeader divider>
                   <div>
                     <CardTitle className="num text-body">{exam.id}</CardTitle>

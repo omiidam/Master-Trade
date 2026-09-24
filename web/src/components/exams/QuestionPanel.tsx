@@ -82,7 +82,7 @@ export function QuestionPanel({
   };
 
   return (
-    <Card className={className}>
+    <Card surface="action" className={className}>
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">

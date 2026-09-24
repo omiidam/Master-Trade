@@ -49,7 +49,7 @@ export function MetricsPanel({
 }: MetricsPanelProps) {
   if (!metrics) {
     return (
-      <Card className={className}>
+      <Card surface="metric" className={className}>
         <CardHeader divider>
           <div>
             <CardTitle className="text-body">Performance metrics</CardTitle>
@@ -130,7 +130,7 @@ export function MetricsPanel({
   ];
 
   return (
-    <Card className={className}>
+    <Card surface="metric" className={className}>
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">Performance metrics</CardTitle>

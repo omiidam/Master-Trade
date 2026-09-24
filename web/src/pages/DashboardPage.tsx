@@ -95,7 +95,7 @@ export function DashboardPage() {
     >
       <Grid columns={4}>
         {mockStudyMetrics.map((metric) => (
-          <Card key={metric.id}>
+          <Card surface="metric" key={metric.id}>
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">{metric.label}</CardTitle>
@@ -130,7 +130,7 @@ export function DashboardPage() {
         aria-label="Dashboard sections"
       >
         <TabPanel value="overview" className="space-y-4">
-          <Card>
+          <Card surface="featured">
             <CardHeader divider>
               <div>
                 <CardTitle>Training equity curve</CardTitle>
@@ -205,7 +205,7 @@ export function DashboardPage() {
             description="Roll-ups from the product modules. Each figure is illustrative and each card states what it cannot tell you."
           >
             <Grid columns={4}>
-              <Card>
+              <Card surface="metric">
                 <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Knowledge mastery</CardTitle>
@@ -231,7 +231,7 @@ export function DashboardPage() {
                 </CardFooter>
               </Card>
 
-              <Card>
+              <Card surface="metric">
                 <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Exam performance</CardTitle>
@@ -262,7 +262,7 @@ export function DashboardPage() {
                 </CardFooter>
               </Card>
 
-              <Card>
+              <Card surface="metric">
                 <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Memory growth</CardTitle>
@@ -289,7 +289,7 @@ export function DashboardPage() {
                 </CardFooter>
               </Card>
 
-              <Card>
+              <Card surface="metric">
                 <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Research progress</CardTitle>
@@ -336,7 +336,7 @@ export function DashboardPage() {
               <SkeletonCard rows={4} />
             </Grid>
           ) : (
-            <Card>
+            <Card surface="data">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Recent agent and system events</CardTitle>

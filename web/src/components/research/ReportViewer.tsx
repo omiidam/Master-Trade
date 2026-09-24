@@ -40,7 +40,7 @@ export interface ReportViewerProps {
 export function ReportViewer({ report, provenance, sourceRef, className }: ReportViewerProps) {
   if (!report) {
     return (
-      <Card className={className}>
+      <Card surface="data" className={className}>
         <CardHeader divider>
           <CardTitle className="text-body">Report</CardTitle>
         </CardHeader>

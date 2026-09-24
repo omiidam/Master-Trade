@@ -34,6 +34,7 @@ export { Button, IconButton } from './Button';
 export type { ButtonProps, ButtonShape, ButtonSize, ButtonVariant } from './Button';
 
 export {
+  CARD_SURFACES,
   Card,
   CardContent,
   CardDescription,
@@ -48,6 +49,7 @@ export type {
   CardDensity,
   CardEmphasis,
   CardProps,
+  CardSurface,
   CardTileSpace,
   CardTileTone,
   CardTone,

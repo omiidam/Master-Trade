@@ -133,7 +133,7 @@ export function MemoryPage() {
       }
     >
       <Grid columns={4}>
-        <Card>
+        <Card surface="data">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Knowledge base</CardTitle>
@@ -153,7 +153,7 @@ export function MemoryPage() {
             </span>
           </CardFooter>
         </Card>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Trust mix</CardTitle>
@@ -169,7 +169,7 @@ export function MemoryPage() {
             ))}
           </CardContent>
         </Card>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Verified share</CardTitle>
@@ -206,7 +206,7 @@ export function MemoryPage() {
         aria-label="Memory sections"
       >
         <TabPanel value="board" className="space-y-4">
-          <Card>
+          <Card surface="featured">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Knowledge growth</CardTitle>
@@ -267,7 +267,7 @@ export function MemoryPage() {
           >
             <Grid columns={3}>
               {mockMemoryCategories.map((category) => (
-                <Card key={category.id}>
+                <Card surface="metric" key={category.id}>
                   <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">{category.label}</CardTitle>
@@ -416,7 +416,7 @@ export function MemoryPage() {
           >
             <Grid columns={2}>
               {(['verified', 'pending-review', 'unverified', 'archived'] as const).map((status) => (
-                <Card key={status}>
+                <Card surface="metric" key={status}>
                   <CardHeader divider>
                     <div className="flex items-center gap-2">
                       <span aria-hidden className="text-text-faint">
@@ -474,7 +474,7 @@ export function MemoryPage() {
             </Card>
           </Grid>
 
-          <Card>
+          <Card surface="data">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Archived records</CardTitle>

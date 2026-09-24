@@ -32,6 +32,11 @@ const TONE_TEXT: Record<StatTone, string> = {
  *
  * A metric card is exactly what `emphasis` is for: it is the card the eye lands on in a row of
  * four, and it says which way its figure went in its edge, not in a badge.
+ *
+ * `surface="metric"` supplies the rest and is the whole reason this card stopped being a panel: a
+ * statistic is a raised plate read at a glance, and a page of eight of them sharing the plain
+ * panel's face with the four prose cards beside it was eight cards that could not be told apart
+ * from a paragraph.
  */
 const TONE_EMPHASIS: Record<StatTone, CardEmphasis> = {
   positive: 'success',
@@ -69,8 +74,8 @@ export function JournalStatCard({
   const strokeTone = tone === 'negative' ? 'info' : 'primary';
   return (
     <Card
+      surface="metric"
       emphasis={TONE_EMPHASIS[tone]}
-      density="compact"
       className={cn('flex h-full flex-col', className)}
     >
       {/*

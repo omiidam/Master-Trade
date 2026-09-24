@@ -184,6 +184,8 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
       'control rests on.',
     variables: [
       '--shadow-panel',
+      '--shadow-plate',
+      '--shadow-frame',
       '--shadow-popover',
       '--shadow-glow',
       '--shadow-glow-control',
@@ -196,11 +198,13 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   {
     group: 'gradient',
     summary:
-      'The panel sheen, the loading sweep, the three control faces, the lit edge and its ' +
-      'under-lit inverse, the overlay veil, the composer frame and the agent card’s under-light. ' +
-      'Structural, never decorative.',
+      'The panel sheen, the corner light and the lit lintel, the loading sweep, the three control ' +
+      'faces, the lit edge and its under-lit inverse, the overlay veil, the composer frame and the ' +
+      'agent card’s under-light. Structural, never decorative.',
     variables: [
       '--gradient-panel',
+      '--gradient-corner',
+      '--gradient-lintel',
       '--gradient-sheen',
       '--gradient-control',
       '--gradient-accent',

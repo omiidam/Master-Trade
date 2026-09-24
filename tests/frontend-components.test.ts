@@ -242,9 +242,15 @@ describe('Task 2 — content components', () => {
       expect(entry(card, emphasis), emphasis).toMatch(/border-[a-z]+-border/);
     }
     // Elevation level 3 is one accent surface that asks to be acted on, so `accent` is the only
-    // emphasis that may reach for the accent glow.
-    expect(card).toMatch(/emphasis === 'accent' \? 'shadow-glow' :/);
-    expect(card).not.toMatch(/shadow-glow-danger|shadow-glow-control/);
+    // emphasis that may reach for the accent glow — which is what this asserts, rather than the
+    // name of the local it happens to be compared against: the glow is chosen once, and only
+    // behind an `accent` test.
+    const glowChoices = componentCode('Card')
+      .split('\n')
+      .filter((line) => line.includes("'shadow-glow'"));
+    expect(glowChoices).toHaveLength(1);
+    expect(glowChoices[0]).toMatch(/'accent' \?/);
+    expect(componentCode('Card')).not.toMatch(/shadow-glow-danger|shadow-glow-control/);
   });
 
   it('gives a success badge a fill of its own', () => {

@@ -67,7 +67,7 @@ export function SettingsPage() {
       >
         <TabPanel value="appearance" className="space-y-4">
           <Grid columns={2}>
-            <Card>
+            <Card surface="utility">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Writing direction</CardTitle>
@@ -101,7 +101,7 @@ export function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card surface="utility">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Density</CardTitle>
@@ -172,7 +172,7 @@ export function SettingsPage() {
             can honestly claim: without the desktop shell there is no keychain to
             store a key in, and the provider rows below say so.
           */}
-          <Card>
+          <Card surface="data">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Desktop host</CardTitle>
@@ -245,7 +245,7 @@ export function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card surface="data">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Model providers</CardTitle>
@@ -289,7 +289,7 @@ export function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card surface="data">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Budget</CardTitle>
@@ -327,7 +327,7 @@ export function SettingsPage() {
         </TabPanel>
 
         <TabPanel value="data" className="space-y-4">
-          <Card>
+          <Card surface="featured">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Safety posture</CardTitle>
@@ -418,7 +418,7 @@ export function SettingsPage() {
         </TabPanel>
 
         <TabPanel value="advanced" className="space-y-4">
-          <Card>
+          <Card surface="utility">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Background jobs</CardTitle>
@@ -443,7 +443,7 @@ export function SettingsPage() {
           </Card>
 
           <Grid columns={2}>
-            <Card>
+            <Card surface="utility">
               <CardHeader divider>
                 <CardTitle className="text-body">Configuration</CardTitle>
               </CardHeader>
@@ -461,7 +461,7 @@ export function SettingsPage() {
                 <ReadOnlyValue label="Audit retention" value="365 days" />
               </CardContent>
             </Card>
-            <Card>
+            <Card surface="utility">
               <CardHeader divider>
                 <CardTitle className="text-body">Secrets</CardTitle>
               </CardHeader>

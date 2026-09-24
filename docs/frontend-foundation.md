@@ -1004,3 +1004,149 @@ Four of the fourteen pages (Portfolio, Evaluation, Usage, Profile) render their 
 state in the preview, because they read from a backend that is not connected: their cards are
 covered by typecheck, by the unit suites and by the codemods, but not by the browser sweep.
 That is a limit of the preview, not of the change.
+
+## 15. Phase 7.2.4 — one system, six surfaces
+
+§13 gave the product one card and four knobs. §14 put every card in the drawer on the reference's
+form. Both were right, and together they produced the failure this phase exists to answer: every
+call site took the defaults, so a page of twelve cards was twelve copies of one plate. A metric
+card, a chart, a dataset, a notice and a calculator rendered as the same object — the _only_
+variety in the tree was whatever a page had added by hand, which is how the product arrived at
+thirty cards each restating the border, the fill and the shadow.
+
+The correction is one word, `surface`, and six faces.
+
+### The six, and why each one earns its own face
+
+`surface` is not a fifth knob. It is a **name for a combination** of the existing four — which is
+what makes the kinds of card in the product an enumerable list rather than a habit, and what stops
+"this is a metric card" from quietly meaning something different on the next screen.
+
+| `surface`  | what it is for                              | tone    | variant | emphasis | density  |
+| ---------- | ------------------------------------------- | ------- | ------- | -------- | -------- |
+| `featured` | the one card the screen is organised around | default | accent  | accent   | spacious |
+| `metric`   | one figure, read at a glance                | raised  | plain   | none     | compact  |
+| `data`     | a chart, a table, a stream                  | default | plain   | none     | compact  |
+| `info`     | prose, principles, policy — **the default** | default | plain   | none     | cozy     |
+| `action`   | a card whose job ends in one control        | default | plain   | none     | spacious |
+| `utility`  | a readout or a control cluster              | sunken  | plain   | none     | compact  |
+
+Two rules hold the set together, and both are asserted rather than assumed:
+
+- **no two resolve to the same four values.** Two names with one combination would be one card
+  wearing two names, and a call site asking for the second would be asking for nothing.
+- **every one has a face of its own.** A surface with no face would silently take the generic one,
+  which is the whole failure this phase set out to fix.
+
+### The faces
+
+Where the four knobs answer "which layer", "where does the light come from", "which card is this
+screen about" and "how much air", the face answers the third question the knobs cannot: **what kind
+of object is this, before you read a word of it.**
+
+| `surface`  | face                                                    | edge                    | what changed on the surface                                                                      |
+| ---------- | ------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `featured` | `bg-surface shadow-panel agent-glow edge-under`         | `border-primary-border` | unchanged — under-lit, and the only glow                                                         |
+| `metric`   | `bg-surface-raised shadow-plate face-corner`            | `border-border-strong`  | raised fill, corner light, broad inset shine, harder cast                                        |
+| `data`     | `bg-surface shadow-frame`                               | `border-border`         | **no face at all**: no gradient, no top hairline, closed by an inner hairline and a halved shine |
+| `info`     | `bg-surface shadow-panel panel-gradient edge-highlight` | `border-border`         | unchanged — the product's panel                                                                  |
+| `action`   | `bg-surface shadow-panel face-lintel`                   | `border-border-strong`  | an accent tint along the top edge                                                                |
+| `utility`  | `bg-surface-sunken shadow-control-inset`                | `border-border`         | unchanged — the recess                                                                           |
+
+`info` is the fall-through in the component, not by convention: a card with no `surface` renders
+`plainFace(tone, variant)`, and `surface="info"` is declared as exactly that string. The suite
+asserts the equality, so the two cannot drift into a seventh undocumented treatment. This is also
+why nothing in the tree writes `surface="info"`: every unannotated card already is one.
+
+### The reference's two signature details
+
+Both come from the attached card form, and both were kept in **shape** while their mechanism was
+replaced:
+
+- **The corner light.** The reference lights its card from a stack of six radial pools. That idea
+  is kept as one pool — light arriving from a corner and falling off across the surface — and the
+  two accent pools are dropped, because on a product card they would be a second decorative accent
+  competing with `emphasis`.
+- **The inset shine.** `box-shadow: 0px -16px 24px rgba(255,255,255,0.25) inset` is the reference's
+  opening detail: a broad pool of light inside the top of the card rather than the 1px hairline the
+  rest of the product uses. Kept at 9% and inset by 14px — light rather than a white smear — and
+  halved on `data`, whose body is what should carry the light.
+
+What was **not** copied, and why: the reference's rotating `card__border::before`. It is
+`position: fixed` with a 200%-wide box and an `animation`, and it is the same construction that made
+the viewport scroll sideways in Phase 7.2.1. The product already has one ambient animation, on the
+agent card's ring, and it is clipped.
+
+### Radius
+
+`--radius-panel` moved from `0.875rem` to `1rem` — the reference's own `border-radius`. At 16px a
+corner is a clear quarter-circle rather than a softened right angle, which is what lets a card hold
+raised tiles without the two radii reading as the same surface. `--radius-inset` and
+`--radius-control` are untouched, so the well and the tile keep their step down.
+
+### Where the surfaces were spent
+
+74 cards across 23 files. The distribution is the design: `data` 29, `metric` 26, `utility` 11,
+`featured` 6, `action` 2 — and the remaining cards in the tree carry no surface at all, which is a
+decision too.
+
+| drawer group | sections     | what was differentiated                                                                      |
+| ------------ | ------------ | -------------------------------------------------------------------------------------------- |
+| workspace    | Dashboard    | the stat row as plates; one featured                                                         |
+| workspace    | AI Workspace | the transcript stays a transcript; the runtime readout is a frame                            |
+| workspace    | Memory       | trust figures as plates, the growth chart as a frame, the policy as prose                    |
+| workspace    | Research     | experiment metrics as plates; the timeline as a frame                                        |
+| workspace    | Journal      | 10 plates for the headline figures, 6 frames for the chart wall, the footnote cards recessed |
+| workspace    | Portfolio    | value and concentration as plates                                                            |
+| workspace    | Evaluation   | the readiness and history readouts as frames                                                 |
+| workspace    | Trading Lab  | the calculator as the action card, closed by the reference's full-width pill                 |
+| learning     | Academy      | progress as plates, the three tracks recessed, one featured                                  |
+| learning     | Exams        | scores as plates, the question panel as the action card                                      |
+| system       | Activity     | the stream and queue as frames; the legend recessed                                          |
+| system       | Usage        | credits and plan as plates                                                                   |
+| system       | Profile      | preferences as plates                                                                        |
+| system       | Settings     | appearance controls recessed, the safety posture featured                                    |
+
+Variety is not the same as annotation. `action` is deliberately the rarest surface — it is for a
+card whose job ends in one control, and there are two — and the informational panel is still the
+majority of the tree, asserted as such: a page where all twelve cards carry a surface has moved the
+uniformity, not removed it.
+
+### Bounds
+
+Every face and border is built from a closed set: a fill, a depth, a paint utility or a border
+colour. Nothing in a face may move, resize or paint outside the card — no `overflow`, no
+`position`, no transform, no `w-`/`h-`, no `animate` — and the suite enforces the set with the
+7.2.1 regression named in the failure message. The two new effects are safe by construction: a
+`radial-gradient` pool is painted in the element's own box, and an `inset` shadow is painted inside
+the border box and clipped to it.
+
+One paint per face, also enforced: `background-image` is a single property, so a face naming two
+gradient utilities would show whichever the stylesheet happened to order last.
+
+### What was not changed
+
+No functionality, no copy, no data shape, no route, no element order, no breakpoint. Every change is
+a `className`, a token value, or the `surface` prop on a card that already existed. The one
+component edit outside the card system is `TradingLabPage`'s calculator button, which gained
+`shape="pill" fullWidth` and a block wrapper so the reference's closing control resolves its width
+against the card's body.
+
+Verified after the change, on the built bundle:
+
+- `npm run typecheck:web` clean; `npm run typecheck` clean.
+- **1315** unit tests across **67** files, including the new 17-test card-surface contract
+  (`tests/frontend-card-surfaces.test.ts`) and the 19-test colour-harmony contract.
+- `npm run build` and `npm run build:web` clean; `npm run desktop:verify` still **0 errors,
+  4 warnings**.
+- **27** browser end-to-end assertions.
+- The three faces read back off the DOM as three different treatments: `metric` at
+  `rgb(16,24,35)` with a corner radial gradient and `inset 0 14px 26px -16px rgba(255,255,255,0.09)`;
+  `data` flat (`background-image: none`) closed by `inset 0 0 0 1px rgba(255,255,255,0.027)`; the
+  fall-through panel on its own linear sheen. All three at a 16px radius.
+- Horizontal overflow measured at **1440 / 834 / 390** on **all 14** drawer pages:
+  `documentElement.scrollWidth - clientWidth === 0` everywhere.
+
+Four of the fourteen pages (Portfolio, Evaluation, Usage, Profile) render their unavailable state
+in the preview, because they read from a backend that is not connected. Tabbed pages show their
+first tab only in the sweep; the remaining tabs were checked individually by clicking them.

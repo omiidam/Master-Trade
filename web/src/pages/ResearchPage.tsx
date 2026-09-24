@@ -81,7 +81,7 @@ export function ResearchPage() {
       }
     >
       <Grid columns={4}>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Research progress</CardTitle>
@@ -100,7 +100,7 @@ export function ResearchPage() {
             />
           </CardContent>
         </Card>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Evaluated trades</CardTitle>
@@ -114,7 +114,7 @@ export function ResearchPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Pending decisions</CardTitle>
@@ -129,7 +129,7 @@ export function ResearchPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Abandoned</CardTitle>
@@ -154,7 +154,7 @@ export function ResearchPage() {
       >
         <TabPanel value="overview" className="space-y-4">
           <Grid columns={2}>
-            <Card>
+            <Card surface="featured">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Active experiments</CardTitle>
@@ -167,7 +167,7 @@ export function ResearchPage() {
                 <p>{CONFIDENCE_CAVEAT}</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card surface="data">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Findings summary</CardTitle>
@@ -257,7 +257,7 @@ export function ResearchPage() {
                       }
                     : {})}
                 />
-                <Card>
+                <Card surface="data">
                   <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">Findings</CardTitle>

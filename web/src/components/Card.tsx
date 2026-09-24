@@ -17,12 +17,17 @@ import { cn } from '../lib/cn';
  *   emphasis  which card is the screen about?   stated in the border, never in a badge
  *   density   how much air does it get?         compact, cozy, spacious
  *
+ * and one word, `surface`, that *names* a combination of those four rather than adding a fifth.
+ *
  * ## What is *not* here
  *
  * There is no `variant="metric"` and no `variant="form"`. Density and emphasis already express both:
  * a metric card is a compact card with a figure in it, and a form is a panel with fields in it.
  * A variant is only worth adding when it changes the *surface* — when it puts the light somewhere
- * new — because that is the only thing a card cannot say with its content.
+ * new — because that is the only thing a card cannot say with its content. That is the whole reason
+ * `surface` exists and the whole reason it is not a knob: it does not add a property, it says which
+ * combination of the four a kind of card is, so that "this is a metric card" means the same thing on
+ * every screen instead of wherever the last page left it.
  */
 
 /**
@@ -157,7 +162,121 @@ const INTERACTIVE =
   'transition-[border-color,box-shadow,transform] duration-[var(--duration-fast)] ' +
   'ease-[var(--ease-standard)] hover:-translate-y-px hover:shadow-popover';
 
+/**
+ * The face each surface is cut with, and the line around it.
+ *
+ * `CARD_SURFACES` says which combination of the four knobs a kind of card is; this says what that
+ * combination *looks like* on the surface — where the light comes from, how deep the card sits and
+ * how hard its edge is. The two are separate because the four knobs cannot express the third
+ * question: a metric card and an informational card can share a tone and a variant and still need
+ * to look like different objects, and before this they did not.
+ *
+ * Six cards, six faces, and the differences are the ones that carry meaning:
+ *
+ *   `featured`  under-lit (`agent-glow edge-under`) + the accent glow — the light moved.
+ *   `metric`    a raised plate, lit from its top-left corner, on a full cast, with a harder edge.
+ *   `data`      a *frame*: no gradient and no top hairline at all, closed by an inner hairline on
+ *               all four sides and a softer cast. A dataset card is a window onto a body, so it
+ *               does not get a face of its own — the well or the plot inside it is the light.
+ *   `info`      the product's default panel: the top sheen and the top hairline.
+ *   `action`    a lintel — an accent tint along the top edge — because the card exists to be acted
+ *               on, and the pill at the bottom is the loud half of the same statement.
+ *   `utility`   a recessed plate: darker than its surroundings, lit along its bottom.
+ *
+ * The borders move with the faces for the same reason: `metric` and `action` are objects you could
+ * pick up, so they get the harder line; `data` keeps the plain edge and lets its inner hairline
+ * define the window; and `featured` says so in the accent. `utility` keeps `border-border` rather
+ * than dropping to transparent, which is what a recess would do if depth were the only signal —
+ * the product's own wells (`CardTile`) carry the line as well, and the reference's inner sections
+ * are bordered too.
+ */
+const SURFACE_FACE: Record<CardSurface, string> = {
+  featured: cn('bg-surface shadow-panel', FLOOD),
+  metric: 'bg-surface-raised shadow-plate face-corner',
+  data: 'bg-surface shadow-frame',
+  info: TONES.default,
+  action: 'bg-surface shadow-panel face-lintel',
+  utility: TONES.sunken,
+};
+
+const SURFACE_BORDER: Record<CardSurface, string> = {
+  featured: 'border-primary-border',
+  metric: 'border-border-strong',
+  data: 'border-border',
+  info: 'border-border',
+  action: 'border-border-strong',
+  utility: 'border-border',
+};
+
+/**
+ * What a card is *for*, as one word.
+ *
+ * Six of them, and they are deliberately not six more knobs: each is a **name for a combination of
+ * tone, variant, emphasis and density**, so a card can say what it is without becoming a second way
+ * to describe a face. The reason to name them is that the four knobs are free and every call site
+ * took the defaults — which is how a screen of eight cards became eight copies of one plate, with
+ * whatever variety existed added by hand, one page at a time.
+ *
+ * The name is the *intent*; the combination is what that intent is worth:
+ *
+ *   - **`featured`** — the one card the screen is organised around. The only kind that moves the
+ *     light (`variant="accent"`) and the only one allowed the accent glow, which is the rule
+ *     `emphasis` already carried: a grid of four glowing panels has no emphasis at all.
+ *   - **`metric`** — one figure, read at a glance. A raised plate at compact density, so a row of
+ *     them separates from the page and reads as figures rather than as prose. Its *state* is still
+ *     allowed to override `emphasis` at the call site, because a negative figure's red edge
+ *     belongs to the figure.
+ *   - **`data`** — a chart, table or stream. The default frame with tight air: what distinguishes
+ *     a dataset from prose is its *body* — a well, a plot, full-bleed rows — and the card's job is
+ *     to get out of the way of it.
+ *   - **`info`** — prose, principles, policy. The product's default panel, and what a card with no
+ *     surface gets, so a panel that needs no annotation needs no surface either.
+ *   - **`action`** — a card whose job ends in one control. It gets the most air, because the reader
+ *     is about to do something and the reference closes such a card with a full-width pill.
+ *   - **`utility`** — a readout or a control cluster. A *recessed* plate, and the only kind that
+ *     takes `tone="sunken"`. Deliberately restricted to cards that hold no well of their own: a
+ *     recess inside a recess is not a depth, it is a smudge.
+ *
+ * Explicit props still win, one at a time: `surface="metric"` with an `emphasis` is a metric card
+ * whose figure is in a state, which is a real card rather than a contradiction.
+ */
+export type CardSurface = 'featured' | 'metric' | 'data' | 'info' | 'action' | 'utility';
+
+interface SurfacePreset {
+  tone: CardTone;
+  variant: CardVariant;
+  emphasis: CardEmphasis;
+  density: CardDensity;
+}
+
+/**
+ * The six combinations, in one place so they can be read — and tested — as a set.
+ *
+ * Pairwise distinct on purpose: two that resolved to the same four values would be one kind of card
+ * wearing two names, and a call site asking for the second would be asking for nothing.
+ */
+export const CARD_SURFACES: Record<CardSurface, SurfacePreset> = {
+  featured: { tone: 'default', variant: 'accent', emphasis: 'accent', density: 'spacious' },
+  metric: { tone: 'raised', variant: 'plain', emphasis: 'none', density: 'compact' },
+  data: { tone: 'default', variant: 'plain', emphasis: 'none', density: 'compact' },
+  info: { tone: 'default', variant: 'plain', emphasis: 'none', density: 'cozy' },
+  action: { tone: 'default', variant: 'plain', emphasis: 'none', density: 'spacious' },
+  utility: { tone: 'sunken', variant: 'plain', emphasis: 'none', density: 'compact' },
+};
+
 export interface CardProps extends HTMLAttributes<HTMLElement> {
+  /**
+   * What this card is for. Optional: a card with no surface is an informational panel.
+   *
+   * Named `surface` rather than `role` because `role` is an ARIA attribute that `Card` forwards to
+   * the DOM — a card really can be `<Card role="region">` — and taking that name for a visual
+   * axis would have traded one ambiguity for a worse one.
+   *
+   * Passed as one word rather than four props so the kinds of card in the product are an enumerable
+   * list rather than a habit, and so that \"this is a metric card\" cannot quietly come to mean
+   * something different on the next screen.
+   */
+  surface?: CardSurface;
   /**
    * The element to render as. `div` by default.
    *
@@ -188,27 +307,32 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
 }
 
 /**
- * The surface, and the choice of where its light comes from.
+ * The face of a card that was not given a surface — or that overrode the one it was given.
  *
  * Composed in one expression rather than stacked as independent class strings: `cn` is a plain join
  * and does not resolve conflicts, so two utilities touching `background-image` would leave the
  * winner to stylesheet order. Picking the face is therefore a branch, not an addition.
  */
-function face(tone: CardTone, variant: CardVariant, wash: boolean, emphasis: CardEmphasis): string {
-  // A washed card's fill replaces the neutral one rather than joining it: `bg-surface` and
-  // `bg-danger-soft` are the same property, so the winner would be whichever the stylesheet
-  // happened to order last.
-  if (wash && emphasis !== 'none') {
-    const fill = EMPHASIS_WASH[emphasis];
-    if (tone === 'sunken') return cn(fill, 'shadow-control-inset');
-    if (variant === 'accent') return cn(fill, 'shadow-panel', FLOOD);
-    return cn(fill, 'shadow-panel panel-gradient edge-highlight');
-  }
+function plainFace(tone: CardTone, variant: CardVariant): string {
   if (tone === 'sunken') return TONES.sunken;
   if (variant === 'accent') {
     return cn(tone === 'raised' ? 'bg-surface-raised' : 'bg-surface', 'shadow-panel', FLOOD);
   }
   return TONES[tone];
+}
+
+/**
+ * The face of a card that *is* its state rather than one that points at it.
+ *
+ * A washed card's fill replaces the neutral one rather than joining it: `bg-surface` and
+ * `bg-danger-soft` are the same property, so the winner would be whichever the stylesheet happened
+ * to order last.
+ */
+function washFace(tone: CardTone, variant: CardVariant, emphasis: CardEmphasis): string {
+  const fill = EMPHASIS_WASH[emphasis];
+  if (tone === 'sunken') return cn(fill, 'shadow-control-inset');
+  if (variant === 'accent') return cn(fill, 'shadow-panel', FLOOD);
+  return cn(fill, 'shadow-panel panel-gradient edge-highlight');
 }
 
 /**
@@ -222,29 +346,60 @@ function face(tone: CardTone, variant: CardVariant, wash: boolean, emphasis: Car
  */
 export function Card({
   as: Element = 'div',
-  tone = 'default',
-  emphasis = 'none',
+  surface,
+  tone,
+  emphasis,
   wash,
-  density = 'cozy',
-  variant = 'plain',
+  density,
+  variant,
   interactive,
   className,
   ...rest
 }: CardProps) {
+  // The surface is the floor and an explicit prop is the override, resolved one knob at a time: a
+  // metric card whose figure is a loss keeps `surface="metric"` and states `emphasis="danger"`,
+  // and a card with no surface at all falls through to the defaults it always had.
+  const preset: SurfacePreset | undefined =
+    surface === undefined ? undefined : CARD_SURFACES[surface];
+  const resolvedTone = tone ?? preset?.tone ?? 'default';
+  const resolvedVariant = variant ?? preset?.variant ?? 'plain';
+  const resolvedEmphasis = emphasis ?? preset?.emphasis ?? 'none';
+  const resolvedDensity = density ?? preset?.density ?? 'cozy';
   // The panel shadow comes with the plain face; only the emphasis can add one on top, because a
   // glowing card is still a raised card.
-  const shadow = emphasis === 'accent' ? 'shadow-glow' : '';
+  const shadow = resolvedEmphasis === 'accent' ? 'shadow-glow' : '';
+  // The bespoke face belongs to the surface, but only while the surface is still the thing choosing
+  // where the light comes from: an explicit `tone` or `variant` is a caller saying it wants a
+  // different placement, and the generic faces are the answer to that. So an override drops the
+  // face and keeps everything the surface also decided — its density, and its emphasis.
+  const bespoke = surface !== undefined && tone === undefined && variant === undefined;
+  const faceClass =
+    wash === true && resolvedEmphasis !== 'none'
+      ? washFace(resolvedTone, resolvedVariant, resolvedEmphasis)
+      : bespoke
+        ? SURFACE_FACE[surface]
+        : plainFace(resolvedTone, resolvedVariant);
+  // Branchwise rather than as two `border-*` utilities in one join: both set `border-color`, so the
+  // winner would be whichever Tailwind emitted last. A stated tone outranks the surface's own edge,
+  // because a card in a state keeps the state's colour on its border.
+  const borderClass =
+    resolvedEmphasis !== 'none'
+      ? EMPHASIS_BORDER[resolvedEmphasis]
+      : bespoke
+        ? SURFACE_BORDER[surface]
+        : 'border-border';
   return (
-    <CardDensityContext.Provider value={density}>
+    <CardDensityContext.Provider value={resolvedDensity}>
       <Element
-        data-density={density}
+        data-density={resolvedDensity}
+        {...(surface === undefined ? {} : { 'data-surface': surface })}
         className={cn(
           'relative rounded-[var(--radius-panel)] border',
-          EMPHASIS_BORDER[emphasis],
-          face(tone, variant, wash === true, emphasis),
+          borderClass,
+          faceClass,
           shadow,
           interactive && INTERACTIVE,
-          interactive && emphasis === 'none' && 'hover:border-border-strong',
+          interactive && resolvedEmphasis === 'none' && 'hover:border-border-strong',
           className,
         )}
         {...rest}

@@ -110,7 +110,7 @@ export function AgentWorkspacePage() {
             }
           />
 
-          <Card>
+          <Card surface="data">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Conversation</CardTitle>

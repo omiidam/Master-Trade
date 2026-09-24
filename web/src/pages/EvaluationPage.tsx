@@ -310,7 +310,7 @@ export function EvaluationPage() {
 
           {capabilitiesStatus === 'ready' && capabilities !== null ? (
             <>
-              <Card>
+              <Card surface="data">
                 <CardHeader divider>
                   <div className="min-w-0">
                     <CardTitle>What this account can do right now</CardTitle>
@@ -349,7 +349,7 @@ export function EvaluationPage() {
               >
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {capabilities.readiness.map((decision) => (
-                    <Card key={decision.requestedType}>
+                    <Card surface="utility" key={decision.requestedType}>
                       <CardHeader divider>
                         <div className="min-w-0">
                           <CardTitle className="text-body">{decision.requestedType}</CardTitle>

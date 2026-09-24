@@ -101,7 +101,7 @@ export function DecisionSummary({
 }) {
   const scope = decision.symbol ?? decision.portfolioId ?? 'Composition-wide';
   return (
-    <Card className={className}>
+    <Card surface="data" className={className}>
       <CardHeader divider>
         <div className="min-w-0">
           <CardTitle className="truncate">{scope}</CardTitle>
@@ -487,7 +487,7 @@ export function EvaluationSummary({
 }) {
   return (
     <div className={cn('space-y-4', className)}>
-      <Card>
+      <Card surface="data">
         <CardHeader divider>
           <div className="min-w-0">
             <CardTitle>What the record says happened</CardTitle>
@@ -564,7 +564,7 @@ export function EvaluationHistory({
   }
 
   return (
-    <Card className={className}>
+    <Card surface="data" className={className}>
       <CardHeader divider>
         <div className="min-w-0">
           <CardTitle>Evaluation history</CardTitle>

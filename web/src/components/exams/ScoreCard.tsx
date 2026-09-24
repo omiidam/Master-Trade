@@ -48,7 +48,7 @@ export function ScoreCard({
   const delta = hasTrend ? last - first : null;
 
   return (
-    <Card className={className}>
+    <Card surface="metric" className={className}>
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">{title}</CardTitle>

@@ -40,7 +40,7 @@ export function MistakeAnalysisCard({
   const widest = patterns.reduce((max, pattern) => Math.max(max, pattern.share), 0);
 
   return (
-    <Card className={className}>
+    <Card surface="data" className={className}>
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">Mistake analysis</CardTitle>

@@ -67,7 +67,7 @@ export function MemoryTimeline({
   );
 
   return (
-    <Card className={className}>
+    <Card surface="data" className={className}>
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">{title}</CardTitle>

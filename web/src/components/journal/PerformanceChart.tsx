@@ -255,7 +255,11 @@ export function PerformanceChart({
   );
 
   return (
-    <Card as="figure" className={className}>
+    // `surface="data"`: a chart card is a *frame* around a plot, so it drops the panel's own face
+    // and its top hairline instead of lighting one itself. What should carry the light here is the
+    // well the series is drawn in, and a card that lights its own top edge as well halves the
+    // contrast that well depends on.
+    <Card as="figure" surface="data" className={className}>
       {header}
       <CardContent className="space-y-3">
         {hasData ? renderControls(false) : null}

@@ -177,7 +177,7 @@ export function ActivityPage() {
       }
     >
       <Grid columns={4}>
-        <Card>
+        <Card surface="data">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Stream</CardTitle>
@@ -194,7 +194,7 @@ export function ActivityPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card surface="data">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Queue</CardTitle>
@@ -218,7 +218,7 @@ export function ActivityPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card surface="data">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Notifications</CardTitle>
@@ -239,7 +239,7 @@ export function ActivityPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card surface="data">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Subscription</CardTitle>
@@ -411,7 +411,7 @@ export function ActivityPage() {
                   text: 'The status is recorded in the row, so cancellation crosses processes and survives a restart.',
                 },
               ].map((item) => (
-                <Card key={item.state}>
+                <Card surface="utility" key={item.state}>
                   <CardHeader divider>
                     <CardTitle className="text-body">{item.state}</CardTitle>
                   </CardHeader>
@@ -495,7 +495,7 @@ export function ActivityPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card surface="utility">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Endpoint</CardTitle>
@@ -539,7 +539,7 @@ export function ActivityPage() {
           </Grid>
 
           <Grid columns={3}>
-            <Card>
+            <Card surface="utility">
               <CardHeader divider>
                 <CardTitle className="text-body">Heartbeat</CardTitle>
               </CardHeader>
@@ -549,7 +549,7 @@ export function ActivityPage() {
                 is the failure mode the check exists to prevent.
               </CardContent>
             </Card>
-            <Card>
+            <Card surface="utility">
               <CardHeader divider>
                 <CardTitle className="text-body">Backoff, then stop</CardTitle>
               </CardHeader>
@@ -559,7 +559,7 @@ export function ActivityPage() {
                 and no further attempts are made.
               </CardContent>
             </Card>
-            <Card>
+            <Card surface="utility">
               <CardHeader divider>
                 <CardTitle className="text-body">Frame validation</CardTitle>
               </CardHeader>

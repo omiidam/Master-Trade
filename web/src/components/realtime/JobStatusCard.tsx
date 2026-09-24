@@ -74,6 +74,7 @@ export function JobStatusCard({
 
   return (
     <Card
+      surface="metric"
       tone={attention ? 'raised' : 'default'}
       className={cn(attention && 'border-danger-border', className)}
     >

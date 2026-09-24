@@ -61,7 +61,7 @@ export function TradingLabPage() {
         aria-label="Trading lab sections"
       >
         <TabPanel value="review" className="space-y-4">
-          <Card>
+          <Card surface="data">
             <CardHeader divider>
               <div>
                 <CardTitle>Practice chart</CardTitle>
@@ -137,7 +137,7 @@ export function TradingLabPage() {
 
         <TabPanel value="risk" className="space-y-4">
           <Grid columns={2}>
-            <Card>
+            <Card surface="action">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Position size calculator</CardTitle>
@@ -162,10 +162,15 @@ export function TradingLabPage() {
                     {({ id }) => <Input id={id} disabled placeholder="181.90" />}
                   </Field>
                 </div>
+                {/* The reference closes a card whose job ends in one control with a full-width pill.
+                    The wrapper is a block so `w-full` resolves against the card's body rather than
+                    the inline box a bare `<span>` would give it. */}
                 <Tooltip content="The tool registry and risk math are implemented; this phase only ships the interface, so the panel is inert.">
-                  <span>
+                  <span className="block">
                     <Button
                       variant="primary"
+                      shape="pill"
+                      fullWidth
                       disabled
                       leadingIcon={<Calculator size={14} aria-hidden />}
                     >
@@ -176,7 +181,7 @@ export function TradingLabPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card surface="metric">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Tool result</CardTitle>
@@ -211,7 +216,7 @@ export function TradingLabPage() {
         </TabPanel>
 
         <TabPanel value="rules" className="space-y-4">
-          <Card>
+          <Card surface="featured">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Proposed process rule</CardTitle>

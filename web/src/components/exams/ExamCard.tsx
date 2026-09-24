@@ -58,7 +58,7 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
   const belowPass = exam.bestScore !== null && exam.bestScore < exam.passScore;
 
   return (
-    <Card interactive className={cn(locked && 'opacity-70', className)}>
+    <Card surface="metric" interactive className={cn(locked && 'opacity-70', className)}>
       <CardHeader divider>
         <div className="min-w-0">
           <CardTitle className="text-body">{exam.title}</CardTitle>

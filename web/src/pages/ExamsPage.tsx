@@ -108,7 +108,7 @@ export function ExamsPage() {
       }
     >
       <Grid columns={4}>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Assessment progress</CardTitle>
@@ -126,7 +126,7 @@ export function ExamsPage() {
             />
           </CardContent>
         </Card>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Average best score</CardTitle>
@@ -145,7 +145,7 @@ export function ExamsPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card surface="metric">
           <CardHeader divider>
             <div>
               <CardTitle className="text-body">Attempts to pass</CardTitle>
@@ -184,7 +184,7 @@ export function ExamsPage() {
         aria-label="Examination sections"
       >
         <TabPanel value="overview" className="space-y-4">
-          <Card>
+          <Card surface="featured">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Current assessment</CardTitle>
@@ -283,7 +283,7 @@ export function ExamsPage() {
 
         <TabPanel value="current" className="space-y-4">
           <Grid columns={2}>
-            <Card>
+            <Card surface="data">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Attempt context</CardTitle>
@@ -383,7 +383,7 @@ export function ExamsPage() {
             />
           </Grid>
 
-          <Card>
+          <Card surface="data">
             <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Attempt history</CardTitle>
@@ -445,7 +445,7 @@ export function ExamsPage() {
         <TabPanel value="review" className="space-y-4">
           <Grid columns={2}>
             <MistakeAnalysisCard patterns={mockMistakes} incorrectAnswers={incorrect} />
-            <Card>
+            <Card surface="data">
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Post-submission review</CardTitle>
