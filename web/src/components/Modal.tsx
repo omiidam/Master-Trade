@@ -53,7 +53,7 @@ export function Modal({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduceMotion ? 0 : DURATION.fast, ease: EASE.standard }}
-                className="fixed inset-0 z-[var(--z-overlay)] bg-black/70 backdrop-blur-sm"
+                className="fixed inset-0 z-[var(--z-overlay)] bg-overlay backdrop-blur-sm"
               />
             </RadixDialog.Overlay>
             <RadixDialog.Content asChild forceMount>

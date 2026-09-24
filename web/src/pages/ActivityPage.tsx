@@ -186,9 +186,7 @@ export function ActivityPage() {
             <Badge tone={live ? 'success' : 'neutral'}>{live ? 'live' : 'not live'}</Badge>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-text">
-              {streamSummary.delivered}
-            </span>
+            <span className="num text-metric text-text">{streamSummary.delivered}</span>
             <p className="mt-2 text-caption text-text-faint">
               {streamSummary.dropped} frame(s) dropped — stale or unreadable. A dropped frame is
               counted, never rendered as if it passed validation.
@@ -209,7 +207,7 @@ export function ActivityPage() {
             </Badge>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-text">
+            <span className="num text-metric text-text">
               {jobs.summary ? (jobs.jobs.length ?? 0) : previewSummary.total}
             </span>
             <p className="mt-2 text-caption text-text-faint">
@@ -231,7 +229,7 @@ export function ActivityPage() {
             </Badge>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-text">
+            <span className="num text-metric text-text">
               {notifications.filter((entry) => entry.origin === 'client').length}
             </span>
             <p className="mt-2 text-caption text-text-faint">

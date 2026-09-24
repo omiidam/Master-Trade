@@ -6,12 +6,11 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'subtle' | 'dang
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary:
-    'bg-primary text-primary-fg hover:bg-primary-strong shadow-[0_10px_30px_-16px_rgba(53,214,164,0.7)]',
+  primary: 'bg-primary text-primary-fg hover:bg-primary-strong shadow-glow-control',
   secondary: 'bg-surface-raised text-text border border-border hover:border-border-strong',
   ghost: 'bg-transparent text-text-muted hover:text-text hover:bg-surface-raised',
-  subtle: 'bg-primary-soft text-primary hover:bg-[#123329] border border-transparent',
-  danger: 'bg-danger-soft text-danger border border-[#3d1c20] hover:border-danger',
+  subtle: 'bg-primary-soft text-primary hover:bg-primary-soft-hover border border-transparent',
+  danger: 'bg-danger-soft text-danger border border-danger-border hover:border-danger',
 };
 
 const SIZES: Record<ButtonSize, string> = {

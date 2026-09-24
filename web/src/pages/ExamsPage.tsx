@@ -133,7 +133,7 @@ export function ExamsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-text">
+            <span className="num text-metric text-text">
               {progress.averageBest === null ? '—' : formatPercent(progress.averageBest, 1)}
             </span>
             <div className="mt-2">
@@ -152,9 +152,7 @@ export function ExamsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-text">
-              {progress.meanAttemptsToPass ?? '—'}
-            </span>
+            <span className="num text-metric text-text">{progress.meanAttemptsToPass ?? '—'}</span>
             <p className="mt-2 text-caption text-text-faint">
               Retries are kept. A failed attempt is evidence about which lesson to rework, not a
               penalty.
@@ -256,7 +254,7 @@ export function ExamsPage() {
                     <Badge tone="outline">{category.examCount} exams</Badge>
                   </CardHeader>
                   <CardContent className="flex items-end justify-between gap-3">
-                    <span className="num text-[1.25rem] leading-none font-semibold text-text">
+                    <span className="num text-subheading text-text">
                       {category.averageScore === null
                         ? '—'
                         : formatPercent(category.averageScore, 1)}

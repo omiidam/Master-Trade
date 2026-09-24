@@ -24,7 +24,7 @@ export function Workspace({
     <div className={cn('mx-auto flex w-full max-w-[1400px] flex-col gap-5', className)}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-[1.375rem] font-semibold tracking-tight text-text">{title}</h2>
+          <h2 className="text-heading font-semibold tracking-tight text-text">{title}</h2>
           {description ? (
             <p className="mt-0.5 max-w-3xl text-caption text-text-muted">{description}</p>
           ) : null}

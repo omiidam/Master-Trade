@@ -159,9 +159,7 @@ export function MetricsPanel({
               className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2.5"
             >
               <dt className="text-caption text-text-faint">{tile.label}</dt>
-              <dd className="num mt-1 text-[1.125rem] leading-none font-semibold text-text">
-                {tile.value}
-              </dd>
+              <dd className="num mt-1 text-figure text-text">{tile.value}</dd>
               <dd className="mt-1.5 text-caption text-text-faint">{tile.hint}</dd>
             </div>
           ))}

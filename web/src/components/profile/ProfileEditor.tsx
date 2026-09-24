@@ -368,7 +368,7 @@ export function ProfileEditor({
                     className={cn(
                       'rounded-[var(--radius-pill)] border px-3 py-1 text-caption transition-colors',
                       active
-                        ? 'border-[#14453a] bg-primary-soft text-primary'
+                        ? 'border-primary-border bg-primary-soft text-primary'
                         : 'border-border bg-surface-sunken text-text-muted hover:border-border-strong',
                     )}
                   >
@@ -393,7 +393,7 @@ export function ProfileEditor({
                     className={cn(
                       'rounded-[var(--radius-pill)] border px-3 py-1 text-caption transition-colors',
                       active
-                        ? 'border-[#14453a] bg-primary-soft text-primary'
+                        ? 'border-primary-border bg-primary-soft text-primary'
                         : 'border-border bg-surface-sunken text-text-muted hover:border-border-strong',
                     )}
                   >

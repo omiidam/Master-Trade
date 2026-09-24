@@ -51,14 +51,17 @@ Tokens are a two-part contract: declared as CSS custom properties in
 and fails if an inventoried token is missing, so a component can never reference a
 token the theme does not define.
 
-| Group        | Contents                                                                  |
-| ------------ | ------------------------------------------------------------------------- |
-| `color`      | surfaces, borders, text, states, AI accent, epistemic + provenance colors |
-| `typography` | interface/numeric font stacks, caption/body/title scale                   |
-| `radius`     | control, panel, pill                                                      |
-| `shadow`     | panel, popover, accent glow                                               |
-| `motion`     | fast/base/slow durations, standard/emphasis easings                       |
-| `zIndex`     | shell, overlay, modal, tooltip layers                                     |
+| Group        | Contents                                                                                 |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| `color`      | surfaces, borders, text, states, AI accent, state borders, epistemic + provenance colors |
+| `typography` | interface/numeric font stacks, weighted type scale, weight ladder                        |
+| `spacing`    | the named spacing scale (2px grid up to 6rem)                                            |
+| `breakpoint` | phone landscape, tablet, desktop, wide, ultrawide                                        |
+| `radius`     | mark, inset, control, tile, panel, pill                                                  |
+| `shadow`     | panel, popover, accent glow, control glow                                                |
+| `gradient`   | panel sheen, loading sweep                                                               |
+| `motion`     | fast/base/slow durations, standard/emphasis easings                                      |
+| `zIndex`     | shell, overlay, modal, tooltip layers                                                    |
 
 **Theme: "Workstation Dark"** — near-black layered surfaces with a faint
 engineering grid, hairline borders, mint primary accent, blue informational,
@@ -72,6 +75,10 @@ Two dedicated token families exist for trust, not decoration:
   `--color-uncertainty`) label every agent statement;
 - **provenance colors** (`--color-provenance-synthetic|historical|live`) label
   market data everywhere it appears.
+
+Phase 7.1 later extended this vocabulary into a complete design foundation — type
+scale, spacing, breakpoints, depth and controlled glow — and removed the last values
+written at call sites. [§ 10](#10-phase-71--design-foundations) has the detail.
 
 ## 2. Component library
 
@@ -194,6 +201,17 @@ states, five experiment states) is exercised by the sample data; the answer key 
 withheld on every question; `unverified` never renders as a fact; a
 `model`-authored record can never be `authoritative`.
 
+`tests/frontend-design-foundations.test.ts` (Phase 7.1) holds the other half of the
+token contract and the parts that only matter once the tokens are a system: the
+inventory is complete in **both** directions; every ladder (type, spacing,
+breakpoints, radii) is strictly ordered and agrees value-for-value with the
+stylesheet; every weighted type step pairs a line height and a weight and no
+running-text step pairs either; each elevation level names a shadow and a surface
+that exist, with level 0 carrying none; both gradients are exposed as utilities; and
+no component may write a hex colour, a colour function, an arbitrary font size or an
+arbitrary colour/shadow utility. [§ 10](#10-phase-71--design-foundations) explains
+what each rule protects.
+
 ## 7. Deliberately not built in this phase
 
 - No data fetching (TanStack Query waits for real endpoints).
@@ -278,3 +296,108 @@ records (compiled under the backend `tsconfig` too, so contract drift fails the
 build). Each derives its summary figures from its own rows — `summariseExamProgress`,
 `memoryStatus`, `summariseResearch` — rather than duplicating counts, and the
 tests assert the derivation agrees with the rows.
+
+## 10. Phase 7.1 — design foundations
+
+Phase 3.2 shipped a token _list_ — enough to stop components inventing hex values,
+not enough to design from. Phase 7.1 turned it into a system: every family a screen
+is allowed to reach for is named twice (declared in the theme, inventoried in
+`tokens.ts`), the ladders are ordered and machine-checked, and the values that had
+leaked into call sites were replaced by the tokens that should have owned them.
+**No page was redesigned and no product feature was added** — the same pixels, now
+named.
+
+`tests/frontend-design-foundations.test.ts` is what makes the claims below checkable
+rather than aspirational, and it holds both directions of the contract: nothing is
+inventoried that the theme does not declare, and nothing is declared that the
+inventory does not name (a paired `--text-*--line-height` is the one exception, and
+the suite says why).
+
+### Type scale and spacing
+
+The scale is nine steps from `--text-micro` (10px) to `--text-display` (28px). Four
+of them are _figures_ — `figure`, `subheading`, `metric`, `display` — and each pairs
+its size with a line height of 1 and a weight of 600, because a number that must not
+wrap and must not drift as it grows is one decision, not three. The remaining five
+steps are running text and deliberately pair **no** leading: they inherit the body's
+1.55, which is what keeps the local `leading-*` overrides at those call sites
+working. `text-metric` alone replaced eighteen copies of
+`text-[1.5rem] leading-none font-semibold`.
+
+The weight ladder (`normal`/`medium`/`semibold`/`bold`) is declared so a figure can
+never reach for an invented weight.
+
+Spacing is one 4px base named by role (`--space-hairline` … `--space-band`) rather
+than by multiple, so a gap that means "the space between two cards" has a name that
+survives a redesign. Tailwind's numeric scale stays available for the arithmetic
+inside a control.
+
+### A trap worth recording: the `--spacing-*` namespace
+
+The scale is `--space-*`, not `--spacing-*`, and that is not a naming preference.
+Tailwind turns every _named_ entry in `--spacing-*` into a utility, and that
+namespace is an input to **every** sizing family — so adding a name there does not
+add a spacing step, it redefines a utility that already existed. Both shapes of the
+mistake were made while building this phase, and neither was a type error:
+
+| Written                 | What Tailwind emitted                             | What broke                                   |
+| ----------------------- | ------------------------------------------------- | -------------------------------------------- |
+| `--spacing-3xl: 4rem`   | `max-w-3xl` reads the suffix against it           | every page description became a 64px box     |
+| `--spacing-block: 1rem` | `.inline-block{inline-size:var(--spacing-block)}` | the static _display_ utility was overwritten |
+
+Both were caught by the phone-width lay-out suite (`e2e.test.ts`, "does not clip
+rendered text at phone widths") and by nothing else — not the typecheck, not the
+token contract, not a visual glance at desktop width. That is the argument for
+keeping that browser check in `npm run validate`, and for the rule the contract suite
+now enforces: the `--spacing-*` namespace holds no named entries at all. `--space-*`
+is not a Tailwind namespace, so those ten declarations are emitted as plain custom
+properties and reached with `gap-[var(--space-group)]`.
+
+### Responsive ladder
+
+Breakpoints are declared rather than inherited: the five widths are Tailwind's own
+defaults, restated so the product's contract is visible in the stylesheet and cannot
+move under it. `sm`, `md` and `lg` are the phone-landscape, tablet and desktop widths
+the screens are designed at, and `xl`/`2xl` are where the shell stops growing.
+
+### Visual depth
+
+Depth is a ladder, not a habit:
+
+| Family    | Steps                                                                         |
+| --------- | ----------------------------------------------------------------------------- |
+| radius    | `mark` → `inset` → `control` → `tile` → `panel`, plus `pill` as a shape       |
+| elevation | `flat` → `panel` → `overlay` → `emphasis`, each naming its shadow and surface |
+| gradient  | `.panel-gradient` (top-lit sheen), `.surface-sheen` (loading sweep)           |
+| glow      | `--shadow-glow`, `--shadow-glow-control` — the only two, and both reserved    |
+
+`ELEVATION` in `tokens.ts` names each level's shadow and surface once, so "which
+shadow for this?" has one answer instead of a per-component judgement. Level 0 is the
+page itself, which has no shadow at all — a level, not an omission. The gradients are
+exposed as utilities so no component writes a `linear-gradient`, and the accent glow
+is reserved for the primary action rather than spent on decoration: glow is the
+strongest emphasis the interface has, and the suite pins that there are exactly two.
+
+The state edges are a first-class family now. Every tinted surface has a matching
+`--color-*-border`, which is what replaced the most-copied literals in the tree.
+
+### What was removed from the call sites
+
+| Was                                        | Count | Now                                   |
+| ------------------------------------------ | ----- | ------------------------------------- |
+| literal hex state borders                  | 46    | `--color-*-border`, `--color-overlay` |
+| `text-[…rem] leading-none font-semibold`   | 22    | the four weighted type steps          |
+| `shadow-[0_10px_30px_-16px_rgba(…)]`       | 1     | `--shadow-glow-control`               |
+| `bg-[linear-gradient(90deg,…)]`            | 1     | `.surface-sheen`                      |
+| `rounded-lg` / `rounded-xl` / `rounded-sm` | 6     | `--radius-inset` / `tile` / `mark`    |
+
+Every replacement resolves to the value it replaced. The suite enforces the rule
+going forward: no `.ts`/`.tsx` under `web/src` may carry a hex colour, a colour
+function, an arbitrary font size, or an arbitrary colour/shadow utility.
+
+### Recorded deviation (Phase 7.2)
+
+The shell collapses its rail with `COMPACT_SHELL_QUERY = '(max-width: 1099px)'` in
+`web/src/lib/useMediaQuery.ts` — a raw pixel value in TypeScript that sits between the
+`md` and `xl` steps of the ladder rather than on one of them. It is left exactly as it
+is here: moving it is a layout decision, not a token one.

@@ -108,9 +108,7 @@ export function ResearchPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-text">
-              {progress.evaluatedTrades}
-            </span>
+            <span className="num text-metric text-text">{progress.evaluatedTrades}</span>
             <p className="mt-2 text-caption text-text-faint">
               Sample size is reported before any rate, because a rate without it is a rumour.
             </p>
@@ -124,9 +122,7 @@ export function ResearchPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-warning">
-              {progress.pendingDecisions}
-            </span>
+            <span className="num text-metric text-warning">{progress.pendingDecisions}</span>
             <p className="mt-2 text-caption text-text-faint">
               A promising result stays inactive until a person decides. The system cannot adopt its
               own proposal.
@@ -141,9 +137,7 @@ export function ResearchPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-text-muted">
-              {progress.abandoned}
-            </span>
+            <span className="num text-metric text-text-muted">{progress.abandoned}</span>
             <p className="mt-2 text-caption text-text-faint">
               Rejections are kept. An experiment tuned until it looks good is a worse outcome than
               one that was dropped.

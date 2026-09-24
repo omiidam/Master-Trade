@@ -11,11 +11,11 @@ import { CALENDAR_DAY_STATE_LABEL, RESULT_LABEL, setupLabel } from '../../mock/j
 import type { CalendarDayState, JournalCalendarDay, JournalTrade } from '../../mock/journal';
 
 const STATE_STYLE: Record<CalendarDayState, string> = {
-  win: 'border-[#14453a] bg-primary-soft/60',
-  loss: 'border-[#3d1c20] bg-danger-soft/60',
+  win: 'border-success-border bg-primary-soft/60',
+  loss: 'border-danger-border bg-danger-soft/60',
   breakeven: 'border-border-strong bg-surface-raised/60',
-  mixed: 'border-[#3d2c12] bg-warning-soft/50',
-  open: 'border-[#1b2c49] bg-info-soft/60',
+  mixed: 'border-warning-border bg-warning-soft/50',
+  open: 'border-info-border bg-info-soft/60',
   flat: 'border-border bg-surface-sunken',
 };
 
@@ -283,7 +283,10 @@ export function JournalCalendar({
       <ul className="flex flex-wrap items-center gap-2 text-caption text-text-faint">
         {(Object.keys(CALENDAR_DAY_STATE_LABEL) as CalendarDayState[]).map((state) => (
           <li key={state} className="inline-flex items-center gap-1.5">
-            <span aria-hidden className={cn('h-2 w-2 rounded-sm border', STATE_STYLE[state])} />
+            <span
+              aria-hidden
+              className={cn('h-2 w-2 rounded-[var(--radius-mark)] border', STATE_STYLE[state])}
+            />
             {CALENDAR_DAY_STATE_LABEL[state]}
           </li>
         ))}

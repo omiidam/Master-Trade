@@ -75,7 +75,7 @@ export function HypotheticalScenarioBadge({
 
 function Chip({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="min-w-0 rounded-lg border border-border bg-surface-raised px-3 py-2">
+    <div className="min-w-0 rounded-[var(--radius-inset)] border border-border bg-surface-raised px-3 py-2">
       <p className="text-caption text-text-muted">{label}</p>
       <p className="mt-0.5 truncate text-body font-medium text-text">{value}</p>
     </div>
@@ -335,7 +335,7 @@ export function DecisionReadinessPanel({
         )}
 
         {readiness.clarifications.length > 0 ? (
-          <div className="rounded-lg border border-border bg-surface-raised p-3">
+          <div className="rounded-[var(--radius-inset)] border border-border bg-surface-raised p-3">
             <p className="text-caption font-medium text-text">What would change the answer</p>
             <ul className="mt-1.5 list-disc space-y-1 pl-5">
               {readiness.clarifications.map((question) => (
@@ -636,7 +636,7 @@ export function DecisionCard({
       onClick={() => onSelect(decision.id)}
       aria-current={selected ? 'true' : undefined}
       className={cn(
-        'w-full min-w-0 rounded-xl border px-3 py-3 text-left transition-colors',
+        'w-full min-w-0 rounded-[var(--radius-tile)] border px-3 py-3 text-left transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
         selected
           ? 'border-primary bg-primary-soft'

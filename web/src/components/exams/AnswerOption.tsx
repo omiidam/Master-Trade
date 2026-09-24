@@ -37,9 +37,9 @@ const REVIEW_ICON = {
 } as const;
 
 const REVIEW_TONE = {
-  correct: 'border-[#14453a] bg-primary-soft text-primary',
-  incorrect: 'border-[#3d1c20] bg-danger-soft text-danger',
-  partial: 'border-[#3d2c12] bg-warning-soft text-warning',
+  correct: 'border-success-border bg-primary-soft text-primary',
+  incorrect: 'border-danger-border bg-danger-soft text-danger',
+  partial: 'border-warning-border bg-warning-soft text-warning',
 } as const;
 
 const REVIEW_LABEL = {

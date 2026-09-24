@@ -35,7 +35,7 @@ export function AssumptionNotice({ notice, className }: AssumptionNoticeProps) {
       className={
         className ??
         `space-y-2 rounded-[var(--radius-card)] border p-3 ${
-          refused ? 'border-[#3d1c20] bg-danger-soft' : 'border-border bg-surface-sunken'
+          refused ? 'border-danger-border bg-danger-soft' : 'border-border bg-surface-sunken'
         }`
       }
       aria-label={`Assumption: ${inputLabel(notice.field)}`}

@@ -75,7 +75,7 @@ export function JobStatusCard({
   return (
     <Card
       tone={attention ? 'raised' : 'default'}
-      className={cn(attention && 'border-[#3d1c20]', className)}
+      className={cn(attention && 'border-danger-border', className)}
     >
       <CardHeader>
         <div className="min-w-0">

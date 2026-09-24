@@ -11,9 +11,9 @@ const ICONS: Record<ErrorSeverity, ReactNode> = {
 };
 
 const TONES: Record<ErrorSeverity, string> = {
-  info: 'border-[#1b2c49] bg-info-soft text-info',
-  warning: 'border-[#3d2c12] bg-warning-soft text-warning',
-  error: 'border-[#3d1c20] bg-danger-soft text-danger',
+  info: 'border-info-border bg-info-soft text-info',
+  warning: 'border-warning-border bg-warning-soft text-warning',
+  error: 'border-danger-border bg-danger-soft text-danger',
 };
 
 export interface ErrorStateProps {

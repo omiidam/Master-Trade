@@ -69,7 +69,7 @@ export function UsageLimitNotice({ feature, resetsAt, className }: UsageLimitNot
     <div
       className={
         className ??
-        'flex items-start gap-2 rounded-[var(--radius-control)] border border-[#3d2c12] bg-warning-soft px-3 py-2'
+        'flex items-start gap-2 rounded-[var(--radius-control)] border border-warning-border bg-warning-soft px-3 py-2'
       }
     >
       <Clock size={14} aria-hidden className="mt-0.5 shrink-0 text-warning" />
@@ -107,7 +107,7 @@ export function InsufficientCreditsState({
       role="status"
       className={
         className ??
-        'space-y-2 rounded-[var(--radius-panel)] border border-[#3d2c12] bg-warning-soft px-4 py-3'
+        'space-y-2 rounded-[var(--radius-panel)] border border-warning-border bg-warning-soft px-4 py-3'
       }
     >
       <div className="flex items-center gap-1.5">

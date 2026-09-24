@@ -251,9 +251,7 @@ export function JournalPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-2 text-caption text-text-muted">
-            <p className="num text-[1.5rem] leading-none font-semibold text-warning">
-              {states.byReviewState.required}
-            </p>
+            <p className="num text-metric text-warning">{states.byReviewState.required}</p>
             <p className="text-text-faint">
               A rule break and an unscored record both force a review, whatever the outcome was.
             </p>

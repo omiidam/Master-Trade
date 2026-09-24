@@ -46,7 +46,7 @@ export function ChecklistField({
                   'flex cursor-pointer items-start gap-2 rounded-[var(--radius-control)] border px-2.5 py-2',
                   'transition-colors duration-[var(--duration-fast)]',
                   checked
-                    ? 'border-[#14453a] bg-primary-soft'
+                    ? 'border-primary-border bg-primary-soft'
                     : 'border-border bg-surface-sunken hover:border-border-strong',
                 )}
               >

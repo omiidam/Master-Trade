@@ -118,7 +118,7 @@ export function TradeForm({
         onOpenChange={(next) => setOpen(next ? id : 'information')}
       >
         {issues > 0 ? (
-          <ul className="mb-3 space-y-1 rounded-[var(--radius-control)] border border-[#3d1c20] bg-danger-soft px-3 py-2">
+          <ul className="mb-3 space-y-1 rounded-[var(--radius-control)] border border-danger-border bg-danger-soft px-3 py-2">
             {errors[id]?.map((message) => (
               <li key={message} className="flex items-start gap-2 text-caption text-danger">
                 <CircleAlert size={12} aria-hidden className="mt-0.5 shrink-0" />
@@ -591,7 +591,7 @@ export function TradeForm({
       {submitState.kind === 'saved' ? (
         <div
           role="status"
-          className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-[#14453a] bg-primary-soft px-4 py-3 text-success"
+          className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-success-border bg-primary-soft px-4 py-3 text-success"
         >
           <ShieldCheck size={16} aria-hidden className="mt-0.5 shrink-0" />
           <div>

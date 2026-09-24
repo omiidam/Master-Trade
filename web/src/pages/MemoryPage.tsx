@@ -140,7 +140,7 @@ export function MemoryPage() {
             </div>
           </CardHeader>
           <CardContent className="flex items-end justify-between gap-3">
-            <span className="num text-[1.5rem] leading-none font-semibold text-text">
+            <span className="num text-metric text-text">
               {mockMemoryCategories.reduce((sum, category) => sum + category.count, 0)}
             </span>
             <Sparkline values={verifiedSeries} width={80} height={22} tone="primary" />
@@ -176,7 +176,7 @@ export function MemoryPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-text">
+            <span className="num text-metric text-text">
               {formatPercent((counts.verified / mockKnowledge.length) * 100, 0)}
             </span>
             <p className="mt-2 text-caption text-text-faint">

@@ -36,8 +36,8 @@ export function MistakeTag({
         className={cn(
           'inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2 py-0.5 text-caption leading-5',
           positive
-            ? 'border-[#14453a] bg-primary-soft text-success'
-            : 'border-[#3d2c12] bg-warning-soft text-warning',
+            ? 'border-success-border bg-primary-soft text-success'
+            : 'border-warning-border bg-warning-soft text-warning',
           className,
         )}
       >

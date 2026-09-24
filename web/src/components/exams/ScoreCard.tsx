@@ -65,7 +65,7 @@ export function ScoreCard({
       <CardContent className="space-y-3">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <span className="num text-[1.75rem] leading-none font-semibold text-text">
+            <span className="num text-display text-text">
               {bestScore === null ? '—' : formatPercent(bestScore, 0)}
             </span>
             <p className="mt-1 text-caption text-text-faint">best score</p>

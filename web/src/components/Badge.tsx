@@ -9,12 +9,12 @@ export type BadgeTone =
 
 const TONES: Record<BadgeTone, string> = {
   neutral: 'bg-surface-raised text-text-muted border-border',
-  primary: 'bg-primary-soft text-primary border-[#14453a]',
-  info: 'bg-info-soft text-info border-[#1b2c49]',
-  success: 'bg-primary-soft text-success border-[#14453a]',
-  warning: 'bg-warning-soft text-warning border-[#3d2c12]',
-  danger: 'bg-danger-soft text-danger border-[#3d1c20]',
-  ai: 'bg-ai-soft text-ai border-[#2b2450]',
+  primary: 'bg-primary-soft text-primary border-primary-border',
+  info: 'bg-info-soft text-info border-info-border',
+  success: 'bg-primary-soft text-success border-success-border',
+  warning: 'bg-warning-soft text-warning border-warning-border',
+  danger: 'bg-danger-soft text-danger border-danger-border',
+  ai: 'bg-ai-soft text-ai border-ai-border',
   outline: 'bg-transparent text-text-muted border-border-strong',
 };
 

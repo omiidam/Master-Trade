@@ -68,10 +68,10 @@ export const CONNECTION_PRESENTATION: Record<ConnectionState | 'initialising', P
 
 const TONE_CLASSES: Record<ConnectionTone, string> = {
   neutral: 'border-border bg-surface-raised text-text-muted',
-  info: 'border-[#1b2c49] bg-info-soft text-info',
-  success: 'border-[#14453a] bg-primary-soft text-success',
-  warning: 'border-[#3d2c12] bg-warning-soft text-warning',
-  danger: 'border-[#3d1c20] bg-danger-soft text-danger',
+  info: 'border-info-border bg-info-soft text-info',
+  success: 'border-success-border bg-primary-soft text-success',
+  warning: 'border-warning-border bg-warning-soft text-warning',
+  danger: 'border-danger-border bg-danger-soft text-danger',
 };
 
 /**

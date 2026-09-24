@@ -88,7 +88,7 @@ export function AgentWorkspacePage() {
                       className={
                         isAgent
                           ? 'rounded-[var(--radius-panel)] border border-border bg-surface-sunken p-3.5'
-                          : 'rounded-[var(--radius-panel)] border border-[#1b2c49] bg-info-soft/60 p-3.5'
+                          : 'rounded-[var(--radius-panel)] border border-info-border bg-info-soft/60 p-3.5'
                       }
                     >
                       <header className="flex flex-wrap items-center gap-2">

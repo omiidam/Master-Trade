@@ -97,7 +97,7 @@ export function AcademyPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <span className="num text-[1.5rem] leading-none font-semibold text-text">
+            <span className="num text-metric text-text">
               {mockProgress.examAverage === null ? '—' : formatPercent(mockProgress.examAverage)}
             </span>
             <p className="mt-2 text-caption text-text-faint">

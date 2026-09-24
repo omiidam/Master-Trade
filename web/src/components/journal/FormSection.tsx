@@ -41,7 +41,7 @@ export function FormSection({
     <section
       className={cn(
         'rounded-[var(--radius-panel)] border bg-surface shadow-panel',
-        issues > 0 ? 'border-[#3d1c20]' : 'border-border',
+        issues > 0 ? 'border-danger-border' : 'border-border',
         className,
       )}
     >
@@ -62,7 +62,7 @@ export function FormSection({
             className={cn(
               'num grid h-6 w-6 shrink-0 place-items-center rounded-full border text-caption',
               issues > 0
-                ? 'border-[#3d1c20] bg-danger-soft text-danger'
+                ? 'border-danger-border bg-danger-soft text-danger'
                 : 'border-border bg-surface-sunken text-text-muted',
             )}
           >

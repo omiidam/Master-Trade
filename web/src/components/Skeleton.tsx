@@ -19,7 +19,7 @@ export function Skeleton({ shape = 'text', className, width }: SkeletonProps) {
       aria-hidden
       style={width ? { width } : undefined}
       className={cn(
-        'block animate-pulse bg-[linear-gradient(90deg,var(--color-surface-raised),var(--color-border),var(--color-surface-raised))]',
+        'surface-sheen block animate-pulse',
         shape === 'text' && 'h-3 rounded-[var(--radius-control)]',
         shape === 'block' && 'h-24 rounded-[var(--radius-panel)]',
         shape === 'circle' && 'h-8 w-8 rounded-full',

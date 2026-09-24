@@ -13,6 +13,8 @@
   --color-surface: #0b1017;
   --color-surface-raised: #101823;
   --color-surface-sunken: #070a0f;
+  /* What sits *between* the viewer and a modal: a scrim, not a surface. */
+  --color-overlay: rgb(0 0 0 / 0.7);
 
   /* Borders and text */
   --color-border: #1b2430;
@@ -26,6 +28,8 @@
   --color-primary-strong: #17b98a;
   --color-primary-fg: #04120d;
   --color-primary-soft: #0f2a23;
+  /* One step deeper than `--color-primary-soft`; the hover of a soft control. */
+  --color-primary-soft-hover: #123329;
   --color-info: #6ea8fe;
   --color-info-soft: #111f36;
   --color-success: #3ddc97;
@@ -36,6 +40,25 @@
   --color-ai: #a78bfa;
   --color-ai-soft: #1d1733;
   --color-focus: #59e0b8;
+
+  /*
+   * The edge of a tinted state surface.
+   *
+   * Every `--color-*-soft` fill needs a border that reads as the same state without being the
+   * fill: the warning panel's edge, the danger callout's outline, a selected option's rim. These
+   * were the most-copied literals in the tree (`border-[#3d1c20]` fifteen times over), which is
+   * exactly the drift a token prevents — one tweak to the danger edge was fifteen edits. Kept
+   * alongside the tone they belong to, so a surface and its border are chosen together.
+   *
+   * `primary` and `success` currently resolve to the same value: they are separate roles that
+   * happen to agree today, and they are separate tokens so they are free to disagree later.
+   */
+  --color-primary-border: #14453a;
+  --color-success-border: #14453a;
+  --color-info-border: #1b2c49;
+  --color-warning-border: #3d2c12;
+  --color-danger-border: #3d1c20;
+  --color-ai-border: #2b2450;
 
   /* Epistemic labels (docs/architecture.md § 7) */
   --color-fact: #8ab4f8;
@@ -53,19 +76,136 @@
     'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Noto Sans', sans-serif;
   --font-mono:
     'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
+  /*
+   * The type scale, ordered smallest to largest.
+   *
+   * Four steps carry a paired line height and weight, because those are the steps the product
+   * renders as *figures* — a number with a unit and a delta, which must not wrap and must not
+   * drift as it grows. `text-display`, `text-metric` and friends therefore replace the
+   * `text-[1.5rem] leading-none font-semibold` triple that appeared at every figure in the app:
+   * the intent is named once, and the three values cannot disagree.
+   *
+   * `micro`, `caption`, `body`, `title` and `heading` deliberately carry **no** paired line height.
+   * They inherit the body's 1.55, which is what a running line of interface text wants, and pairing
+   * them would silently override the places that set their own `leading-*`.
+   */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --text-micro: 0.625rem;
   --text-caption: 0.6875rem;
   --text-body: 0.875rem;
   --text-title: 1.0625rem;
+  --text-figure: 1.125rem;
+  --text-figure--line-height: 1;
+  --text-figure--font-weight: 600;
+  --text-subheading: 1.25rem;
+  --text-subheading--line-height: 1;
+  --text-subheading--font-weight: 600;
+  --text-heading: 1.375rem;
+  --text-metric: 1.5rem;
+  --text-metric--line-height: 1;
+  --text-metric--font-weight: 600;
+  --text-display: 1.75rem;
+  --text-display--line-height: 1;
+  --text-display--font-weight: 600;
 
-  /* Radii */
+  /*
+   * The spacing scale — one 4px base, named by role rather than by multiple.
+   *
+   * `p-4` still works; these are the steps a layout is *allowed* to reach for, so a gap that
+   * means "the space between two cards" has a name that survives a redesign. Tailwind's numeric
+   * scale stays available for the arithmetic cases (a half-step inside a control).
+   *
+   * **`--space-*`, deliberately not `--spacing-*`.** Those look like the same thing and are not.
+   * Tailwind generates a utility for every named entry in `--spacing-*`, and that namespace is an
+   * *input to every sizing family* — so adding a name does not add a spacing step, it redefines a
+   * utility that already existed:
+   *
+   *   - `--spacing-3xl: 4rem` re-pointed `max-w-3xl` (Tailwind reads the suffix against
+   *     `--spacing-*` as well as `--container-*`), turning the workspace description into a 64px
+   *     box on every page;
+   *   - `--spacing-block: 1rem` was worse: it emitted `.inline-block{inline-size:var(--spacing-block)}`,
+   *     overwriting the static *display* utility of that name, so every `inline-block` in the app
+   *     collapsed to zero content width.
+   *
+   * Both were caught by the phone-width lay-out suite rather than by a type error, which is why
+   * `tests/frontend-design-foundations.test.ts` now asserts that the `--spacing-*` namespace holds
+   * no named entries at all. `--space-*` is not a Tailwind namespace, so these emit as plain
+   * custom properties and are reached with `gap-[var(--space-group)]`. Tailwind's own numeric
+   * scale remains for the arithmetic cases (a half-step inside a control).
+   */
+  --space-hairline: 0.125rem;
+  --space-tight: 0.25rem;
+  --space-snug: 0.5rem;
+  --space-inline: 0.75rem;
+  --space-block: 1rem;
+  --space-group: 1.5rem;
+  --space-panel: 2rem;
+  --space-section: 3rem;
+  --space-frame: 4rem;
+  --space-band: 6rem;
+
+  /*
+   * The responsive ladder, declared rather than inherited.
+   *
+   * These are Tailwind's own defaults, restated so the product's contract is visible in this file
+   * and cannot move under it: a `md:` means the same width in every screen, and the three device
+   * classes the product supports are `sm` (phone landscape), `md` (tablet) and `lg` (desktop).
+   * Declaring them changes nothing today; it makes the ladder reviewable.
+   */
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+
+  /*
+   * Radii, by the kind of thing being rounded.
+   *
+   * `inset` is a surface nested inside a panel (a tile, a stat block) and `tile` is a selectable
+   * card. Both are deliberately *not* named `sm`/`lg`: those names belong to Tailwind's own radius
+   * scale, and a component that said `rounded-lg` expecting 0.5rem must keep getting 0.5rem.
+   * `mark` is the smallest step — a positioned marker or an inline chip edge — so even the corner
+   * of a decoration is a decision this file owns.
+   *
+   * `inset` and `control` are the same value on purpose: at this scale a surface nested inside a
+   * panel rounds by exactly as much as a button does. They stay separate names because they are
+   * separate roles — the suite asserts this is the *only* coincidence in the ladder.
+   */
+  --radius-mark: 0.25rem;
+  --radius-inset: 0.5rem;
   --radius-control: 0.5rem;
+  --radius-tile: 0.75rem;
   --radius-panel: 0.875rem;
   --radius-pill: 999px;
 
-  /* Elevation */
+  /*
+   * Elevation. The ladder itself is named once in `design/tokens.ts` (`ELEVATION`), so the levels
+   * are documented rather than implied by which component happens to shadow what.
+   *
+   * These are all *light*: a near-black interface reads depth from a hairline top highlight and a
+   * large, soft, very dark drop shadow. `glow` is emphasis rather than height — the primary accent
+   * lighting its own edge — and `glow-control` is that emphasis sized for a control.
+   */
   --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.02), 0 18px 40px -28px rgb(0 0 0 / 0.9);
   --shadow-popover: 0 26px 60px -24px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.03);
   --shadow-glow: 0 0 0 1px rgb(53 214 164 / 0.25), 0 12px 40px -18px rgb(53 214 164 / 0.35);
+  --shadow-glow-control: 0 10px 30px -16px rgb(53 214 164 / 0.7);
+
+  /*
+   * Gradients. Two, both structural: the sheen that lights the top of a panel so stacked surfaces
+   * separate, and the travelling highlight behind a loading shape. Neither is decoration, and
+   * neither is written at a call site.
+   */
+  --gradient-panel: linear-gradient(180deg, rgb(255 255 255 / 0.025) 0%, rgb(255 255 255 / 0) 55%);
+  --gradient-sheen: linear-gradient(
+    90deg,
+    var(--color-surface-raised),
+    var(--color-border),
+    var(--color-surface-raised)
+  );
 
   /* Motion */
   --duration-fast: 140ms;
@@ -186,11 +326,12 @@
   }
 
   .panel-gradient {
-    background-image: linear-gradient(
-      180deg,
-      rgb(255 255 255 / 0.025) 0%,
-      rgb(255 255 255 / 0) 55%
-    );
+    background-image: var(--gradient-panel);
+  }
+
+  /* The skeleton sweep. A token, so the highlight is the same everywhere a shape is loading. */
+  .surface-sheen {
+    background-image: var(--gradient-sheen);
   }
 
   .glass {

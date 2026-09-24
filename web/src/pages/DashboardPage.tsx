@@ -103,9 +103,7 @@ export function DashboardPage() {
               <Badge tone={metric.trend === 'up' ? 'primary' : 'warning'}>{metric.delta}</Badge>
             </CardHeader>
             <CardContent className="flex items-end justify-between gap-3">
-              <span className="num text-[1.5rem] leading-none font-semibold text-text">
-                {metric.value}
-              </span>
+              <span className="num text-metric text-text">{metric.value}</span>
               {metric.trend === 'up' ? (
                 <span className="text-primary" aria-hidden>
                   <TrendingUp size={16} />
@@ -199,9 +197,7 @@ export function DashboardPage() {
                   <Badge tone="primary">{verifiedShare}</Badge>
                 </CardHeader>
                 <CardContent className="flex items-end justify-between gap-3">
-                  <span className="num text-[1.5rem] leading-none font-semibold text-text">
-                    {verifiedShare}
-                  </span>
+                  <span className="num text-metric text-text">{verifiedShare}</span>
                   <Sparkline
                     values={mockKnowledgeGrowth.map((point) => point.verified)}
                     width={72}
@@ -227,7 +223,7 @@ export function DashboardPage() {
                   <Badge tone="info">{examProgress.attempts} attempts</Badge>
                 </CardHeader>
                 <CardContent className="flex items-end justify-between gap-3">
-                  <span className="num text-[1.5rem] leading-none font-semibold text-text">
+                  <span className="num text-metric text-text">
                     {examProgress.averageBest === null
                       ? '—'
                       : formatPercent(examProgress.averageBest, 1)}
@@ -256,9 +252,7 @@ export function DashboardPage() {
                   <Badge tone="neutral">+{addedThisMonth}</Badge>
                 </CardHeader>
                 <CardContent className="flex items-end justify-between gap-3">
-                  <span className="num text-[1.5rem] leading-none font-semibold text-text">
-                    {latestGrowth}
-                  </span>
+                  <span className="num text-metric text-text">{latestGrowth}</span>
                   <Sparkline
                     values={mockKnowledgeGrowth.map(
                       (point) => point.verified + point.pending + point.unverified,
@@ -287,7 +281,7 @@ export function DashboardPage() {
                   <Badge tone="warning">{researchProgress.pendingDecisions} pending</Badge>
                 </CardHeader>
                 <CardContent className="flex items-end justify-between gap-3">
-                  <span className="num text-[1.5rem] leading-none font-semibold text-text">
+                  <span className="num text-metric text-text">
                     {researchProgress.evaluatedTrades}
                   </span>
                   <span className="text-caption text-text-faint">trades evaluated</span>

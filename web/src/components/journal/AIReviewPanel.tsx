@@ -130,7 +130,7 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
           </div>
         ) : state === 'completed' ? (
           <div className="space-y-3">
-            <p className="flex items-start gap-2 rounded-[var(--radius-control)] border border-[#3d2c12] bg-warning-soft px-3 py-2 text-caption text-warning">
+            <p className="flex items-start gap-2 rounded-[var(--radius-control)] border border-warning-border bg-warning-soft px-3 py-2 text-caption text-warning">
               <TriangleAlert size={13} aria-hidden className="mt-0.5 shrink-0" />
               Layout example. No model provider is connected in this phase, so every field below is
               empty by construction — this is the shape a review will take, not a review.
@@ -156,7 +156,7 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="num inline-block rounded-[var(--radius-control)] border border-[#3d1c20] bg-danger-soft px-2 py-0.5 text-caption text-danger">
+            <p className="num inline-block rounded-[var(--radius-control)] border border-danger-border bg-danger-soft px-2 py-0.5 text-caption text-danger">
               JOURNAL_REVIEW_PROVIDER_UNAVAILABLE
             </p>
             <p className="text-caption text-text-muted">

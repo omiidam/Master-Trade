@@ -96,7 +96,7 @@ export function CapabilityCard({ capability }: { capability: CapabilityView }) {
         <p className="text-caption text-text-muted">{capability.description}</p>
 
         {/* The reason, in the server's words, with the state's full meaning. */}
-        <p className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-caption text-text">
+        <p className="rounded-[var(--radius-inset)] border border-border bg-surface-raised px-3 py-2 text-caption text-text">
           {capability.stateReason}
         </p>
 
@@ -261,7 +261,7 @@ export function CapabilitySummary({
       {counts.map((entry) => (
         <div
           key={entry.state}
-          className="min-w-0 rounded-xl border border-border bg-surface-raised px-3 py-2"
+          className="min-w-0 rounded-[var(--radius-tile)] border border-border bg-surface-raised px-3 py-2"
         >
           <p className="text-caption text-text-muted">{STATE_LABEL[entry.state]}</p>
           <p className="mt-0.5 text-title font-semibold tabular-nums text-text">{entry.count}</p>

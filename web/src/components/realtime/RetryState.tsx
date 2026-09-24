@@ -54,7 +54,7 @@ export function RetryState({
       className={cn(
         'flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-panel)] border px-4 py-3',
         kind === 'permission-denied' || kind === 'exhausted'
-          ? 'border-[#3d1c20] bg-danger-soft text-danger'
+          ? 'border-danger-border bg-danger-soft text-danger'
           : 'border-border bg-surface-raised text-text-muted',
         className,
       )}

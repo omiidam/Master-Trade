@@ -27,10 +27,10 @@ const TONE_TEXT: Record<StatTone, string> = {
 };
 
 const TONE_RING: Record<StatTone, string> = {
-  positive: 'border-[#14453a]',
-  negative: 'border-[#3d1c20]',
+  positive: 'border-success-border',
+  negative: 'border-danger-border',
   neutral: 'border-border',
-  warning: 'border-[#3d2c12]',
+  warning: 'border-warning-border',
 };
 
 const TONE_ICON = {
@@ -86,9 +86,7 @@ export function JournalStatCard({
 
       <div>
         <div className="flex items-baseline gap-1.5">
-          <span className={cn('num text-[1.5rem] leading-none font-semibold', TONE_TEXT[tone])}>
-            {value}
-          </span>
+          <span className={cn('num text-metric', TONE_TEXT[tone])}>{value}</span>
           {unit ? <span className="text-caption text-text-faint">{unit}</span> : null}
         </div>
         <p className="mt-1.5 flex items-center gap-1.5 text-caption text-text-muted">

@@ -90,7 +90,7 @@ export function ReportViewer({ report, provenance, sourceRef, className }: Repor
 
         <div
           role="note"
-          className="flex items-start gap-2 rounded-[var(--radius-control)] border border-[#3d2c12] bg-warning-soft px-3 py-2 text-warning"
+          className="flex items-start gap-2 rounded-[var(--radius-control)] border border-warning-border bg-warning-soft px-3 py-2 text-warning"
         >
           <AlertTriangle size={14} aria-hidden className="mt-0.5 shrink-0" />
           <div>
