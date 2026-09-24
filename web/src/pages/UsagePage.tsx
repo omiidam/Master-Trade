@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { Coins, History, Layers, ShieldCheck, Wallet } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card, CardContent, CardTile } from '../components/Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTile,
+  CardTitle,
+} from '../components/Card';
 import { ErrorState } from '../components/ErrorState';
 import { Skeleton } from '../components/Skeleton';
 import { TabPanel, Tabs } from '../components/Tabs';
@@ -158,12 +165,16 @@ export function UsagePage() {
             </Grid>
 
             <Card>
-              <CardContent className="space-y-3 pt-4">
-                <h2 className="text-h3 font-semibold text-text">Consumption this period</h2>
-                <p className="text-body-sm text-text-muted">
-                  Counted from the ledger rather than from a stored counter, so a corrected charge
-                  cannot leave the count wrong.
-                </p>
+              <CardHeader divider>
+                <div className="min-w-0">
+                  <CardTitle>Consumption this period</CardTitle>
+                  <CardDescription>
+                    Counted from the ledger rather than from a stored counter, so a corrected charge
+                    cannot leave the count wrong.
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {usage.features
                     .filter((feature) => feature.periodLimit !== null)
@@ -216,16 +227,18 @@ export function UsagePage() {
         <TabPanel value="features">
           <div className="space-y-4">
             <Card>
-              <CardContent className="space-y-4 pt-4">
-                <div className="space-y-1">
-                  <h2 className="text-h3 font-semibold text-text">Declared capabilities</h2>
-                  <p className="text-body-sm text-text-muted">
+              <CardHeader divider>
+                <div className="min-w-0">
+                  <CardTitle>Declared capabilities</CardTitle>
+                  <CardDescription>
                     Every capability the platform declares, whether or not it exists yet. A
                     capability that is not built and one that is not in your plan are different
                     answers, and they are never shown with the same words.
-                  </p>
+                  </CardDescription>
                 </div>
+              </CardHeader>
 
+              <CardContent className="space-y-4">
                 <ul className="space-y-3" role="list">
                   {usage.features.map((feature) => (
                     <CardTile space="roomy" key={feature.id} className="space-y-2">
@@ -244,7 +257,7 @@ export function UsagePage() {
                         )}
                       </div>
 
-                      <p className="text-body-sm text-text-muted">{feature.description}</p>
+                      <p className="text-body text-text-muted">{feature.description}</p>
                       <p className="text-caption text-text-faint">{feature.costBasis}</p>
 
                       {feature.periodLimit === null ? null : (

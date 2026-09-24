@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react';
 import type { PortfolioInsight } from '@shared/portfolio/model';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardTile } from '../Card';
+import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
 import {
   insightSeverityLabel,
   insightSeverityTone,
@@ -41,28 +41,27 @@ const CONFIDENCE_TONE = {
 export function PortfolioInsightCard({ insight, className }: PortfolioInsightCardProps) {
   return (
     <Card className={className}>
-      <CardContent className="space-y-3 pt-4">
+      <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <Info size={16} aria-hidden className="text-text-muted" />
-          <h3 className="text-body font-medium text-text">{insight.title}</h3>
+          <CardTitle className="text-body">{insight.title}</CardTitle>
           <Badge tone={insightSeverityTone(insight.severity)}>
             {insightSeverityLabel(insight.severity)}
           </Badge>
           <Badge tone="outline">{insightTypeLabel(insight.type)}</Badge>
           <Badge tone={CONFIDENCE_TONE[insight.confidence]}>{insight.confidence}</Badge>
         </div>
-
+      </CardHeader>
+      <CardContent className="space-y-3">
         <p className="text-caption text-text-faint">{insightTypeMeaning(insight.type)}</p>
-        <p className="text-body-sm text-text-muted">{insight.explanation}</p>
+        <p className="text-body text-text-muted">{insight.explanation}</p>
 
         {insight.metrics.length > 0 ? (
           <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {insight.metrics.map((metric) => (
               <CardTile key={metric.label}>
                 <dt className="text-caption text-text-muted">{metric.label}</dt>
-                <dd className="text-body-sm font-semibold tabular-nums text-text">
-                  {metric.value}
-                </dd>
+                <dd className="text-body font-semibold tabular-nums text-text">{metric.value}</dd>
               </CardTile>
             ))}
           </dl>
@@ -70,8 +69,8 @@ export function PortfolioInsightCard({ insight, className }: PortfolioInsightCar
 
         {insight.assumptions.length > 0 ? (
           <div className="space-y-1">
-            <h4 className="text-body-sm font-medium text-text">What this rests on</h4>
-            <ul className="list-disc space-y-1 pl-5 text-body-sm text-text-muted" role="list">
+            <h4 className="text-body font-medium text-text">What this rests on</h4>
+            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
               {insight.assumptions.map((assumption, index) => (
                 <li key={index}>{assumption}</li>
               ))}
@@ -81,8 +80,8 @@ export function PortfolioInsightCard({ insight, className }: PortfolioInsightCar
 
         {insight.limitations.length > 0 ? (
           <div className="space-y-1">
-            <h4 className="text-body-sm font-medium text-text">Limitations</h4>
-            <ul className="list-disc space-y-1 pl-5 text-body-sm text-text-muted" role="list">
+            <h4 className="text-body font-medium text-text">Limitations</h4>
+            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
               {insight.limitations.map((limitation, index) => (
                 <li key={index}>{limitation}</li>
               ))}
@@ -120,9 +119,11 @@ export function PortfolioInsightsList({ insights, className }: PortfolioInsights
   if (insights.length === 0) {
     return (
       <Card className={className}>
-        <CardContent className="space-y-1 pt-4">
-          <h3 className="text-body font-medium text-text">No observations</h3>
-          <p className="text-body-sm text-text-muted">
+        <CardHeader divider>
+          <CardTitle className="text-body">No observations</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <p className="text-body text-text-muted">
             The engine produced no insight for this composition. That is not a clean bill of health:
             it means there was nothing it could observe — most often because too little was declared
             for a figure to exist at all. The gaps panel says which figures those are.

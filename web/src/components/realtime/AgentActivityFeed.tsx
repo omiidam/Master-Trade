@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Activity, Radio } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
-import { Card, CardTitle } from '../Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
 import { cn } from '../../lib/cn';
 import { formatRelative } from '../../lib/format';
@@ -63,25 +63,33 @@ export function AgentActivityFeed({
 }: AgentActivityFeedProps): ReactNode {
   return (
     <Card as="section" aria-label="Agent activity" className={className}>
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span aria-hidden className="text-text-faint">
-            <Activity size={14} />
-          </span>
-          <CardTitle>Activity</CardTitle>
-          <Badge tone={live ? 'success' : 'neutral'} icon={<Radio size={11} aria-hidden />}>
-            {live ? 'live' : 'not live'}
-          </Badge>
-          <span className="text-caption text-text-faint">{entries.length} entries</span>
+      {/*
+        The card's name and its rule come from the shared header instead of a hand-rolled header
+        element carrying a `border-b`. The whole row is one child so the icon, the title, the
+        liveness badge and the count keep the single-line rhythm they had; `actions` would have been
+        a second row-level group for a control that belongs to the same line.
+      */}
+      <CardHeader divider>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span aria-hidden className="text-text-faint">
+              <Activity size={14} />
+            </span>
+            <CardTitle>Activity</CardTitle>
+            <Badge tone={live ? 'success' : 'neutral'} icon={<Radio size={11} aria-hidden />}>
+              {live ? 'live' : 'not live'}
+            </Badge>
+            <span className="text-caption text-text-faint">{entries.length} entries</span>
+          </div>
+          {onClear && entries.length > 0 ? (
+            <Button size="sm" variant="ghost" onClick={onClear}>
+              Clear this list
+            </Button>
+          ) : null}
         </div>
-        {onClear && entries.length > 0 ? (
-          <Button size="sm" variant="ghost" onClick={onClear}>
-            Clear this list
-          </Button>
-        ) : null}
-      </header>
+      </CardHeader>
 
-      <div className={cn('overflow-y-auto px-4 py-3', maxHeightClass)}>
+      <CardContent className={cn('overflow-y-auto', maxHeightClass)}>
         {loading && entries.length === 0 ? (
           <ul aria-hidden className="space-y-3">
             {[0, 1, 2].map((row) => (
@@ -129,7 +137,7 @@ export function AgentActivityFeed({
             ))}
           </ol>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 }

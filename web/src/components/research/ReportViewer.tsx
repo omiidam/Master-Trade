@@ -4,7 +4,7 @@ import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardDivider, CardHeader, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { Tooltip } from '../Tooltip';
@@ -41,7 +41,7 @@ export function ReportViewer({ report, provenance, sourceRef, className }: Repor
   if (!report) {
     return (
       <Card className={className}>
-        <CardHeader>
+        <CardHeader divider>
           <CardTitle className="text-body">Report</CardTitle>
         </CardHeader>
         <CardContent>
@@ -57,7 +57,7 @@ export function ReportViewer({ report, provenance, sourceRef, className }: Repor
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div>
           <CardTitle className="text-body">{report.title}</CardTitle>
           <CardDescription>
@@ -105,7 +105,8 @@ export function ReportViewer({ report, provenance, sourceRef, className }: Repor
         </p>
       </CardContent>
 
-      <CardContent className="border-t border-border pt-4">
+      <CardDivider />
+      <CardContent className="pt-4">
         <Tooltip content="No research service is connected in this phase, so export is inert.">
           <span>
             <Button

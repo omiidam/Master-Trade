@@ -56,7 +56,7 @@ export function ClarificationQuestionCard({
         {position === null ? null : (
           <span className="text-caption text-text-faint">{position}</span>
         )}
-        <span className="text-body-sm font-medium text-text">{question.label}</span>
+        <span className="text-body font-medium text-text">{question.label}</span>
         <Badge tone="neutral">{clarificationReasonLabel(question.reason)}</Badge>
         {question.blocking ? (
           <Badge tone="danger">Blocking</Badge>
@@ -65,7 +65,7 @@ export function ClarificationQuestionCard({
         )}
       </div>
 
-      <p className="text-body-sm text-text-muted">{question.question}</p>
+      <p className="text-body text-text-muted">{question.question}</p>
 
       {onAnswer === undefined ? null : (
         <div className="flex flex-wrap items-center gap-2">

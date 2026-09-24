@@ -1,7 +1,7 @@
 import { AlertTriangle, Gauge } from 'lucide-react';
 import type { PortfolioInsight, WeightSet } from '@shared/portfolio/model';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardTile } from '../Card';
+import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatPercent, insightSeverityLabel, insightSeverityTone } from './labels';
 
@@ -41,7 +41,7 @@ function Panel({ set, title }: { set: WeightSet; title: string }) {
   return (
     <CardTile space="roomy" className="space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-body-sm font-medium text-text">{title}</span>
+        <span className="text-body font-medium text-text">{title}</span>
         <Badge tone="outline">
           {set.basis === 'market-value' ? 'share of market value' : 'share of declared weight'}
         </Badge>
@@ -64,7 +64,7 @@ function Panel({ set, title }: { set: WeightSet; title: string }) {
         ).map(([label, value, hint]) => (
           <div key={label} className="rounded-[var(--radius-control)] bg-surface px-2 py-1.5">
             <dt className="text-caption text-text-muted">{label}</dt>
-            <dd className="text-body-sm font-semibold tabular-nums text-text">{value}</dd>
+            <dd className="text-body font-semibold tabular-nums text-text">{value}</dd>
             <p className="text-caption text-text-faint">{hint}</p>
           </div>
         ))}
@@ -89,10 +89,10 @@ export function ConcentrationRiskCard({
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-4 pt-4">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <CardHeader divider>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <Gauge size={16} aria-hidden className="text-text-muted" />
-          <h3 className="text-body font-medium text-text">Concentration</h3>
+          <CardTitle>Concentration</CardTitle>
           {insight === null ? (
             <Badge tone="outline">no concentration observation was made</Badge>
           ) : (
@@ -101,9 +101,11 @@ export function ConcentrationRiskCard({
             </Badge>
           )}
         </div>
+      </CardHeader>
 
+      <CardContent className="space-y-4">
         {sets.length === 0 ? (
-          <p className="text-body-sm text-text-muted">
+          <p className="text-body text-text-muted">
             No population of shares could be formed, so no concentration figure exists. The gaps
             panel says what is missing, rather than this card showing a concentration of zero.
           </p>
@@ -117,7 +119,7 @@ export function ConcentrationRiskCard({
 
         {insight === null ? null : (
           <div className="space-y-1">
-            <p className="text-body-sm text-text-muted">{insight.explanation}</p>
+            <p className="text-body text-text-muted">{insight.explanation}</p>
             <div className="flex flex-wrap gap-1.5">
               {insight.metrics.map((metric) => (
                 <Badge key={metric.label} tone="neutral">

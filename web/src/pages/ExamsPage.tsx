@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Target,
 } from 'lucide-react';
+import { AgentBadge, AgentCardItem, AgentCardList } from '../components/agent/AgentCard';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import {
@@ -108,7 +109,7 @@ export function ExamsPage() {
     >
       <Grid columns={4}>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Assessment progress</CardTitle>
               <CardDescription>
@@ -126,7 +127,7 @@ export function ExamsPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Average best score</CardTitle>
               <CardDescription>Mean of the best score per examination</CardDescription>
@@ -145,7 +146,7 @@ export function ExamsPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Attempts to pass</CardTitle>
               <CardDescription>Mean across passed examinations</CardDescription>
@@ -160,7 +161,7 @@ export function ExamsPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">How grading works</CardTitle>
               <CardDescription>What an assessment guarantees</CardDescription>
@@ -184,7 +185,7 @@ export function ExamsPage() {
       >
         <TabPanel value="overview" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Current assessment</CardTitle>
                 <CardDescription>
@@ -246,7 +247,7 @@ export function ExamsPage() {
             <Grid columns={3}>
               {mockExamCategories.map((category) => (
                 <Card key={category.id}>
-                  <CardHeader>
+                  <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">{category.label}</CardTitle>
                       <CardDescription>{category.description}</CardDescription>
@@ -283,7 +284,7 @@ export function ExamsPage() {
         <TabPanel value="current" className="space-y-4">
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Attempt context</CardTitle>
                   <CardDescription>What the runner would know about this attempt</CardDescription>
@@ -325,7 +326,7 @@ export function ExamsPage() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Integrity rules</CardTitle>
                   <CardDescription>The rules this interface follows</CardDescription>
@@ -383,7 +384,7 @@ export function ExamsPage() {
           </Grid>
 
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Attempt history</CardTitle>
                 <CardDescription>
@@ -445,7 +446,7 @@ export function ExamsPage() {
           <Grid columns={2}>
             <MistakeAnalysisCard patterns={mockMistakes} incorrectAnswers={incorrect} />
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Post-submission review</CardTitle>
                   <CardDescription>
@@ -502,7 +503,7 @@ export function ExamsPage() {
           >
             <Grid columns={3}>
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <CardTitle className="text-body">By pattern</CardTitle>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
@@ -511,7 +512,7 @@ export function ExamsPage() {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <CardTitle className="text-body">By lesson</CardTitle>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
@@ -520,7 +521,7 @@ export function ExamsPage() {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <CardTitle className="text-body">By evidence</CardTitle>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
@@ -550,7 +551,7 @@ export function ExamsPage() {
 
           <Grid columns={3}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Loading</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -561,7 +562,7 @@ export function ExamsPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Empty</CardTitle>
               </CardHeader>
               <CardContent>
@@ -574,7 +575,7 @@ export function ExamsPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Error</CardTitle>
               </CardHeader>
               <CardContent>
@@ -589,7 +590,7 @@ export function ExamsPage() {
           </Grid>
 
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Locked examinations</CardTitle>
                 <CardDescription>Locked by prerequisite, with the dependency named</CardDescription>
@@ -598,15 +599,29 @@ export function ExamsPage() {
                 {lockedExams.length} locked
               </Badge>
             </CardHeader>
-            <CardContent className="space-y-2 text-caption text-text-muted">
-              {lockedExams.map((exam) => (
-                <p key={exam.id} className="flex flex-wrap items-center gap-2">
-                  <span className="text-text">{exam.title}</span>
-                  <span className="num text-text-faint">
-                    requires {exam.prerequisites.join(', ')}
-                  </span>
-                </p>
-              ))}
+            {/*
+              A marked list rather than a paragraph per exam: the mark is what makes the gate
+              visible at a glance, and the `neutral` tone is the one the badge family reserves for
+              a row that is numbered or waiting rather than confirmed.
+            */}
+            <CardContent>
+              <AgentCardList>
+                {lockedExams.map((exam) => (
+                  <AgentCardItem
+                    key={exam.id}
+                    badge={
+                      <AgentBadge tone="neutral">
+                        <Hourglass size={10} strokeWidth={2.5} />
+                      </AgentBadge>
+                    }
+                  >
+                    <span className="text-text">{exam.title}</span>{' '}
+                    <span className="num text-text-faint">
+                      requires {exam.prerequisites.join(', ')}
+                    </span>
+                  </AgentCardItem>
+                ))}
+              </AgentCardList>
             </CardContent>
           </Card>
         </TabPanel>

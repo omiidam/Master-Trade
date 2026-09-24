@@ -311,7 +311,7 @@ export function EvaluationPage() {
           {capabilitiesStatus === 'ready' && capabilities !== null ? (
             <>
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <div className="min-w-0">
                     <CardTitle>What this account can do right now</CardTitle>
                     <CardDescription>
@@ -350,7 +350,7 @@ export function EvaluationPage() {
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {capabilities.readiness.map((decision) => (
                     <Card key={decision.requestedType}>
-                      <CardHeader>
+                      <CardHeader divider>
                         <div className="min-w-0">
                           <CardTitle className="text-body">{decision.requestedType}</CardTitle>
                           <CardDescription>
@@ -387,7 +387,7 @@ export function EvaluationPage() {
               <CapabilityPipeline stages={capabilities.stages} />
 
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <div className="min-w-0">
                     <CardTitle>
                       <span className="inline-flex items-center gap-2">

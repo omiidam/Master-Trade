@@ -41,7 +41,7 @@ export function MistakeAnalysisCard({
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div>
           <CardTitle className="text-body">Mistake analysis</CardTitle>
           <CardDescription>

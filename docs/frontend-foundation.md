@@ -828,3 +828,179 @@ same light rather than a second copy of it).
 
 19 new assertions cover this phase in `tests/frontend-color-harmony.test.ts`, all read from
 source and offline, plus the two contract updates above.
+
+## 14. Phase 7.2.3 — the card form, in every drawer category
+
+Phase 7.2.2 built the system and converted the call sites it could reach, but the reference's
+_composition_ — a title block, a hairline rule, a list of rows, a closing action — had only
+reached Dashboard, AI Workspace and a handful of named panels. This phase is the scope
+correction: the same form, on every card, in every section the drawer lists, from Dashboard
+through Settings.
+
+### The audit, and the bug in it
+
+Before touching anything, the tree was walked and measured: for every file that renders a
+`Card`, how many headers, titles, descriptions, rules and bodies it has. The first version of
+that audit matched `<Card` with a character class — `<Card[ >]` — which silently missed the
+twelve files whose `<Card` is followed by a newline and a multi-line prop list
+(`AnalysisReadinessPanel`, `PortfolioPanels`, `AssumptionNotice`, `RetryState` and friends).
+It reported 54 card-bearing files; the real number is **66**. The corrected audit matches
+`<Card\b`, which also stops `<CardHeader`/`<CardTile` from counting as a card.
+
+What it found:
+
+|                                                               | before | after   |
+| ------------------------------------------------------------- | ------ | ------- |
+| files rendering a card                                        | 66     | 66      |
+| `<Card>` usages                                               | 206    | 219     |
+| `<CardHeader>`                                                | 168    | 196     |
+| of those, carrying the rule (`divider`)                       | **3**  | **190** |
+| `<CardTitle>`                                                 | 168    | 197     |
+| `<CardDescription>`                                           | 119    | 133     |
+| `<CardContent>`                                               | 106    | 209     |
+| hand-rolled titles lifted out of a body (`pt-4` + raw `<h3>`) | 24     | 0       |
+
+The rule is the part that mattered. `CardDivider` existed and was used **nowhere**: a card's
+head and its body were separated by nothing, which is why every panel read as one undivided
+slab. Three headers carried `divider` and all three were the hand-written Portfolio ones from
+the previous turn.
+
+### The rule needed a rhythm, and the rhythm found a collision
+
+A rule is not enough on its own. `CardHeader` is `px-4 pt-4` with **no bottom padding** — the
+body's own `pt-4` was the only thing keeping a title off its contents — so dropping an `hr`
+under the head would have drawn the line into the descender of the title.
+
+The obvious fix is a margin on the rule, and that is the one thing this codebase cannot do:
+`cn` is a plain join with no conflict resolution, so `<CardDivider className="mt-4" />` beside
+the component's own `m-0` leaves the winner to stylesheet order. "The rule is 16px under the
+title" must not depend on which utility Tailwind emitted last — that is the same class of bug
+that produced the 7.2.1 overflow. So the spacing is a **padding on a wrapper**, and the scale
+learned a third entry:
+
+```
+DENSITY.cozy = { header: 'px-4 pt-4', rule: 'px-4 pt-4', content: 'px-4 py-4', footer: 'px-4 py-3' }
+```
+
+The head's `pt-4`, the rule's band `pt-4`, then the body's `py-4`: title, a breath, the
+hairline, a breath, the contents. The reference's own rhythm (a flat `gap: 1rem`) expressed in
+the scale that already existed, so `density="compact"` tightens all three together.
+
+`CardHeader` also gained `flex-wrap`. The heads it replaced nearly all wrote it by hand — a
+long title beside a control has to be able to push the control onto its own line at 390px, and
+the `actions` group is `shrink-0` by design (a control must never be squeezed). It just was
+not part of the system, so half the hand-rolled headers forgot it.
+
+### The two codemods, and the one that shipped a bug
+
+Two throwaway scripts did the mechanical work, and both are deleted before the commit:
+
+- **`divider` on every header that has a body.** 164 headers across 36 files. The script
+  parses each file with the TypeScript compiler, finds the `CardHeader` elements whose parent
+  has _rendered content_ after them, and inserts one attribute. A header that is the last child
+  of its card is skipped, because a rule across the bottom of a header-only panel is a line
+  pointing at nothing; a header followed only by a comment is skipped too.
+- **Lifting titles out of bodies.** 11 cards, in `PortfolioPanels`, `PortfolioInsightCard` and
+  `AssetAllocationChart`, where the shape was `<CardContent className="… pt-4">` with the
+  title row as its first child — the pre-7.2.2 pattern where the card's name lives _inside_
+  its contents. It is rewritten to `CardHeader divider` + `CardTitle` + a `CardContent` that no
+  longer needs a `pt-4` to clear a title that is no longer there.
+
+The lift script's first run was **wrong**, and the way it failed is worth keeping: it rebased
+the title's offsets against the title element instead of against the element being lifted, so
+anything inside a wrapper row (`<div><Icon/><h3>Name</h3><Badge/></div>`) got the closing tag
+spliced into the middle of the markup. `tsc` caught it immediately — `JSX element 'h3' has no
+corresponding closing tag` — and the three files were restored from `git` rather than patched,
+because a bad codemod leaves no useful partial state.
+
+### A dead class, found while measuring
+
+`text-body-sm` appears 93 times and **emits no CSS at all**. Tailwind v4 only generates a
+`text-*` utility for a key in the `--text-*` namespace, and there is no `--text-body-sm` — so
+every "slightly smaller body" was rendering at the inherited body size, which is exactly what
+`text-body` sets. The replacement is therefore pixel-identical: the tree stops carrying a
+class that looks like a size and is not one. Every card _description_ among them became the
+`CardDescription` the system owns, which is the same 11px the other 119 descriptions already
+used.
+
+### Variety was the point, so the tick list did not go everywhere
+
+The reference's signature row — a filled accent disc with a dark glyph, and a sentence beside
+it — already existed as `AgentCardList` / `AgentCardItem` / `AgentCheck`, built in Phase 7.2.1
+and used only by the agent surface. It is now used in **8 files**:
+
+| where                                  | group     | what it marks                               |
+| -------------------------------------- | --------- | ------------------------------------------- |
+| Dashboard — _Strengths_ / _Watch list_ | workspace | statements that hold / findings that do not |
+| AI Workspace transcript                | workspace | the rows it was always for                  |
+| Journal — _Reading these numbers_      | workspace | three caveats, each in its own tone         |
+| Trading Lab — the approval pipeline    | workspace | an **ordered** list: the rows are steps     |
+| Exams — locked examinations            | learning  | the gate each locked exam waits on          |
+| Usage — plan entitlements              | system    | what a plan includes, ticked                |
+| Settings — data provenance policy      | system    | three guarantees                            |
+
+Everything else stays what it is: a metric card is a compact card with a figure in it, a
+badge cloud is a badge cloud (the Academy curriculum), a table is a table, a control bar is a
+control bar. That is the variety the brief asks for — **one** header anatomy and **one** rule,
+with the composition left to the content. Converting every card to a tick list would have been
+the repetitive, fatiguing outcome the brief warns against.
+
+### Cards that are deliberately still not headed
+
+Measured, listed, and left alone with a reason — the audit's 18 remaining "header gaps" are
+almost entirely these:
+
+- **State surfaces whose content _is_ the state**: `EmptyState`, `RetryState`, `ConnectionStatus`,
+  `Skeleton`, `LoadingState`, `AssumptionNotice`, `ClarificationQuestionCard`. A title over
+  "nothing here yet" restates the sentence.
+- **Container cards**: `ChartAdapter` (the `figure` head is the caller's), `TradeFilters` (a
+  control bar), `TradeTable` (a toolbar and a `<caption>`), `PerformanceChart`'s `ChartSurface`
+  (the chart's own well, framed by the card above it).
+- **`FormSection`'s `<h3>`**: it wraps the disclosure button. It is an accordion trigger, and
+  its `border-b` _is_ the rule when open.
+- **The transcript message card** on AI Workspace: a byline — avatar, speaker, epistemic badge,
+  timestamp — not a name. It already uses `tone`, `emphasis` and `wash`.
+- **Skeleton cards** on `EvaluationPage`, `PortfolioPage`, `UsagePage`, `ProfilePage`: the
+  head's placeholder is itself a `Skeleton`, so there is no title to put in a `CardHeader`.
+- **`MissingInformationPanel`'s and `ProfilePage`'s remaining `<h3>`**: section headings for a
+  _page_ region, not names of cards.
+- **Capability pipeline stages**: a numbered row. Its name is a `CardTitle`, but the number is
+  the marker, so it keeps the row composition rather than growing a head and a rule.
+
+### Also in this phase
+
+- Four cards that used a second `CardContent` with a `border-t` as a footer band now use
+  `CardDivider` + `CardContent`, so the rule between a card's body and its closing note comes
+  from the system rather than from a border utility written at the call site.
+- `SubscriptionPlanCard`'s included entitlements use `AgentCheck` — the reference's disc — in
+  place of a bare lucide tick.
+- `PlanComparison`'s hand-rolled `<section><header><h2>` became the `Section` component, which
+  is the same head the page-level sections use.
+- Six internal sub-headings inside cards (`What each cost means`, `Findings`, `Attempts`, …)
+  were `<h3>` — the _same_ level as the `CardTitle` above them — or a `text-body-sm` label that
+  rendered at body size and therefore did not read as a heading at all. They are now `<h4>`
+  micro-labels, one style: `text-caption font-semibold text-text-muted uppercase`.
+
+### What was not changed
+
+No functionality, no copy, no data shape, no route. Every change is a `className`, an element
+name, or the wrapper a body sits in — with the deliberate exception of the two collateral fixes
+the audit turned up (the dead `text-body-sm` class, and the four hand-rolled footer rules).
+
+Verified after the change, on the built bundle:
+
+- `npm run typecheck:web` clean; `npm run typecheck` clean.
+- **1298** unit tests across **66** files, unchanged from the 7.2.2 baseline — including the
+  19-test colour-harmony contract and `test-hygiene`.
+- `npm run build` and `npm run build:web` clean; `npm run desktop:verify` still **0 errors,
+  4 warnings** across 51 checks.
+- **27** browser end-to-end assertions.
+- Horizontal overflow measured at **1440 / 834 / 390** on **all 14** drawer pages:
+  `documentElement.scrollWidth - clientWidth === 0` everywhere. The structural probe on the
+  built bundle confirms 12 cards and 11 rules on Dashboard, 2 tick lists, and **no card whose
+  rule is its last child** — the rule always has contents under it.
+
+Four of the fourteen pages (Portfolio, Evaluation, Usage, Profile) render their unavailable
+state in the preview, because they read from a backend that is not connected: their cards are
+covered by typecheck, by the unit suites and by the codemods, but not by the browser sweep.
+That is a limit of the preview, not of the change.

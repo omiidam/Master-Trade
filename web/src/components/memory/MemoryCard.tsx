@@ -50,7 +50,7 @@ export function MemoryCard({
       className={cn(archived && 'opacity-75', className)}
       aria-label={record.title}
     >
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <TrustBadge status={status} />

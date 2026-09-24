@@ -3,7 +3,7 @@ import type { InputRef } from '@shared/quality/model';
 import type { ClarificationQuestion } from '@shared/quality/readiness';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
-import { Card } from '../Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { ClarificationQuestionCard } from './ClarificationQuestionCard';
 import { inputLabel } from './labels';
@@ -48,21 +48,20 @@ export function MissingInformationPanel({
 }: MissingInformationPanelProps) {
   if (gaps.length === 0 && clarifications.length === 0) {
     return (
-      <Card
-        as="section"
-        emphasis="success"
-        className={cn('p-4', className)}
-        aria-label="Missing information"
-      >
-        <div className="flex items-center gap-2">
-          <CheckCircle2 size={16} aria-hidden className="text-success" />
-          <h3 className="text-body-sm font-medium text-text">Nothing required is missing</h3>
-        </div>
-        <p className="mt-1 text-body-sm text-text-muted">
-          Every input the system can currently ask about is present and usable. This is not a
-          statement that the answer will be complete — only that it will not be missing a declared
-          requirement.
-        </p>
+      <Card as="section" emphasis="success" className={className} aria-label="Missing information">
+        <CardHeader divider>
+          <div className="flex min-w-0 items-center gap-2">
+            <CheckCircle2 size={16} aria-hidden className="text-success" />
+            <CardTitle className="text-body">Nothing required is missing</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-body text-text-muted">
+            Every input the system can currently ask about is present and usable. This is not a
+            statement that the answer will be complete — only that it will not be missing a declared
+            requirement.
+          </p>
+        </CardContent>
       </Card>
     );
   }
@@ -71,7 +70,7 @@ export function MissingInformationPanel({
     <section className={cn('space-y-3', className)} aria-label="Missing information">
       <div className="flex flex-wrap items-center gap-2">
         <CircleHelp size={16} aria-hidden className="text-text-muted" />
-        <h3 className="text-body-sm font-medium text-text">What is not known yet</h3>
+        <h3 className="text-body font-medium text-text">What is not known yet</h3>
         {gaps.length > 0 ? <Badge tone="warning">{gaps.length} input(s) missing</Badge> : null}
         {clarifications.length > 0 ? (
           <Badge tone="outline">{clarifications.length} question(s)</Badge>

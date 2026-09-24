@@ -9,7 +9,7 @@ import {
 import type { ReactNode } from 'react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
-import { Card, CardTile, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { AI_REVIEW_NOTICE, AI_REVIEW_STATE_LABEL, AI_REVIEW_STATE_ORDER } from '../../mock/journal';
 import type { AiReviewState } from '../../mock/journal';
@@ -81,29 +81,33 @@ export interface AIReviewPanelProps {
  */
 export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewPanelProps) {
   return (
-    <Card as="section" aria-label="Review assistance" className={cn('p-4', className)}>
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex items-start gap-2">
+    <Card as="section" aria-label="Review assistance" className={className}>
+      <CardHeader
+        divider
+        actions={
+          <Badge tone={TONE[state]} dot>
+            {AI_REVIEW_STATE_LABEL[state]}
+          </Badge>
+        }
+      >
+        <div className="flex min-w-0 items-start gap-2">
           <span
             aria-hidden
             className={cn('mt-0.5', state === 'failed' ? 'text-danger' : 'text-ai')}
           >
             {ICONS[state]}
           </span>
-          <div>
+          <div className="min-w-0">
             <CardTitle>Review assistance</CardTitle>
-            <p className="mt-0.5 text-caption text-text-muted">
+            <CardDescription>
               {tradeRef ? `${tradeRef} · ` : ''}
               {EXPLANATION[state]}
-            </p>
+            </CardDescription>
           </div>
         </div>
-        <Badge tone={TONE[state]} dot>
-          {AI_REVIEW_STATE_LABEL[state]}
-        </Badge>
-      </header>
+      </CardHeader>
 
-      <div className="mt-3">
+      <CardContent>
         {state === 'not-available' ? (
           <CardTile as="p" space="roomy" className="border-dashed text-caption text-text-muted">
             {AI_REVIEW_NOTICE}
@@ -170,7 +174,7 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
             ) : null}
           </div>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 }

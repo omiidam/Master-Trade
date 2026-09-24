@@ -60,7 +60,7 @@ export function AcademyPage() {
     >
       <Grid columns={3}>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Curriculum progress</CardTitle>
               <CardDescription>
@@ -90,7 +90,7 @@ export function AcademyPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Exam average</CardTitle>
               <CardDescription>Best score per examination</CardDescription>
@@ -106,7 +106,7 @@ export function AcademyPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">How grading works</CardTitle>
               <CardDescription>What the Academy guarantees</CardDescription>
@@ -141,7 +141,7 @@ export function AcademyPage() {
                       sequence rather than appearing all at once. */}
                   <Reveal index={index}>
                     <Card interactive className={cn(module.status === 'locked' && 'opacity-70')}>
-                      <CardHeader>
+                      <CardHeader divider>
                         <div className="flex items-start gap-3">
                           <span
                             aria-hidden
@@ -199,7 +199,7 @@ export function AcademyPage() {
 
         <TabPanel value="lessons" className="space-y-3">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Module 2 — Risk First</CardTitle>
                 <CardDescription>Lesson states and prerequisite gating</CardDescription>
@@ -240,7 +240,7 @@ export function AcademyPage() {
           <Grid columns={3}>
             {mockExams.map((exam) => (
               <Card key={exam.id}>
-                <CardHeader>
+                <CardHeader divider>
                   <div>
                     <CardTitle className="num text-body">{exam.id}</CardTitle>
                     <CardDescription>{exam.questionCount} questions</CardDescription>
@@ -258,7 +258,7 @@ export function AcademyPage() {
             ))}
           </Grid>
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <CardTitle className="text-body">Examination integrity</CardTitle>
             </CardHeader>
             <CardContent>

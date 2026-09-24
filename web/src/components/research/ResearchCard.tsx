@@ -70,7 +70,7 @@ export function ResearchCard({ experiment, onOpen, className }: ResearchCardProp
       interactive={onOpen !== undefined}
       className={cn(experiment.status === 'abandoned' && 'opacity-75', className)}
     >
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={STATUS_TONE[experiment.status]} dot={experiment.status === 'running'}>

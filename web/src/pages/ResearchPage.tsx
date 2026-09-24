@@ -82,7 +82,7 @@ export function ResearchPage() {
     >
       <Grid columns={4}>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Research progress</CardTitle>
               <CardDescription>
@@ -101,7 +101,7 @@ export function ResearchPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Evaluated trades</CardTitle>
               <CardDescription>Total across evaluations with metrics</CardDescription>
@@ -115,7 +115,7 @@ export function ResearchPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Pending decisions</CardTitle>
               <CardDescription>Awaiting a recorded human approval</CardDescription>
@@ -130,7 +130,7 @@ export function ResearchPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Abandoned</CardTitle>
               <CardDescription>Stopped with the reason recorded</CardDescription>
@@ -155,7 +155,7 @@ export function ResearchPage() {
         <TabPanel value="overview" className="space-y-4">
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Active experiments</CardTitle>
                   <CardDescription>Running, plus anything waiting on a decision</CardDescription>
@@ -168,7 +168,7 @@ export function ResearchPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Findings summary</CardTitle>
                   <CardDescription>The one line each experiment currently supports</CardDescription>
@@ -258,7 +258,7 @@ export function ResearchPage() {
                     : {})}
                 />
                 <Card>
-                  <CardHeader>
+                  <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">Findings</CardTitle>
                       <CardDescription>
@@ -334,7 +334,7 @@ export function ResearchPage() {
 
           <Grid columns={3}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Reported first</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -343,7 +343,7 @@ export function ResearchPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Win rate is not edge</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -352,7 +352,7 @@ export function ResearchPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Missing means missing</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -367,7 +367,7 @@ export function ResearchPage() {
           <ReportViewer report={report} provenance="synthetic" sourceRef="synthetic-generator" />
           <Grid columns={3}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">No model text</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -376,7 +376,7 @@ export function ResearchPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Same visual weight</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -385,7 +385,7 @@ export function ResearchPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Decision, not activation</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -403,7 +403,7 @@ export function ResearchPage() {
           />
           <Grid columns={3}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Evidence is appended</CardTitle>
                   <CardDescription>Never edited in place</CardDescription>
@@ -415,7 +415,7 @@ export function ResearchPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Approval is explicit</CardTitle>
                   <CardDescription>Recorded with a rationale</CardDescription>
@@ -427,7 +427,7 @@ export function ResearchPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Loading and empty</CardTitle>
                   <CardDescription>Stated, not hidden</CardDescription>

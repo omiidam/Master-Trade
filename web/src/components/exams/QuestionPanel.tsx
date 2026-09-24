@@ -83,7 +83,7 @@ export function QuestionPanel({
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div>
           <CardTitle className="text-body">
             Question {index} of {total}

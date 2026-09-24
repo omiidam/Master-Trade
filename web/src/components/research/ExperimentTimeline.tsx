@@ -70,7 +70,7 @@ export function ExperimentTimeline({
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div>
           <CardTitle className="text-body">{title}</CardTitle>
           <CardDescription>{description}</CardDescription>

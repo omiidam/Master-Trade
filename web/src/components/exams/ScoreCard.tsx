@@ -49,7 +49,7 @@ export function ScoreCard({
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div>
           <CardTitle className="text-body">{title}</CardTitle>
           <p className="mt-1 text-caption text-text-muted">

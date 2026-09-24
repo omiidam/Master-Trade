@@ -200,7 +200,7 @@ export function ProfileEditor({
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
+        <CardHeader divider>
           <CardTitle>Trading preferences</CardTitle>
           <CardDescription>
             Only what you tell us is stored as a fact. Anything left blank stays missing and is
@@ -397,7 +397,7 @@ export function ProfileEditor({
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader divider>
           <CardTitle>Existing holdings</CardTitle>
           <CardDescription>
             Optional, and by percentage only. There is no field for a quantity, a price or a cost
@@ -406,7 +406,7 @@ export function ProfileEditor({
         </CardHeader>
         <CardContent className="space-y-3">
           {holdings.length === 0 ? (
-            <p className="text-body-sm text-text-faint italic">
+            <p className="text-body text-text-faint italic">
               No holdings described. Analysis that depends on them will say so.
             </p>
           ) : (
@@ -518,7 +518,7 @@ export function ProfileEditor({
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader divider>
           <CardTitle>Constraints and preferences</CardTitle>
           <CardDescription>
             Boundaries you want respected, in your own words. A preference, not an instruction to

@@ -38,7 +38,7 @@ export function ClarifyingPrompts({ prompts, questions = [], onAnswer }: Clarify
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader divider>
         <CardTitle>What I still need from you</CardTitle>
         <CardDescription>
           These are asked rather than defaulted. If you would rather not answer, the analysis stays
@@ -62,7 +62,7 @@ export function ClarifyingPrompts({ prompts, questions = [], onAnswer }: Clarify
                   className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0 space-y-1">
-                    <p className="text-body-sm text-text">{prompt.question}</p>
+                    <p className="text-body text-text">{prompt.question}</p>
                     <p className="text-caption text-text-faint">{prompt.label}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">

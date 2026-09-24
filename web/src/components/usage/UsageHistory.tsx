@@ -1,7 +1,7 @@
 import { History, Receipt } from 'lucide-react';
 import type { UsageAttemptView, UsageHistoryData, UsageMovementView } from '@shared/api/contracts';
 import { Badge, type BadgeTone } from '../Badge';
-import { Card, CardHeader, CardTitle } from '../Card';
+import { Card, CardDescription, CardHeader, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
 import { Tooltip } from '../Tooltip';
 import {
@@ -70,7 +70,7 @@ export function CreditTransactionItem({ movement, className }: CreditTransaction
           <Badge tone={KIND_TONE[movement.kind] ?? 'neutral'}>
             {ledgerKindLabel(movement.kind)}
           </Badge>
-          <span className="text-body-sm text-text">{creditReasonLabel(movement.reason)}</span>
+          <span className="text-body text-text">{creditReasonLabel(movement.reason)}</span>
           {returned ? <Badge tone="outline">Returned</Badge> : null}
         </div>
         <p className="text-caption text-text-muted">{creditReasonMeaning(movement.reason)}</p>
@@ -84,10 +84,10 @@ export function CreditTransactionItem({ movement, className }: CreditTransaction
         <p
           className={
             returned
-              ? 'text-body-sm font-medium tabular-nums text-text-muted'
+              ? 'text-body font-medium tabular-nums text-text-muted'
               : movement.delta > 0
-                ? 'text-body-sm font-medium tabular-nums text-success'
-                : 'text-body-sm font-medium tabular-nums text-text'
+                ? 'text-body font-medium tabular-nums text-success'
+                : 'text-body font-medium tabular-nums text-text'
           }
         >
           {formatDelta(movement.delta)}
@@ -111,13 +111,13 @@ export function UsageHistory({ history, className }: UsageHistoryProps) {
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2">
             <History size={16} aria-hidden className="text-primary" />
             Usage history
           </CardTitle>
-          <p className="text-body-sm text-text-muted">{history.note}</p>
+          <CardDescription>{history.note}</CardDescription>
         </div>
         <div className="flex flex-wrap justify-end gap-1.5">
           <Badge tone="outline">granted {totals.granted}</Badge>
@@ -127,11 +127,17 @@ export function UsageHistory({ history, className }: UsageHistoryProps) {
         </div>
       </CardHeader>
 
-      <div className="px-4 pb-2 pt-3">
-        <h3 className="flex items-center gap-1.5 text-body-sm font-medium text-text">
+      {/*
+        This card's body is full-bleed: a movement is a row whose rule runs the whole width of the
+        card, so there is no single padded box to wrap it in. `CardContent` would have added a
+        second horizontal inset on top of each row's own, which is why the header is the only part
+        of this panel the card system takes over.
+      */}
+      <div className="px-4 pb-2 pt-4">
+        <h4 className="flex items-center gap-1.5 text-caption font-semibold text-text-muted uppercase">
           <Receipt size={14} aria-hidden className="text-text-muted" />
           Movements
-        </h3>
+        </h4>
       </div>
       {movements.length === 0 ? (
         <div className="px-4 pb-4">
@@ -150,7 +156,7 @@ export function UsageHistory({ history, className }: UsageHistoryProps) {
       )}
 
       <div className="px-4 pb-2 pt-4">
-        <h3 className="text-body-sm font-medium text-text">Attempts</h3>
+        <h4 className="text-caption font-semibold text-text-muted uppercase">Attempts</h4>
         <p className="text-caption text-text-faint">
           Every invocation, including the ones that were refused before running and the ones that
           cost nothing.
@@ -182,7 +188,7 @@ function AttemptRow({ attempt }: { attempt: UsageAttemptView }) {
           <Badge tone={ATTEMPT_TONE[attempt.status] ?? 'neutral'}>
             {attemptStatusLabel(attempt.status)}
           </Badge>
-          <span className="text-body-sm text-text">{attempt.feature}</span>
+          <span className="text-body text-text">{attempt.feature}</span>
           <span className="text-caption text-text-faint">
             {usageCategoryLabel(attempt.category)}
           </span>
@@ -198,7 +204,7 @@ function AttemptRow({ attempt }: { attempt: UsageAttemptView }) {
           {attempt.settledAt === null ? '' : ` · settled ${attempt.settledAt}`}
         </p>
       </div>
-      <p className="text-body-sm tabular-nums text-text-muted">
+      <p className="text-body tabular-nums text-text-muted">
         {attempt.credits === 0 ? 'no charge' : `${attempt.credits} held`}
       </p>
     </li>

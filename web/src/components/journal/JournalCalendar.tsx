@@ -2,7 +2,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Rows3 } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
-import { Card, CardDescription, CardTile, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { RuleComplianceBadge } from './RuleComplianceBadge';
 import { SetupBadge } from './SetupBadge';
 import { MistakeTag } from './MistakeTag';
@@ -122,275 +122,285 @@ export function JournalCalendar({
   const monthRisk = monthDays.reduce((sum, day) => sum + day.riskTotal, 0);
 
   return (
-    <Card as="section" aria-label="Trading calendar" className={cn('space-y-4 p-4', className)}>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <CardTitle>
-            {view === 'month'
-              ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-GB', {
-                  month: 'long',
-                  year: 'numeric',
-                  timeZone: 'UTC',
-                })
-              : `Week of ${formatDayLabel(weekCells[0]?.date ?? anchorDate)}`}
-          </CardTitle>
-          <CardDescription className="mt-0.5">
-            {monthTrades} trades · {monthRisk.toLocaleString('en-US')} committed risk across{' '}
-            {monthDays.length} trading {monthDays.length === 1 ? 'day' : 'days'} this month.
-          </CardDescription>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <CardTile
-            space="none"
-            role="group"
-            aria-label="Calendar view"
-            className="inline-flex items-center gap-0.5 p-0.5"
-          >
-            {(
-              [
-                { id: 'month', label: 'Month', icon: <CalendarDays size={13} aria-hidden /> },
-                { id: 'week', label: 'Week', icon: <Rows3 size={13} aria-hidden /> },
-              ] as const
-            ).map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                aria-pressed={view === option.id}
-                onClick={() => onViewChange(option.id)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 text-caption font-medium',
-                  view === option.id
-                    ? 'bg-surface-raised text-text shadow-panel'
-                    : 'text-text-muted hover:text-text',
-                )}
-              >
-                {option.icon}
-                {option.label}
-              </button>
-            ))}
-          </CardTile>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onSelectDate(null)}
-            disabled={selectedDate === null}
-            label="Clear the selected day"
-          >
-            Clear day
-          </Button>
-        </div>
-      </header>
-
-      <div>
-        <div className="mb-1 grid grid-cols-7 gap-1.5">
-          {WEEKDAY_LABELS.map((label) => (
-            <p key={label} className="px-1 text-caption font-semibold text-text-faint uppercase">
-              {label}
-            </p>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1.5">
-          {shown.map((cell, index) => {
-            if (cell.date === null || cell.dayNumber === null) {
-              return (
-                <div
-                  key={`blank-${index}`}
-                  aria-hidden
-                  className="min-h-[92px] rounded-[var(--radius-control)]"
-                />
-              );
-            }
-            const day = byDate.get(cell.date);
-            const state: CalendarDayState = day?.state ?? 'flat';
-            const active = cell.date === selectedDate;
-            return (
-              <button
-                key={cell.date}
-                type="button"
-                onClick={() => onSelectDate(active ? null : cell.date)}
-                aria-pressed={active}
-                aria-label={
-                  day
-                    ? `${formatDayLabel(cell.date)}: ${day.tradeCount} trades, ${CALENDAR_DAY_STATE_LABEL[state]}, ${formatNetR(day.netR)}`
-                    : `${formatDayLabel(cell.date)}: no trades recorded`
-                }
-                className={cn(
-                  'flex min-h-[92px] flex-col gap-1 rounded-[var(--radius-control)] border p-1.5 text-start',
-                  'transition-colors duration-[var(--duration-fast)]',
-                  STATE_STYLE[state],
-                  active ? 'ring-2 ring-[var(--color-focus)]' : 'hover:border-border-strong',
-                )}
-              >
-                <span className="flex items-center justify-between gap-1">
-                  <span className="num text-caption text-text-muted">{cell.dayNumber}</span>
-                  {day ? (
-                    <span className="num text-caption text-text-faint">{day.tradeCount}t</span>
-                  ) : (
-                    <span className="text-caption text-text-faint">—</span>
+    <Card as="section" aria-label="Trading calendar" className={className}>
+      <CardHeader divider>
+        <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle>
+              {view === 'month'
+                ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-GB', {
+                    month: 'long',
+                    year: 'numeric',
+                    timeZone: 'UTC',
+                  })
+                : `Week of ${formatDayLabel(weekCells[0]?.date ?? anchorDate)}`}
+            </CardTitle>
+            <CardDescription>
+              {monthTrades} trades · {monthRisk.toLocaleString('en-US')} committed risk across{' '}
+              {monthDays.length} trading {monthDays.length === 1 ? 'day' : 'days'} this month.
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTile
+              space="none"
+              role="group"
+              aria-label="Calendar view"
+              className="inline-flex items-center gap-0.5 p-0.5"
+            >
+              {(
+                [
+                  { id: 'month', label: 'Month', icon: <CalendarDays size={13} aria-hidden /> },
+                  { id: 'week', label: 'Week', icon: <Rows3 size={13} aria-hidden /> },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={view === option.id}
+                  onClick={() => onViewChange(option.id)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 text-caption font-medium',
+                    view === option.id
+                      ? 'bg-surface-raised text-text shadow-panel'
+                      : 'text-text-muted hover:text-text',
                   )}
-                </span>
-                {day ? (
-                  <>
-                    <span
-                      className={cn(
-                        'num text-caption font-medium',
-                        day.netR === null
-                          ? 'text-text-faint'
-                          : day.netR > 0
-                            ? 'text-success'
-                            : day.netR < 0
-                              ? 'text-danger'
-                              : 'text-text-muted',
-                      )}
-                    >
-                      {formatNetR(day.netR)}
-                    </span>
-                    <span className="truncate text-caption text-text-faint">
-                      {setupLabel(day.mainSetupId)}
-                    </span>
-                    <span className="mt-auto flex items-center justify-between gap-1">
-                      <span
-                        aria-hidden
-                        className={cn(
-                          'h-1.5 w-1.5 rounded-full',
-                          day.compliance === 'compliant'
-                            ? 'bg-success'
-                            : day.compliance === 'violation'
-                              ? 'bg-danger'
-                              : day.compliance === 'partial'
-                                ? 'bg-warning'
-                                : 'bg-text-faint',
-                        )}
-                      />
-                      <span className="num text-caption text-text-faint">
-                        {day.emotionalScore}/10
-                      </span>
-                    </span>
-                  </>
-                ) : (
-                  <span className="mt-auto text-caption text-text-faint">no trades</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <ul className="flex flex-wrap items-center gap-2 text-caption text-text-faint">
-        {(Object.keys(CALENDAR_DAY_STATE_LABEL) as CalendarDayState[]).map((state) => (
-          <li key={state} className="inline-flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className={cn('h-2 w-2 rounded-[var(--radius-mark)] border', STATE_STYLE[state])}
-            />
-            {CALENDAR_DAY_STATE_LABEL[state]}
-          </li>
-        ))}
-        <li className="inline-flex items-center gap-1.5">
-          <span className="num">n/10</span> self-reported emotional read
-        </li>
-      </ul>
-
-      {selectedDay === undefined ? (
-        <EmptyState
-          icon={<CalendarDays size={22} aria-hidden />}
-          title={
-            selectedDate === null ? 'Select a day to read it' : 'No trades recorded on that day'
-          }
-          description={
-            selectedDate === null
-              ? "Choosing a date shows that day's trades, its committed risk, the mistakes and the lesson taken from it."
-              : 'A day with no record is a day with no record. Nothing is filled in to make the panel look complete.'
-          }
-          hint={
-            selectedDate === null
-              ? 'The month grid shows trade count, net R and the main setup for every day that was traded.'
-              : 'Pick another day, or clear the selection.'
-          }
-        />
-      ) : (
-        <Card tone="sunken" className="space-y-3 p-4">
-          <header className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h4 className="text-body font-semibold text-text">
-                {formatDayLabel(selectedDay.date)}
-              </h4>
-              <p className="text-caption text-text-muted">
-                {CALENDAR_DAY_STATE_LABEL[selectedDay.state]} · {selectedDay.tradeCount}{' '}
-                {selectedDay.tradeCount === 1 ? 'trade' : 'trades'} · {formatNetR(selectedDay.netR)}{' '}
-                · {selectedDay.riskTotal.toLocaleString('en-US')} committed risk
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <RuleComplianceBadge compliance={selectedDay.compliance} />
-              <SetupBadge setupId={selectedDay.mainSetupId} />
-              <Badge tone="outline">emotion {selectedDay.emotionalScore}/10</Badge>
-            </div>
-          </header>
-
-          {selectedTrades.length > 0 ? (
-            <ul className="divide-y divide-border rounded-[var(--radius-control)] border border-border bg-surface">
-              {selectedTrades.map((trade) => (
-                <li key={trade.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
-                  <span className="num text-caption text-text-muted">{trade.ref}</span>
-                  <span className="text-body text-text">{trade.symbol}</span>
-                  <span className="num text-caption text-text-muted">
-                    {RESULT_LABEL[trade.result]}
-                  </span>
-                  <span className="num ms-auto text-caption text-text-muted">
-                    {trade.actual?.actualR == null
-                      ? 'not scored'
-                      : `${trade.actual.actualR > 0 ? '+' : ''}${trade.actual.actualR.toFixed(2)}R`}
-                  </span>
-                  <span className="num text-caption text-text-faint">
-                    closed{' '}
-                    {trade.closedAt === null ? '—' : formatTimestamp(trade.closedAt).slice(11)}
-                  </span>
-                </li>
+                >
+                  {option.icon}
+                  {option.label}
+                </button>
               ))}
-            </ul>
-          ) : (
-            <p className="text-caption text-text-faint">
-              The day has a summary but no openable records in this view.
-            </p>
-          )}
+            </CardTile>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onSelectDate(null)}
+              disabled={selectedDate === null}
+              label="Clear the selected day"
+            >
+              Clear day
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
 
-          <div className="grid gap-3 lg:grid-cols-2">
-            <div>
-              <p className="text-caption font-semibold text-text-muted uppercase">Mistakes</p>
-              {selectedDay.mistakes.length === 0 ? (
-                <p className="mt-1 text-caption text-text-faint">Nothing recorded as a mistake.</p>
-              ) : (
-                <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                  {selectedDay.mistakes.map((mistake) => (
-                    <li key={mistake}>
-                      <MistakeTag label={mistake} />
+      <CardContent className="space-y-4">
+        <div>
+          <div className="mb-1 grid grid-cols-7 gap-1.5">
+            {WEEKDAY_LABELS.map((label) => (
+              <p key={label} className="px-1 text-caption font-semibold text-text-faint uppercase">
+                {label}
+              </p>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1.5">
+            {shown.map((cell, index) => {
+              if (cell.date === null || cell.dayNumber === null) {
+                return (
+                  <div
+                    key={`blank-${index}`}
+                    aria-hidden
+                    className="min-h-[92px] rounded-[var(--radius-control)]"
+                  />
+                );
+              }
+              const day = byDate.get(cell.date);
+              const state: CalendarDayState = day?.state ?? 'flat';
+              const active = cell.date === selectedDate;
+              return (
+                <button
+                  key={cell.date}
+                  type="button"
+                  onClick={() => onSelectDate(active ? null : cell.date)}
+                  aria-pressed={active}
+                  aria-label={
+                    day
+                      ? `${formatDayLabel(cell.date)}: ${day.tradeCount} trades, ${CALENDAR_DAY_STATE_LABEL[state]}, ${formatNetR(day.netR)}`
+                      : `${formatDayLabel(cell.date)}: no trades recorded`
+                  }
+                  className={cn(
+                    'flex min-h-[92px] flex-col gap-1 rounded-[var(--radius-control)] border p-1.5 text-start',
+                    'transition-colors duration-[var(--duration-fast)]',
+                    STATE_STYLE[state],
+                    active ? 'ring-2 ring-[var(--color-focus)]' : 'hover:border-border-strong',
+                  )}
+                >
+                  <span className="flex items-center justify-between gap-1">
+                    <span className="num text-caption text-text-muted">{cell.dayNumber}</span>
+                    {day ? (
+                      <span className="num text-caption text-text-faint">{day.tradeCount}t</span>
+                    ) : (
+                      <span className="text-caption text-text-faint">—</span>
+                    )}
+                  </span>
+                  {day ? (
+                    <>
+                      <span
+                        className={cn(
+                          'num text-caption font-medium',
+                          day.netR === null
+                            ? 'text-text-faint'
+                            : day.netR > 0
+                              ? 'text-success'
+                              : day.netR < 0
+                                ? 'text-danger'
+                                : 'text-text-muted',
+                        )}
+                      >
+                        {formatNetR(day.netR)}
+                      </span>
+                      <span className="truncate text-caption text-text-faint">
+                        {setupLabel(day.mainSetupId)}
+                      </span>
+                      <span className="mt-auto flex items-center justify-between gap-1">
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'h-1.5 w-1.5 rounded-full',
+                            day.compliance === 'compliant'
+                              ? 'bg-success'
+                              : day.compliance === 'violation'
+                                ? 'bg-danger'
+                                : day.compliance === 'partial'
+                                  ? 'bg-warning'
+                                  : 'bg-text-faint',
+                          )}
+                        />
+                        <span className="num text-caption text-text-faint">
+                          {day.emotionalScore}/10
+                        </span>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="mt-auto text-caption text-text-faint">no trades</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <ul className="flex flex-wrap items-center gap-2 text-caption text-text-faint">
+          {(Object.keys(CALENDAR_DAY_STATE_LABEL) as CalendarDayState[]).map((state) => (
+            <li key={state} className="inline-flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className={cn('h-2 w-2 rounded-[var(--radius-mark)] border', STATE_STYLE[state])}
+              />
+              {CALENDAR_DAY_STATE_LABEL[state]}
+            </li>
+          ))}
+          <li className="inline-flex items-center gap-1.5">
+            <span className="num">n/10</span> self-reported emotional read
+          </li>
+        </ul>
+
+        {selectedDay === undefined ? (
+          <EmptyState
+            icon={<CalendarDays size={22} aria-hidden />}
+            title={
+              selectedDate === null ? 'Select a day to read it' : 'No trades recorded on that day'
+            }
+            description={
+              selectedDate === null
+                ? "Choosing a date shows that day's trades, its committed risk, the mistakes and the lesson taken from it."
+                : 'A day with no record is a day with no record. Nothing is filled in to make the panel look complete.'
+            }
+            hint={
+              selectedDate === null
+                ? 'The month grid shows trade count, net R and the main setup for every day that was traded.'
+                : 'Pick another day, or clear the selection.'
+            }
+          />
+        ) : (
+          <Card tone="sunken">
+            <CardHeader
+              divider
+              actions={
+                <div className="flex flex-wrap items-center gap-2">
+                  <RuleComplianceBadge compliance={selectedDay.compliance} />
+                  <SetupBadge setupId={selectedDay.mainSetupId} />
+                  <Badge tone="outline">emotion {selectedDay.emotionalScore}/10</Badge>
+                </div>
+              }
+            >
+              <div className="min-w-0">
+                <CardTitle className="text-body">{formatDayLabel(selectedDay.date)}</CardTitle>
+                <CardDescription>
+                  {CALENDAR_DAY_STATE_LABEL[selectedDay.state]} · {selectedDay.tradeCount}{' '}
+                  {selectedDay.tradeCount === 1 ? 'trade' : 'trades'} ·{' '}
+                  {formatNetR(selectedDay.netR)} · {selectedDay.riskTotal.toLocaleString('en-US')}{' '}
+                  committed risk
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {selectedTrades.length > 0 ? (
+                <ul className="divide-y divide-border rounded-[var(--radius-control)] border border-border bg-surface">
+                  {selectedTrades.map((trade) => (
+                    <li key={trade.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
+                      <span className="num text-caption text-text-muted">{trade.ref}</span>
+                      <span className="text-body text-text">{trade.symbol}</span>
+                      <span className="num text-caption text-text-muted">
+                        {RESULT_LABEL[trade.result]}
+                      </span>
+                      <span className="num ms-auto text-caption text-text-muted">
+                        {trade.actual?.actualR == null
+                          ? 'not scored'
+                          : `${trade.actual.actualR > 0 ? '+' : ''}${trade.actual.actualR.toFixed(2)}R`}
+                      </span>
+                      <span className="num text-caption text-text-faint">
+                        closed{' '}
+                        {trade.closedAt === null ? '—' : formatTimestamp(trade.closedAt).slice(11)}
+                      </span>
                     </li>
                   ))}
                 </ul>
+              ) : (
+                <p className="text-caption text-text-faint">
+                  The day has a summary but no openable records in this view.
+                </p>
               )}
-            </div>
-            <div>
-              <p className="text-caption font-semibold text-text-muted uppercase">Lesson</p>
-              <p className="mt-1 text-caption text-text-muted">
-                {selectedDay.lesson === '' ? 'No lesson recorded.' : selectedDay.lesson}
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-start gap-2 border-t border-border pt-3">
-            <ChevronRight size={13} aria-hidden className="mt-0.5 shrink-0 text-text-faint" />
-            <p className="text-caption text-text-faint">
-              {selectedDay.notes === '' ? 'No notes for the day.' : selectedDay.notes}
-            </p>
-          </div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div>
+                  <p className="text-caption font-semibold text-text-muted uppercase">Mistakes</p>
+                  {selectedDay.mistakes.length === 0 ? (
+                    <p className="mt-1 text-caption text-text-faint">
+                      Nothing recorded as a mistake.
+                    </p>
+                  ) : (
+                    <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                      {selectedDay.mistakes.map((mistake) => (
+                        <li key={mistake}>
+                          <MistakeTag label={mistake} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <p className="text-caption font-semibold text-text-muted uppercase">Lesson</p>
+                  <p className="mt-1 text-caption text-text-muted">
+                    {selectedDay.lesson === '' ? 'No lesson recorded.' : selectedDay.lesson}
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-2 text-caption text-text-faint">
-            <ChevronLeft size={12} aria-hidden />
-            Screenshots for these records live on each trade; open a record to see them.
-          </div>
-        </Card>
-      )}
+              <div className="flex items-start gap-2 border-t border-border pt-3">
+                <ChevronRight size={13} aria-hidden className="mt-0.5 shrink-0 text-text-faint" />
+                <p className="text-caption text-text-faint">
+                  {selectedDay.notes === '' ? 'No notes for the day.' : selectedDay.notes}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 text-caption text-text-faint">
+                <ChevronLeft size={12} aria-hidden />
+                Screenshots for these records live on each trade; open a record to see them.
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </CardContent>
     </Card>
   );
 }

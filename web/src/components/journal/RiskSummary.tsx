@@ -1,5 +1,5 @@
 import { Badge } from '../Badge';
-import { Card, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { RMultipleIndicator } from './RMultipleIndicator';
 import type { JournalTrade } from '../../mock/journal';
@@ -75,73 +75,82 @@ export function RiskSummary({ trade, className }: { trade: JournalTrade; classNa
   const divergences = rows.filter((row) => row.differs).length;
 
   return (
-    <Card as="section" aria-label="Planned versus actual" className={cn('p-4', className)}>
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+    <Card as="section" aria-label="Planned versus actual" className={className}>
+      <CardHeader
+        divider
+        actions={
+          <Badge tone={divergences === 0 ? 'success' : 'warning'}>
+            {divergences === 0
+              ? 'executed as planned'
+              : `${divergences} ${divergences === 1 ? 'divergence' : 'divergences'}`}
+          </Badge>
+        }
+      >
+        <div className="min-w-0">
           <CardTitle>Planned versus actual</CardTitle>
-          <p className="mt-0.5 text-caption text-text-muted">
+          <CardDescription>
             The plan is what was written before entry; the actual column is what the record shows.
-          </p>
+          </CardDescription>
         </div>
-        <Badge tone={divergences === 0 ? 'success' : 'warning'}>
-          {divergences === 0
-            ? 'executed as planned'
-            : `${divergences} ${divergences === 1 ? 'divergence' : 'divergences'}`}
-        </Badge>
-      </header>
+      </CardHeader>
 
-      <table className="mt-3 w-full border-collapse">
-        <thead>
-          <tr className="border-b border-border">
-            <th
-              scope="col"
-              className="py-1.5 text-start text-caption font-semibold text-text-faint uppercase"
-            >
-              Measure
-            </th>
-            <th
-              scope="col"
-              className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-            >
-              Planned
-            </th>
-            <th
-              scope="col"
-              className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-            >
-              Actual
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.label} className="border-b border-border last:border-b-0">
-              <th scope="row" className="py-2 text-start text-caption font-normal text-text-muted">
-                {row.label}
-              </th>
-              <td className="num py-2 text-end text-caption text-text-muted">{row.planned}</td>
-              <td
-                className={cn(
-                  'num py-2 text-end text-caption',
-                  row.differs ? 'text-warning' : 'text-text',
-                )}
+      <CardContent className="space-y-3">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-border">
+              <th
+                scope="col"
+                className="py-1.5 text-start text-caption font-semibold text-text-faint uppercase"
               >
-                {row.actual}
-              </td>
+                Measure
+              </th>
+              <th
+                scope="col"
+                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
+              >
+                Planned
+              </th>
+              <th
+                scope="col"
+                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
+              >
+                Actual
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.label} className="border-b border-border last:border-b-0">
+                <th
+                  scope="row"
+                  className="py-2 text-start text-caption font-normal text-text-muted"
+                >
+                  {row.label}
+                </th>
+                <td className="num py-2 text-end text-caption text-text-muted">{row.planned}</td>
+                <td
+                  className={cn(
+                    'num py-2 text-end text-caption',
+                    row.differs ? 'text-warning' : 'text-text',
+                  )}
+                >
+                  {row.actual}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3">
-        <span className="text-caption text-text-muted">Realised result</span>
-        <RMultipleIndicator value={actual?.actualR ?? null} planned={trade.plan.plannedRr} />
-        {actual?.actualR == null ? (
-          <span className="text-caption text-text-faint">
-            Unscored: the record has no exit, so there is no realised multiple to show.
-          </span>
-        ) : null}
-      </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
+          <span className="text-caption text-text-muted">Realised result</span>
+          <RMultipleIndicator value={actual?.actualR ?? null} planned={trade.plan.plannedRr} />
+          {actual?.actualR == null ? (
+            <span className="text-caption text-text-faint">
+              Unscored: the record has no exit, so there is no realised multiple to show.
+            </span>
+          ) : null}
+        </div>
+      </CardContent>
     </Card>
   );
 }

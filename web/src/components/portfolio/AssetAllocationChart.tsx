@@ -1,6 +1,6 @@
 import type { AllocationBucket, WeightSet } from '@shared/portfolio/model';
 import { Badge } from '../Badge';
-import { Card, CardContent } from '../Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatPercent } from './labels';
 
@@ -42,9 +42,11 @@ export function AssetAllocationChart({
   if (weights === null) {
     return (
       <Card className={className}>
-        <CardContent className="space-y-2 pt-4">
-          <h3 className="text-body font-medium text-text">{title}</h3>
-          <p className="text-body-sm text-text-muted">
+        <CardHeader divider>
+          <CardTitle className="text-body">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-body text-text-muted">
             No shares of this kind could be formed, so nothing is drawn here. That is the honest
             answer rather than a chart of zeroes: every bar would imply a measurement that does not
             exist.
@@ -58,9 +60,9 @@ export function AssetAllocationChart({
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-4 pt-4">
+      <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
-          <h3 className="text-body font-medium text-text">{title}</h3>
+          <CardTitle className="text-body">{title}</CardTitle>
           <Badge tone="outline">
             {weights.basis === 'market-value'
               ? 'share of market value'
@@ -73,7 +75,8 @@ export function AssetAllocationChart({
             total {formatPercent(weights.totalPercent)}
           </Badge>
         </div>
-
+      </CardHeader>
+      <CardContent className="space-y-4">
         <p className="text-caption text-text-faint">
           Coverage: {formatPercent(weights.coveragePercent)} of the declared document. A share here
           is a share of this population only — never of a mixture of declared weights and market
@@ -81,7 +84,7 @@ export function AssetAllocationChart({
         </p>
 
         {buckets.length === 0 ? (
-          <p className="text-body-sm text-text-muted">
+          <p className="text-body text-text-muted">
             Nothing in this population could be grouped, so there is no breakdown to show.
           </p>
         ) : (
@@ -89,7 +92,7 @@ export function AssetAllocationChart({
             {buckets.map((bucket) => (
               <li key={bucket.key} className="space-y-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-body-sm text-text">{bucket.label}</span>
+                  <span className="text-body text-text">{bucket.label}</span>
                   <span className="text-caption tabular-nums text-text-muted">
                     {formatPercent(bucket.weightPercent)} · {bucket.positions} position
                     {bucket.positions === 1 ? '' : 's'}
@@ -112,7 +115,7 @@ export function AssetAllocationChart({
 
         {weights.largest.length > 0 ? (
           <div className="space-y-2">
-            <h4 className="text-body-sm font-medium text-text">Largest shares</h4>
+            <h4 className="text-body font-medium text-text">Largest shares</h4>
             <ul className="flex flex-wrap gap-1.5" role="list">
               {weights.largest.map((share) => (
                 <li key={share.id}>

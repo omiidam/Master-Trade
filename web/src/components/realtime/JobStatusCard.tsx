@@ -77,7 +77,7 @@ export function JobStatusCard({
       tone={attention ? 'raised' : 'default'}
       className={cn(attention && 'border-danger-border', className)}
     >
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <CardTitle className="text-body">{kindLabel ?? job.kind}</CardTitle>
           <p className="mt-0.5 num truncate text-caption text-text-faint">{job.id}</p>

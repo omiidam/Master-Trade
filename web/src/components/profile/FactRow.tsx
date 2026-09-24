@@ -79,12 +79,12 @@ export function FactRow({ fieldKey, field, status, ageDays, required }: FactRowP
     <div className="flex flex-col gap-2 border-b border-border/60 py-3 last:border-b-0 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2">
-          <span className="text-body-sm font-medium text-text">{FIELD_LABELS[fieldKey]}</span>
+          <span className="text-body font-medium text-text">{FIELD_LABELS[fieldKey]}</span>
           {!required ? <span className="text-caption text-text-faint">optional</span> : null}
         </div>
         <p
           className={cn(
-            'text-body-sm break-words',
+            'text-body break-words',
             missing ? 'text-text-faint italic' : 'text-text-muted',
           )}
         >

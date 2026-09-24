@@ -33,6 +33,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardDivider,
   CardHeader,
   CardTile,
   CardTitle,
@@ -101,7 +102,7 @@ export function DecisionSummary({
   const scope = decision.symbol ?? decision.portfolioId ?? 'Composition-wide';
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <CardTitle className="truncate">{scope}</CardTitle>
           <CardDescription>
@@ -156,10 +157,13 @@ export function DecisionSummary({
         />
       </CardContent>
       {decision.rationale === null ? null : (
-        <CardContent className="border-t border-border pt-3">
-          <p className="text-caption text-text-muted">Your rationale, as you recorded it</p>
-          <p className="mt-1 text-body text-text">{decision.rationale}</p>
-        </CardContent>
+        <>
+          <CardDivider />
+          <CardContent className="pt-3">
+            <p className="text-caption text-text-muted">Your rationale, as you recorded it</p>
+            <p className="mt-1 text-body text-text">{decision.rationale}</p>
+          </CardContent>
+        </>
       )}
     </Card>
   );
@@ -229,7 +233,7 @@ export function ExpectedVsActualPanel({
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <CardTitle>Expected versus actual</CardTitle>
           <CardDescription>
@@ -302,7 +306,7 @@ export function DecisionReadinessPanel({
 }) {
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <CardTitle>Evaluation readiness</CardTitle>
           <CardDescription>{EVALUATION_READINESS_MEANING[readiness.readiness]}</CardDescription>
@@ -385,7 +389,7 @@ export function EvaluationLimitationsPanel({
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <CardTitle>Limitations and assumptions</CardTitle>
           <CardDescription>
@@ -425,7 +429,7 @@ export function EvaluationLimitationsPanel({
 export function ObservationCard({ observation }: { observation: DecisionObservation }) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <CardTitle className="text-body">{observation.title}</CardTitle>
           <CardDescription>
@@ -484,7 +488,7 @@ export function EvaluationSummary({
   return (
     <div className={cn('space-y-4', className)}>
       <Card>
-        <CardHeader>
+        <CardHeader divider>
           <div className="min-w-0">
             <CardTitle>What the record says happened</CardTitle>
             <CardDescription>
@@ -561,7 +565,7 @@ export function EvaluationHistory({
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <CardTitle>Evaluation history</CardTitle>
           <CardDescription>

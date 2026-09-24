@@ -40,7 +40,7 @@ export function orderIssues(issues: readonly QualityIssue[]): QualityIssue[] {
 export function ValidationIssueList({ issues, emptyMessage, className }: ValidationIssueListProps) {
   if (issues.length === 0) {
     return (
-      <p className={className ?? 'text-body-sm text-text-muted'}>
+      <p className={className ?? 'text-body text-text-muted'}>
         {emptyMessage ?? 'No findings. Every input considered is present, well-formed and current.'}
       </p>
     );
@@ -52,12 +52,12 @@ export function ValidationIssueList({ issues, emptyMessage, className }: Validat
         <CardTile key={`${issue.field}:${issue.code}:${index}`} className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <DataQualityBadge kind="severity" value={issue.severity} />
-            <span className="text-body-sm font-medium text-text">{inputLabel(issue.field)}</span>
+            <span className="text-body font-medium text-text">{inputLabel(issue.field)}</span>
             <span className="text-caption text-text-faint">
               · {dimensionLabel(issue.dimension)}
             </span>
           </div>
-          <p className="text-body-sm text-text-muted">{issue.detail}</p>
+          <p className="text-body text-text-muted">{issue.detail}</p>
           <p className="text-caption text-text-faint">
             <span className="font-mono">{issue.code}</span> — {issueCodeLabel(issue.code)}
           </p>

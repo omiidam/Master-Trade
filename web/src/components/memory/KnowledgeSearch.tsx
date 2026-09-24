@@ -59,7 +59,7 @@ export function KnowledgeSearch({
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div>
           <CardTitle className="text-body">{title}</CardTitle>
           <CardDescription>

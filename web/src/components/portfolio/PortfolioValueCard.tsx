@@ -1,7 +1,7 @@
 import { Coins, TriangleAlert } from 'lucide-react';
 import type { PortfolioMetrics } from '@shared/portfolio/model';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardTile } from '../Card';
+import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
 import { formatMoney, formatSignedPercent } from './labels';
 
 /**
@@ -32,18 +32,20 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-4 pt-4">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <CardHeader divider>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <Coins size={16} aria-hidden className="text-text-muted" />
-          <h3 className="text-body font-medium text-text">Portfolio value</h3>
+          <CardTitle>Portfolio value</CardTitle>
           <Badge tone={metrics.valuationComplete ? 'success' : 'warning'}>
             {metrics.valuationComplete ? 'every position valued' : 'incomplete valuation'}
           </Badge>
         </div>
+      </CardHeader>
 
+      <CardContent className="space-y-4">
         {priced === 0 ? (
           <CardTile space="roomy">
-            <p className="text-body-sm text-text">
+            <p className="text-body text-text">
               No position has both a quantity and a current price, so there is no value to report.
             </p>
             <p className="text-caption text-text-muted">
@@ -69,7 +71,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
 
         {unsummable ? (
           <div className="space-y-2">
-            <p className="inline-flex items-start gap-1.5 text-body-sm text-warning">
+            <p className="inline-flex items-start gap-1.5 text-body text-warning">
               <TriangleAlert size={14} aria-hidden className="mt-0.5 shrink-0" />
               <span>
                 The priced positions are not all in one currency, so a single total is not produced.
@@ -134,8 +136,8 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
 
         {metrics.assumptions.length > 0 ? (
           <div className="space-y-1">
-            <h4 className="text-body-sm font-medium text-text">What these figures rest on</h4>
-            <ul className="list-disc space-y-1 pl-5 text-body-sm text-text-muted" role="list">
+            <h4 className="text-body font-medium text-text">What these figures rest on</h4>
+            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
               {metrics.assumptions.map((assumption) => (
                 <li key={assumption.id}>
                   {assumption.statement}

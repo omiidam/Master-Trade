@@ -223,13 +223,13 @@ export function ProfilePage() {
           <Grid columns={2}>
             <CompletenessMeter assessment={assessment} />
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle>How to read this page</CardTitle>
                 <CardDescription>
                   Every value is labelled with where it came from and whether it is still current.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 text-body-sm text-text-muted">
+              <CardContent className="space-y-2 text-body text-text-muted">
                 <p>
                   <span className="text-text">Confirmed</span> — you told us this, inside its
                   freshness window.
@@ -264,7 +264,7 @@ export function ProfilePage() {
 
         <TabPanel value="context" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <CardTitle>Declared context</CardTitle>
               <CardDescription>
                 {FIELD_KEYS.length} fields. The value, its source and its age are shown together,
@@ -294,7 +294,7 @@ export function ProfilePage() {
         <TabPanel value="quality" className="space-y-4">
           {qualityStatus === 'idle' || qualityStatus === 'loading' ? (
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle>Assessing the declared inputs</CardTitle>
                 <CardDescription>
                   Deterministic checks over what you have declared and what each capability declares
@@ -352,7 +352,7 @@ export function ProfilePage() {
                   <h3 className="text-body font-medium text-text">
                     May each analysis run, and in what form?
                   </h3>
-                  <p className="text-body-sm text-text-muted">
+                  <p className="text-body text-text-muted">
                     The same gate the agent consults before a model is asked to reason. It is
                     evaluated here from the stored context, on the server, so the answer you read
                     and the answer the agent acts on are one and the same.
@@ -401,7 +401,7 @@ export function ProfilePage() {
 
         <TabPanel value="history" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <CardTitle>Context history</CardTitle>
               <CardDescription>
                 Versions are append-only. A save adds a version; nothing is rewritten, so the
@@ -422,7 +422,7 @@ export function ProfilePage() {
                       key={entry.version}
                       className="flex items-center justify-between gap-3"
                     >
-                      <span className="text-body-sm text-text">Version {entry.version}</span>
+                      <span className="text-body text-text">Version {entry.version}</span>
                       <span className="text-caption text-text-muted">
                         {new Date(entry.createdAt).toLocaleString()}
                       </span>

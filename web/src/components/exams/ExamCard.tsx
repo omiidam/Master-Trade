@@ -59,7 +59,7 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
 
   return (
     <Card interactive className={cn(locked && 'opacity-70', className)}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <CardTitle className="text-body">{exam.title}</CardTitle>
           <CardDescription>

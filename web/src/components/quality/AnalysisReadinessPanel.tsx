@@ -7,8 +7,7 @@ import { AssumptionNotice } from './AssumptionNotice';
 import { ClarificationQuestionCard } from './ClarificationQuestionCard';
 import { DimensionGrid } from './InputQualitySummary';
 import { ValidationIssueList } from './ValidationIssueList';
-import { Card, CardTile } from '../Card';
-import { cn } from '../../lib/cn';
+import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
 
 /**
  * Whether one requested analysis may run, and in what form.
@@ -60,15 +59,17 @@ export function AnalysisReadinessPanel({
   const planned = decision.capability === 'planned';
 
   return (
-    <Card
-      as="section"
-      className={cn('space-y-4 p-4', className)}
-      aria-label={`Readiness for ${decision.requestedType}`}
-    >
-      <header className="space-y-2">
-        <div className="flex flex-wrap items-center gap-1.5">
+    <Card as="section" className={className} aria-label={`Readiness for ${decision.requestedType}`}>
+      {/*
+        The panel's name and the rule under it come from the card system, and the "why" moves into
+        the body with the rest of the reasoning: a title head carrying three paragraphs is not a
+        head, and the badges belong level with the name so the verdict is readable before the
+        explanation is.
+      */}
+      <CardHeader divider>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <GaugeCircle size={16} aria-hidden className="text-text-muted" />
-          <h3 className="text-body font-medium text-text">{decision.requestedType}</h3>
+          <CardTitle className="text-body">{decision.requestedType}</CardTitle>
           <Badge tone={planned ? 'outline' : 'neutral'}>
             {decision.capability === 'planned'
               ? 'Declared, not implemented'
@@ -82,107 +83,116 @@ export function AnalysisReadinessPanel({
             <DataQualityBadge kind="classification" value={decision.classification} />
           )}
         </div>
+      </CardHeader>
 
-        <p className="text-body-sm text-text-muted">
+      <CardContent className="space-y-3">
+        <p className="text-body text-text-muted">
           <span className="text-text">Why: </span>
           {describeDecisionCode(decision.decidedBy)}
         </p>
         <p className="text-caption text-text-faint font-mono">{decision.decidedBy}</p>
-      </header>
 
-      {planned ? (
-        <p className="text-body-sm text-warning">
-          The inputs were assessed and the verdict stands. This capability has not been built yet,
-          so no analysis is produced — that is a gap in the product, not a problem with your inputs.
-        </p>
-      ) : null}
+        {planned ? (
+          <p className="text-body text-warning">
+            The inputs were assessed and the verdict stands. This capability has not been built yet,
+            so no analysis is produced — that is a gap in the product, not a problem with your
+            inputs.
+          </p>
+        ) : null}
 
-      {decision.capabilityNote === null ? null : (
-        <p className="text-body-sm text-text-muted">{decision.capabilityNote}</p>
-      )}
+        {decision.capabilityNote === null ? null : (
+          <p className="text-body text-text-muted">{decision.capabilityNote}</p>
+        )}
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {COUNT_ROWS.map((row) => (
-          <CardTile key={row.key}>
-            <p className="text-caption text-text-muted">{row.label}</p>
-            <p className="text-h3 font-semibold tabular-nums text-text">
-              {decision.counts[row.key]}
-            </p>
-          </CardTile>
-        ))}
-      </div>
-
-      <DimensionGrid dimensions={decision.dimensions} />
-
-      {decision.limitations.length > 0 ? (
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5">
-            <TriangleAlert size={14} aria-hidden className="text-warning" />
-            <h4 className="text-body-sm font-medium text-text">
-              Limitations this answer would carry
-            </h4>
-          </div>
-          <ul className="list-disc space-y-1 pl-5 text-body-sm text-text-muted" role="list">
-            {decision.limitations.map((limitation, index) => (
-              <li key={index}>{limitation}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {decision.assumptions.length > 0 ? (
-        <div className="space-y-2">
-          <h4 className="text-body-sm font-medium text-text">Substitutions and premises</h4>
-          {decision.assumptions.map((notice) => (
-            <AssumptionNotice key={`${notice.field}:${notice.origin}`} notice={notice} />
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {COUNT_ROWS.map((row) => (
+            <CardTile key={row.key}>
+              <p className="text-caption text-text-muted">{row.label}</p>
+              <p className="text-h3 font-semibold tabular-nums text-text">
+                {decision.counts[row.key]}
+              </p>
+            </CardTile>
           ))}
         </div>
-      ) : null}
 
-      {decision.clarifications.length > 0 ? (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5">
-            <ClipboardCheck size={14} aria-hidden className="text-text-muted" />
-            <h4 className="text-body-sm font-medium text-text">
-              {refuses ? 'Required before an answer exists' : 'Would improve the answer'}
+        <DimensionGrid dimensions={decision.dimensions} />
+
+        {decision.limitations.length > 0 ? (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <TriangleAlert size={14} aria-hidden className="text-warning" />
+              <h4 className="text-caption font-semibold text-text-muted uppercase">
+                Limitations this answer would carry
+              </h4>
+            </div>
+            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
+              {decision.limitations.map((limitation, index) => (
+                <li key={index}>{limitation}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {decision.assumptions.length > 0 ? (
+          <div className="space-y-2">
+            <h4 className="text-caption font-semibold text-text-muted uppercase">
+              Substitutions and premises
             </h4>
-          </div>
-          {decision.clarifications.map((question, index) => (
-            <ClarificationQuestionCard
-              key={`${question.field}:${question.reason}`}
-              question={question}
-              index={index + 1}
-              total={decision.clarifications.length}
-              {...(answerLabel === undefined ? {} : { answerLabel })}
-              {...(onAnswer === undefined ? {} : { onAnswer })}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {decision.analysable.length > 0 ? (
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck size={14} aria-hidden className="text-success" />
-            <h4 className="text-body-sm font-medium text-text">What can still be analysed</h4>
-          </div>
-          <ul className="list-disc space-y-1 pl-5 text-body-sm text-text-muted" role="list">
-            {decision.analysable.map((topic, index) => (
-              <li key={index}>{topic}</li>
+            {decision.assumptions.map((notice) => (
+              <AssumptionNotice key={`${notice.field}:${notice.origin}`} notice={notice} />
             ))}
-          </ul>
+          </div>
+        ) : null}
+
+        {decision.clarifications.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <ClipboardCheck size={14} aria-hidden className="text-text-muted" />
+              <h4 className="text-caption font-semibold text-text-muted uppercase">
+                {refuses ? 'Required before an answer exists' : 'Would improve the answer'}
+              </h4>
+            </div>
+            {decision.clarifications.map((question, index) => (
+              <ClarificationQuestionCard
+                key={`${question.field}:${question.reason}`}
+                question={question}
+                index={index + 1}
+                total={decision.clarifications.length}
+                {...(answerLabel === undefined ? {} : { answerLabel })}
+                {...(onAnswer === undefined ? {} : { onAnswer })}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {decision.analysable.length > 0 ? (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck size={14} aria-hidden className="text-success" />
+              <h4 className="text-caption font-semibold text-text-muted uppercase">
+                What can still be analysed
+              </h4>
+            </div>
+            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
+              {decision.analysable.map((topic, index) => (
+                <li key={index}>{topic}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <div className="space-y-2">
+          <h4 className="text-caption font-semibold text-text-muted uppercase">
+            Findings behind this verdict
+          </h4>
+          <ValidationIssueList
+            issues={decision.issues}
+            emptyMessage="No findings: every input this analysis consumes is present, well-formed and current."
+          />
         </div>
-      ) : null}
 
-      <div className="space-y-2">
-        <h4 className="text-body-sm font-medium text-text">Findings behind this verdict</h4>
-        <ValidationIssueList
-          issues={decision.issues}
-          emptyMessage="No findings: every input this analysis consumes is present, well-formed and current."
-        />
-      </div>
-
-      <p className="text-caption text-text-faint">{decision.note}</p>
+        <p className="text-caption text-text-faint">{decision.note}</p>
+      </CardContent>
     </Card>
   );
 }

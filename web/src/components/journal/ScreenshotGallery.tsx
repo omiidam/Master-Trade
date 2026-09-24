@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Eye, ImageOff } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
-import { Card, CardTile, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { FullscreenChartViewer } from './FullscreenChartViewer';
 import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
@@ -131,96 +131,31 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
     setIndex((value) => (value + delta + attachments.length) % attachments.length);
 
   return (
-    <Card
-      as="section"
-      aria-label="Screenshots and attachments"
-      className={cn('space-y-3 p-4', className)}
-    >
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <CardTitle>Screenshots and attachments</CardTitle>
-          <p className="mt-0.5 text-caption text-text-muted">{JOURNAL_ATTACHMENT_NOTE}</p>
-        </div>
-        <Badge tone="outline">
-          {attachments.length} {attachments.length === 1 ? 'attachment' : 'attachments'}
-        </Badge>
-      </header>
-
-      <AttachmentPreview attachment={current} height={320} />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-body text-text">{current.label}</p>
-          <p className="num text-caption text-text-faint">
-            captured {formatTimestamp(current.capturedAt)} · {ATTACHMENT_KIND_LABEL[current.kind]}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => step(-1)}
-            label="Previous attachment"
-            leadingIcon={<ChevronLeft size={14} aria-hidden />}
-          >
-            Previous
-          </Button>
-          <span className="num text-caption text-text-muted">
-            {clamped + 1} / {attachments.length}
-          </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => step(1)}
-            label="Next attachment"
-            trailingIcon={<ChevronRight size={14} aria-hidden />}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
-
-      <ul className="flex flex-wrap gap-2">
-        {attachments.map((attachment, position) => (
-          <li key={attachment.id}>
-            <button
-              type="button"
-              onClick={() => setIndex(position)}
-              aria-pressed={position === clamped}
-              aria-label={`Show ${attachment.label}`}
-              className={cn(
-                'w-[112px] overflow-hidden rounded-[var(--radius-control)] border p-0.5 text-start',
-                'transition-colors duration-[var(--duration-fast)]',
-                position === clamped
-                  ? 'border-primary'
-                  : 'border-border hover:border-border-strong',
-              )}
-            >
-              <AttachmentPreview attachment={attachment} height={62} className="rounded-[6px]" />
-              <span className="mt-1 block truncate px-1 pb-1 text-caption text-text-muted">
-                {ATTACHMENT_KIND_LABEL[attachment.kind]}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <Button
-        variant="subtle"
-        size="sm"
-        onClick={() => setOpen(true)}
-        label="Open attachment fullscreen"
-        leadingIcon={<Eye size={14} aria-hidden />}
+    <Card as="section" aria-label="Screenshots and attachments" className={className}>
+      <CardHeader
+        divider
+        actions={
+          <Badge tone="outline">
+            {attachments.length} {attachments.length === 1 ? 'attachment' : 'attachments'}
+          </Badge>
+        }
       >
-        View fullscreen
-      </Button>
+        <div className="min-w-0">
+          <CardTitle>Screenshots and attachments</CardTitle>
+          <CardDescription>{JOURNAL_ATTACHMENT_NOTE}</CardDescription>
+        </div>
+      </CardHeader>
 
-      <FullscreenChartViewer
-        open={open}
-        onOpenChange={setOpen}
-        title={`${current.label}`}
-        description={JOURNAL_ATTACHMENT_NOTE}
-        toolbar={
-          <div className="flex items-center gap-1">
+      <CardContent className="space-y-3">
+        <AttachmentPreview attachment={current} height={320} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-body text-text">{current.label}</p>
+            <p className="num text-caption text-text-faint">
+              captured {formatTimestamp(current.capturedAt)} · {ATTACHMENT_KIND_LABEL[current.kind]}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
@@ -230,6 +165,9 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
             >
               Previous
             </Button>
+            <span className="num text-caption text-text-muted">
+              {clamped + 1} / {attachments.length}
+            </span>
             <Button
               variant="secondary"
               size="sm"
@@ -240,12 +178,76 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
               Next
             </Button>
           </div>
-        }
-        closeLabel="Close fullscreen attachment"
-        footnote="Press Escape or use Close to return to the gallery. Arrow controls move between attachments."
-      >
-        <AttachmentPreview attachment={current} height={520} />
-      </FullscreenChartViewer>
+        </div>
+
+        <ul className="flex flex-wrap gap-2">
+          {attachments.map((attachment, position) => (
+            <li key={attachment.id}>
+              <button
+                type="button"
+                onClick={() => setIndex(position)}
+                aria-pressed={position === clamped}
+                aria-label={`Show ${attachment.label}`}
+                className={cn(
+                  'w-[112px] overflow-hidden rounded-[var(--radius-control)] border p-0.5 text-start',
+                  'transition-colors duration-[var(--duration-fast)]',
+                  position === clamped
+                    ? 'border-primary'
+                    : 'border-border hover:border-border-strong',
+                )}
+              >
+                <AttachmentPreview attachment={attachment} height={62} className="rounded-[6px]" />
+                <span className="mt-1 block truncate px-1 pb-1 text-caption text-text-muted">
+                  {ATTACHMENT_KIND_LABEL[attachment.kind]}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <Button
+          variant="subtle"
+          size="sm"
+          onClick={() => setOpen(true)}
+          label="Open attachment fullscreen"
+          leadingIcon={<Eye size={14} aria-hidden />}
+        >
+          View fullscreen
+        </Button>
+
+        <FullscreenChartViewer
+          open={open}
+          onOpenChange={setOpen}
+          title={`${current.label}`}
+          description={JOURNAL_ATTACHMENT_NOTE}
+          toolbar={
+            <div className="flex items-center gap-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => step(-1)}
+                label="Previous attachment"
+                leadingIcon={<ChevronLeft size={14} aria-hidden />}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => step(1)}
+                label="Next attachment"
+                trailingIcon={<ChevronRight size={14} aria-hidden />}
+              >
+                Next
+              </Button>
+            </div>
+          }
+          closeLabel="Close fullscreen attachment"
+          footnote="Press Escape or use Close to return to the gallery. Arrow controls move between attachments."
+        >
+          <AttachmentPreview attachment={current} height={520} />
+        </FullscreenChartViewer>
+      </CardContent>
     </Card>
   );
 }

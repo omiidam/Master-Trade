@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { EmptyState } from '../EmptyState';
-import { Card, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
 import { TRADE_EVENT_LABEL } from '../../mock/journal';
@@ -63,38 +63,44 @@ export function TradeTimeline({
   const ordered = [...events].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
 
   return (
-    <Card as="section" aria-label="Trade history" className={cn('p-4', className)}>
-      <CardTitle>Record history</CardTitle>
-      <p className="mt-0.5 text-caption text-text-muted">
-        Appended in order. Nothing here is overwritten, so an earlier reading stays available.
-      </p>
-      <ol className="mt-3 space-y-0">
-        {ordered.map((event, index) => (
-          <li key={event.id} className="relative flex gap-3 pb-4 last:pb-0">
-            {index < ordered.length - 1 ? (
-              <span aria-hidden className="absolute start-[13px] top-6 bottom-0 w-px bg-border" />
-            ) : null}
-            <span
-              aria-hidden
-              className={cn(
-                'relative z-10 grid h-[27px] w-[27px] shrink-0 place-items-center rounded-full',
-                'border border-border bg-surface-sunken',
-                TONE[event.kind],
-              )}
-            >
-              {ICONS[event.kind]}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-body text-text">{TRADE_EVENT_LABEL[event.kind]}</p>
-                <p className="num text-caption text-text-faint">{formatTimestamp(event.at)}</p>
+    <Card as="section" aria-label="Trade history" className={className}>
+      <CardHeader divider>
+        <div className="min-w-0">
+          <CardTitle>Record history</CardTitle>
+          <CardDescription>
+            Appended in order. Nothing here is overwritten, so an earlier reading stays available.
+          </CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ol className="space-y-0">
+          {ordered.map((event, index) => (
+            <li key={event.id} className="relative flex gap-3 pb-4 last:pb-0">
+              {index < ordered.length - 1 ? (
+                <span aria-hidden className="absolute start-[13px] top-6 bottom-0 w-px bg-border" />
+              ) : null}
+              <span
+                aria-hidden
+                className={cn(
+                  'relative z-10 grid h-[27px] w-[27px] shrink-0 place-items-center rounded-full',
+                  'border border-border bg-surface-sunken',
+                  TONE[event.kind],
+                )}
+              >
+                {ICONS[event.kind]}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-body text-text">{TRADE_EVENT_LABEL[event.kind]}</p>
+                  <p className="num text-caption text-text-faint">{formatTimestamp(event.at)}</p>
+                </div>
+                <p className="mt-0.5 text-caption text-text-muted">{event.detail}</p>
+                <p className="mt-0.5 text-caption text-text-faint">source: {event.actor}</p>
               </div>
-              <p className="mt-0.5 text-caption text-text-muted">{event.detail}</p>
-              <p className="mt-0.5 text-caption text-text-faint">source: {event.actor}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
+            </li>
+          ))}
+        </ol>
+      </CardContent>
     </Card>
   );
 }

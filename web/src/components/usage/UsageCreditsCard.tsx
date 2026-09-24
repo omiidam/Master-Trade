@@ -1,7 +1,7 @@
 import { Gauge, ShieldCheck } from 'lucide-react';
 import type { UsageStatusData } from '@shared/api/contracts';
 import { Badge } from '../Badge';
-import { Card, CardHeader, CardTile, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { CreditBalance, UsageProgressBar } from './CreditBalance';
 import { FeatureEntitlementBadge } from './FeatureEntitlementBadge';
 import { UsageLimitNotice } from './UpgradePrompt';
@@ -49,21 +49,21 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2">
             <Gauge size={16} aria-hidden className="text-primary" />
             Usage credits
           </CardTitle>
-          <p className="text-body-sm text-text-muted">
+          <CardDescription>
             One credit is one agent turn. Every number below is computed on the server from your
             stored plan and your own ledger.
-          </p>
+          </CardDescription>
         </div>
         <Badge tone="outline">{usage.plan.displayName}</Badge>
       </CardHeader>
 
-      <div className="space-y-4 px-4 pb-4 pt-3">
+      <CardContent className="space-y-4">
         <CreditBalance
           balance={usage.balance}
           allowance={usage.plan.periodCredits}
@@ -74,7 +74,7 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
           {usage.features.map((feature) => (
             <CardTile key={feature.id} className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-body-sm font-medium text-text">{feature.label}</span>
+                <span className="text-body font-medium text-text">{feature.label}</span>
                 <FeatureEntitlementBadge feature={feature} />
                 <span className="text-caption text-text-faint">
                   {usageCategoryLabel(feature.category)}
@@ -100,7 +100,9 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
 
         {metered.length === 0 ? null : (
           <div className="space-y-1">
-            <h3 className="text-body-sm font-medium text-text">What each cost means</h3>
+            <h4 className="text-caption font-semibold text-text-muted uppercase">
+              What each cost means
+            </h4>
             <ul className="space-y-1" role="list">
               {metered.map((feature) => (
                 <li key={feature.id} className="text-caption text-text-muted">
@@ -122,7 +124,9 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
 
         {grouped.permission.length > 0 ? (
           <div className="space-y-1">
-            <h3 className="text-body-sm font-medium text-text">Not permitted for your role</h3>
+            <h4 className="text-caption font-semibold text-text-muted uppercase">
+              Not permitted for your role
+            </h4>
             <ul className="space-y-1" role="list">
               {grouped.permission.map((feature) => (
                 <li key={feature.id} className="text-caption text-text-muted">
@@ -140,7 +144,9 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
 
         {grouped.entitlement.length > 0 ? (
           <div className="space-y-1">
-            <h3 className="text-body-sm font-medium text-text">Not in this plan</h3>
+            <h4 className="text-caption font-semibold text-text-muted uppercase">
+              Not in this plan
+            </h4>
             <ul className="space-y-1" role="list">
               {grouped.entitlement.map((feature) => (
                 <li key={feature.id} className="text-caption text-text-muted">
@@ -156,7 +162,7 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
           <ShieldCheck size={13} aria-hidden className="mt-0.5 shrink-0 text-success" />
           <span>{usage.note}</span>
         </p>
-      </div>
+      </CardContent>
     </Card>
   );
 }

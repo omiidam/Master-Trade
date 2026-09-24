@@ -20,7 +20,7 @@ export function CompletenessMeter({ assessment }: { assessment: ContextAssessmen
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader divider>
         <CardTitle>Context completeness</CardTitle>
         <CardDescription>
           Share of the fields the analysis capabilities require that carry a value you have actually
@@ -63,26 +63,26 @@ export function CompletenessMeter({ assessment }: { assessment: ContextAssessmen
             <dt className="text-caption text-text-muted">Weakest required field</dt>
             <dd className="flex items-center gap-2">
               <ContextStatusBadge status={weakest} />
-              <span className="text-body-sm text-text">{STATUS_LABEL[weakest]}</span>
+              <span className="text-body text-text">{STATUS_LABEL[weakest]}</span>
             </dd>
           </div>
           <div className="space-y-1">
             <dt className="text-caption text-text-muted">Missing</dt>
-            <dd className="text-body-sm text-text">{gaps.length}</dd>
+            <dd className="text-body text-text">{gaps.length}</dd>
           </div>
           <div className="space-y-1">
             <dt className="text-caption text-text-muted">May be outdated</dt>
-            <dd className="text-body-sm text-text">{stale.length}</dd>
+            <dd className="text-body text-text">{stale.length}</dd>
           </div>
         </dl>
 
         {complete ? (
-          <p className="text-body-sm text-text-muted">
+          <p className="text-body text-text-muted">
             Every required field is current. The analysis capabilities can answer the questions
             these inputs support.
           </p>
         ) : (
-          <p className="text-body-sm text-text-muted">
+          <p className="text-body text-text-muted">
             Until these are answered, capabilities that require them produce limited analysis or
             decline to be precise rather than substituting a default.
           </p>

@@ -5,7 +5,7 @@ import type { Portfolio, PortfolioDocumentBody } from '@shared/portfolio/model';
 import { ASSET_CLASSES, MAX_SYMBOL_LENGTH, SYMBOL_PATTERN } from '@shared/profile/model';
 import { Badge } from '../Badge';
 import { Button, IconButton } from '../Button';
-import { Card, CardContent, CardTile } from '../Card';
+import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
 import { Field, Input, Select } from '../Input';
 import { assetClassLabel } from './labels';
 
@@ -212,14 +212,16 @@ export function HoldingsEditor({
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-5 pt-4">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <CardHeader divider>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <Save size={16} aria-hidden className="text-text-muted" />
-          <h3 className="text-body font-medium text-text">Declare the composition</h3>
+          <CardTitle>Declare the composition</CardTitle>
           <Badge tone="outline">replaces the current version</Badge>
           <Badge tone="neutral">every figure is computed on the server</Badge>
         </div>
+      </CardHeader>
 
+      <CardContent className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Name">
             {(inputProps) => (
@@ -268,7 +270,7 @@ export function HoldingsEditor({
           {positions.map((position, index) => (
             <CardTile as="fieldset" key={position.key} space="roomy" className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <legend className="text-body-sm font-medium text-text">Position {index + 1}</legend>
+                <legend className="text-body font-medium text-text">Position {index + 1}</legend>
                 <IconButton
                   label={`Remove position ${index + 1}`}
                   variant="ghost"
@@ -418,17 +420,17 @@ export function HoldingsEditor({
         </Button>
 
         {formError === null ? null : (
-          <p role="alert" className="text-body-sm text-danger">
+          <p role="alert" className="text-body text-danger">
             {formError}
           </p>
         )}
 
         {validationIssues.length > 0 ? (
           <div className="space-y-1 rounded-[var(--radius-control)] border border-danger/40 bg-danger-soft px-3 py-2">
-            <p className="text-body-sm font-medium text-danger">
+            <p className="text-body font-medium text-danger">
               The declaration was rejected by the server:
             </p>
-            <ul className="list-disc space-y-0.5 pl-5 text-body-sm text-text" role="list">
+            <ul className="list-disc space-y-0.5 pl-5 text-body text-text" role="list">
               {validationIssues.map((issue) => (
                 <li key={issue}>{issue}</li>
               ))}

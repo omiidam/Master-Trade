@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Calculator, Check, FileText, Gavel, Lock, ShieldCheck, Wrench } from 'lucide-react';
+import { AgentBadge, AgentCardItem, AgentCardList } from '../components/agent/AgentCard';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import {
@@ -61,7 +62,7 @@ export function TradingLabPage() {
       >
         <TabPanel value="review" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle>Practice chart</CardTitle>
                 <CardDescription>
@@ -88,7 +89,7 @@ export function TradingLabPage() {
             {mockLabSetups.map((setup, index) => (
               <Reveal key={setup.id} index={index}>
                 <Card>
-                  <CardHeader>
+                  <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">{setup.title}</CardTitle>
                       <CardDescription className="flex flex-wrap gap-1.5 pt-1">
@@ -137,7 +138,7 @@ export function TradingLabPage() {
         <TabPanel value="risk" className="space-y-4">
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Position size calculator</CardTitle>
                   <CardDescription>
@@ -176,7 +177,7 @@ export function TradingLabPage() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Tool result</CardTitle>
                   <CardDescription>
@@ -211,7 +212,7 @@ export function TradingLabPage() {
 
         <TabPanel value="rules" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Proposed process rule</CardTitle>
                 <CardDescription>
@@ -232,22 +233,42 @@ export function TradingLabPage() {
                   Status: draft → evaluation attached → awaiting human activation
                 </p>
               </CardTile>
-              <ol className="space-y-2 text-caption text-text-muted">
-                <li className="flex gap-2">
-                  <FileText size={14} aria-hidden className="mt-0.5 shrink-0 text-info" />
+              {/*
+                A sequence, so the list is `ordered` — the `<ol>` the reference's row family chooses
+                when the rows are steps rather than statements. The glyph stays, moved into the
+                mark, so the tone of each stage is still readable at a glance.
+              */}
+              <AgentCardList ordered>
+                <AgentCardItem
+                  badge={
+                    <AgentBadge tone="info">
+                      <FileText size={10} strokeWidth={2.5} />
+                    </AgentBadge>
+                  }
+                >
                   Deterministic evaluation: sample size, expectancy and an explicit
                   <em> inconclusive </em> verdict when the evidence is thin.
-                </li>
-                <li className="flex gap-2">
-                  <Gavel size={14} aria-hidden className="mt-0.5 shrink-0 text-warning" />
+                </AgentCardItem>
+                <AgentCardItem
+                  badge={
+                    <AgentBadge tone="warning">
+                      <Gavel size={10} strokeWidth={2.5} />
+                    </AgentBadge>
+                  }
+                >
                   Human decision: only an owner may decide, and the requester cannot approve their
                   own proposal.
-                </li>
-                <li className="flex gap-2">
-                  <ShieldCheck size={14} aria-hidden className="mt-0.5 shrink-0 text-primary" />
+                </AgentCardItem>
+                <AgentCardItem
+                  badge={
+                    <AgentBadge tone="accent">
+                      <ShieldCheck size={10} strokeWidth={2.5} />
+                    </AgentBadge>
+                  }
+                >
                   Activation: refused without a non-expired approval row referencing this proposal.
-                </li>
-              </ol>
+                </AgentCardItem>
+              </AgentCardList>
               <div className="flex flex-wrap gap-2">
                 <Tooltip content="Approval workflow lands with the persistence slice; the gate is already enforced in the backend.">
                   <span>

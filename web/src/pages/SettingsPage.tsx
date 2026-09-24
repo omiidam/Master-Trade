@@ -9,12 +9,14 @@ import {
   Sliders,
   Sparkles,
 } from 'lucide-react';
+import { AgentCardItem, AgentCardList, AgentCheck } from '../components/agent/AgentCard';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import {
   Card,
   CardContent,
   CardDescription,
+  CardDivider,
   CardHeader,
   CardTile,
   CardTitle,
@@ -66,7 +68,7 @@ export function SettingsPage() {
         <TabPanel value="appearance" className="space-y-4">
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Writing direction</CardTitle>
                   <CardDescription>
@@ -100,7 +102,7 @@ export function SettingsPage() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Density</CardTitle>
                   <CardDescription>How much of the workspace is used by chrome</CardDescription>
@@ -131,7 +133,7 @@ export function SettingsPage() {
           </Grid>
 
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Theme</CardTitle>
                 <CardDescription>
@@ -171,7 +173,7 @@ export function SettingsPage() {
             store a key in, and the provider rows below say so.
           */}
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Desktop host</CardTitle>
                 <CardDescription>
@@ -235,7 +237,8 @@ export function SettingsPage() {
                 </ul>
               )}
             </CardContent>
-            <CardContent className="border-t border-border pt-3 text-caption text-text-faint">
+            <CardDivider />
+            <CardContent className="pt-3 text-caption text-text-faint">
               The shell grants the interface no filesystem, path, shell or network permission. Every
               privileged action — the keychain, the cache, exports, the bundled API process — is a
               typed command implemented in Rust, and the allow-list is verified in CI.
@@ -243,7 +246,7 @@ export function SettingsPage() {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Model providers</CardTitle>
                 <CardDescription>
@@ -278,7 +281,8 @@ export function SettingsPage() {
                 </div>
               ))}
             </CardContent>
-            <CardContent className="border-t border-border pt-3 text-caption text-text-faint">
+            <CardDivider />
+            <CardContent className="pt-3 text-caption text-text-faint">
               The gateway owns fallback order, retries, timeouts and budget refusal. A provider can
               fail without the permission model changing: the model may request a tool, never run
               one.
@@ -286,7 +290,7 @@ export function SettingsPage() {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Budget</CardTitle>
                 <CardDescription>
@@ -324,7 +328,7 @@ export function SettingsPage() {
 
         <TabPanel value="data" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Safety posture</CardTitle>
                 <CardDescription>
@@ -361,23 +365,40 @@ export function SettingsPage() {
 
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Data provenance policy</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-caption text-text-muted">
-                <p>Synthetic training data must be labelled wherever it appears.</p>
-                <p>
-                  Historical data is stated as historical; live data is not permitted in training.
-                </p>
-                <p>Unverified memory enters context as uncertainty, never as fact.</p>
+              {/*
+                Three policies, three marks. They are statements the product guarantees rather
+                than actions to take, which is exactly the reference's checked list.
+              */}
+              <CardContent>
+                <AgentCardList>
+                  <AgentCardItem badge={<AgentCheck />}>
+                    Synthetic training data must be labelled wherever it appears.
+                  </AgentCardItem>
+                  <AgentCardItem badge={<AgentCheck />}>
+                    Historical data is stated as historical; live data is not permitted in training.
+                  </AgentCardItem>
+                  <AgentCardItem badge={<AgentCheck />}>
+                    Unverified memory enters context as uncertainty, never as fact.
+                  </AgentCardItem>
+                </AgentCardList>
               </CardContent>
             </Card>
             <Card tone="sunken">
-              <CardContent className="space-y-2">
-                <div className="flex items-center gap-2">
+              {/*
+                A well still names itself. The label was a bare `<span>` beside an icon, which is
+                why this card read as the one panel on the page with no head — a rule under a
+                `CardTitle` is what tells a reader where the panel starts.
+              */}
+              <CardHeader divider>
+                <div className="flex min-w-0 items-center gap-2">
                   <Database size={15} aria-hidden className="text-text-faint" />
-                  <span className="text-caption font-medium text-text">Local data</span>
+                  <CardTitle className="text-caption">Local data</CardTitle>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
                 <ReadOnlyValue
                   label="Database"
                   value="data/master-trade.db"
@@ -398,7 +419,7 @@ export function SettingsPage() {
 
         <TabPanel value="advanced" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Background jobs</CardTitle>
                 <CardDescription>
@@ -423,7 +444,7 @@ export function SettingsPage() {
 
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -441,7 +462,7 @@ export function SettingsPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Secrets</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-caption text-text-muted">

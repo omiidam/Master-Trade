@@ -78,7 +78,7 @@ export function InterfaceStatesPanel({
         {states.map((state, index) => (
           <Reveal key={state} index={index}>
             <Card tone="sunken" className="h-full">
-              <CardHeader>
+              <CardHeader divider>
                 <div className="flex items-center gap-2">
                   <span className="text-text-faint">{ICON[state]}</span>
                   <CardTitle className="text-body">{LABEL[state]}</CardTitle>

@@ -47,14 +47,14 @@ export function AssumptionNotice({ notice, className }: AssumptionNoticeProps) {
         ) : (
           <CircleDashed size={14} aria-hidden className="text-text-muted" />
         )}
-        <span className="text-body-sm font-medium text-text">{notice.label}</span>
+        <span className="text-body font-medium text-text">{notice.label}</span>
         <Badge tone={refused ? 'danger' : 'warning'}>{ORIGIN_LABEL[notice.origin]}</Badge>
         <Badge tone={refused ? 'outline' : 'info'}>
           {notice.permitted ? 'Permitted, and labelled' : 'Not permitted'}
         </Badge>
       </div>
 
-      <p className="text-body-sm text-text-muted">{notice.statement}</p>
+      <p className="text-body text-text-muted">{notice.statement}</p>
       <p className="text-caption text-text-faint">{notice.reason}</p>
     </Card>
   );

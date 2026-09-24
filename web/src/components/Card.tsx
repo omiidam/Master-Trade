@@ -73,14 +73,30 @@ export type CardDensity = 'compact' | 'cozy' | 'spacious';
 
 interface DensityScale {
   header: string;
+  /**
+   * The band the header's rule sits in.
+   *
+   * The rule needs a step *above* it and the body's own top padding gives it one below, which is
+   * what makes the reference's rhythm — title, a breath, the hairline, a breath, the contents —
+   * come out even. It is a padding on a wrapper rather than a margin on the `hr` because `cn` is a
+   * plain join: an `hr` carrying both the divider's own `m-0` and a caller's `mt-4` would leave the
+   * winner to stylesheet order, and "the rule is 16px under the title" is not a fact that should
+   * depend on which utility Tailwind happened to emit last.
+   */
+  rule: string;
   content: string;
   footer: string;
 }
 
 const DENSITY: Record<CardDensity, DensityScale> = {
-  compact: { header: 'px-3 pt-3', content: 'px-3 py-3', footer: 'px-3 py-2' },
-  cozy: { header: 'px-4 pt-4', content: 'px-4 py-4', footer: 'px-4 py-3' },
-  spacious: { header: 'px-5 pt-5', content: 'px-5 py-5', footer: 'px-5 py-4' },
+  compact: { header: 'px-3 pt-3', rule: 'px-3 pt-3', content: 'px-3 py-3', footer: 'px-3 py-2' },
+  cozy: { header: 'px-4 pt-4', rule: 'px-4 pt-4', content: 'px-4 py-4', footer: 'px-4 py-3' },
+  spacious: {
+    header: 'px-5 pt-5',
+    rule: 'px-5 pt-5',
+    content: 'px-5 py-5',
+    footer: 'px-5 py-4',
+  },
 };
 
 /**
@@ -245,6 +261,13 @@ export function Card({
  * `shrink-0` that keeps a long title from squeezing the button beside it. `divider` draws the
  * hairline rule between the head and the body — the reference's `hr.line`, and the one structural
  * detail that separates a card's *name* from its *contents* without a second surface.
+ *
+ * **`divider` is the default anatomy of a card in this product, not an option.** A card that names
+ * itself and then shows something is the shape the reference draws, and it is the shape every
+ * category of the drawer now uses; it is a prop rather than unconditional because a handful of
+ * cards genuinely have no body to separate — a header-only panel, a container whose children are
+ * the content — and drawing a rule across the bottom of one of those would be a line pointing at
+ * nothing.
  */
 export interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
   /** Buttons or badges level with the title. They never shrink; the title does. */
@@ -258,13 +281,25 @@ export function CardHeader({ actions, divider, className, children, ...rest }: C
   return (
     <>
       <div
-        className={cn('flex items-start justify-between gap-3', DENSITY[density].header, className)}
+        className={cn(
+          // `flex-wrap` is what keeps a titled card with actions from overflowing at 390px: the
+          // actions are `shrink-0` by design (a control must not be squeezed), so without a wrap the
+          // row would simply be wider than the card. The headers this replaced nearly all wrote
+          // `flex-wrap` by hand — it just was not part of the system, so half of them forgot it.
+          'flex flex-wrap items-start justify-between gap-3',
+          DENSITY[density].header,
+          className,
+        )}
         {...rest}
       >
         {children}
         {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
       </div>
-      {divider ? <CardDivider /> : null}
+      {divider ? (
+        <div className={DENSITY[density].rule}>
+          <CardDivider />
+        </div>
+      ) : null}
     </>
   );
 }

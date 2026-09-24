@@ -134,7 +134,7 @@ export function MemoryPage() {
     >
       <Grid columns={4}>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Knowledge base</CardTitle>
               <CardDescription>Records across five categories</CardDescription>
@@ -154,7 +154,7 @@ export function MemoryPage() {
           </CardFooter>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Trust mix</CardTitle>
               <CardDescription>Illustrative sample of nine records</CardDescription>
@@ -170,7 +170,7 @@ export function MemoryPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Verified share</CardTitle>
               <CardDescription>Of the records in the illustrative sample</CardDescription>
@@ -186,7 +186,7 @@ export function MemoryPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Trust policy</CardTitle>
               <CardDescription>What keeps the knowledge base honest</CardDescription>
@@ -207,7 +207,7 @@ export function MemoryPage() {
       >
         <TabPanel value="board" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Knowledge growth</CardTitle>
                 <CardDescription>Records per month by trust, six months of study</CardDescription>
@@ -268,7 +268,7 @@ export function MemoryPage() {
             <Grid columns={3}>
               {mockMemoryCategories.map((category) => (
                 <Card key={category.id}>
-                  <CardHeader>
+                  <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">{category.label}</CardTitle>
                       <CardDescription>{category.description}</CardDescription>
@@ -380,7 +380,7 @@ export function MemoryPage() {
           <MemoryTimeline entries={mockMemoryTimeline} recordTitles={recordTitles} />
           <Grid columns={3}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Append-only</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -389,7 +389,7 @@ export function MemoryPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Verification is recorded</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -398,7 +398,7 @@ export function MemoryPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Deletion is a tombstone</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -417,7 +417,7 @@ export function MemoryPage() {
             <Grid columns={2}>
               {(['verified', 'pending-review', 'unverified', 'archived'] as const).map((status) => (
                 <Card key={status}>
-                  <CardHeader>
+                  <CardHeader divider>
                     <div className="flex items-center gap-2">
                       <span aria-hidden className="text-text-faint">
                         {STATUS_ICON[status]}
@@ -440,7 +440,7 @@ export function MemoryPage() {
 
           <Grid columns={3}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Loading</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -448,7 +448,7 @@ export function MemoryPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Empty</CardTitle>
               </CardHeader>
               <CardContent>
@@ -460,7 +460,7 @@ export function MemoryPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Unverified warning</CardTitle>
               </CardHeader>
               <CardContent>
@@ -475,7 +475,7 @@ export function MemoryPage() {
           </Grid>
 
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Archived records</CardTitle>
                 <CardDescription>Tombstoned, retained as evidence</CardDescription>

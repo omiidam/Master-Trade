@@ -16,7 +16,7 @@ import type {
 } from '@shared/portfolio/model';
 import type { PortfolioReadinessDecision } from '@shared/portfolio/readiness';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardTile } from '../Card';
+import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import {
   describePriceAge,
@@ -72,8 +72,11 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
   if (decisions.length === 0) {
     return (
       <Card className={className}>
-        <CardContent className="pt-4">
-          <p className="text-body-sm text-text-muted">
+        <CardHeader divider>
+          <CardTitle className="text-body">Portfolio readiness</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-body text-text-muted">
             No readiness verdict was produced, so nothing is claimed about whether an analysis may
             run.
           </p>
@@ -84,13 +87,14 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-4 pt-4">
+      <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <ShieldCheck size={16} aria-hidden className="text-text-muted" />
-          <h3 className="text-body font-medium text-text">Portfolio readiness</h3>
+          <CardTitle className="text-body">Portfolio readiness</CardTitle>
           <Badge tone="outline">the worse of two readings decides</Badge>
         </div>
-
+      </CardHeader>
+      <CardContent className="space-y-4">
         {decisions.map((decision) => (
           <CardTile
             as="section"
@@ -100,13 +104,13 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
             aria-label={scopeLabel(decision.scope)}
           >
             <div className="flex flex-wrap items-center gap-1.5">
-              <h4 className="text-body-sm font-medium text-text">{scopeLabel(decision.scope)}</h4>
+              <h4 className="text-body font-medium text-text">{scopeLabel(decision.scope)}</h4>
               <Badge tone={READINESS_TONE[decision.readiness]}>{decision.readiness}</Badge>
               <Badge tone="outline">{decision.base.readiness} from declared inputs</Badge>
               {decision.capability === 'planned' ? <Badge tone="info">not built yet</Badge> : null}
             </div>
 
-            <p className="text-body-sm text-text-muted">{scopeMeaning(decision.scope)}</p>
+            <p className="text-body text-text-muted">{scopeMeaning(decision.scope)}</p>
             <p className="text-caption font-mono text-text-faint">
               decided by {decision.decidedBy}
             </p>
@@ -114,7 +118,7 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
             {decision.limitations.length > 0 ? (
               <div className="space-y-1">
                 <p className="text-caption text-text-muted">Limitations this answer carries</p>
-                <ul className="list-disc space-y-1 pl-5 text-body-sm text-text-muted" role="list">
+                <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
                   {decision.limitations.map((limitation, index) => (
                     <li key={index}>{limitation}</li>
                   ))}
@@ -134,7 +138,7 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
                       key={`${question.field}:${question.reason}`}
                       className="rounded-[var(--radius-control)] bg-surface px-2.5 py-2"
                     >
-                      <p className="text-body-sm text-text">{question.question}</p>
+                      <p className="text-body text-text">{question.question}</p>
                       <p className="text-caption text-text-faint">
                         {question.label} · {question.reason}
                         {question.blocking ? ' · required before an answer exists' : ''}
@@ -191,10 +195,10 @@ export function PortfolioQualitySummary({
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-4 pt-4">
+      <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <ClipboardList size={16} aria-hidden className="text-text-muted" />
-          <h3 className="text-body font-medium text-text">Data quality</h3>
+          <CardTitle className="text-body">Data quality</CardTitle>
           {assessment.worst === null ? (
             <Badge tone="success">no findings</Badge>
           ) : (
@@ -206,7 +210,8 @@ export function PortfolioQualitySummary({
             {assessment.described ? 'a composition is declared' : 'nothing declared'}
           </Badge>
         </div>
-
+      </CardHeader>
+      <CardContent className="space-y-4">
         <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {(
             [
@@ -235,7 +240,7 @@ export function PortfolioQualitySummary({
             <CalendarClock size={13} aria-hidden />
             Price freshness
           </p>
-          <p className="text-body-sm text-text-muted">
+          <p className="text-body text-text-muted">
             {assessment.newestPriceAt === null
               ? 'No price was declared anywhere in the composition, so freshness cannot be reported.'
               : `Newest observation ${assessment.newestPriceAt}, oldest ${assessment.oldestPriceAt}.`}
@@ -259,9 +264,9 @@ export function PortfolioQualitySummary({
         </div>
 
         <div className="space-y-1.5">
-          <h4 className="text-body-sm font-medium text-text">Findings</h4>
+          <h4 className="text-body font-medium text-text">Findings</h4>
           {assessment.findings.length === 0 ? (
-            <p className="text-body-sm text-text-muted">
+            <p className="text-body text-text-muted">
               Every position declared carries what a calculation needs.
             </p>
           ) : (
@@ -269,7 +274,7 @@ export function PortfolioQualitySummary({
               {assessment.findings.map((found) => (
                 <li key={found.code} className="flex items-start gap-2">
                   <Badge tone={issueTone(found.code)}>{found.code}</Badge>
-                  <span className="text-body-sm text-text-muted">{found.detail}</span>
+                  <span className="text-body text-text-muted">{found.detail}</span>
                 </li>
               ))}
             </ul>
@@ -304,9 +309,11 @@ export function MissingHoldingData({ gaps, className }: MissingHoldingDataProps)
   if (gaps.length === 0) {
     return (
       <Card className={className}>
-        <CardContent className="space-y-1 pt-4">
-          <h3 className="text-body font-medium text-text">Missing holding data</h3>
-          <p className="text-body-sm text-text-muted">
+        <CardHeader divider>
+          <CardTitle className="text-body">Missing holding data</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <p className="text-body text-text-muted">
             Nothing is missing: every figure these scopes ask for could be produced from what is
             declared.
           </p>
@@ -317,13 +324,14 @@ export function MissingHoldingData({ gaps, className }: MissingHoldingDataProps)
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-3 pt-4">
+      <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <TriangleAlert size={16} aria-hidden className="text-warning" />
-          <h3 className="text-body font-medium text-text">Missing holding data</h3>
+          <CardTitle className="text-body">Missing holding data</CardTitle>
           <Badge tone="warning">{gaps.length} figure(s) not produced</Badge>
         </div>
-
+      </CardHeader>
+      <CardContent className="space-y-3">
         <ul className="space-y-2" role="list">
           {gaps.map((gap) => (
             <CardTile as="li" key={gap.code} className="space-y-1">
@@ -331,7 +339,7 @@ export function MissingHoldingData({ gaps, className }: MissingHoldingDataProps)
                 <Badge tone={issueTone(gap.code)}>{issueMeaning(gap.code)}</Badge>
                 <span className="font-mono text-caption text-text-faint">{gap.code}</span>
               </div>
-              <p className="text-body-sm text-text-muted">{gap.detail}</p>
+              <p className="text-body text-text-muted">{gap.detail}</p>
               {gap.remedies.length > 0 ? (
                 <ul className="list-disc space-y-0.5 pl-5 text-caption text-text-faint" role="list">
                   {gap.remedies.map((remedy, index) => (
@@ -373,9 +381,11 @@ export function PortfolioSnapshotTimeline({
   if (snapshots.length === 0) {
     return (
       <Card className={className}>
-        <CardContent className="space-y-1 pt-4">
-          <h3 className="text-body font-medium text-text">Version history</h3>
-          <p className="text-body-sm text-text-muted">
+        <CardHeader divider>
+          <CardTitle className="text-body">Version history</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          <p className="text-body text-text-muted">
             No version has been written, because no composition has been declared for this account.
           </p>
         </CardContent>
@@ -385,14 +395,15 @@ export function PortfolioSnapshotTimeline({
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-3 pt-4">
+      <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <History size={16} aria-hidden className="text-text-muted" />
-          <h3 className="text-body font-medium text-text">Version history</h3>
+          <CardTitle className="text-body">Version history</CardTitle>
           <Badge tone="outline">newest first</Badge>
           <Badge tone="neutral">{snapshots.length} version(s) shown</Badge>
         </div>
-
+      </CardHeader>
+      <CardContent className="space-y-3">
         <ol className="space-y-2" role="list">
           {snapshots.map((snapshot) => (
             <CardTile
@@ -403,7 +414,7 @@ export function PortfolioSnapshotTimeline({
                 <Badge tone={snapshot.version === currentVersion ? 'primary' : 'outline'}>
                   version {snapshot.version}
                 </Badge>
-                <span className="text-body-sm text-text-muted">
+                <span className="text-body text-text-muted">
                   {snapshotReasonLabel(snapshot.reason)}
                 </span>
               </div>
@@ -453,10 +464,10 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-4 pt-4">
+      <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <Layers size={16} aria-hidden className="text-text-muted" />
-          <h3 className="text-body font-medium text-text">Exposure</h3>
+          <CardTitle className="text-body">Exposure</CardTitle>
           <Badge tone="outline">measured, not scored</Badge>
           {metrics.valuationComplete ? (
             <Badge tone="neutral">every position valued</Badge>
@@ -464,9 +475,10 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
             <Badge tone="warning">partial valuation</Badge>
           )}
         </div>
-
+      </CardHeader>
+      <CardContent className="space-y-4">
         {classes.length === 0 && currencies.length === 0 ? (
-          <p className="text-body-sm text-text-muted">
+          <p className="text-body text-text-muted">
             No exposure can be described, because no position could be valued. Nothing is shown in
             place of it: a share of a total that does not exist is not a share.
           </p>
@@ -496,11 +508,11 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
             <ul className="grid gap-2 sm:grid-cols-2" role="list">
               {currencies.map((group) => (
                 <CardTile key={group.currency} className="flex items-center justify-between gap-2">
-                  <span className="text-body-sm text-text-muted">
+                  <span className="text-body text-text-muted">
                     {group.currency} · {group.positions} position
                     {group.positions === 1 ? '' : 's'}
                   </span>
-                  <span className="text-body-sm tabular-nums text-text">
+                  <span className="text-body tabular-nums text-text">
                     {formatNumber(group.marketValue)}
                   </span>
                 </CardTile>

@@ -1,7 +1,7 @@
 import { FolderTree, History, Layers, Wallet } from 'lucide-react';
 import type { PortfolioViewData } from '@shared/api/contracts';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardTile } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatNumber, scopeLabel } from './labels';
 
@@ -29,38 +29,39 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
 
   return (
     <Card className={className}>
-      <CardContent className="space-y-4 pt-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Wallet size={16} aria-hidden className="text-text-muted" />
-              <h2 className="text-h3 font-semibold text-text">{view.portfolio.name}</h2>
-              <Badge tone="neutral">{view.portfolio.baseCurrency}</Badge>
-              {view.declared ? (
-                <Badge tone="outline" icon={<History size={12} aria-hidden />}>
-                  version {view.version}
-                </Badge>
-              ) : (
-                <Badge tone="info">not declared yet</Badge>
-              )}
-              {worst === null ? (
-                <Badge tone="success">no findings</Badge>
-              ) : (
-                <Badge tone={worst === 'blocking' ? 'danger' : 'warning'}>
-                  findings: worst is {worst}
-                </Badge>
-              )}
-            </div>
-            <p className="text-body-sm text-text-muted">
-              {view.declared
-                ? `Declared as ${coverage.positions} position${coverage.positions === 1 ? '' : 's'}, last written ${view.portfolio.updatedAt}.`
-                : 'No composition has been declared for this account, so there is nothing to value. That is different from a portfolio that holds nothing — one of them is an answer and the other is a missing one.'}
-            </p>
+      <CardHeader
+        divider
+        actions={<p className="text-caption text-text-faint">as of {view.asOf}</p>}
+      >
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Wallet size={16} aria-hidden className="text-text-muted" />
+            <CardTitle>{view.portfolio.name}</CardTitle>
+            <Badge tone="neutral">{view.portfolio.baseCurrency}</Badge>
+            {view.declared ? (
+              <Badge tone="outline" icon={<History size={12} aria-hidden />}>
+                version {view.version}
+              </Badge>
+            ) : (
+              <Badge tone="info">not declared yet</Badge>
+            )}
+            {worst === null ? (
+              <Badge tone="success">no findings</Badge>
+            ) : (
+              <Badge tone={worst === 'blocking' ? 'danger' : 'warning'}>
+                findings: worst is {worst}
+              </Badge>
+            )}
           </div>
-
-          <p className="text-caption text-text-faint">as of {view.asOf}</p>
+          <CardDescription className="mt-1">
+            {view.declared
+              ? `Declared as ${coverage.positions} position${coverage.positions === 1 ? '' : 's'}, last written ${view.portfolio.updatedAt}.`
+              : 'No composition has been declared for this account, so there is nothing to value. That is different from a portfolio that holds nothing — one of them is an answer and the other is a missing one.'}
+          </CardDescription>
         </div>
+      </CardHeader>
 
+      <CardContent className="space-y-4">
         <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {(
             [
@@ -132,7 +133,7 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
               {view.readiness.map((decision) => (
                 <li
                   key={decision.scope}
-                  className="flex items-center justify-between gap-2 text-body-sm"
+                  className="flex items-center justify-between gap-2 text-body"
                 >
                   <span className="text-text-muted">{scopeLabel(decision.scope)}</span>
                   <Badge
@@ -155,7 +156,7 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
         </div>
 
         {view.assessment.truncated ? (
-          <p className={cn('text-body-sm text-warning')}>
+          <p className={cn('text-body text-warning')}>
             The document declares more positions than the engine reads at once, so only the first
             ones were used. The rest were not silently included.
           </p>

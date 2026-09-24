@@ -39,12 +39,12 @@ export function DimensionGrid({
 }) {
   return (
     <div className={className ?? 'space-y-2'}>
-      <h4 className="text-body-sm font-medium text-text">Dimensions</h4>
+      <h4 className="text-body font-medium text-text">Dimensions</h4>
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="list">
         {dimensions.map((dimension) => (
           <CardTile key={dimension.dimension} className="space-y-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-body-sm font-medium text-text">
+              <span className="text-body font-medium text-text">
                 {dimensionLabel(dimension.dimension)}
               </span>
               <DataQualityBadge
@@ -96,7 +96,7 @@ export function InputQualitySummary({
       </header>
 
       {contextSet ? null : (
-        <p className="text-body-sm text-text-muted">
+        <p className="text-body text-text-muted">
           You have not declared a trading context yet, so every input below is legitimately absent.
           This report describes that empty context rather than a shortlist of things you did wrong.
         </p>

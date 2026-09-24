@@ -111,7 +111,7 @@ export function AgentWorkspacePage() {
           />
 
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Conversation</CardTitle>
                 <CardDescription>

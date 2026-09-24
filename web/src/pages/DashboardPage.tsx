@@ -20,6 +20,7 @@ import {
   CardTitle,
   Section,
 } from '../components/Card';
+import { AgentCardItem, AgentCardList, AgentCheck } from '../components/agent/AgentCard';
 import { ChartAdapter } from '../components/charts/ChartAdapter';
 import { Sparkline } from '../components/charts/Sparkline';
 import { EmptyState } from '../components/EmptyState';
@@ -95,7 +96,7 @@ export function DashboardPage() {
       <Grid columns={4}>
         {mockStudyMetrics.map((metric) => (
           <Card key={metric.id}>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">{metric.label}</CardTitle>
                 <CardDescription>{metric.hint}</CardDescription>
@@ -130,7 +131,7 @@ export function DashboardPage() {
       >
         <TabPanel value="overview" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle>Training equity curve</CardTitle>
                 <CardDescription>
@@ -154,29 +155,47 @@ export function DashboardPage() {
 
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Strengths</CardTitle>
                   <CardDescription>{mockDashboard.headings[1]}</CardDescription>
                 </div>
                 <BookOpen size={16} aria-hidden className="text-text-faint" />
               </CardHeader>
-              <CardContent className="space-y-2 text-caption text-text-muted">
-                <p>Consistent review habit: 11 consecutive days with a written session.</p>
-                <p>Risk-first framing appears in every journal entry this month.</p>
+              {/*
+                The reference's checked list: a filled accent disc with a dark tick, and the
+                statement beside it. A short list of things that *hold* is what the mark is for,
+                which is why this card takes it and the grid of figures above does not.
+              */}
+              <CardContent>
+                <AgentCardList>
+                  <AgentCardItem badge={<AgentCheck />}>
+                    Consistent review habit: 11 consecutive days with a written session.
+                  </AgentCardItem>
+                  <AgentCardItem badge={<AgentCheck />}>
+                    Risk-first framing appears in every journal entry this month.
+                  </AgentCardItem>
+                </AgentCardList>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Watch list</CardTitle>
                   <CardDescription>{mockDashboard.headings[2]}</CardDescription>
                 </div>
                 <ShieldCheck size={16} aria-hidden className="text-text-faint" />
               </CardHeader>
-              <CardContent className="space-y-2 text-caption text-text-muted">
-                <p>Exam average dipped on the second risk module attempt.</p>
-                <p>One journal entry missing an explicit invalidation level.</p>
+              {/* The same list in its other tone: a marked row whose mark is a caution, not a tick. */}
+              <CardContent>
+                <AgentCardList>
+                  <AgentCardItem badge={<AgentCheck tone="warning" />}>
+                    Exam average dipped on the second risk module attempt.
+                  </AgentCardItem>
+                  <AgentCardItem badge={<AgentCheck tone="warning" />}>
+                    One journal entry missing an explicit invalidation level.
+                  </AgentCardItem>
+                </AgentCardList>
               </CardContent>
             </Card>
           </Grid>
@@ -187,7 +206,7 @@ export function DashboardPage() {
           >
             <Grid columns={4}>
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Knowledge mastery</CardTitle>
                     <CardDescription>
@@ -213,7 +232,7 @@ export function DashboardPage() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Exam performance</CardTitle>
                     <CardDescription>
@@ -244,7 +263,7 @@ export function DashboardPage() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Memory growth</CardTitle>
                     <CardDescription>Records added in the last month</CardDescription>
@@ -271,7 +290,7 @@ export function DashboardPage() {
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Research progress</CardTitle>
                     <CardDescription>
@@ -318,7 +337,7 @@ export function DashboardPage() {
             </Grid>
           ) : (
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Recent agent and system events</CardTitle>
                   <CardDescription>
@@ -358,7 +377,7 @@ export function DashboardPage() {
         <TabPanel value="states" className="space-y-4">
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Loading state</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -370,7 +389,7 @@ export function DashboardPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Empty state</CardTitle>
               </CardHeader>
               <CardContent>

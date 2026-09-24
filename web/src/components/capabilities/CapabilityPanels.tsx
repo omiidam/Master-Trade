@@ -93,7 +93,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 export function CapabilityCard({ capability }: { capability: CapabilityView }) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader divider>
         <div className="min-w-0">
           <CardTitle className="text-body">{capability.name}</CardTitle>
           <CardDescription>{capability.categoryLabel}</CardDescription>
@@ -186,7 +186,7 @@ export function ModuleMap({ modules }: { modules: readonly CapabilityModuleView[
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {modules.map((module) => (
           <Card key={module.id}>
-            <CardHeader>
+            <CardHeader divider>
               <CardTitle className="text-body">{module.label}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -233,7 +233,7 @@ export function CapabilityPipeline({ stages }: { stages: readonly CapabilityStag
                   {index + 1}
                 </span>
                 <div className="min-w-0 space-y-1">
-                  <p className="text-body font-medium text-text">{stage.label}</p>
+                  <CardTitle className="text-body">{stage.label}</CardTitle>
                   <p className="text-caption text-text-muted">{stage.meaning}</p>
                   <p className="text-caption text-text-muted">
                     <span className="font-medium text-text">If it does not pass: </span>

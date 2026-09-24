@@ -130,7 +130,7 @@ export function FeedbackStatesPanel({
        * It is here so the emphasis is a surface someone has looked at, not a prop in a type.
        */}
       <Card emphasis="accent">
-        <CardHeader>
+        <CardHeader divider>
           <div>
             <CardTitle className="text-body">Toasts — on the accent card</CardTitle>
             <CardDescription>

@@ -10,6 +10,7 @@ import {
   CardTitle,
   Section,
 } from '../Card';
+import { AgentBadge, AgentCardItem, AgentCardList } from '../agent/AgentCard';
 import { Input } from '../Input';
 import { ProgressIndicator } from '../exams/ProgressIndicator';
 import { PerformanceChart } from './PerformanceChart';
@@ -69,81 +70,87 @@ function BreakdownTable({
   plannedLabel?: string;
 }) {
   return (
-    <Card as="section" className="p-4">
-      <CardTitle>{title}</CardTitle>
-      <p className="mt-0.5 text-caption text-text-muted">{description}</p>
-      <table className="mt-3 w-full border-collapse">
-        <caption className="sr-only">
-          {title}: sample size, win rate, average R and {plannedLabel} for each bucket.
-        </caption>
-        <thead>
-          <tr className="border-b border-border">
-            <th
-              scope="col"
-              className="py-1.5 text-start text-caption font-semibold text-text-faint uppercase"
-            >
-              Bucket
-            </th>
-            <th
-              scope="col"
-              className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-            >
-              Sample
-            </th>
-            <th
-              scope="col"
-              className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-            >
-              Win rate
-            </th>
-            <th
-              scope="col"
-              className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-            >
-              Average R
-            </th>
-            <th
-              scope="col"
-              className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-            >
-              Planned
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id} className="border-b border-border last:border-b-0">
-              <th scope="row" className="py-2 text-start text-caption font-normal text-text">
-                {row.label}
-              </th>
-              <td className="num py-2 text-end text-caption text-text-faint">{row.sample}</td>
-              <td className="num py-2 text-end text-caption text-text-muted">
-                {row.winRatePct.toFixed(1)}%
-              </td>
-              <td
-                className={cn(
-                  'num py-2 text-end text-caption',
-                  row.averageR > 0.15
-                    ? 'text-success'
-                    : row.averageR < -0.15
-                      ? 'text-danger'
-                      : 'text-text-muted',
-                )}
+    <Card as="section">
+      <CardHeader divider>
+        <div className="min-w-0">
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <table className="w-full border-collapse">
+          <caption className="sr-only">
+            {title}: sample size, win rate, average R and {plannedLabel} for each bucket.
+          </caption>
+          <thead>
+            <tr className="border-b border-border">
+              <th
+                scope="col"
+                className="py-1.5 text-start text-caption font-semibold text-text-faint uppercase"
               >
-                {row.averageR > 0 ? '+' : row.averageR < 0 ? '−' : ''}
-                {Math.abs(row.averageR).toFixed(2)}R
-              </td>
-              <td className="num py-2 text-end text-caption text-text-faint">
-                {row.plannedRr.toFixed(1)}:1
-              </td>
+                Bucket
+              </th>
+              <th
+                scope="col"
+                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
+              >
+                Sample
+              </th>
+              <th
+                scope="col"
+                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
+              >
+                Win rate
+              </th>
+              <th
+                scope="col"
+                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
+              >
+                Average R
+              </th>
+              <th
+                scope="col"
+                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
+              >
+                Planned
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="mt-2 text-caption text-text-faint">
-        Rows are buckets of the same records, not independent samples — a bucket with a small sample
-        is a hint, not a finding.
-      </p>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} className="border-b border-border last:border-b-0">
+                <th scope="row" className="py-2 text-start text-caption font-normal text-text">
+                  {row.label}
+                </th>
+                <td className="num py-2 text-end text-caption text-text-faint">{row.sample}</td>
+                <td className="num py-2 text-end text-caption text-text-muted">
+                  {row.winRatePct.toFixed(1)}%
+                </td>
+                <td
+                  className={cn(
+                    'num py-2 text-end text-caption',
+                    row.averageR > 0.15
+                      ? 'text-success'
+                      : row.averageR < -0.15
+                        ? 'text-danger'
+                        : 'text-text-muted',
+                  )}
+                >
+                  {row.averageR > 0 ? '+' : row.averageR < 0 ? '−' : ''}
+                  {Math.abs(row.averageR).toFixed(2)}R
+                </td>
+                <td className="num py-2 text-end text-caption text-text-faint">
+                  {row.plannedRr.toFixed(1)}:1
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="text-caption text-text-faint">
+          Rows are buckets of the same records, not independent samples — a bucket with a small
+          sample is a hint, not a finding.
+        </p>
+      </CardContent>
     </Card>
   );
 }
@@ -370,7 +377,7 @@ export function AnalyticsPanel({
 
       <Grid4>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Rule compliance</CardTitle>
               <CardDescription>Records by checklist outcome</CardDescription>
@@ -394,7 +401,7 @@ export function AnalyticsPanel({
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Consecutive wins and losses</CardTitle>
               <CardDescription>Streaks read from the recorded sequence</CardDescription>
@@ -425,7 +432,7 @@ export function AnalyticsPanel({
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Mistake frequency</CardTitle>
               <CardDescription>Recorded patterns, with the corrective note</CardDescription>
@@ -449,28 +456,50 @@ export function AnalyticsPanel({
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Reading these numbers</CardTitle>
               <CardDescription>What the analytics do not support</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="space-y-2 text-caption text-text-muted">
-            <p className="flex items-start gap-2">
-              <Sigma size={13} aria-hidden className="mt-0.5 shrink-0 text-text-faint" />
-              Fourteen scored trades is a sample, not a result. Every figure on this page is
-              illustrative.
-            </p>
-            <p className="flex items-start gap-2">
-              <Divide size={14} aria-hidden className="mt-0.5 shrink-0 text-text-faint" />
-              Win rate and average R can disagree; when they do, expectancy is the figure to look
-              at.
-            </p>
-            <p className="flex items-start gap-2">
-              <AlertTriangle size={13} aria-hidden className="mt-0.5 shrink-0 text-warning" />
-              Nothing here is a signal, a recommendation or a rule. A rule change needs an
-              evaluation and a recorded human approval.
-            </p>
+          {/*
+            The reference's marked list, with the glyph moved into the mark: the discs are the same
+            family the agent's rows use, and the tone says which caveat this is — a sample, an
+            arithmetic disagreement, or a limit on what the page may conclude.
+          */}
+          <CardContent>
+            <AgentCardList>
+              <AgentCardItem
+                badge={
+                  <AgentBadge tone="neutral">
+                    <Sigma size={10} strokeWidth={2.5} />
+                  </AgentBadge>
+                }
+              >
+                Fourteen scored trades is a sample, not a result. Every figure on this page is
+                illustrative.
+              </AgentCardItem>
+              <AgentCardItem
+                badge={
+                  <AgentBadge tone="neutral">
+                    <Divide size={10} strokeWidth={2.5} />
+                  </AgentBadge>
+                }
+              >
+                Win rate and average R can disagree; when they do, expectancy is the figure to look
+                at.
+              </AgentCardItem>
+              <AgentCardItem
+                badge={
+                  <AgentBadge tone="warning">
+                    <AlertTriangle size={10} strokeWidth={2.5} />
+                  </AgentBadge>
+                }
+              >
+                Nothing here is a signal, a recommendation or a rule. A rule change needs an
+                evaluation and a recorded human approval.
+              </AgentCardItem>
+            </AgentCardList>
           </CardContent>
         </Card>
       </Grid4>

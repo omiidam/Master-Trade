@@ -1,7 +1,16 @@
-import { Check, Lock, Minus, ShieldAlert } from 'lucide-react';
+import { Lock, Minus, ShieldAlert } from 'lucide-react';
 import type { UsagePlanView } from '@shared/api/contracts';
+import { AgentCheck } from '../agent/AgentCard';
 import { Badge } from '../Badge';
-import { Card, CardHeader, CardTile, CardTitle } from '../Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTile,
+  CardTitle,
+  Section,
+} from '../Card';
 import { usageCategoryLabel } from './labels';
 
 /**
@@ -35,17 +44,17 @@ export function SubscriptionPlanCard({
 
   return (
     <Card className={className} tone={current ? 'raised' : 'default'}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="space-y-1">
           <CardTitle className="flex flex-wrap items-center gap-2">
             {plan.displayName}
             {current ? <Badge tone="primary">Your plan</Badge> : null}
             {plan.active ? null : <Badge tone="neutral">Retired</Badge>}
           </CardTitle>
-          <p className="text-body-sm text-text-muted">{plan.tagline}</p>
+          <CardDescription>{plan.tagline}</CardDescription>
         </div>
         <div className="text-right">
-          <p className="text-body-sm font-medium tabular-nums text-text">
+          <p className="text-body font-medium tabular-nums text-text">
             {plan.periodCredits} credits
           </p>
           <p className="text-caption text-text-faint">
@@ -54,12 +63,17 @@ export function SubscriptionPlanCard({
         </div>
       </CardHeader>
 
-      <div className="space-y-3 px-4 pb-4 pt-3">
+      <CardContent className="space-y-3">
         <div className="space-y-1">
+          {/*
+            The reference's tick — a filled disc of the accent with a dark glyph — not a bare
+            check icon. It is the same mark the agent's rows use (`AgentCheck`), so "this is
+            included" looks identical wherever the product says it.
+          */}
           {included.map((entry) => (
             <div key={entry.feature} className="flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-1.5 text-body-sm text-text">
-                <Check size={13} aria-hidden className="text-success" />
+              <span className="inline-flex items-center gap-1.5 text-body text-text">
+                <AgentCheck />
                 {entry.feature}
               </span>
               <span className="text-caption tabular-nums text-text-muted">
@@ -69,7 +83,7 @@ export function SubscriptionPlanCard({
           ))}
           {excluded.map((entry) => (
             <div key={entry.feature} className="flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-1.5 text-body-sm text-text-faint">
+              <span className="inline-flex items-center gap-1.5 text-body text-text-faint">
                 <Minus size={13} aria-hidden />
                 {entry.feature}
               </span>
@@ -79,7 +93,9 @@ export function SubscriptionPlanCard({
         </div>
 
         <div className="space-y-1">
-          <h4 className="text-caption font-medium text-text-muted">What this plan may not do</h4>
+          <h4 className="text-caption font-semibold text-text-muted uppercase">
+            What this plan may not do
+          </h4>
           <ul className="list-disc space-y-1 pl-5" role="list">
             {plan.mayNot.map((line, index) => (
               <li key={index} className="text-caption text-text-faint">
@@ -104,7 +120,7 @@ export function SubscriptionPlanCard({
             purchasable and no amount is displayed.
           </span>
         </CardTile>
-      </div>
+      </CardContent>
     </Card>
   );
 }
@@ -141,15 +157,11 @@ export function PlanComparison({
   const features = [...new Set(plans.flatMap((plan) => plan.entitlements.map((e) => e.feature)))];
 
   return (
-    <section className={className ?? 'space-y-3'} aria-label="Plan comparison">
-      <header className="space-y-1">
-        <h2 className="text-h3 font-semibold text-text">Plans</h2>
-        <p className="text-body-sm text-text-muted">
-          Allowances are declared in code and served as data. Nothing here can be bought: there is
-          no payment integration in this build.
-        </p>
-      </header>
-
+    <Section
+      title="Plans"
+      description="Allowances are declared in code and served as data. Nothing here can be bought: there is no payment integration in this build."
+      className={className}
+    >
       <div className="overflow-x-auto rounded-[var(--radius-panel)] border border-border">
         <table className="w-full min-w-[40rem] border-collapse text-left">
           <caption className="sr-only">
@@ -179,11 +191,11 @@ export function PlanComparison({
           </thead>
           <tbody>
             <tr className="border-b border-border">
-              <th scope="row" className="px-3 py-2 text-body-sm font-medium text-text">
+              <th scope="row" className="px-3 py-2 text-body font-medium text-text">
                 Credits per period
               </th>
               {plans.map((plan) => (
-                <td key={plan.id} className="px-3 py-2 text-body-sm tabular-nums text-text">
+                <td key={plan.id} className="px-3 py-2 text-body tabular-nums text-text">
                   {plan.periodCredits}
                 </td>
               ))}
@@ -193,7 +205,7 @@ export function PlanComparison({
               const category = categories[feature];
               return (
                 <tr key={feature} className="border-b border-border last:border-b-0">
-                  <th scope="row" className="px-3 py-2 text-body-sm font-medium text-text">
+                  <th scope="row" className="px-3 py-2 text-body font-medium text-text">
                     {feature}
                   </th>
                   {plans.map((plan) => {
@@ -201,7 +213,7 @@ export function PlanComparison({
                       (candidate) => candidate.feature === feature,
                     );
                     return (
-                      <td key={plan.id} className="px-3 py-2 text-body-sm">
+                      <td key={plan.id} className="px-3 py-2 text-body">
                         {entry === undefined || !entry.included ? (
                           <span className="inline-flex items-center gap-1 text-text-faint">
                             <Lock size={12} aria-hidden />
@@ -226,6 +238,6 @@ export function PlanComparison({
           </tbody>
         </table>
       </div>
-    </section>
+    </Section>
   );
 }

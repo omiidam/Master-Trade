@@ -43,7 +43,7 @@ function Row({ position }: { position: PositionMetrics }) {
     <tr className="border-b border-border last:border-0 align-top">
       <th scope="row" className="py-3 pr-3 text-left">
         <div className="flex flex-col gap-1">
-          <span className="font-mono text-body-sm text-text">{position.symbol}</span>
+          <span className="font-mono text-body text-text">{position.symbol}</span>
           <span className="flex flex-wrap items-center gap-1">
             <Badge tone="neutral">{assetClassLabel(position.assetClass)}</Badge>
             <Badge tone="outline">{position.currency}</Badge>
@@ -129,7 +129,7 @@ export function HoldingsTable({ metrics, className }: HoldingsTableProps) {
   if (metrics.positions.length === 0) {
     return (
       <CardTile space="roomy" className={cn('', className)}>
-        <p className="text-body-sm text-text">No positions to show.</p>
+        <p className="text-body text-text">No positions to show.</p>
         <p className="text-caption text-text-muted">
           Nothing has been declared for this account yet. Nothing is displayed in place of a
           holding: an illustrative row would be a factual claim about somebody's money.
@@ -140,7 +140,7 @@ export function HoldingsTable({ metrics, className }: HoldingsTableProps) {
 
   return (
     <div className={cn('overflow-x-auto', className)}>
-      <table className="w-full min-w-[56rem] border-collapse text-body-sm">
+      <table className="w-full min-w-[56rem] border-collapse text-body">
         <caption className="sr-only">
           Declared positions with the figures computed from each one
         </caption>

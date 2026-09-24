@@ -42,11 +42,11 @@ export function CreditBalance({
         className={balance > 0 ? 'text-primary' : 'text-text-faint'}
       />
       <span
-        className={cn('font-semibold tabular-nums text-text', compact ? 'text-body-sm' : 'text-h3')}
+        className={cn('font-semibold tabular-nums text-text', compact ? 'text-body' : 'text-h3')}
       >
         {balance}
       </span>
-      <span className={cn('text-text-muted', compact ? 'text-caption' : 'text-body-sm')}>
+      <span className={cn('text-text-muted', compact ? 'text-caption' : 'text-body')}>
         of {allowance} this period
       </span>
       {lifetimeConsumed === undefined ? null : (
@@ -105,7 +105,7 @@ export function UsageProgressBar({ label, used, limit, unit, className }: UsageP
   return (
     <div className={cn('space-y-1', className)}>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-body-sm text-text">{label}</span>
+        <span className="text-body text-text">{label}</span>
         <span className={cn('text-caption tabular-nums', BAR_TEXT[state])}>
           {used}
           {limit === null ? '' : ` / ${limit}`} {unit}

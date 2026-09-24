@@ -191,7 +191,7 @@ export function JournalPage() {
 
       <Grid columns={4}>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Records by state</CardTitle>
               <CardDescription>
@@ -211,7 +211,7 @@ export function JournalPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Rule adherence</CardTitle>
               <CardDescription>Assessed separately from the outcome</CardDescription>
@@ -229,7 +229,7 @@ export function JournalPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Write-ups</CardTitle>
               <CardDescription>A record with no review cannot be studied</CardDescription>
@@ -245,7 +245,7 @@ export function JournalPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Reviews awaiting you</CardTitle>
               <CardDescription>Flagged by the record, not by the result</CardDescription>
@@ -421,7 +421,7 @@ export function JournalPage() {
           />
           <Grid columns={3}>
             <Card tone="sunken">
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Record states</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -431,7 +431,7 @@ export function JournalPage() {
               </CardContent>
             </Card>
             <Card tone="sunken">
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Actions on a record</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1.5 text-caption text-text-muted">
@@ -446,7 +446,7 @@ export function JournalPage() {
               </CardContent>
             </Card>
             <Card tone="sunken">
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Filtering is how a review starts</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -463,7 +463,7 @@ export function JournalPage() {
             <TradeForm onCancel={() => setTab('history')} className="xl:col-span-1" />
             <div className="space-y-4">
               <Card tone="sunken">
-                <CardHeader>
+                <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">No store is connected yet</CardTitle>
                     <CardDescription>What happens when you submit in this phase</CardDescription>
@@ -483,7 +483,7 @@ export function JournalPage() {
                 </CardContent>
               </Card>
               <Card tone="sunken">
-                <CardHeader>
+                <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Risk is not calculated here</CardTitle>
                     <CardDescription>Where the numbers come from</CardDescription>
@@ -498,7 +498,7 @@ export function JournalPage() {
                 </CardContent>
               </Card>
               <Card tone="sunken">
-                <CardHeader>
+                <CardHeader divider>
                   <div>
                     <CardTitle className="text-body">Recording is not adopting</CardTitle>
                     <CardDescription>The safety boundary</CardDescription>
@@ -517,7 +517,7 @@ export function JournalPage() {
         {/* Trade details -------------------------------------------------- */}
         <JournalTabPanel value="details">
           <Card>
-            <CardHeader>
+            <CardHeader divider>
               <div>
                 <CardTitle className="text-body">Choose a record</CardTitle>
                 <CardDescription>
@@ -568,7 +568,7 @@ export function JournalPage() {
           ) : (
             <>
               <Card>
-                <CardHeader>
+                <CardHeader divider>
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <CardTitle>{selected.symbol}</CardTitle>
@@ -676,7 +676,7 @@ export function JournalPage() {
 
               <Grid columns={2}>
                 <Card>
-                  <CardHeader>
+                  <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">Market analysis</CardTitle>
                       <CardDescription>Written before the entry, not after</CardDescription>
@@ -719,7 +719,7 @@ export function JournalPage() {
                 </Card>
 
                 <Card>
-                  <CardHeader>
+                  <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">Execution, risk and management</CardTitle>
                       <CardDescription>
@@ -757,7 +757,7 @@ export function JournalPage() {
                 </Card>
 
                 <Card>
-                  <CardHeader>
+                  <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">Psychology</CardTitle>
                       <CardDescription>Self-reported at the time</CardDescription>
@@ -805,7 +805,7 @@ export function JournalPage() {
                 </Card>
 
                 <Card>
-                  <CardHeader>
+                  <CardHeader divider>
                     <div>
                       <CardTitle className="text-body">Mistakes and lessons</CardTitle>
                       <CardDescription>What the record taught</CardDescription>
@@ -896,7 +896,7 @@ export function JournalPage() {
           />
           <Grid columns={2}>
             <Card tone="sunken">
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">What a day holds</CardTitle>
                   <CardDescription>
@@ -910,7 +910,7 @@ export function JournalPage() {
               </CardContent>
             </Card>
             <Card tone="sunken">
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">The emotional score is self-reported</CardTitle>
                   <CardDescription>Labelled so it is never read as a measurement</CardDescription>
@@ -928,7 +928,7 @@ export function JournalPage() {
         <JournalTabPanel value="reviews">
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Awaiting a review</CardTitle>
                   <CardDescription>
@@ -969,7 +969,7 @@ export function JournalPage() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Mistake frequency</CardTitle>
                   <CardDescription>
@@ -1009,7 +1009,7 @@ export function JournalPage() {
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                 {reviewedTrades.map((trade) => (
                   <Card key={trade.id} tone="sunken">
-                    <CardHeader>
+                    <CardHeader divider>
                       <div>
                         <CardTitle className="text-body">
                           {trade.ref} · {trade.symbol}
@@ -1058,7 +1058,7 @@ export function JournalPage() {
           >
             <Grid columns={3}>
               <Card tone="sunken">
-                <CardHeader>
+                <CardHeader divider>
                   <CardTitle className="text-body">
                     <span className="inline-flex items-center gap-2">
                       <NotebookPen size={14} aria-hidden className="text-text-faint" />A record is
@@ -1072,7 +1072,7 @@ export function JournalPage() {
                 </CardContent>
               </Card>
               <Card tone="sunken">
-                <CardHeader>
+                <CardHeader divider>
                   <CardTitle className="text-body">
                     <span className="inline-flex items-center gap-2">
                       <BrainCircuit size={14} aria-hidden className="text-text-faint" />
@@ -1086,7 +1086,7 @@ export function JournalPage() {
                 </CardContent>
               </Card>
               <Card tone="sunken">
-                <CardHeader>
+                <CardHeader divider>
                   <CardTitle className="text-body">
                     <span className="inline-flex items-center gap-2">
                       <ShieldCheck size={14} aria-hidden className="text-text-faint" />

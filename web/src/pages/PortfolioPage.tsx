@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Coins, Gauge, Layers, ListChecks, PencilLine, Sparkles } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card, CardContent } from '../components/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { Skeleton } from '../components/Skeleton';
@@ -161,7 +161,7 @@ export function PortfolioPage() {
 
       {saveStatus === 'saved' ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-primary/40 bg-primary-soft px-3 py-2">
-          <p className="text-body-sm text-text">
+          <p className="text-body text-text">
             The declaration was stored as version {view.version}. Every earlier version is kept and
             was not rewritten.
           </p>
@@ -203,13 +203,17 @@ export function PortfolioPage() {
             ) : (
               <>
                 <Card>
-                  <CardContent className="space-y-3 pt-4">
-                    <h2 className="text-h3 font-semibold text-text">Positions</h2>
-                    <p className="text-body-sm text-text-muted">
-                      Every figure was computed on the server from what you declared. An em dash is
-                      a figure that does not exist, and the Findings column says which kind of
-                      absence it was.
-                    </p>
+                  <CardHeader divider>
+                    <div className="min-w-0">
+                      <CardTitle>Positions</CardTitle>
+                      <CardDescription>
+                        Every figure was computed on the server from what you declared. An em dash
+                        is a figure that does not exist, and the Findings column says which kind of
+                        absence it was.
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
                     <HoldingsTable metrics={view.metrics} />
                   </CardContent>
                 </Card>

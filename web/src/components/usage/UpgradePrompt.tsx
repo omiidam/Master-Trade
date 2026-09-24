@@ -36,13 +36,13 @@ export function UpgradePrompt({ feature, upgradePlanName, className }: UpgradePr
     <CardTile className={className ?? 'space-y-1.5'}>
       <div className="flex items-center gap-1.5">
         <ArrowUpRight size={14} aria-hidden className="text-info" />
-        <p className="text-body-sm font-medium text-text">
+        <p className="text-body font-medium text-text">
           {upgradePlanName === undefined || upgradePlanName === null
             ? 'A larger allowance would cover this'
             : `${upgradePlanName} would cover this`}
         </p>
       </div>
-      <p className="text-body-sm text-text-muted">{feature.reason}</p>
+      <p className="text-body text-text-muted">{feature.reason}</p>
       <p className="text-caption text-text-faint">
         Nothing here can take a payment: this build has no payment integration, and every plan is
         declared as not purchasable.
@@ -70,10 +70,10 @@ export function UsageLimitNotice({ feature, resetsAt, className }: UsageLimitNot
     >
       <Clock size={14} aria-hidden className="mt-0.5 shrink-0 text-warning" />
       <div className="space-y-1">
-        <p className="text-body-sm font-medium text-text">
+        <p className="text-body font-medium text-text">
           {feature.label}: {feature.usedThisPeriod} of {feature.periodLimit ?? 0} used this period
         </p>
-        <p className="text-body-sm text-text-muted">{feature.reason}</p>
+        <p className="text-body text-text-muted">{feature.reason}</p>
         {resetsAt === undefined || resetsAt === null ? null : (
           <p className="text-caption text-text-faint">The allowance renews at {resetsAt}.</p>
         )}
@@ -111,7 +111,7 @@ export function InsufficientCreditsState({
         <p className="text-body font-medium text-text">Not enough credits</p>
         <Badge tone="warning">{denialHeading('insufficient-credits')}</Badge>
       </div>
-      <p className="text-body-sm text-text-muted">
+      <p className="text-body text-text-muted">
         {cost === null
           ? `Your balance is ${usage.balance}. Nothing was consumed.`
           : `This costs ${cost} credits and your balance is ${usage.balance}${
@@ -133,7 +133,7 @@ export function DisabledFeatureNotice({ feature }: { feature: UsageFeatureViewDa
   return (
     <CardTile className="flex items-start gap-2">
       <ShieldAlert size={14} aria-hidden className="mt-0.5 shrink-0 text-text-faint" />
-      <p className="text-body-sm text-text-muted">{feature.stateReason ?? feature.reason}</p>
+      <p className="text-body text-text-muted">{feature.stateReason ?? feature.reason}</p>
     </CardTile>
   );
 }
@@ -147,7 +147,7 @@ export function ComingSoonNotice({ feature, action }: ComingSoonNoticeProps) {
   if (feature.denial !== 'feature-coming-soon') return null;
   return (
     <CardTile className="space-y-1">
-      <p className="text-body-sm text-text-muted">
+      <p className="text-body text-text-muted">
         {feature.stateReason ??
           'This capability is included in your plan and has not been built yet.'}
       </p>
@@ -164,7 +164,7 @@ export function ComingSoonNotice({ feature, action }: ComingSoonNoticeProps) {
 export function UsageEmptyState({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="rounded-[var(--radius-control)] border border-dashed border-border px-4 py-6 text-center">
-      <p className="text-body-sm text-text-muted">{title}</p>
+      <p className="text-body text-text-muted">{title}</p>
       <p className="mt-1 text-caption text-text-faint">{hint}</p>
     </div>
   );

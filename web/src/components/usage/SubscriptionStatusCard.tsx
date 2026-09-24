@@ -1,7 +1,7 @@
 import { CalendarClock, CreditCard, ShieldAlert } from 'lucide-react';
 import type { UsageStatusData } from '@shared/api/contracts';
 import { Badge, type BadgeTone } from '../Badge';
-import { Card, CardHeader, CardTile, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { Tooltip } from '../Tooltip';
 import { CreditBalance } from './CreditBalance';
 import { describeReset, subscriptionStatusLabel } from './labels';
@@ -43,10 +43,10 @@ export function SubscriptionStatusCard({
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader divider>
         <div className="space-y-1">
           <CardTitle>{usage.plan.displayName}</CardTitle>
-          <p className="text-body-sm text-text-muted">{usage.plan.tagline}</p>
+          <CardDescription>{usage.plan.tagline}</CardDescription>
         </div>
         <div className="flex flex-col items-end gap-1">
           <Badge tone={STATUS_TONE[usage.subscriptionStatus] ?? 'neutral'}>
@@ -60,7 +60,7 @@ export function SubscriptionStatusCard({
         </div>
       </CardHeader>
 
-      <div className="space-y-3 px-4 pb-4 pt-3">
+      <CardContent className="space-y-3">
         <CreditBalance
           balance={usage.balance}
           allowance={allowance}
@@ -99,7 +99,7 @@ export function SubscriptionStatusCard({
             durable here, so a restart resets them. The capability itself still meters.
           </p>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 }

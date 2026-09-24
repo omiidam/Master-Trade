@@ -178,7 +178,7 @@ export function ActivityPage() {
     >
       <Grid columns={4}>
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Stream</CardTitle>
               <CardDescription>Delivered vs. dropped frames</CardDescription>
@@ -195,7 +195,7 @@ export function ActivityPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Queue</CardTitle>
               <CardDescription>
@@ -219,7 +219,7 @@ export function ActivityPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Notifications</CardTitle>
               <CardDescription>Server notices and stream warnings</CardDescription>
@@ -240,7 +240,7 @@ export function ActivityPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader divider>
             <div>
               <CardTitle className="text-body">Subscription</CardTitle>
               <CardDescription>What this client asked to receive</CardDescription>
@@ -342,7 +342,7 @@ export function ActivityPage() {
 
           <Grid columns={3}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Sequence, not arrival order</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -352,7 +352,7 @@ export function ActivityPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Internal events never arrive</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -362,7 +362,7 @@ export function ActivityPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Unknown types are dropped</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -412,7 +412,7 @@ export function ActivityPage() {
                 },
               ].map((item) => (
                 <Card key={item.state}>
-                  <CardHeader>
+                  <CardHeader divider>
                     <CardTitle className="text-body">{item.state}</CardTitle>
                   </CardHeader>
                   <CardContent className="text-caption text-text-muted">{item.text}</CardContent>
@@ -468,7 +468,7 @@ export function ActivityPage() {
 
           <Grid columns={2}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">What a reconnect keeps</CardTitle>
                   <CardDescription>Resume, replay and the honest gap</CardDescription>
@@ -496,7 +496,7 @@ export function ActivityPage() {
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">Endpoint</CardTitle>
                   <CardDescription>Where this client is pointed, and with what</CardDescription>
@@ -540,7 +540,7 @@ export function ActivityPage() {
 
           <Grid columns={3}>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Heartbeat</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -550,7 +550,7 @@ export function ActivityPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Backoff, then stop</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
@@ -560,7 +560,7 @@ export function ActivityPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader>
+              <CardHeader divider>
                 <CardTitle className="text-body">Frame validation</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">

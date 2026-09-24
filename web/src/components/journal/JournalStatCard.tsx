@@ -1,7 +1,7 @@
 import { Info, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { Sparkline } from '../charts/Sparkline';
 import { Tooltip } from '../Tooltip';
-import { Card, type CardEmphasis } from '../Card';
+import { Card, CardContent, CardHeader, CardTitle, type CardEmphasis } from '../Card';
 import { cn } from '../../lib/cn';
 import type { StatTone } from '../../mock/journal';
 
@@ -71,42 +71,56 @@ export function JournalStatCard({
     <Card
       emphasis={TONE_EMPHASIS[tone]}
       density="compact"
-      className={cn('relative flex h-full flex-col justify-between gap-3 p-4', className)}
+      className={cn('flex h-full flex-col', className)}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-caption font-medium tracking-wide text-text-muted uppercase">{label}</p>
-        {hint ? (
-          <Tooltip content={hint}>
-            <span className="text-text-faint" tabIndex={0} aria-label={`About ${label}`}>
-              <Info size={13} aria-hidden />
+      {/*
+        A metric card is a card, and it gets the same titled head as every other one — the label
+        is the card's name even when it is set as an uppercase micro-label rather than a sentence.
+        `density="compact"` is what keeps the head and the rule from doubling the card's height, and
+        the tooltip/trend glyph rides along as the head's `actions` so it cannot squeeze the label.
+      */}
+      <CardHeader
+        divider
+        actions={
+          hint ? (
+            <Tooltip content={hint}>
+              <span className="text-text-faint" tabIndex={0} aria-label={`About ${label}`}>
+                <Info size={13} aria-hidden />
+              </span>
+            </Tooltip>
+          ) : (
+            <span className={cn('shrink-0', TONE_TEXT[tone])} aria-hidden>
+              <Icon size={14} />
             </span>
-          </Tooltip>
-        ) : (
-          <span className={cn('shrink-0', TONE_TEXT[tone])} aria-hidden>
-            <Icon size={14} />
-          </span>
-        )}
-      </div>
+          )
+        }
+      >
+        <CardTitle className="text-caption font-medium tracking-wide text-text-muted uppercase">
+          {label}
+        </CardTitle>
+      </CardHeader>
 
-      <div>
-        <div className="flex items-baseline gap-1.5">
-          <span className={cn('num text-metric', TONE_TEXT[tone])}>{value}</span>
-          {unit ? <span className="text-caption text-text-faint">{unit}</span> : null}
+      <CardContent className="flex flex-1 flex-col justify-between gap-3">
+        <div>
+          <div className="flex items-baseline gap-1.5">
+            <span className={cn('num text-metric', TONE_TEXT[tone])}>{value}</span>
+            {unit ? <span className="text-caption text-text-faint">{unit}</span> : null}
+          </div>
+          <p className="mt-1.5 flex items-center gap-1.5 text-caption text-text-muted">
+            <span className={cn('shrink-0', TONE_TEXT[tone])} aria-hidden>
+              <Icon size={12} />
+            </span>
+            {comparison}
+          </p>
         </div>
-        <p className="mt-1.5 flex items-center gap-1.5 text-caption text-text-muted">
-          <span className={cn('shrink-0', TONE_TEXT[tone])} aria-hidden>
-            <Icon size={12} />
-          </span>
-          {comparison}
-        </p>
-      </div>
 
-      <div className="flex items-end justify-between gap-3">
-        {basis ? <p className="text-caption text-text-faint">{basis}</p> : <span />}
-        {sparkline && sparkline.length > 1 ? (
-          <Sparkline values={sparkline} tone={strokeTone} width={72} height={24} />
-        ) : null}
-      </div>
+        <div className="flex items-end justify-between gap-3">
+          {basis ? <p className="text-caption text-text-faint">{basis}</p> : <span />}
+          {sparkline && sparkline.length > 1 ? (
+            <Sparkline values={sparkline} tone={strokeTone} width={72} height={24} />
+          ) : null}
+        </div>
+      </CardContent>
     </Card>
   );
 }

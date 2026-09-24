@@ -4,7 +4,7 @@ import { LineChart } from 'lucide-react';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { EmptyState } from '../EmptyState';
 import { ErrorState } from '../ErrorState';
-import { Card } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
 import {
   CHART_TONE_VAR,
   ChartToolbar,
@@ -186,15 +186,18 @@ export function PerformanceChart({
     );
   }
 
+  // The reference's title block: the name of the panel, the sentence explaining it, and the rule
+  // that separates both from what the panel draws. The chart is the card's *contents*, so it gets
+  // the padded band rather than the chart component owning a `p-4` of its own.
   const header = (
-    <header className="flex flex-wrap items-start justify-between gap-3">
+    <CardHeader divider>
       <div className="min-w-0">
-        <h3 className="text-title font-semibold text-text">{title}</h3>
+        <CardTitle>{title}</CardTitle>
         {description ? (
-          <p className="mt-0.5 max-w-2xl text-caption text-text-muted">{description}</p>
+          <CardDescription className="max-w-2xl">{description}</CardDescription>
         ) : null}
       </div>
-    </header>
+    </CardHeader>
   );
 
   const renderControls = (expanded: boolean) => (
@@ -252,42 +255,44 @@ export function PerformanceChart({
   );
 
   return (
-    <Card as="figure" className={cn('flex flex-col gap-3 p-4', className)}>
+    <Card as="figure" className={className}>
       {header}
-      {hasData ? renderControls(false) : null}
+      <CardContent className="space-y-3">
+        {hasData ? renderControls(false) : null}
 
-      {hasData ? (
-        <div className="relative" style={{ direction: 'ltr' }}>
-          {surface}
-          {tooltip}
-        </div>
-      ) : (
-        <EmptyState
-          icon={<LineChart size={22} aria-hidden />}
-          title="Nothing to plot yet"
-          description={emptyMessage}
-          hint="An empty chart is left empty rather than filled with a placeholder series."
-        />
-      )}
-
-      {hasData && provenance ? provenanceStrip : null}
-      {footnote ? <p className="text-caption text-text-faint">{footnote}</p> : null}
-
-      {hasData ? (
-        <FullscreenChartViewer
-          open={fullscreen}
-          onOpenChange={setFullscreen}
-          title={title}
-          {...(description ? { description } : {})}
-          toolbar={renderControls(true)}
-        >
+        {hasData ? (
           <div className="relative" style={{ direction: 'ltr' }}>
             {surface}
             {tooltip}
           </div>
-          {provenance ? <div className="mt-3">{provenanceStrip}</div> : null}
-        </FullscreenChartViewer>
-      ) : null}
+        ) : (
+          <EmptyState
+            icon={<LineChart size={22} aria-hidden />}
+            title="Nothing to plot yet"
+            description={emptyMessage}
+            hint="An empty chart is left empty rather than filled with a placeholder series."
+          />
+        )}
+
+        {hasData && provenance ? provenanceStrip : null}
+        {footnote ? <p className="text-caption text-text-faint">{footnote}</p> : null}
+
+        {hasData ? (
+          <FullscreenChartViewer
+            open={fullscreen}
+            onOpenChange={setFullscreen}
+            title={title}
+            {...(description ? { description } : {})}
+            toolbar={renderControls(true)}
+          >
+            <div className="relative" style={{ direction: 'ltr' }}>
+              {surface}
+              {tooltip}
+            </div>
+            {provenance ? <div className="mt-3">{provenanceStrip}</div> : null}
+          </FullscreenChartViewer>
+        ) : null}
+      </CardContent>
     </Card>
   );
 }
