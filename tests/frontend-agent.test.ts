@@ -289,16 +289,23 @@ describe('Task 2 — the agent card', () => {
     ]);
     // A surface class defined in the stylesheet and referenced from a page would be the
     // copy-pasted variant this phase exists to avoid.
-    const referencing = sources.filter((path) =>
-      /composer-frame|agent-ring|agent-glow/.test(bare(path)),
-    );
+    //
+    // Sorted, because `uiSources()` walks the tree and the order `readdirSync` returns is the
+    // filesystem's business rather than the product's: NTFS collates `agent/` before `Card.tsx`
+    // (case-insensitively), while other filesystems enumerate `Card.tsx` first. The assertion is
+    // about *which* files reach the agent's surface classes — a set — so it holds that set in a
+    // defined order instead of depending on how the host happens to lay the directory out. The
+    // expected list below is therefore in `Array.prototype.sort` order, and is not a grouping.
+    const referencing = sources
+      .filter((path) => /composer-frame|agent-ring|agent-glow/.test(bare(path)))
+      .sort();
     expect(referencing).toEqual([
-      'web/src/components/agent/AgentCard.tsx',
-      'web/src/components/agent/MessageComposer.tsx',
       // Phase 7.2.2 turned the agent's under-lit face into the card system's `accent` variant, so
       // the glow now has one more *reader* and still no second definition: `Card` names the same
       // `agent-glow` utility rather than restating the gradient.
       'web/src/components/Card.tsx',
+      'web/src/components/agent/AgentCard.tsx',
+      'web/src/components/agent/MessageComposer.tsx',
       // The inventory, which is where a gradient is registered before it can be used.
       'web/src/design/tokens.ts',
     ]);
