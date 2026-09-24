@@ -1,4 +1,15 @@
 import { Badge } from '../Badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableEmptyRow,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  TableRowHeaderCell,
+} from '../Table';
+import { Trend } from '../Trend';
 import { cn } from '../../lib/cn';
 import {
   assetClassLabel,
@@ -10,7 +21,6 @@ import {
   issueTone,
 } from './labels';
 import type { PortfolioMetrics, PositionMetrics } from '@shared/portfolio/model';
-import { CardTile } from '../Card';
 
 /**
  * Every position, with what could be computed about it and what could not.
@@ -36,74 +46,68 @@ export interface HoldingsTableProps {
 
 function Row({ position }: { position: PositionMetrics }) {
   const priceCurrency = position.currency;
-  const tone =
-    position.marketValue === null ? 'text-text-faint' : 'text-text tabular-nums font-medium';
 
   return (
-    <tr className="border-b border-border last:border-0 align-top">
-      <th scope="row" className="py-3 pr-3 text-left">
+    <TableRow className="align-top">
+      <TableRowHeaderCell>
         <div className="flex flex-col gap-1">
-          <span className="font-mono text-body text-text">{position.symbol}</span>
+          <span className="num text-body text-text">{position.symbol}</span>
           <span className="flex flex-wrap items-center gap-1">
             <Badge tone="neutral">{assetClassLabel(position.assetClass)}</Badge>
             <Badge tone="outline">{position.currency}</Badge>
           </span>
         </div>
-      </th>
+      </TableRowHeaderCell>
 
-      <td className={cn('py-3 pr-3', tone)}>{formatMoney(position.marketValue, priceCurrency)}</td>
-      <td className="py-3 pr-3 tabular-nums text-text-muted">
+      <TableCell numeric tone={position.marketValue === null ? 'faint' : 'default'}>
+        {formatMoney(position.marketValue, priceCurrency)}
+      </TableCell>
+      <TableCell numeric tone="muted">
         {formatMoney(position.costBasis, priceCurrency)}
-      </td>
-      <td className="py-3 pr-3">
+      </TableCell>
+      <TableCell>
         <div className="flex flex-col">
-          <span
-            className={cn(
-              'tabular-nums',
-              position.unrealisedPnl === null
-                ? 'text-text-faint'
-                : position.unrealisedPnl > 0
-                  ? 'text-success'
-                  : position.unrealisedPnl < 0
-                    ? 'text-danger'
-                    : 'text-text-muted',
-            )}
-          >
-            {formatMoney(position.unrealisedPnl, priceCurrency)}
-          </span>
+          {/* The figure and its tone come from `Trend`, so a row's loss is stated the same way
+              here as everywhere else in the product — with a glyph as well as a colour. */}
+          <Trend
+            value={position.unrealisedPnl}
+            format={(value) => formatMoney(value, priceCurrency)}
+            unavailable="not priced"
+            size="body"
+          />
           {position.unrealisedReturnPercent === null ? null : (
-            <span className="text-caption text-text-faint tabular-nums">
+            <span className="num text-caption text-text-faint">
               {formatSignedPercent(position.unrealisedReturnPercent)}
             </span>
           )}
         </div>
-      </td>
+      </TableCell>
 
-      <td className="py-3 pr-3">
+      <TableCell>
         <div className="flex flex-col">
-          <span className="tabular-nums text-text-muted">
+          <span className="num text-text-muted">
             {formatPercent(position.declaredWeightPercent)}
           </span>
-          <span className="text-caption text-text-faint tabular-nums">
+          <span className="num text-caption text-text-faint">
             {position.computedWeightPercent === null
               ? 'no computed share'
               : `${formatPercent(position.computedWeightPercent)} computed`}
           </span>
         </div>
-      </td>
+      </TableCell>
 
-      <td className="py-3 pr-3">
+      <TableCell>
         <div className="flex flex-col gap-0.5">
-          <span className="tabular-nums text-text-muted">
+          <span className="num text-text-muted">
             {position.quantity === null ? '—' : String(position.quantity)}
           </span>
           <span className="text-caption text-text-faint">
             {position.basis === null ? 'no valuation basis' : position.basis}
           </span>
         </div>
-      </td>
+      </TableCell>
 
-      <td className="py-3">
+      <TableCell>
         <div className="flex flex-col gap-1">
           {position.findings.length === 0 ? (
             <Badge tone="success">complete</Badge>
@@ -120,57 +124,42 @@ function Row({ position }: { position: PositionMetrics }) {
             </span>
           )}
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
 export function HoldingsTable({ metrics, className }: HoldingsTableProps) {
-  if (metrics.positions.length === 0) {
-    return (
-      <CardTile space="roomy" className={cn('', className)}>
-        <p className="text-body text-text">No positions to show.</p>
-        <p className="text-caption text-text-muted">
-          Nothing has been declared for this account yet. Nothing is displayed in place of a
-          holding: an illustrative row would be a factual claim about somebody's money.
-        </p>
-      </CardTile>
-    );
-  }
-
   return (
-    <div className={cn('overflow-x-auto', className)}>
-      <table className="w-full min-w-[56rem] border-collapse text-body">
-        <caption className="sr-only">
-          Declared positions with the figures computed from each one
-        </caption>
-        <thead>
-          <tr className="border-b border-border text-left">
-            {[
-              'Position',
-              'Market value',
-              'Cost basis',
-              'Unrealised P/L',
-              'Weight',
-              'Quantity',
-              'Findings',
-            ].map((heading) => (
-              <th
-                key={heading}
-                scope="col"
-                className="py-2 pr-3 text-caption font-medium text-text-muted"
-              >
-                {heading}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {metrics.positions.map((position) => (
-            <Row key={position.id} position={position} />
-          ))}
-        </tbody>
-      </table>
-    </div>
+    // `spacious` rather than the default: a position is a paragraph of figures and its cells carry
+    // two lines each, so the compact row height would set the two lines against each other. The
+    // table keeps its head when it has no rows, so a reader can still see what a holding would say.
+    <Table
+      density="spacious"
+      minWidth={896}
+      label="Declared positions with the figures computed from each one"
+      className={cn('text-body', className)}
+    >
+      <TableHead>
+        <TableHeaderCell>Position</TableHeaderCell>
+        <TableHeaderCell numeric>Market value</TableHeaderCell>
+        <TableHeaderCell numeric>Cost basis</TableHeaderCell>
+        <TableHeaderCell>Unrealised P/L</TableHeaderCell>
+        <TableHeaderCell>Weight</TableHeaderCell>
+        <TableHeaderCell>Quantity</TableHeaderCell>
+        <TableHeaderCell>Findings</TableHeaderCell>
+      </TableHead>
+      <TableBody>
+        {metrics.positions.length === 0 ? (
+          <TableEmptyRow
+            colSpan={7}
+            title="No positions to show"
+            description="Nothing has been declared for this account yet. Nothing is displayed in place of a holding: an illustrative row would be a factual claim about somebody's money."
+          />
+        ) : (
+          metrics.positions.map((position) => <Row key={position.id} position={position} />)
+        )}
+      </TableBody>
+    </Table>
   );
 }

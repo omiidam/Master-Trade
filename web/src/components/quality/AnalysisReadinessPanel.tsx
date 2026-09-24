@@ -108,9 +108,7 @@ export function AnalysisReadinessPanel({
           {COUNT_ROWS.map((row) => (
             <CardTile key={row.key}>
               <p className="text-caption text-text-muted">{row.label}</p>
-              <p className="text-h3 font-semibold tabular-nums text-text">
-                {decision.counts[row.key]}
-              </p>
+              <p className="text-h3 font-semibold num text-text">{decision.counts[row.key]}</p>
             </CardTile>
           ))}
         </div>

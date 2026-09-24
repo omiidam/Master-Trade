@@ -59,7 +59,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
               Market value{totals.marketValue === null ? ' by currency' : ''}
             </p>
             {totals.marketValue === null ? null : (
-              <p className="text-h1 font-semibold tabular-nums text-text">
+              <p className="text-h1 font-semibold num text-text">
                 {formatMoney(totals.marketValue, metrics.baseCurrency)}
               </p>
             )}
@@ -86,7 +86,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
                     {group.currency} · {group.positions} position
                     {group.positions === 1 ? '' : 's'}
                   </p>
-                  <p className="text-h3 font-semibold tabular-nums text-text">
+                  <p className="text-h3 font-semibold num text-text">
                     {formatMoney(group.marketValue, group.currency)}
                   </p>
                 </CardTile>
@@ -128,7 +128,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
           ).map(([label, value, hint]) => (
             <CardTile key={label}>
               <dt className="text-caption text-text-muted">{label}</dt>
-              <dd className="text-body font-semibold tabular-nums text-text">{value}</dd>
+              <dd className="text-body font-semibold num text-text">{value}</dd>
               <p className="text-caption text-text-faint">{hint}</p>
             </CardTile>
           ))}

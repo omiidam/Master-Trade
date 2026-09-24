@@ -84,15 +84,15 @@ export function CreditTransactionItem({ movement, className }: CreditTransaction
         <p
           className={
             returned
-              ? 'text-body font-medium tabular-nums text-text-muted'
+              ? 'text-body font-medium num text-text-muted'
               : movement.delta > 0
-                ? 'text-body font-medium tabular-nums text-success'
-                : 'text-body font-medium tabular-nums text-text'
+                ? 'text-body font-medium num text-success'
+                : 'text-body font-medium num text-text'
           }
         >
           {formatDelta(movement.delta)}
         </p>
-        <p className="text-caption tabular-nums text-text-faint">balance {movement.balanceAfter}</p>
+        <p className="text-caption num text-text-faint">balance {movement.balanceAfter}</p>
         <Tooltip content={ledgerStatusLabel(movement.status)}>
           <span className="text-caption text-text-faint">{movement.status}</span>
         </Tooltip>
@@ -204,7 +204,7 @@ function AttemptRow({ attempt }: { attempt: UsageAttemptView }) {
           {attempt.settledAt === null ? '' : ` · settled ${attempt.settledAt}`}
         </p>
       </div>
-      <p className="text-body tabular-nums text-text-muted">
+      <p className="text-body num text-text-muted">
         {attempt.credits === 0 ? 'no charge' : `${attempt.credits} held`}
       </p>
     </li>

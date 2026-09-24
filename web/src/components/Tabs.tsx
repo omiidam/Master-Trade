@@ -53,9 +53,13 @@ export function Tabs({
       {/* The strip is a *rail*: a recessed well (inset stack) with the active tab standing on it
           as a raised control. That inversion — sunken track, raised selection — is what makes the
           current tab unmistakable without a heavy fill. */}
+      {/* `relative` is load-bearing rather than cosmetic: the rail is a scroll container, and an
+          `sr-only` descendant (`position: absolute`) would otherwise take the nearest positioned
+          ancestor outside it as its containing block and escape the rail's clip, widening the
+          document instead of scrolling inside the rail. */}
       <RadixTabs.List
         aria-label={ariaLabel}
-        className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain rounded-[var(--radius-control)] border border-border bg-surface-sunken p-1 shadow-control-inset"
+        className="relative flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain rounded-[var(--radius-control)] border border-border bg-surface-sunken p-1 shadow-control-inset"
       >
         {items.map((item) => (
           <RadixTabs.Trigger

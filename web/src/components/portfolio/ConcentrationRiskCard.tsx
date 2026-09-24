@@ -64,7 +64,7 @@ function Panel({ set, title }: { set: WeightSet; title: string }) {
         ).map(([label, value, hint]) => (
           <div key={label} className="rounded-[var(--radius-control)] bg-surface px-2 py-1.5">
             <dt className="text-caption text-text-muted">{label}</dt>
-            <dd className="text-body font-semibold tabular-nums text-text">{value}</dd>
+            <dd className="text-body font-semibold num text-text">{value}</dd>
             <p className="text-caption text-text-faint">{hint}</p>
           </div>
         ))}
@@ -124,7 +124,7 @@ export function ConcentrationRiskCard({
               {insight.metrics.map((metric) => (
                 <Badge key={metric.label} tone="neutral">
                   {metric.label}
-                  <span className="tabular-nums">{metric.value}</span>
+                  <span className="num">{metric.value}</span>
                 </Badge>
               ))}
             </div>

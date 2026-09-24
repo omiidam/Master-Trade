@@ -291,9 +291,13 @@ describe('the surfaces are responsive from the first line', () => {
 
   it('keeps the one table inside a container that scrolls, not the page', () => {
     const source = read('web/src/components/decisions/EvaluationPanels.tsx');
-    expect(source).toContain('overflow-x-auto');
-    // The table is the only thing allowed a minimum width, and it sits inside that container.
-    expect(source).toMatch(/overflow-x-auto[\s\S]{0,200}min-w-\[34rem\]/);
+    // The table is the only thing allowed a minimum width and the container is the shared table's,
+    // built in Section 7.3 — so this asserts the two facts that are still this file's: it has one
+    // table, it says how narrow that table may be squeezed, and it does not scroll anything itself.
+    expect(source).toMatch(/<Table\b/);
+    expect(source.match(/<Table\b/g) ?? []).toHaveLength(1);
+    expect(source).toMatch(/minWidth=\{\d+\}/);
+    expect(source, 'the panel scrolls something of its own').not.toContain('overflow-x-auto');
   });
 
   it('gives every interactive element a visible focus state', () => {

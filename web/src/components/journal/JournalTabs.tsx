@@ -51,7 +51,10 @@ export function JournalTabs({
       onValueChange={onValueChange}
       className={cn('flex flex-col gap-4', className)}
     >
-      <div className="-mx-1 overflow-x-auto px-1 pb-1">
+      {/* The rail scrolls, so it is positioned: an `sr-only` (`position: absolute`) descendant
+          would otherwise be contained by whatever positioned ancestor sits outside it and paint
+          past its clip. */}
+      <div className="relative -mx-1 overflow-x-auto px-1 pb-1">
         <RadixTabs.List
           aria-label={ariaLabel}
           className="inline-flex min-w-full items-center gap-1 rounded-[var(--radius-control)] border border-border bg-surface-sunken p-1"

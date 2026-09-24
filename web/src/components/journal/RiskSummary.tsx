@@ -1,6 +1,14 @@
 import { Badge } from '../Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
-import { cn } from '../../lib/cn';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  TableRowHeaderCell,
+} from '../Table';
 import { RMultipleIndicator } from './RMultipleIndicator';
 import type { JournalTrade } from '../../mock/journal';
 
@@ -95,51 +103,26 @@ export function RiskSummary({ trade, className }: { trade: JournalTrade; classNa
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="border-b border-border">
-              <th
-                scope="col"
-                className="py-1.5 text-start text-caption font-semibold text-text-faint uppercase"
-              >
-                Measure
-              </th>
-              <th
-                scope="col"
-                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-              >
-                Planned
-              </th>
-              <th
-                scope="col"
-                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-              >
-                Actual
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="text-caption" label="Planned and actual values for each measure">
+          <TableHead>
+            <TableHeaderCell>Measure</TableHeaderCell>
+            <TableHeaderCell numeric>Planned</TableHeaderCell>
+            <TableHeaderCell numeric>Actual</TableHeaderCell>
+          </TableHead>
+          <TableBody>
             {rows.map((row) => (
-              <tr key={row.label} className="border-b border-border last:border-b-0">
-                <th
-                  scope="row"
-                  className="py-2 text-start text-caption font-normal text-text-muted"
-                >
-                  {row.label}
-                </th>
-                <td className="num py-2 text-end text-caption text-text-muted">{row.planned}</td>
-                <td
-                  className={cn(
-                    'num py-2 text-end text-caption',
-                    row.differs ? 'text-warning' : 'text-text',
-                  )}
-                >
+              <TableRow key={row.label}>
+                <TableRowHeaderCell tone="muted">{row.label}</TableRowHeaderCell>
+                <TableCell numeric tone="muted">
+                  {row.planned}
+                </TableCell>
+                <TableCell numeric tone={row.differs ? 'warning' : 'default'}>
                   {row.actual}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
         <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
           <span className="text-caption text-text-muted">Realised result</span>

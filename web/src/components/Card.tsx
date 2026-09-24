@@ -394,7 +394,13 @@ export function Card({
         data-density={resolvedDensity}
         {...(surface === undefined ? {} : { 'data-surface': surface })}
         className={cn(
-          'relative rounded-[var(--radius-panel)] border',
+          // `relative` contains the shine; `min-w-0` is the other half of not growing the page. A
+          // card is routinely a grid or flex item, and an item's automatic minimum size is its
+          // *min-content* width — which, for a card holding a table in a scroll container, is the
+          // table's own minimum. Without this, a card in a `grid-cols-2` track pushes the grid wider
+          // than the viewport and the whole page gains a sideways scroll, while the table inside the
+          // card is perfectly able to scroll within its own box. A card never sets the page's width.
+          'relative min-w-0 rounded-[var(--radius-panel)] border',
           borderClass,
           faceClass,
           shadow,
@@ -438,9 +444,9 @@ export function CardHeader({ actions, divider, className, children, ...rest }: C
       <div
         className={cn(
           // `flex-wrap` is what keeps a titled card with actions from overflowing at 390px: the
-          // actions are `shrink-0` by design (a control must not be squeezed), so without a wrap the
-          // row would simply be wider than the card. The headers this replaced nearly all wrote
-          // `flex-wrap` by hand — it just was not part of the system, so half of them forgot it.
+          // actions are the controls beside the title, so without a wrap the row would simply be
+          // wider than the card. The headers this replaced nearly all wrote `flex-wrap` by hand —
+          // it just was not part of the system, so half of them forgot it.
           'flex flex-wrap items-start justify-between gap-3',
           DENSITY[density].header,
           className,
@@ -448,7 +454,14 @@ export function CardHeader({ actions, divider, className, children, ...rest }: C
         {...rest}
       >
         {children}
-        {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
+        {/* Wrapping the row is necessary and was not sufficient: a group of badges is wider than a
+            390px card on its own, so `shrink-0` here moved the overflow rather than removing it — the
+            group kept its 282px content width on its own line and pushed the page 32px sideways. The
+            group therefore shrinks *and* wraps. A control is still never squeezed: a child's own
+            automatic minimum size is its min-content width, which for a button is its label. */}
+        {actions ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">{actions}</div>
+        ) : null}
       </div>
       {divider ? (
         <div className={DENSITY[density].rule}>

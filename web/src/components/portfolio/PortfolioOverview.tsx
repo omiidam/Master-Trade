@@ -89,7 +89,7 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
           ).map(([label, value, hint]) => (
             <CardTile key={label}>
               <dt className="text-caption text-text-muted">{label}</dt>
-              <dd className="text-h3 font-semibold tabular-nums text-text">{value}</dd>
+              <dd className="text-h3 font-semibold num text-text">{value}</dd>
               <p className="text-caption text-text-faint">{hint}</p>
             </CardTile>
           ))}

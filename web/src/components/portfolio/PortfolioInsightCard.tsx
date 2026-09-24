@@ -61,7 +61,7 @@ export function PortfolioInsightCard({ insight, className }: PortfolioInsightCar
             {insight.metrics.map((metric) => (
               <CardTile key={metric.label}>
                 <dt className="text-caption text-text-muted">{metric.label}</dt>
-                <dd className="text-body font-semibold tabular-nums text-text">{metric.value}</dd>
+                <dd className="text-body font-semibold num text-text">{metric.value}</dd>
               </CardTile>
             ))}
           </dl>

@@ -93,7 +93,7 @@ export function AssetAllocationChart({
               <li key={bucket.key} className="space-y-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-body text-text">{bucket.label}</span>
-                  <span className="text-caption tabular-nums text-text-muted">
+                  <span className="text-caption num text-text-muted">
                     {formatPercent(bucket.weightPercent)} · {bucket.positions} position
                     {bucket.positions === 1 ? '' : 's'}
                   </span>
@@ -121,7 +121,7 @@ export function AssetAllocationChart({
                 <li key={share.id}>
                   <Badge tone="neutral">
                     <span className="font-mono">{share.symbol}</span>
-                    <span className="tabular-nums">{formatPercent(share.weightPercent)}</span>
+                    <span className="num">{formatPercent(share.weightPercent)}</span>
                   </Badge>
                 </li>
               ))}

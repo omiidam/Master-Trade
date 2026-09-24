@@ -11,6 +11,15 @@ import {
   CardTitle,
   Section,
 } from '../Card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  TableRowHeaderCell,
+} from '../Table';
 import { usageCategoryLabel } from './labels';
 
 /**
@@ -54,9 +63,7 @@ export function SubscriptionPlanCard({
           <CardDescription>{plan.tagline}</CardDescription>
         </div>
         <div className="text-right">
-          <p className="text-body font-medium tabular-nums text-text">
-            {plan.periodCredits} credits
-          </p>
+          <p className="text-body font-medium num text-text">{plan.periodCredits} credits</p>
           <p className="text-caption text-text-faint">
             {plan.resetCadence === 'none' ? 'granted once' : `per ${plan.resetCadence} period`}
           </p>
@@ -76,7 +83,7 @@ export function SubscriptionPlanCard({
                 <AgentCheck />
                 {entry.feature}
               </span>
-              <span className="text-caption tabular-nums text-text-muted">
+              <span className="text-caption num text-text-muted">
                 {entry.periodLimit === null ? 'no separate cap' : `${entry.periodLimit} per period`}
               </span>
             </div>
@@ -162,58 +169,48 @@ export function PlanComparison({
       description="Allowances are declared in code and served as data. Nothing here can be bought: there is no payment integration in this build."
       className={className}
     >
-      <div className="overflow-x-auto rounded-[var(--radius-panel)] border border-border">
-        <table className="w-full min-w-[40rem] border-collapse text-left">
-          <caption className="sr-only">
-            Every declared capability, by plan, with its per-period limit and cost.
-          </caption>
-          <thead>
-            <tr className="border-b border-border bg-surface-sunken">
-              <th scope="col" className="px-3 py-2 text-caption font-medium text-text-muted">
-                Capability
-              </th>
+      {/* The frame keeps its own outline: this is a matrix rather than a record list, so it is a
+          plate the reader looks *into* rather than a table laid on the card. */}
+      <div className="rounded-[var(--radius-panel)] border border-border">
+        <Table
+          minWidth={640}
+          label="Every declared capability, by plan, with its per-period limit and cost"
+        >
+          <TableHead>
+            <TableHeaderCell>Capability</TableHeaderCell>
+            {plans.map((plan) => (
+              // A `heading`: a plan's name is a proper noun and the most important column in the
+              // table, so it is not rendered as an uppercase micro-label.
+              <TableHeaderCell key={plan.id} variant="heading">
+                <span className="flex items-center gap-1.5">
+                  {plan.displayName}
+                  {plan.id === currentPlanId ? <Badge tone="primary">Current</Badge> : null}
+                </span>
+              </TableHeaderCell>
+            ))}
+            <TableHeaderCell>Category</TableHeaderCell>
+          </TableHead>
+          <TableBody>
+            <TableRow>
+              <TableRowHeaderCell>Credits per period</TableRowHeaderCell>
               {plans.map((plan) => (
-                <th
-                  key={plan.id}
-                  scope="col"
-                  className="px-3 py-2 text-caption font-medium text-text"
-                >
-                  <span className="flex items-center gap-1.5">
-                    {plan.displayName}
-                    {plan.id === currentPlanId ? <Badge tone="primary">Current</Badge> : null}
-                  </span>
-                </th>
-              ))}
-              <th scope="col" className="px-3 py-2 text-caption font-medium text-text-muted">
-                Category
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-border">
-              <th scope="row" className="px-3 py-2 text-body font-medium text-text">
-                Credits per period
-              </th>
-              {plans.map((plan) => (
-                <td key={plan.id} className="px-3 py-2 text-body tabular-nums text-text">
+                <TableCell key={plan.id} numeric>
                   {plan.periodCredits}
-                </td>
+                </TableCell>
               ))}
-              <td className="px-3 py-2 text-caption text-text-faint">allowance</td>
-            </tr>
+              <TableCell tone="faint">allowance</TableCell>
+            </TableRow>
             {features.map((feature) => {
               const category = categories[feature];
               return (
-                <tr key={feature} className="border-b border-border last:border-b-0">
-                  <th scope="row" className="px-3 py-2 text-body font-medium text-text">
-                    {feature}
-                  </th>
+                <TableRow key={feature}>
+                  <TableRowHeaderCell>{feature}</TableRowHeaderCell>
                   {plans.map((plan) => {
                     const entry = plan.entitlements.find(
                       (candidate) => candidate.feature === feature,
                     );
                     return (
-                      <td key={plan.id} className="px-3 py-2 text-body">
+                      <TableCell key={plan.id}>
                         {entry === undefined || !entry.included ? (
                           <span className="inline-flex items-center gap-1 text-text-faint">
                             <Lock size={12} aria-hidden />
@@ -222,21 +219,19 @@ export function PlanComparison({
                         ) : entry.periodLimit === null ? (
                           <span className="text-text-muted">included, no separate cap</span>
                         ) : (
-                          <span className="tabular-nums text-text">
-                            {entry.periodLimit} per period
-                          </span>
+                          <span className="num text-text">{entry.periodLimit} per period</span>
                         )}
-                      </td>
+                      </TableCell>
                     );
                   })}
-                  <td className="px-3 py-2 text-caption text-text-faint">
+                  <TableCell tone="faint">
                     {category === undefined ? '' : usageCategoryLabel(category)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </Section>
   );

@@ -41,9 +41,7 @@ export function CreditBalance({
         aria-hidden
         className={balance > 0 ? 'text-primary' : 'text-text-faint'}
       />
-      <span
-        className={cn('font-semibold tabular-nums text-text', compact ? 'text-body' : 'text-h3')}
-      >
+      <span className={cn('font-semibold num text-text', compact ? 'text-body' : 'text-h3')}>
         {balance}
       </span>
       <span className={cn('text-text-muted', compact ? 'text-caption' : 'text-body')}>
@@ -106,7 +104,7 @@ export function UsageProgressBar({ label, used, limit, unit, className }: UsageP
     <div className={cn('space-y-1', className)}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-body text-text">{label}</span>
-        <span className={cn('text-caption tabular-nums', BAR_TEXT[state])}>
+        <span className={cn('text-caption num', BAR_TEXT[state])}>
           {used}
           {limit === null ? '' : ` / ${limit}`} {unit}
         </span>

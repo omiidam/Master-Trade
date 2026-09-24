@@ -59,6 +59,39 @@ export type {
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 
+// The third of the three reading states. It sat in the journal module because the journal was the
+// first surface that needed one; the market chart needs the same three, so it lives with the other
+// two rather than being reached into a product module from a shared one.
+export { LoadingState } from './LoadingState';
+export type { LoadingStateProps } from './LoadingState';
+
+// The shared frame for anything that presents structured information as rows and columns, and the
+// mark for whether a figure went up, down or nowhere. Both are infrastructure rather than product
+// surfaces, so they are exported together and neither knows what it is rendering.
+export {
+  TABLE_ALIGN,
+  Table,
+  TableBody,
+  TableCell,
+  TableEmptyRow,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  TableRowHeaderCell,
+} from './Table';
+export type {
+  TableAlign,
+  TableCellTone,
+  TableDensity,
+  TableEmptyRowProps,
+  TableHeadVariant,
+  TableProps,
+  TableRowAccent,
+} from './Table';
+
+export { Trend, trendDirection } from './Trend';
+export type { TrendDirection, TrendProps, TrendSize } from './Trend';
+
 // Usage, credits and subscription (Phase 5.4). The numbers these render are the
 // server's: no component here adds, subtracts or estimates a credit.
 export {
@@ -152,6 +185,22 @@ export type { InterfaceStateId, InterfaceStatesPanelProps } from './InterfaceSta
 
 export { ChartAdapter } from './charts/ChartAdapter';
 export type { ChartAdapterProps, ChartBar } from './charts/ChartAdapter';
+
+// The stage a chart is drawn on: the plot well, the grid and axis, the reference lines, and the
+// three states a chart can be in. Shared by the journal's series and the market candles.
+export {
+  ChartFrame,
+  ChartStatePanel,
+  PlotGrid,
+  PlotReferenceLine,
+  PlotZeroLine,
+} from './charts/ChartFrame';
+export type {
+  ChartFrameProps,
+  ChartState,
+  ChartStatePanelProps,
+  PlotGridProps,
+} from './charts/ChartFrame';
 export { Sparkline } from './charts/Sparkline';
 export type { SparklineProps } from './charts/Sparkline';
 
@@ -236,7 +285,6 @@ export {
   JournalStatCard,
   JournalTabPanel,
   JournalTabs,
-  LoadingState,
   MetricBar,
   MistakeTag,
   PerformanceChart,

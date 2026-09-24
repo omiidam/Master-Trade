@@ -79,7 +79,10 @@ export function FullscreenChartViewer({
                 </RadixDialog.Close>
               </div>
             </header>
-            <div className="min-h-0 flex-1 overflow-auto px-4 py-4">{children}</div>
+            {/* Positioned for the same reason every scroll container here is: the viewer holds a
+                chart, and the chart's `sr-only` labels would otherwise be contained by the dialog
+                and escape this box's clip. */}
+            <div className="relative min-h-0 flex-1 overflow-auto px-4 py-4">{children}</div>
             <footer className="flex shrink-0 items-center gap-2 border-t border-border px-4 py-2 text-caption text-text-faint">
               <Minimize2 size={12} aria-hidden />
               {footnote}

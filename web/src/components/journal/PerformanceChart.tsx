@@ -3,8 +3,14 @@ import type { DataProvenance } from '@shared/marketdata/provider';
 import { LineChart } from 'lucide-react';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { EmptyState } from '../EmptyState';
-import { ErrorState } from '../ErrorState';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
+import {
+  ChartFrame,
+  ChartStatePanel,
+  PlotGrid,
+  PlotReferenceLine,
+  PlotZeroLine,
+} from '../charts/ChartFrame';
 import {
   CHART_TONE_VAR,
   ChartToolbar,
@@ -12,7 +18,6 @@ import {
   type ChartTone,
 } from './ChartToolbar';
 import { FullscreenChartViewer } from './FullscreenChartViewer';
-import { LoadingState } from './LoadingState';
 import { JOURNAL_REPORT_DATE } from '../../mock/journal';
 import { cn } from '../../lib/cn';
 
@@ -170,17 +175,25 @@ export function PerformanceChart({
 
   const hasData = geometry !== null;
 
+  // The three states come from the shared chart panel, so a journal chart that failed and the
+  // market chart that failed are the same object with different words.
   if (loading) {
     return (
-      <LoadingState label={`Reading ${title.toLowerCase()}`} shape="chart" className={className} />
+      <ChartStatePanel
+        state={{ kind: 'loading', label: `Reading ${title.toLowerCase()}` }}
+        className={className}
+      />
     );
   }
   if (error) {
     return (
-      <ErrorState
-        title={`${title} could not be read`}
-        description={error}
-        code="JOURNAL_CHART_UNAVAILABLE"
+      <ChartStatePanel
+        state={{
+          kind: 'error',
+          title: `${title} could not be read`,
+          description: error,
+          code: 'JOURNAL_CHART_UNAVAILABLE',
+        }}
         className={className}
       />
     );
@@ -394,194 +407,153 @@ function ChartSurface({
   };
 
   return (
-    <Card tone="sunken" className="overflow-hidden">
-      <svg
-        viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={`${series.map((entry) => entry.label).join(', ')} chart, read-only`}
-        style={{ height, width: '100%', display: 'block' }}
-        onMouseMove={handleMove}
-        onMouseLeave={onLeave}
-      >
-        {ticks.map((tick, index) => (
-          <g key={`tick-${index}`}>
-            <line
-              x1={PAD}
-              x2={VIEW_WIDTH - PAD}
-              y1={yAt(tick)}
-              y2={yAt(tick)}
-              stroke="var(--color-border)"
-              strokeWidth={0.5}
-              strokeDasharray="4 6"
-            />
-            <text
-              x={PAD - 6}
-              y={yAt(tick) + 3}
-              textAnchor="end"
-              fill="var(--color-text-faint)"
-              fontSize={10}
-            >
-              {formatChartValue(tick, unit)}
-            </text>
-          </g>
-        ))}
+    <ChartFrame
+      viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+      height={height}
+      label={`${series.map((entry) => entry.label).join(', ')} chart, read-only`}
+      onMouseMove={handleMove}
+      onMouseLeave={onLeave}
+    >
+      <PlotGrid
+        ticks={ticks}
+        y={yAt}
+        x1={PAD}
+        x2={VIEW_WIDTH - PAD}
+        format={(tick) => formatChartValue(tick, unit)}
+      />
 
-        {min < 0 && max > 0 ? (
-          <line
-            x1={PAD}
-            x2={VIEW_WIDTH - PAD}
-            y1={yAt(0)}
-            y2={yAt(0)}
-            stroke="var(--color-border-strong)"
-            strokeWidth={0.8}
-          />
-        ) : null}
+      {min < 0 && max > 0 ? <PlotZeroLine y={yAt(0)} x1={PAD} x2={VIEW_WIDTH - PAD} /> : null}
 
-        {(levels ?? []).map((level) => (
-          <g key={level.label}>
-            <line
-              x1={PAD}
-              x2={VIEW_WIDTH - PAD}
-              y1={yAt(level.value)}
-              y2={yAt(level.value)}
-              stroke={CHART_TONE_VAR[level.tone]}
-              strokeWidth={0.9}
-              strokeDasharray="6 5"
-              opacity={0.8}
-            />
-            <text
-              x={VIEW_WIDTH - PAD}
-              y={yAt(level.value) - 4}
-              textAnchor="end"
-              fill={CHART_TONE_VAR[level.tone]}
-              fontSize={10}
-            >
-              {level.label}
-            </text>
-          </g>
-        ))}
+      {(levels ?? []).map((level) => (
+        <PlotReferenceLine
+          key={level.label}
+          y={yAt(level.value)}
+          x1={PAD}
+          x2={VIEW_WIDTH - PAD}
+          color={CHART_TONE_VAR[level.tone]}
+          label={level.label}
+        />
+      ))}
 
-        {series.map((entry) => {
-          const color = CHART_TONE_VAR[entry.tone];
-          if (entry.bars) {
-            const slot = (VIEW_WIDTH - PAD * 2) / Math.max(entry.points.length, 1);
-            const baseline = yAt(Math.max(min, 0));
-            return (
-              <g key={entry.id}>
-                {entry.points.map((point, index) => {
-                  const y = yAt(point.value);
-                  const top = Math.min(y, baseline);
-                  return (
-                    <rect
-                      key={point.label}
-                      x={xAt(index) - Math.max(slot * 0.26, 2)}
-                      y={top}
-                      width={Math.max(slot * 0.52, 4)}
-                      height={Math.max(Math.abs(y - baseline), 1.2)}
-                      rx={1.5}
-                      fill={color}
-                      opacity={0.85}
-                    />
-                  );
-                })}
-              </g>
-            );
-          }
-
-          const path = entry.points
-            .map(
-              (point, index) =>
-                `${index === 0 ? 'M' : 'L'}${xAt(index).toFixed(2)},${yAt(point.value).toFixed(2)}`,
-            )
-            .join(' ');
+      {series.map((entry) => {
+        const color = CHART_TONE_VAR[entry.tone];
+        if (entry.bars) {
+          const slot = (VIEW_WIDTH - PAD * 2) / Math.max(entry.points.length, 1);
+          const baseline = yAt(Math.max(min, 0));
           return (
             <g key={entry.id}>
-              {entry.area && entry.points.length > 0 ? (
-                <path
-                  d={`${path} L${xAt(entry.points.length - 1).toFixed(2)},${yAt(Math.max(min, 0)).toFixed(2)} L${xAt(0).toFixed(2)},${yAt(Math.max(min, 0)).toFixed(2)} Z`}
-                  fill={color}
-                  opacity={0.12}
-                />
-              ) : null}
-              <path
-                d={path}
-                fill="none"
-                stroke={color}
-                strokeWidth={1.6}
-                strokeLinecap="round"
-                {...(entry.dashed ? { strokeDasharray: '5 4' } : {})}
-              />
-              {entry.points.length <= 24
-                ? entry.points.map((point, index) => (
-                    <circle
-                      key={point.label}
-                      cx={xAt(index)}
-                      cy={yAt(point.value)}
-                      r={2}
-                      fill={color}
-                    />
-                  ))
-                : null}
+              {entry.points.map((point, index) => {
+                const y = yAt(point.value);
+                const top = Math.min(y, baseline);
+                return (
+                  <rect
+                    key={point.label}
+                    x={xAt(index) - Math.max(slot * 0.26, 2)}
+                    y={top}
+                    width={Math.max(slot * 0.52, 4)}
+                    height={Math.max(Math.abs(y - baseline), 1.2)}
+                    rx={1.5}
+                    fill={color}
+                    opacity={0.85}
+                  />
+                );
+              })}
             </g>
           );
-        })}
+        }
 
-        {(markers ?? []).map((marker) => (
-          <g key={marker.label}>
-            <line
-              x1={xAt(marker.index)}
-              x2={xAt(marker.index)}
-              y1={PAD}
-              y2={VIEW_HEIGHT - PAD}
-              stroke={CHART_TONE_VAR[marker.tone]}
-              strokeWidth={0.6}
-              opacity={0.4}
-            />
-            <circle
-              cx={xAt(marker.index)}
-              cy={yAt(marker.value)}
-              r={4}
-              fill="var(--color-bg)"
-              stroke={CHART_TONE_VAR[marker.tone]}
+        const path = entry.points
+          .map(
+            (point, index) =>
+              `${index === 0 ? 'M' : 'L'}${xAt(index).toFixed(2)},${yAt(point.value).toFixed(2)}`,
+          )
+          .join(' ');
+        return (
+          <g key={entry.id}>
+            {entry.area && entry.points.length > 0 ? (
+              <path
+                d={`${path} L${xAt(entry.points.length - 1).toFixed(2)},${yAt(Math.max(min, 0)).toFixed(2)} L${xAt(0).toFixed(2)},${yAt(Math.max(min, 0)).toFixed(2)} Z`}
+                fill={color}
+                opacity={0.12}
+              />
+            ) : null}
+            <path
+              d={path}
+              fill="none"
+              stroke={color}
               strokeWidth={1.6}
+              strokeLinecap="round"
+              {...(entry.dashed ? { strokeDasharray: '5 4' } : {})}
             />
-            <text
-              x={xAt(marker.index)}
-              y={yAt(marker.value) - 8}
-              textAnchor="middle"
-              fill={CHART_TONE_VAR[marker.tone]}
-              fontSize={10}
-            >
-              {marker.label}
-            </text>
+            {entry.points.length <= 24
+              ? entry.points.map((point, index) => (
+                  <circle
+                    key={point.label}
+                    cx={xAt(index)}
+                    cy={yAt(point.value)}
+                    r={2}
+                    fill={color}
+                  />
+                ))
+              : null}
           </g>
-        ))}
+        );
+      })}
 
-        {(annotations ?? []).map((annotation) => (
-          <text
-            key={annotation.label}
-            x={xAt(annotation.index)}
-            y={VIEW_HEIGHT - 8}
-            textAnchor="middle"
-            fill="var(--color-text-faint)"
-            fontSize={10}
-          >
-            {annotation.label}
-          </text>
-        ))}
-
-        {hoverIndex !== null && hoverIndex < longest ? (
+      {(markers ?? []).map((marker) => (
+        <g key={marker.label}>
           <line
-            x1={xAt(hoverIndex)}
-            x2={xAt(hoverIndex)}
+            x1={xAt(marker.index)}
+            x2={xAt(marker.index)}
             y1={PAD}
             y2={VIEW_HEIGHT - PAD}
-            stroke="var(--color-border-strong)"
-            strokeWidth={0.8}
+            stroke={CHART_TONE_VAR[marker.tone]}
+            strokeWidth={0.6}
+            opacity={0.4}
           />
-        ) : null}
-      </svg>
-    </Card>
+          <circle
+            cx={xAt(marker.index)}
+            cy={yAt(marker.value)}
+            r={4}
+            fill="var(--color-bg)"
+            stroke={CHART_TONE_VAR[marker.tone]}
+            strokeWidth={1.6}
+          />
+          <text
+            x={xAt(marker.index)}
+            y={yAt(marker.value) - 8}
+            textAnchor="middle"
+            fill={CHART_TONE_VAR[marker.tone]}
+            fontSize={10}
+          >
+            {marker.label}
+          </text>
+        </g>
+      ))}
+
+      {(annotations ?? []).map((annotation) => (
+        <text
+          key={annotation.label}
+          x={xAt(annotation.index)}
+          y={VIEW_HEIGHT - 8}
+          textAnchor="middle"
+          fill="var(--color-text-faint)"
+          fontSize={10}
+        >
+          {annotation.label}
+        </text>
+      ))}
+
+      {hoverIndex !== null && hoverIndex < longest ? (
+        <line
+          x1={xAt(hoverIndex)}
+          x2={xAt(hoverIndex)}
+          y1={PAD}
+          y2={VIEW_HEIGHT - PAD}
+          stroke="var(--color-border-strong)"
+          strokeWidth={0.8}
+        />
+      ) : null}
+    </ChartFrame>
   );
 }

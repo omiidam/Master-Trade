@@ -229,7 +229,7 @@ export function PortfolioQualitySummary({
           ).map(([label, value, hint]) => (
             <CardTile key={label}>
               <dt className="text-caption text-text-muted">{label}</dt>
-              <dd className="text-body font-semibold tabular-nums text-text">{value}</dd>
+              <dd className="text-body font-semibold num text-text">{value}</dd>
               <p className="text-caption text-text-faint">{hint}</p>
             </CardTile>
           ))}
@@ -492,7 +492,7 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
                 <li key={bucket.key}>
                   <Badge tone="neutral">
                     {bucket.label}
-                    <span className="tabular-nums">{formatPercent(bucket.weightPercent)}</span>
+                    <span className="num">{formatPercent(bucket.weightPercent)}</span>
                   </Badge>
                 </li>
               ))}
@@ -512,9 +512,7 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
                     {group.currency} · {group.positions} position
                     {group.positions === 1 ? '' : 's'}
                   </span>
-                  <span className="text-body tabular-nums text-text">
-                    {formatNumber(group.marketValue)}
-                  </span>
+                  <span className="text-body num text-text">{formatNumber(group.marketValue)}</span>
                 </CardTile>
               ))}
             </ul>

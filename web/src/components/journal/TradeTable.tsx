@@ -1,21 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronLeft,
-  ChevronRight,
-  Columns3,
-  Download,
-  Inbox,
-  RotateCcw,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Columns3, Download, Inbox, RotateCcw } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Card } from '../Card';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
 import { ErrorState } from '../ErrorState';
+import { Table, TableBody, TableHead, TableHeaderCell } from '../Table';
 import { Tooltip } from '../Tooltip';
-import { LoadingState } from './LoadingState';
+import { LoadingState } from '../LoadingState';
 import { DEFAULT_VISIBLE_COLUMNS, TRADE_COLUMNS, TradeRow, type TradeColumnId } from './TradeRow';
 import { cn } from '../../lib/cn';
 import { sortTrades } from '../../mock/journal';
@@ -299,73 +291,53 @@ export function TradeTable({
         />
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[880px] border-collapse text-start">
-              <caption className="sr-only">
-                Trade history with date, symbol, direction, setup, risk, realised R, result, rule
-                compliance and status. Each row has a menu of record actions.
-              </caption>
-              <thead>
-                <tr className="border-b border-border-strong">
-                  {TRADE_COLUMNS.filter((column) => orderedColumns.includes(column.id)).map(
-                    (column) => {
-                      const active = column.sortable !== undefined && column.sortable === sortKey;
-                      return (
-                        <th
-                          key={column.id}
-                          scope="col"
-                          className={cn(
-                            'px-3 py-2 text-caption font-semibold tracking-wide text-text-faint uppercase',
-                            column.align === 'end' && 'text-end',
-                            column.id === 'ref' && 'ps-4',
-                          )}
-                        >
-                          {column.sortable ? (
-                            <button
-                              type="button"
-                              onClick={() => toggleSort(column.sortable as TradeSortKey)}
-                              aria-label={`Sort by ${column.label}`}
-                              className={cn(
-                                'inline-flex items-center gap-1 transition-colors duration-[var(--duration-fast)]',
-                                active ? 'text-text' : 'hover:text-text-muted',
-                              )}
-                            >
-                              {column.label}
-                              <span aria-hidden className={cn(!active && 'opacity-0')}>
-                                {sortDirection === 'asc' ? (
-                                  <ArrowUp size={11} />
-                                ) : (
-                                  <ArrowDown size={11} />
-                                )}
-                              </span>
-                            </button>
-                          ) : (
-                            column.label
-                          )}
-                        </th>
-                      );
-                    },
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((trade) => (
-                  <TradeRow
-                    key={trade.id}
-                    trade={trade}
-                    columns={orderedColumns}
-                    onView={onView}
-                    onEdit={onEdit}
-                    onDuplicate={onDuplicate}
-                    onArchive={onArchive}
-                    onDelete={onDelete}
-                    onAddReview={onAddReview}
-                    onViewScreenshots={onViewScreenshots}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table
+            minWidth={880}
+            label="Trade history with date, symbol, direction, setup, risk, realised R, result, rule compliance and status. Each row has a menu of record actions."
+          >
+            <TableHead>
+              {TRADE_COLUMNS.filter((column) => orderedColumns.includes(column.id)).map(
+                (column) => {
+                  const active = column.sortable !== undefined && column.sortable === sortKey;
+                  return (
+                    <TableHeaderCell
+                      key={column.id}
+                      {...(column.align === 'end' ? { align: 'end' as const } : {})}
+                      className={column.id === 'ref' ? 'ps-4' : undefined}
+                      {...(column.sortable === undefined
+                        ? {}
+                        : {
+                            sort: {
+                              direction: active
+                                ? (sortDirection as 'asc' | 'desc')
+                                : (null as 'asc' | 'desc' | null),
+                              onToggle: () => toggleSort(column.sortable as TradeSortKey),
+                            },
+                          })}
+                    >
+                      {column.label}
+                    </TableHeaderCell>
+                  );
+                },
+              )}
+            </TableHead>
+            <TableBody>
+              {rows.map((trade) => (
+                <TradeRow
+                  key={trade.id}
+                  trade={trade}
+                  columns={orderedColumns}
+                  onView={onView}
+                  onEdit={onEdit}
+                  onDuplicate={onDuplicate}
+                  onArchive={onArchive}
+                  onDelete={onDelete}
+                  onAddReview={onAddReview}
+                  onViewScreenshots={onViewScreenshots}
+                />
+              ))}
+            </TableBody>
+          </Table>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-caption text-text-faint">

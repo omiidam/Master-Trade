@@ -82,5 +82,3 @@ export { AIReviewPanel, AIReviewStateGallery } from './AIReviewPanel';
 export type { AIReviewPanelProps } from './AIReviewPanel';
 export { AnalyticsPanel } from './AnalyticsPanel';
 export type { AnalyticsPanelProps } from './AnalyticsPanel';
-export { LoadingState } from './LoadingState';
-export type { LoadingStateProps } from './LoadingState';

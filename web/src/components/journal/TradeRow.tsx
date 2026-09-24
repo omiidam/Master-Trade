@@ -12,6 +12,7 @@ import {
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { Tooltip } from '../Tooltip';
+import { TableCell, TableRow, type TableRowAccent } from '../Table';
 import { SetupBadge } from './SetupBadge';
 import { DirectionBadge } from './DirectionBadge';
 import { RMultipleIndicator } from './RMultipleIndicator';
@@ -107,22 +108,28 @@ const STATUS_TONE: Record<TradeStatus, 'primary' | 'info' | 'warning' | 'outline
  * Row emphasis by state.
  *
  * The row's left edge is the fastest read in a 16-row table: a win, a loss and a
- * break-even must be distinguishable before any number is read. An archived row is
- * dimmed rather than hidden, because a record that was archived can still be the
- * reason a later decision was made.
+ * break-even must be distinguishable before any number is read. The accent itself is the table
+ * system's (`TableRow accent`), stated here as the mapping from a trade's result to one. A
+ * break-even has no accent rather than a grey one: a rule for "nothing happened" is a rule that
+ * draws attention to the rows with nothing in them.
+ *
+ * An archived row is dimmed rather than hidden, because a record that was archived can still be the
+ * reason a later decision was made. An `incomplete` row keeps the warning wash, which is the one row
+ * state that is *told* rather than annotated — the row is still being filled in, and that is a fact
+ * about the record rather than about its outcome.
  */
-const ROW_ACCENT: Record<TradeResult, string> = {
-  win: 'before:bg-success',
-  loss: 'before:bg-danger',
-  breakeven: 'before:bg-border-strong',
-  pending: 'before:bg-info',
+const ROW_ACCENT: Record<TradeResult, TableRowAccent> = {
+  win: 'success',
+  loss: 'danger',
+  breakeven: 'none',
+  pending: 'info',
 };
 
-const ROW_DIM: Record<TradeStatus, string> = {
+const ROW_TINT: Record<TradeStatus, string> = {
   closed: '',
   open: '',
   incomplete: 'bg-warning-soft/20',
-  archived: 'opacity-60',
+  archived: '',
 };
 
 function price(value: number | null | undefined): string {
@@ -212,11 +219,7 @@ export function TradeRow({
       <span className="num text-caption text-text-muted">{trade.plan.plannedRr.toFixed(1)}</span>
     ),
     actualR: (
-      <RMultipleIndicator
-        value={trade.actual?.actualR ?? null}
-        planned={trade.plan.plannedRr}
-        className="text-caption"
-      />
+      <RMultipleIndicator value={trade.actual?.actualR ?? null} planned={trade.plan.plannedRr} />
     ),
     result: <Badge tone={RESULT_TONE[trade.result]}>{RESULT_LABEL[trade.result]}</Badge>,
     compliance: <RuleComplianceBadge compliance={trade.compliance} />,
@@ -315,32 +318,24 @@ export function TradeRow({
   };
 
   return (
-    <tr
-      className={cn(
-        'relative border-b border-border transition-colors duration-[var(--duration-fast)]',
-        'before:absolute before:inset-y-0 before:start-0 before:w-[2px]',
-        ROW_ACCENT[trade.result],
-        ROW_DIM[trade.status],
-        'hover:bg-surface-raised/50',
-        className,
-      )}
+    <TableRow
+      accent={ROW_ACCENT[trade.result]}
+      muted={trade.status === 'archived'}
+      className={cn(ROW_TINT[trade.status], className)}
     >
       {columns.map((column) => {
         const definition = TRADE_COLUMNS.find((item) => item.id === column);
         return (
-          <td
+          <TableCell
             key={column}
-            className={cn(
-              'px-3 py-2 align-middle',
-              definition?.align === 'end' && 'text-end',
-              column === 'ref' && 'ps-4',
-            )}
+            align={definition?.align === 'end' ? 'end' : 'start'}
+            className={column === 'ref' ? 'ps-4' : undefined}
           >
             {cells[column]}
-          </td>
+          </TableCell>
         );
       })}
-    </tr>
+    </TableRow>
   );
 }
 

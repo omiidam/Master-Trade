@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import type { DataProvenance } from '@shared/marketdata/provider';
-import { Card } from '../Card';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { cn } from '../../lib/cn';
+import { ChartFrame, ChartStatePanel, PlotGrid, PlotReferenceLine } from './ChartFrame';
 
 export interface ChartBar {
   time: string;
@@ -21,6 +21,8 @@ export interface ChartAdapterProps {
   source: string;
   updatedAt: string;
   height?: number;
+  loading?: boolean;
+  error?: string | null;
   className?: string;
 }
 
@@ -56,6 +58,8 @@ export function ChartAdapter({
   source,
   updatedAt,
   height = 280,
+  loading = false,
+  error = null,
   className,
 }: ChartAdapterProps) {
   const { plotted, min, max } = useMemo(() => {
@@ -84,6 +88,45 @@ export function ChartAdapter({
   const last = bars.at(-1);
   const slotWidth = plotted.length > 0 ? (VIEW_WIDTH - PADDING * 2) / plotted.length : 12;
 
+  // A chart with no bars used to draw an empty frame with a grid in it, which reads as a market
+  // that did not move rather than as data that did not arrive. The three states are the shared
+  // ones, so this says the same thing a failed journal chart says.
+  if (loading) {
+    return (
+      <ChartStatePanel
+        state={{ kind: 'loading', label: `Reading ${symbol} ${timeframe}` }}
+        className={className}
+      />
+    );
+  }
+  if (error) {
+    return (
+      <ChartStatePanel
+        state={{
+          kind: 'error',
+          title: `${symbol} ${timeframe} could not be read`,
+          description: error,
+          code: 'MARKET_CHART_UNAVAILABLE',
+        }}
+        className={className}
+      />
+    );
+  }
+  if (bars.length === 0) {
+    return (
+      <ChartStatePanel
+        state={{
+          kind: 'empty',
+          title: 'Nothing to plot for this symbol and timeframe',
+          description:
+            'The provider returned no bars, so the chart is left empty rather than drawn from a placeholder series.',
+          hint: 'An empty chart is a fact about the data, not a flat market.',
+        }}
+        className={className}
+      />
+    );
+  }
+
   return (
     <figure className={cn('space-y-3', className)}>
       <div className="flex items-center justify-between gap-3" style={{ direction: 'ltr' }}>
@@ -98,64 +141,59 @@ export function ChartAdapter({
         </div>
       </div>
 
-      <Card tone="sunken" className="overflow-hidden" style={{ direction: 'ltr' }}>
-        <svg
-          viewBox={`0 0 ${VIEW_WIDTH} 100`}
-          preserveAspectRatio="none"
-          role="img"
-          aria-label={`${symbol} ${timeframe} chart, ${provenance} data, read-only`}
-          style={{ height, width: '100%', display: 'block' }}
-        >
-          {[20, 40, 60, 80].map((line) => (
-            <line
-              key={line}
-              x1={0}
-              x2={VIEW_WIDTH}
-              y1={line}
-              y2={line}
-              stroke="var(--color-border)"
-              strokeWidth={0.4}
-              strokeDasharray="4 6"
-            />
-          ))}
-          {plotted.map((bar) => {
-            const color = bar.up ? 'var(--color-primary)' : 'var(--color-danger)';
-            const wickX = bar.x;
-            return (
-              <g key={bar.time}>
-                <line
-                  x1={wickX}
-                  x2={wickX}
-                  y1={PADDING + (1 - (bar.high - min) / (max - min || 1)) * (100 - PADDING * 2)}
-                  y2={PADDING + (1 - (bar.low - min) / (max - min || 1)) * (100 - PADDING * 2)}
-                  stroke={color}
-                  strokeWidth={0.7}
-                  opacity={0.75}
-                />
-                <rect
-                  x={wickX - Math.max(slotWidth * 0.28, 1.4)}
-                  y={bar.bodyTop}
-                  width={Math.max(slotWidth * 0.56, 2.8)}
-                  height={bar.bodyHeight}
-                  fill={color}
-                  opacity={0.9}
-                />
-              </g>
-            );
-          })}
-          {last ? (
-            <line
-              x1={0}
-              x2={VIEW_WIDTH}
-              y1={PADDING + (1 - (last.close - min) / (max - min || 1)) * (100 - PADDING * 2)}
-              y2={PADDING + (1 - (last.close - min) / (max - min || 1)) * (100 - PADDING * 2)}
-              stroke="var(--color-info)"
-              strokeWidth={0.5}
-              strokeDasharray="2 4"
-            />
-          ) : null}
-        </svg>
-      </Card>
+      <ChartFrame
+        viewBox={`0 0 ${VIEW_WIDTH} 100`}
+        height={height}
+        label={`${symbol} ${timeframe} chart, ${provenance} data, read-only`}
+      >
+        {/*
+          A grid with no axis: the practice candles are read by shape against a reference line, and
+          labelling four gridlines would put four prices on a chart whose whole point is that no
+          price is claimed. `PlotGrid` draws the same dashes either way.
+        */}
+        <PlotGrid
+          ticks={[20, 40, 60, 80]}
+          y={(value) => value}
+          x1={0}
+          x2={VIEW_WIDTH}
+          strokeWidth={0.4}
+        />
+        {plotted.map((bar) => {
+          const color = bar.up ? 'var(--color-primary)' : 'var(--color-danger)';
+          const wickX = bar.x;
+          return (
+            <g key={bar.time}>
+              <line
+                x1={wickX}
+                x2={wickX}
+                y1={PADDING + (1 - (bar.high - min) / (max - min || 1)) * (100 - PADDING * 2)}
+                y2={PADDING + (1 - (bar.low - min) / (max - min || 1)) * (100 - PADDING * 2)}
+                stroke={color}
+                strokeWidth={0.7}
+                opacity={0.75}
+              />
+              <rect
+                x={wickX - Math.max(slotWidth * 0.28, 1.4)}
+                y={bar.bodyTop}
+                width={Math.max(slotWidth * 0.56, 2.8)}
+                height={bar.bodyHeight}
+                fill={color}
+                opacity={0.9}
+              />
+            </g>
+          );
+        })}
+        {last ? (
+          <PlotReferenceLine
+            y={PADDING + (1 - (last.close - min) / (max - min || 1)) * (100 - PADDING * 2)}
+            x1={0}
+            x2={VIEW_WIDTH}
+            color="var(--color-info)"
+            strokeWidth={0.5}
+            dash="2 4"
+          />
+        ) : null}
+      </ChartFrame>
 
       <ProvenanceBanner provenance={provenance} source={source} updatedAt={updatedAt} />
       <p className="text-caption text-text-faint">

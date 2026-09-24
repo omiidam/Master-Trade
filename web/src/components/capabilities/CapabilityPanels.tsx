@@ -269,7 +269,7 @@ export function CapabilitySummary({
       {counts.map((entry) => (
         <CardTile key={entry.state} tone="raised" className="min-w-0">
           <p className="text-caption text-text-muted">{STATE_LABEL[entry.state]}</p>
-          <p className="mt-0.5 text-title font-semibold tabular-nums text-text">{entry.count}</p>
+          <p className="mt-0.5 text-title font-semibold num text-text">{entry.count}</p>
         </CardTile>
       ))}
     </div>

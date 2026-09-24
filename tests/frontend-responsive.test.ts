@@ -92,8 +92,8 @@ const FIXED_WIDTH = /(?<!max-)w-\[[0-9]+(?:px|rem)\]/g;
  * content grid cannot hide behind this allowance.
  */
 const PLACEHOLDER_SURFACES: Readonly<Record<string, string>> = {
-  'web/src/components/journal/LoadingState.tsx':
-    'a journal skeleton; its four-bar row mirrors the stat row it stands in for',
+  'web/src/components/LoadingState.tsx':
+    'a skeleton; its four-bar row mirrors the stat row it stands in for',
 };
 
 /**
@@ -190,14 +190,26 @@ describe('navigation on the narrowest screen', () => {
 
 describe('no surface can make the page scroll sideways', () => {
   it('scrolls every wide table inside its own container', () => {
+    // The container is the shared table's now rather than each table's own, which is the point of
+    // Section 7.3: one place decides that a dense table scrolls sideways inside its own box. So the
+    // assertion follows the indirection — every wide table is rendered through `Table` with a
+    // minimum width, and `Table` is the thing that supplies the container and applies it.
+    const shared = read('web/src/components/Table.tsx');
+    expect(shared, 'the shared table supplies no scroll container').toContain('overflow-x-auto');
+    expect(shared, 'the shared table applies no minimum width').toMatch(
+      /minWidth: `\$\{minWidth\}px`/,
+    );
+    // And the container is the table's own wrapper, so the minimum width cannot reach the page.
+    const containerAt = shared.indexOf('overflow-x-auto');
+    const minWidthAt = shared.indexOf('minWidth: `');
+    expect(containerAt).toBeLessThan(minWidthAt);
+
     for (const [path, what] of Object.entries(SCROLLING_TABLES)) {
       const source = read(path);
-      expect(source, `${path} (${what}) has no scroll container`).toContain('overflow-x-auto');
-      // The minimum width belongs to the table inside that container, not to the card.
-      const scrollAt = source.indexOf('overflow-x-auto');
-      const minWidthAt = source.search(/(?<!max-)(min-)?w-\[[0-9]+(px|rem)\]/);
-      expect(minWidthAt, `${path} declares no minimum width to contain`).toBeGreaterThan(-1);
-      expect(scrollAt, `${path} scrolls something other than the table`).toBeLessThan(minWidthAt);
+      expect(source, `${path} (${what}) does not use the shared table`).toMatch(/<Table\b/);
+      expect(source, `${path} (${what}) declares no minimum width to contain`).toMatch(
+        /minWidth=\{\d+\}/,
+      );
     }
   });
 

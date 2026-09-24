@@ -39,7 +39,9 @@ import {
   CardTitle,
   Section,
 } from '../Card';
+import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from '../Table';
 import { EmptyState } from '../EmptyState';
+import { TrendMark } from '../Trend';
 import { cn } from '../../lib/cn';
 import {
   BASE_READINESS_TONE,
@@ -58,6 +60,7 @@ import {
   OBSERVATION_TONE,
   OUTCOME_TONE,
   figureClass,
+  figureMark,
 } from './labels';
 
 /**
@@ -178,9 +181,14 @@ export function FigureRow({ figure }: { figure: DecisionEvaluationReport['figure
         <p className="text-caption text-text-muted">{figure.basis}</p>
       </div>
       <div className="flex items-center gap-2">
+        {/* The mark states the direction in shape as well as in ink, and the figure already prints
+            its own sign — so a gain and a loss are separable three ways over. */}
+        {figure.value === null ? null : (
+          <TrendMark direction={figureMark(figure.value)} size="body" />
+        )}
         <span
           className={cn(
-            'text-body font-semibold tabular-nums',
+            'text-body font-semibold num',
             figure.value === null ? 'text-text-muted' : figureClass(figure.value),
           )}
         >
@@ -453,10 +461,11 @@ export function ObservationCard({ observation }: { observation: DecisionObservat
             {observation.metrics.map((metric) => (
               <div key={`${metric.label}:${metric.value}`} className="flex items-baseline gap-1.5">
                 <dt className="text-caption text-text-muted">{metric.label}</dt>
-                <dd
-                  className={cn('text-caption font-medium tabular-nums', figureClass(metric.value))}
-                >
-                  {metric.value}
+                <dd className="inline-flex items-center gap-1">
+                  <TrendMark direction={figureMark(metric.value)} />
+                  <span className={cn('text-caption font-medium num', figureClass(metric.value))}>
+                    {metric.value}
+                  </span>
                 </dd>
               </div>
             ))}
@@ -574,53 +583,45 @@ export function EvaluationHistory({
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="overflow-x-auto">
-        <table className="w-full min-w-[34rem] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-border text-caption text-text-muted">
-              <th scope="col" className="py-2 pr-3 font-medium">
-                When
-              </th>
-              <th scope="col" className="py-2 pr-3 font-medium">
-                Reason
-              </th>
-              <th scope="col" className="py-2 pr-3 font-medium">
-                Outcome
-              </th>
-              <th scope="col" className="py-2 pr-3 font-medium">
-                Readiness
-              </th>
-              <th scope="col" className="py-2 font-medium">
-                Version
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+      <CardContent>
+        <Table
+          className="text-caption"
+          minWidth={544}
+          label="Each evaluation this decision has had, with the rule that produced it"
+        >
+          <TableHead>
+            <TableHeaderCell>When</TableHeaderCell>
+            <TableHeaderCell>Reason</TableHeaderCell>
+            <TableHeaderCell>Outcome</TableHeaderCell>
+            <TableHeaderCell>Readiness</TableHeaderCell>
+            <TableHeaderCell numeric>Version</TableHeaderCell>
+          </TableHead>
+          <TableBody>
             {evaluations.map((evaluation) => (
-              <tr key={evaluation.id} className="border-b border-border last:border-b-0">
-                <td className="py-2 pr-3 text-caption text-text">
-                  {new Date(evaluation.evaluatedAt).toLocaleString()}
-                </td>
-                <td className="py-2 pr-3 text-caption text-text-muted">
+              <TableRow key={evaluation.id}>
+                <TableCell>
+                  <span className="num">{new Date(evaluation.evaluatedAt).toLocaleString()}</span>
+                </TableCell>
+                <TableCell tone="muted">
                   {DECISION_EVALUATION_REASON_LABEL[evaluation.reason]}
-                </td>
-                <td className="py-2 pr-3">
+                </TableCell>
+                <TableCell>
                   <Badge tone={OUTCOME_TONE[evaluation.outcome]}>
                     {EVALUATION_OUTCOME_LABEL[evaluation.outcome]}
                   </Badge>
-                </td>
-                <td className="py-2 pr-3">
+                </TableCell>
+                <TableCell>
                   <Badge tone={EVALUATION_READINESS_TONE[evaluation.readiness]}>
                     {EVALUATION_READINESS_LABEL[evaluation.readiness]}
                   </Badge>
-                </td>
-                <td className="py-2 text-caption text-text-muted tabular-nums">
+                </TableCell>
+                <TableCell numeric tone="muted">
                   v{evaluation.decisionVersion}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
@@ -679,7 +680,7 @@ export function DecisionCard({
             </span>
           </>
         )}
-        <span className="text-caption text-text-muted tabular-nums">v{decision.version}</span>
+        <span className="text-caption text-text-muted num">v{decision.version}</span>
       </div>
     </button>
   );

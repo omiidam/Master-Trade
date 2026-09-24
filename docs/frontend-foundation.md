@@ -1150,3 +1150,90 @@ Verified after the change, on the built bundle:
 Four of the fourteen pages (Portfolio, Evaluation, Usage, Profile) render their unavailable state
 in the preview, because they read from a backend that is not connected. Tabbed pages show their
 first tab only in the sweep; the remaining tabs were checked individually by clicking them.
+
+## 16. Phase 7.3 — tables, charts, indicators
+
+Three shapes carry all of this product's structured information: a **table** of records, a **chart**
+of a series, and a **mark** saying which way a figure went. Each had grown its own way of doing it,
+and the three ways disagreed with each other.
+
+### One table
+
+`web/src/components/Table.tsx` is now the only place a `<table>` is emitted, and the contract suite
+fails by name on a second one. It owns the head (uppercase, `border-strong` rule, `aria-sort` with
+the inactive state as `none` and the arrow reserving its space so toggling a sort cannot resize a
+column), the cell (`numeric` decides alignment _and_ the monospaced face in one prop, so a figure
+cannot be monospaced and left-aligned), two densities, the row states (hover, selected, positive,
+negative, muted) and the three content states — including `TableEmptyRow`, which keeps the head so a
+reader can still see what would have been there.
+
+Six hand-rolled tables moved onto it: the journal's trade history, the three analytics breakdowns,
+risk summary, evaluation history and the plan comparison. Four cell paddings, three head treatments
+and two ways of drawing the rule under a head became one of each. `tabular-nums` is gone from the
+tree — it set the figure variant and left the font, which is exactly how a column of prices ended up
+in two faces.
+
+### One plot
+
+`web/src/components/charts/ChartFrame.tsx` owns the frame, the shared grid and baseline, and the
+three content states. Both charts now route loading, empty and error through `ChartStatePanel`; the
+market chart used to draw an empty grid for data that had not arrived, which reads as a market that
+did not move. The plot's height is a style and never a layout size, the series is `direction: ltr`
+(so an RTL locale cannot mirror a time axis while the labels stay upright), and no chart may set its
+own overflow — the frame clips. `Sparkline` insets its geometry by half a stroke instead of relying
+on `overflow-visible`, so a hairline of light no longer lands on the surface behind it.
+
+### One direction
+
+The vocabulary — `up`, `down`, `flat`, `unavailable`, what each is called and what ink it is
+written in — lives in `web/src/design/trend.ts`, a module with no JSX, because the tables, the
+calendar and the decision engine all classify a figure without drawing it. `Trend` adds the cues: an
+arrow, a word in the accessibility tree, and the ink last. `+0.69R` and `−0.69R` were previously the
+same string in two colours; a missing figure is now an absence (`not scored`) and never a zero.
+
+### The overflow, measured properly
+
+This is where the interesting work was, and where §15's claim needs a correction. That measurement
+used `documentElement.scrollWidth - clientWidth` **on each page's default view**, and it passed on
+all fourteen while a real defect sat one tab away: the journal's trade history could be panned
+**329px** sideways at 390px. `scrollWidth` on an ancestor with `overflow: visible` includes the
+scrollable overflow of _nested scroll containers_, so it is the wrong probe — and the reason the
+defect survived the sweep that introduced the tables. The probe that finds it is the one the browser
+actually answers:
+
+```js
+document.documentElement.scrollLeft = 700; // ask to pan
+const panned = document.documentElement.scrollLeft; // 0 means no real overflow
+```
+
+Switching to that probe, and sweeping **every tab of every section** rather than the default view,
+found three distinct defects at 390px — all three the same underlying fact wearing different
+clothes: _a box that must be able to shrink was refusing to._
+
+| View                    | Pan   | Cause                                                                                                                                                                                                               | Fix                                                                                                                                   |
+| ----------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Journal · Trade history | 329px | `sr-only` is `position: absolute`, so a reader-only span at the far right of a 1080px row took the `Card` behind the table — positioned for its own shine — as its containing block and escaped the scroller's clip | every scroll container is now positioned: `relative overflow-x-auto`                                                                  |
+| Journal · Analytics     | 110px | a card holding a table in a scroll container reported the table's minimum as _its own_, so the card in a `grid gap-4 xl:grid-cols-2` track pushed the grid wider than the viewport                                  | `Card` is `min-w-0`; a card never sets the page's width                                                                               |
+| Journal · Calendar      | 32px  | `CardHeader`'s actions group was `shrink-0`, so wrapping the header row moved the overflow instead of removing it — a group of badges is wider than a 390px card on its own line                                    | the actions group shrinks _and_ wraps; a control is still never squeezed, because a flex item's automatic minimum size is its content |
+
+The rules are asserted, not remembered: every scroll container in the tree is positioned, `Card`
+keeps `min-w-0` and never hides its own overflow, and the actions group cannot go back to
+`shrink-0`. `overflow-hidden` on the card would have "fixed" all three and silently amputated a
+table, a tooltip or a chart that legitimately needed the box, which is why the suite forbids it.
+
+### Verified
+
+- Both typechecks clean.
+- **1342** unit tests across **68** files, including the new 27-test data-component contract
+  (`tests/frontend-data-components.test.ts`).
+- `npm run build` and `npm run build:web` clean; `npm run desktop:verify` **0 errors, 4 warnings**.
+- **27** browser end-to-end assertions.
+- Pan sweep at **1440 / 834 / 390**: `scrollLeft` stays **0** on all **14** sections and every tab
+  reachable inside them — the three defects above were the only views that moved, and are fixed.
+- Read back off the built bundle: the trade table's scroll container is `position: relative`, 230px
+  wide, `scrollWidth` 1080 — the table scrolls inside its own box while the document does not move;
+  the analytics breakdowns sit in 264px cards with their tables scrolling internally.
+
+The backend-dependent tables (portfolio holdings, evaluation history, the plan comparison) render
+their unavailable state in the preview, so their markup is covered by the typecheck and the source
+contract rather than by the browser sweep.

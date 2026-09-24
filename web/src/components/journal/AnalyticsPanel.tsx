@@ -17,6 +17,15 @@ import { PerformanceChart } from './PerformanceChart';
 import { MetricBar } from './MetricBar';
 import { cn } from '../../lib/cn';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+  TableRow,
+  TableRowHeaderCell,
+} from '../Table';
+import {
   JOURNAL_STAT_NOTE,
   TRADE_RANGES,
   TRADE_RANGE_LABEL,
@@ -78,74 +87,41 @@ function BreakdownTable({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <table className="w-full border-collapse">
-          <caption className="sr-only">
-            {title}: sample size, win rate, average R and {plannedLabel} for each bucket.
-          </caption>
-          <thead>
-            <tr className="border-b border-border">
-              <th
-                scope="col"
-                className="py-1.5 text-start text-caption font-semibold text-text-faint uppercase"
-              >
-                Bucket
-              </th>
-              <th
-                scope="col"
-                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-              >
-                Sample
-              </th>
-              <th
-                scope="col"
-                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-              >
-                Win rate
-              </th>
-              <th
-                scope="col"
-                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-              >
-                Average R
-              </th>
-              <th
-                scope="col"
-                className="py-1.5 text-end text-caption font-semibold text-text-faint uppercase"
-              >
-                Planned
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table
+          className="text-caption"
+          label={`${title}: sample size, win rate, average R and ${plannedLabel} for each bucket.`}
+        >
+          <TableHead>
+            <TableHeaderCell>Bucket</TableHeaderCell>
+            <TableHeaderCell numeric>Sample</TableHeaderCell>
+            <TableHeaderCell numeric>Win rate</TableHeaderCell>
+            <TableHeaderCell numeric>Average R</TableHeaderCell>
+            <TableHeaderCell numeric>Planned</TableHeaderCell>
+          </TableHead>
+          <TableBody>
             {rows.map((row) => (
-              <tr key={row.id} className="border-b border-border last:border-b-0">
-                <th scope="row" className="py-2 text-start text-caption font-normal text-text">
-                  {row.label}
-                </th>
-                <td className="num py-2 text-end text-caption text-text-faint">{row.sample}</td>
-                <td className="num py-2 text-end text-caption text-text-muted">
+              <TableRow key={row.id}>
+                <TableRowHeaderCell>{row.label}</TableRowHeaderCell>
+                <TableCell numeric tone="faint">
+                  {row.sample}
+                </TableCell>
+                <TableCell numeric tone="muted">
                   {row.winRatePct.toFixed(1)}%
-                </td>
-                <td
-                  className={cn(
-                    'num py-2 text-end text-caption',
-                    row.averageR > 0.15
-                      ? 'text-success'
-                      : row.averageR < -0.15
-                        ? 'text-danger'
-                        : 'text-text-muted',
-                  )}
+                </TableCell>
+                <TableCell
+                  numeric
+                  tone={row.averageR > 0.15 ? 'success' : row.averageR < -0.15 ? 'danger' : 'muted'}
                 >
                   {row.averageR > 0 ? '+' : row.averageR < 0 ? '−' : ''}
                   {Math.abs(row.averageR).toFixed(2)}R
-                </td>
-                <td className="num py-2 text-end text-caption text-text-faint">
+                </TableCell>
+                <TableCell numeric tone="faint">
                   {row.plannedRr.toFixed(1)}:1
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         <p className="text-caption text-text-faint">
           Rows are buckets of the same records, not independent samples — a bucket with a small
           sample is a hint, not a finding.

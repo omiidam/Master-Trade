@@ -3,6 +3,7 @@ import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
 import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
+import { TREND_INK, trendDirection } from '../Trend';
 import { RuleComplianceBadge } from './RuleComplianceBadge';
 import { SetupBadge } from './SetupBadge';
 import { MistakeTag } from './MistakeTag';
@@ -140,7 +141,12 @@ export function JournalCalendar({
               {monthDays.length} trading {monthDays.length === 1 ? 'day' : 'days'} this month.
             </CardDescription>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          {/* `min-w-0` so this group can be narrower than the controls inside it: an automatic
+              minimum size is the group's *min-content* width, and the month/week toggle plus the
+              navigation buttons exceed what a 390px card header has. Wrapping already handles the
+              narrow case; without this the group refused to shrink below its widest row and pushed
+              the page sideways by ~32px. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <CardTile
               space="none"
               role="group"
@@ -234,16 +240,13 @@ export function JournalCalendar({
                   </span>
                   {day ? (
                     <>
+                      {/* The day's result, in the product's one direction vocabulary. No arrow:
+                          a calendar cell has no room for one, and `formatNetR` already prints the
+                          sign, so the colour is the third cue here rather than the only one. */}
                       <span
                         className={cn(
                           'num text-caption font-medium',
-                          day.netR === null
-                            ? 'text-text-faint'
-                            : day.netR > 0
-                              ? 'text-success'
-                              : day.netR < 0
-                                ? 'text-danger'
-                                : 'text-text-muted',
+                          TREND_INK[trendDirection(day.netR)],
                         )}
                       >
                         {formatNetR(day.netR)}

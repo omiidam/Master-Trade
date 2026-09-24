@@ -14,6 +14,7 @@
  */
 
 import type { BadgeTone } from '../Badge';
+import { TREND_INK, type TrendDirection } from '../Trend';
 import {
   DECISION_EVALUATION_REASON_LABEL,
   DECISION_KIND_LABEL,
@@ -108,19 +109,43 @@ export function figureSign(value: string | null): 'gain' | 'loss' | 'flat' {
 }
 
 /**
- * A class for a figure, by sign.
+ * The decisions module's own vocabulary, mapped onto the product's one direction vocabulary.
  *
- * Note what is *not* here: no tone for "good". A negative R multiple is red because it is a loss, and
- * a positive one is green because it is a gain — never because either was a good or bad decision.
+ * `figureSign` stays here because it reads a *contract string* — the engine's formatted figure — and
+ * that really is this module's business. The *ink*, though, is not: a gain is the same green
+ * everywhere in the product, so the colours are read from `TREND_INK` rather than written again. A
+ * second copy of "gain is success" is how the journal's figures and the decision engine's figures
+ * end up different colours for the same fact.
+ *
+ * Note what is *not* here either: no tone for "good". A negative R multiple is red because it is a
+ * loss and a positive one green because it is a gain — never because either was a good or a bad
+ * decision.
  */
+const FIGURE_INK: Record<ReturnType<typeof figureSign>, string> = {
+  gain: TREND_INK.up,
+  loss: TREND_INK.down,
+  flat: TREND_INK.flat,
+};
+
 export function figureClass(value: string | null): string {
+  return FIGURE_INK[figureSign(value)];
+}
+
+/**
+ * The mark for a formatted figure: the same arrow `Trend` would draw, for the surfaces that hold the
+ * engine's string rather than a number.
+ *
+ * The sign is already printed in the figure itself, so this is the second cue rather than the only
+ * one — but a column of gains and losses is read by shape long before it is read by digit.
+ */
+export function figureMark(value: string | null): TrendDirection {
   switch (figureSign(value)) {
     case 'gain':
-      return 'text-success';
+      return 'up';
     case 'loss':
-      return 'text-danger';
+      return 'down';
     case 'flat':
-      return 'text-text-muted';
+      return 'flat';
   }
 }
 

@@ -1,6 +1,6 @@
-import { Skeleton, SkeletonCard } from '../Skeleton';
-import { Card } from '../Card';
-import { cn } from '../../lib/cn';
+import { Skeleton, SkeletonCard } from './Skeleton';
+import { Card } from './Card';
+import { cn } from '../lib/cn';
 
 export interface LoadingStateProps {
   /** What is being read. Stated so a spinner never becomes the whole message. */
@@ -13,7 +13,12 @@ export interface LoadingStateProps {
 }
 
 /**
- * Journal loading placeholder.
+ * The loading placeholder, for a list, a chart panel or a table.
+ *
+ * It lives beside `EmptyState` and `ErrorState` rather than in the journal module, because it is the
+ * third of the three states every reading surface has and all three are used outside the journal —
+ * the journal's own chart and the market chart share it. A state component that only one module may
+ * reach is how a product ends up with a second one.
  *
  * The shape mirrors what is coming — a list, a chart panel or a table — because a
  * placeholder that does not match the content makes the layout jump when the data
