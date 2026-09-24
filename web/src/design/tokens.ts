@@ -87,9 +87,12 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
       '--color-info',
       '--color-info-soft',
       '--color-success',
+      '--color-success-soft',
       '--color-warning',
       '--color-warning-soft',
       '--color-danger',
+      '--color-danger-strong',
+      '--color-danger-fg',
       '--color-danger-soft',
       '--color-ai',
       '--color-ai-soft',
@@ -176,13 +179,34 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   },
   {
     group: 'shadow',
-    summary: 'Panel, popover, accent-glow and control-glow elevation.',
-    variables: ['--shadow-panel', '--shadow-popover', '--shadow-glow', '--shadow-glow-control'],
+    summary:
+      'Surface elevation, the reserved glow roles, and the control-depth shadows a pressable ' +
+      'control rests on.',
+    variables: [
+      '--shadow-panel',
+      '--shadow-popover',
+      '--shadow-glow',
+      '--shadow-glow-control',
+      '--shadow-glow-danger',
+      '--shadow-control',
+      '--shadow-control-inset',
+      '--shadow-control-raised',
+    ],
   },
   {
     group: 'gradient',
-    summary: 'The panel sheen and the loading sweep. Structural, never decorative.',
-    variables: ['--gradient-panel', '--gradient-sheen'],
+    summary:
+      'The panel sheen, the loading sweep, the three control faces, the lit top edge and the ' +
+      'overlay veil. Structural, never decorative.',
+    variables: [
+      '--gradient-panel',
+      '--gradient-sheen',
+      '--gradient-control',
+      '--gradient-accent',
+      '--gradient-danger-fill',
+      '--gradient-edge',
+      '--gradient-veil',
+    ],
   },
   {
     group: 'motion',
@@ -197,8 +221,8 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   },
   {
     group: 'zIndex',
-    summary: 'Layering for shell chrome, dropdowns, modals and tooltips.',
-    variables: ['--z-shell', '--z-overlay', '--z-modal', '--z-tooltip'],
+    summary: 'Layering for shell chrome, dropdowns, modals, toasts and tooltips.',
+    variables: ['--z-shell', '--z-overlay', '--z-modal', '--z-toast', '--z-tooltip'],
   },
 ];
 
@@ -366,12 +390,56 @@ export const ELEVATION: readonly ElevationLevel[] = [
 ];
 
 /**
- * The accent glows, and what each is allowed to light.
+ * The glow roles, and what each is allowed to light.
  *
- * Reserved deliberately: glow is the strongest emphasis the theme has, so it belongs to the
- * primary action and the brand accent, never to a decorative flourish.
+ * Reserved deliberately, and by *role* rather than by count: glow is the strongest emphasis the
+ * theme has, so every glow must answer "which decision is this highlighting?". Phase 7.1 allowed
+ * the brand accent and the primary control. Phase 7.2 adds exactly one — the destructive action —
+ * because "this cannot be undone" is a different decision from "do this", and a filled red control
+ * with the same shadow as a filled green one reads as the same weight. There is no fourth role,
+ * and `GLOW_ROLES` is what the suite reads, so a decorative glow cannot be added quietly.
  */
 export const GLOW_TOKENS = {
   accent: '--shadow-glow',
   control: '--shadow-glow-control',
+  danger: '--shadow-glow-danger',
 } as const;
+
+/** The glow roles as a list, so a test can assert the reservation has no stray members. */
+export const GLOW_ROLES: readonly string[] = Object.keys(GLOW_TOKENS);
+
+/**
+ * Control depth: how a pressable surface sits in the plane, as opposed to how a panel stacks.
+ *
+ * `resting` is the shadow under a control at rest, `litEdge` is the inset highlight that lights
+ * its top edge, and `raised` is the same control picked up (hover, or the top of a press). Kept
+ * separate from `ELEVATION` on purpose: a button on a card is not a third surface, and folding
+ * these into the elevation ladder would make "level 4" mean something different from level 1–3.
+ */
+export const CONTROL_DEPTH = {
+  resting: '--shadow-control',
+  litEdge: '--shadow-control-inset',
+  raised: '--shadow-control-raised',
+} as const;
+
+/**
+ * The three control faces: the gradient behind each, and the utility that carries it.
+ *
+ * A control face is a background *gradient* rather than a flat fill, because a flat fill is what
+ * makes an interface read as a generic dashboard — light from above is what makes a surface look
+ * like something you press. The utility name is the contract: a component asks for
+ * `control-accent`, never for a gradient, and the suite asserts every gradient here is the
+ * `background-image` of its utility.
+ */
+export interface ControlFace {
+  /** Which control this face belongs to. */
+  role: string;
+  gradient: string;
+  utility: string;
+}
+
+export const CONTROL_FACES: readonly ControlFace[] = [
+  { role: 'neutral', gradient: '--gradient-control', utility: 'control-sheen' },
+  { role: 'accent', gradient: '--gradient-accent', utility: 'control-accent' },
+  { role: 'danger', gradient: '--gradient-danger-fill', utility: 'control-danger' },
+];

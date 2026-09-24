@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { AppShell } from './app/AppShell';
 import { AboutDialog } from './app/AboutDialog';
 import { SafetyDialog } from './app/SafetyDialog';
+import { ToastProvider } from './components/Toast';
 import { TooltipProvider } from './components/Tooltip';
 import type { AppPageId } from './config/navigation';
 import { AcademyPage } from './pages/AcademyPage';
@@ -79,9 +80,13 @@ export function App() {
 
   return (
     <TooltipProvider>
-      <AppShell>{renderPage(page)}</AppShell>
-      <SafetyDialog />
-      <AboutDialog />
+      {/* The toast queue is one per application, above the shell so a message about a dialog is
+          readable over it. Nothing raises a toast outside the surfaces that own a message. */}
+      <ToastProvider>
+        <AppShell>{renderPage(page)}</AppShell>
+        <SafetyDialog />
+        <AboutDialog />
+      </ToastProvider>
     </TooltipProvider>
   );
 }

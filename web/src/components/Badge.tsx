@@ -11,24 +11,50 @@ const TONES: Record<BadgeTone, string> = {
   neutral: 'bg-surface-raised text-text-muted border-border',
   primary: 'bg-primary-soft text-primary border-primary-border',
   info: 'bg-info-soft text-info border-info-border',
-  success: 'bg-primary-soft text-success border-success-border',
+  // `success` has a fill of its own, so an "ok" pill and a brand pill are two different objects
+  // rather than the same teal with two text colours.
+  success: 'bg-success-soft text-success border-success-border',
   warning: 'bg-warning-soft text-warning border-warning-border',
   danger: 'bg-danger-soft text-danger border-danger-border',
   ai: 'bg-ai-soft text-ai border-ai-border',
   outline: 'bg-transparent text-text-muted border-border-strong',
 };
 
+/**
+ * Two shapes, two jobs.
+ *
+ * A `pill` is a *label* — a state, a tone, a verdict, sitting beside prose. A `tag` is an
+ * *identifier* — a code, an id, a key — and it is deliberately squarer and tighter, so a strip of
+ * them reads as a machine's output rather than as sentences.
+ */
+export type BadgeShape = 'pill' | 'tag';
+
+const SHAPES: Record<BadgeShape, string> = {
+  pill: 'rounded-[var(--radius-pill)] px-2 py-0.5',
+  tag: 'rounded-[var(--radius-mark)] px-1.5 py-0.5',
+};
+
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: BadgeTone;
+  shape?: BadgeShape;
   icon?: ReactNode;
   dot?: boolean;
 }
 
-export function Badge({ tone = 'neutral', icon, dot, className, children, ...rest }: BadgeProps) {
+export function Badge({
+  tone = 'neutral',
+  shape = 'pill',
+  icon,
+  dot,
+  className,
+  children,
+  ...rest
+}: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-[var(--radius-pill)] border px-2 py-0.5',
+        'inline-flex max-w-full items-center gap-1.5 border',
+        SHAPES[shape],
         // A pill must fit the box it is in, whatever its label is. `whitespace-nowrap` made the
         // label an unbreakable run, so one long one (a source id such as
         // "risk.positionSize (not yet connected)") became a *minimum width* for every ancestor:

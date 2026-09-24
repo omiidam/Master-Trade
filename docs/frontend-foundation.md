@@ -369,14 +369,23 @@ Depth is a ladder, not a habit:
 | radius    | `mark` → `inset` → `control` → `tile` → `panel`, plus `pill` as a shape       |
 | elevation | `flat` → `panel` → `overlay` → `emphasis`, each naming its shadow and surface |
 | gradient  | `.panel-gradient` (top-lit sheen), `.surface-sheen` (loading sweep)           |
-| glow      | `--shadow-glow`, `--shadow-glow-control` — the only two, and both reserved    |
+| glow      | `accent`, `control`, `danger` — three roles, each reserving an emphasis       |
 
 `ELEVATION` in `tokens.ts` names each level's shadow and surface once, so "which
 shadow for this?" has one answer instead of a per-component judgement. Level 0 is the
 page itself, which has no shadow at all — a level, not an omission. The gradients are
 exposed as utilities so no component writes a `linear-gradient`, and the accent glow
 is reserved for the primary action rather than spent on decoration: glow is the
-strongest emphasis the interface has, and the suite pins that there are exactly two.
+strongest emphasis the interface has.
+
+Phase 7.1 pinned that reservation as a count — "there are exactly two" — and Phase 7.2
+had to change it, which was the point: it needed a third glow for the destructive
+action, because a filled red control carrying the _green_ control's shadow reads as the
+same weight as the green one. Rather than relax the assertion, it became a list of
+**roles** (`GLOW_TOKENS`/`GLOW_ROLES`), so a fourth glow now has to name the decision it
+highlights before it can exist. That is a stronger check than the old one, and it is
+recorded here because the old one was honest about two and this one is honest about
+three.
 
 The state edges are a first-class family now. Every tinted surface has a matching
 `--color-*-border`, which is what replaced the most-copied literals in the tree.
@@ -401,3 +410,141 @@ The shell collapses its rail with `COMPACT_SHELL_QUERY = '(max-width: 1099px)'` 
 `web/src/lib/useMediaQuery.ts` — a raw pixel value in TypeScript that sits between the
 `md` and `xl` steps of the ladder rather than on one of them. It is left exactly as it
 is here: moving it is a layout decision, not a token one.
+
+## 11. Phase 7.2 — core components
+
+Phase 7.1 named the values; this phase spends them. Every control, content surface and
+feedback surface was rebuilt out of the token vocabulary so that the product has a
+visual identity of its own rather than the shape a Tailwind starter produces. **No page
+was redesigned and no product feature was added** — an exhibit on Settings is how the
+new surfaces are rendered and reviewed, in the same spirit as the interface-states panel
+already there.
+
+`tests/frontend-components.test.ts` holds the claims below, and the two 7.1 assertions
+that legitimately changed are described in the sections they belong to.
+
+### The idea the whole phase rests on
+
+Three tokens carry it:
+
+- **A control is lit from above.** `--gradient-control`, `--gradient-accent` and
+  `--gradient-danger-fill` are top-lit fills, reached through the utilities
+  `control-sheen`, `control-accent` and `control-danger`. A flat fill is the single
+  thing that makes an interface read as a generic dashboard.
+- **A raised surface carries a lit edge.** `.edge-highlight` draws one hairline of
+  light along the top of a panel, fading out before the corners so it never fights the
+  radius. Cards, alerts, tooltips and the dialog all share it, so it is one rule rather
+  than four lookalikes.
+- **A control is not a surface.** `CONTROL_DEPTH` (`resting`, `litEdge`, `raised`) is
+  separate from `ELEVATION`, because a button on a card is not a third surface.
+
+### Task 1 — controls
+
+`Button` has eight variants and one rule that organises them: **filled means commit**.
+`primary` and `danger` are the only two filled faces, and therefore the only two that
+glow; `subtle`, `success`, `warning` and `info` are tinted wells, so a status control
+sitting beside a primary action never competes with it. The four new variants exist
+because a design system whose alerts have six tones and whose buttons have five is
+inconsistent, and the Settings exhibit is what renders them.
+
+Every shadow is **one stack**. `box-shadow` is a single property, so a control cannot
+carry two shadow utilities at once — the second simply replaces the first. Each depth
+token therefore contains its own lit inset top edge, which is also the honest model: a
+machined face has one lighting condition, not two. The same reasoning produced
+`TONE_SHADOW` in `Alert`: one map, one branch, no conflict to resolve by CSS order.
+
+`Select` is new and `SELECT_CLASS` is gone. The same twelve-class string had been
+copy-pasted into three screens and had already drifted apart (one copy had hover
+feedback, two did not; one was a caption size the others were not). The shared control
+takes `className` on its **wrapper** and keeps the inner `<select>` at `w-full`, so a
+caller sizes the control once and the chevron keeps its place; every form attribute
+still lands on the real `<select>`. `density`, not `size`, because `size` is already an
+HTML select attribute.
+
+One accessibility change was deliberate: the field face **no longer sets
+`focus:outline-none`**. A text input is entered by keyboard, so it keeps the page-wide
+`:focus-visible` ring every other control gets, and gains the accent border alongside
+it rather than instead of it.
+
+### Task 2 — content components
+
+The card is three surface layers, not three shadows: `default` and `raised` are lit
+panels (surface + gradient + lit edge + `--shadow-panel`), and `sunken` is the inverse —
+a well, lit along its bottom edge, with no top highlight and no panel gradient. A new
+`emphasis` prop says which card a screen is organised around; **`accent` is the only
+emphasis that takes a glow**, because elevation level 3 is defined as _one_ accent
+surface that asks to be acted on.
+
+Both the surface tone and the emphasis are closed families, and only `accent` glows. That the
+exhibit renders an accent emphasis card rather than describing one is deliberate: an unused
+emphasis is a prop nobody has looked at, and the accent glow is the claim most worth eyeballing.
+
+`Badge` gained a second shape and one honest fix. `success` used to borrow
+`--color-primary-soft`, so an "ok" pill and a brand pill were the same object with two
+text colours; it now has its own fill and edge, and `primary`/`success` are neighbouring
+greens that can be told apart. A `tag` shape joins the `pill`: a pill is a _label_, a tag
+is an _identifier_, and the tag's squarer, tighter geometry is what a strip of codes
+should look like.
+
+`Tabs` became a rail. The track is a recessed well and the active tab is a raised face
+standing on it — the inversion is what makes the selection unmistakable without a heavy
+fill — and the active tab gets exactly one accent mark, a 1px rail along its bottom edge.
+The two gradient layers are always present and toggled by opacity because `control-sheen`
+is a plain class and a plain class cannot take a `data-[state=active]:` variant.
+
+`Tooltip` is the smallest surface in the product and still wears all three depth tokens.
+
+### Task 3 — feedback and overlays
+
+There is one feedback primitive, and this is the phase's most important structural
+decision. `Alert` declares the six tones; `ErrorState` and `RealtimeNotification` are now
+thin, named adapters over it, and a toast is the same component with a lifetime. Four
+red panels with slightly different paddings cannot drift apart if there is only one.
+
+|          | `neutral` | `info` | `success` | `warning` | `error` | `destructive` |
+| -------- | --------- | ------ | --------- | --------- | ------- | ------------- |
+| role     | status    | status | status    | alert     | alert   | alert         |
+| toast ms | 5000      | 5000   | 5000      | 7000      | 9000    | never         |
+
+`error` and `destructive` are both red and deliberately two tones: one describes
+something that already happened and could not be done, the other describes something
+about to be done that cannot be undone. Only the destructive surface glows. The role is
+derived from the tone (`ALERT_TONE_ROLE`, in `design/components.ts`) rather than decided
+per call site, because "information does not interrupt" is a property of the tone — a
+live region that shouts about a status update is one people learn to ignore.
+
+`Toast` is a small queue, not a subsystem: no reducer, no persistence, no cross-tab
+channel, and a `limit` so a component that raises one in a render loop cannot grow the
+array without bound. Hover **or focus** pauses the countdown, and leaving restarts it
+rather than resuming — there is no per-toast clock to restore, and "the whole duration
+again" is both simpler and what people expect on returning to read it. The viewport is
+`role="region"` with no `aria-live` of its own, because each toast already carries a
+live role and a live region wrapping live regions says everything twice. It sits above
+the modal layer (`--z-toast`), so a message about a dialog is readable over it.
+
+No feedback surface can render a payload. `Toast` takes a sentence rather than an
+`Error`, and the suite asserts that none of the four surfaces injects markup or reaches
+for `.message`/`.stack`. That is the UI-side half of the rule the backend already
+enforces: a typed code is evidence, an exception body is not.
+
+`Modal` moved to elevation level 2 — the raised surface, as the ladder defines it — and
+gained `overlay-veil`, a faint brand wash over the scrim, so a dialog opens _inside_ the
+workstation instead of on a plain dimmed sheet. It carries **no glow**: glow is the
+accent's emphasis and the destructive action's warning, and a glowing dialog would make
+the one accent surface on a screen ambiguous. Sizing is fluid from `w-[92vw]` with a
+viewport-capped scroll region, so no width is written for a device.
+
+### What changed in the 7.1 contract
+
+Two assertions were rewritten, and both became stronger:
+
+1. **The glow reservation.** It asserted a count of two; it now asserts the manifest's
+   role list, and checks control depth is not elevation.
+2. **The failure role.** It asserted `role="alert"` inside `ErrorState.tsx`. That role
+   now lives in `Alert.tsx`, so the assertion moved to the component that decides it and
+   states the fuller rule — information is announced politely and only a warning or a
+   failure interrupts. A component that delegates its semantics cannot be the place that
+   proves them.
+
+Nothing else in the 7.1 suite was touched, and its two load-bearing rules still hold:
+no call site writes a raw value, and every declared variable is inventoried.

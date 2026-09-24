@@ -26,7 +26,7 @@ import {
 } from '@shared/profile/model';
 import { Button } from '../Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
-import { Field, Input } from '../Input';
+import { Field, Input, Select } from '../Input';
 import { formatFieldValue } from './FactRow';
 import { cn } from '../../lib/cn';
 
@@ -61,10 +61,6 @@ function current<T>(field: ContextField<T>): T | null {
   // An assumed value is not current: it was never stated.
   return field.source === 'assumed' ? null : field.value;
 }
-
-const SELECT_CLASS =
-  'w-full rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 h-9 text-text ' +
-  'focus:border-primary focus:outline-none';
 
 export function ProfileEditor({
   context,
@@ -217,9 +213,8 @@ export function ProfileEditor({
             hint="How much trading experience you would say you have."
           >
             {(props) => (
-              <select
+              <Select
                 {...props}
-                className={SELECT_CLASS}
                 value={experienceLevel ?? ''}
                 onChange={(event) =>
                   setExperienceLevel((event.target.value || null) as ExperienceLevelish)
@@ -231,15 +226,14 @@ export function ProfileEditor({
                     {formatFieldValue(level)}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
           <Field label="Trading style">
             {(props) => (
-              <select
+              <Select
                 {...props}
-                className={SELECT_CLASS}
                 value={tradingStyle ?? ''}
                 onChange={(event) =>
                   setTradingStyle((event.target.value || null) as TradingStyle | null)
@@ -251,15 +245,14 @@ export function ProfileEditor({
                     {formatFieldValue(style)}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
           <Field label="Primary timeframe">
             {(props) => (
-              <select
+              <Select
                 {...props}
-                className={SELECT_CLASS}
                 value={timeframe ?? ''}
                 onChange={(event) =>
                   setTimeframe((event.target.value || null) as ProfileTimeframe | null)
@@ -271,15 +264,14 @@ export function ProfileEditor({
                     {item}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
           <Field label="Horizon" hint="Over what horizon you usually hold a position.">
             {(props) => (
-              <select
+              <Select
                 {...props}
-                className={SELECT_CLASS}
                 value={horizon ?? ''}
                 onChange={(event) => setHorizon((event.target.value || null) as HorizonBand | null)}
               >
@@ -289,7 +281,7 @@ export function ProfileEditor({
                     {band}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
@@ -298,9 +290,8 @@ export function ProfileEditor({
             hint="Declared by you. The system never assigns one, and “prefer not to say” is a valid answer."
           >
             {(props) => (
-              <select
+              <Select
                 {...props}
-                className={SELECT_CLASS}
                 value={riskTolerance ?? ''}
                 onChange={(event) =>
                   setRiskTolerance((event.target.value || null) as RiskToleranceBand | null)
@@ -312,7 +303,7 @@ export function ProfileEditor({
                     {formatFieldValue(band)}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
@@ -321,9 +312,8 @@ export function ProfileEditor({
             hint="A band, never an amount: there is no field here for a balance."
           >
             {(props) => (
-              <select
+              <Select
                 {...props}
-                className={SELECT_CLASS}
                 value={capitalRange ?? ''}
                 onChange={(event) =>
                   setCapitalRange((event.target.value || null) as CapitalRange | null)
@@ -335,7 +325,7 @@ export function ProfileEditor({
                     {formatFieldValue(range)}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
@@ -458,9 +448,9 @@ export function ProfileEditor({
                     }
                     className="max-w-28"
                   />
-                  <select
+                  <Select
                     aria-label={`Holding ${index + 1} asset class`}
-                    className={SELECT_CLASS + ' max-w-40'}
+                    className="max-w-40"
                     value={holding.assetClass}
                     onChange={(event) =>
                       setHoldings((list) =>
@@ -477,7 +467,7 @@ export function ProfileEditor({
                         {formatFieldValue(assetClass)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <Button
                     type="button"
                     variant="ghost"

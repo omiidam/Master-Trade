@@ -300,12 +300,27 @@ describe('every product screen owes its states', () => {
     }
   });
 
-  it('reports a failure with its typed code and an alert role', () => {
+  it('reports a failure with its typed code, and interrupts only when it should', () => {
+    // The `role` this asserted used to live in ErrorState.tsx. Phase 7.2 moved the failure panel
+    // onto the one feedback primitive (`Alert`), so the invariant is asserted where the role is
+    // actually decided — a component that delegates its semantics cannot be the place that proves
+    // them. The claim is also stronger than it was: it is no longer "an error panel is an alert"
+    // but "information is announced politely and only a warning or a failure interrupts", which is
+    // what keeps an interruption meaningful.
+    const alert = read('web/src/components/Alert.tsx');
+    expect(alert).toMatch(/role=\{alertRole\(tone\)\}/);
+    // The rule itself is a table in the component manifest, so "information does not interrupt"
+    // is a value a test can read rather than a condition buried in markup.
+    expect(alert).toMatch(/ALERT_TONE_ROLE\[tone\]/);
+
+    // The failure surface still reports its typed backend code as evidence rather than restating
+    // it in prose, and neither surface injects markup.
     const error = read('web/src/components/ErrorState.tsx');
-    expect(error).toMatch(/role="alert"/);
-    // The code is shown as evidence rather than restated in prose.
+    expect(error).toMatch(/<Alert/);
     expect(error).toContain('code');
-    expect(error).not.toMatch(/dangerouslySetInnerHTML/);
+    for (const file of ['web/src/components/ErrorState.tsx', 'web/src/components/Alert.tsx']) {
+      expect(read(file), file).not.toMatch(/dangerouslySetInnerHTML/);
+    }
   });
 
   it('says why an empty pane is empty', () => {

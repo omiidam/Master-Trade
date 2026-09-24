@@ -18,8 +18,9 @@
  *      running-text steps deliberately do not — pairing them would silently override the places
  *      that set their own leading.
  *   5. **Depth is a ladder, not a habit.** Every elevation level names a shadow and a surface that
- *      exist, level 0 exists and has no shadow, and the accent glow is reserved rather than used
- *      decoratively.
+ *      exist, level 0 exists and has no shadow, and control depth is kept separate from surface
+ *      elevation. Glow is reserved by *role*: Phase 7.2 added the destructive action as a third
+ *      role, so the assertion is the manifest's role list rather than a hardcoded count.
  *   6. **No value is written at a call site.** A component may not carry a hex colour, a colour
  *      function, an arbitrary font size, or an arbitrary colour/shadow utility. That rule is what
  *      makes a palette change one edit: it was 46 literals across 20 files before this phase.
@@ -33,7 +34,10 @@ import { describe, expect, it } from 'vitest';
 import {
   ALL_TOKEN_VARIABLES,
   BREAKPOINTS,
+  CONTROL_DEPTH,
+  CONTROL_FACES,
   ELEVATION,
+  GLOW_ROLES,
   GLOW_TOKENS,
   REQUIRED_TOKEN_GROUPS,
   SPACING_NAMESPACE,
@@ -425,12 +429,19 @@ describe('Task 3 — visual depth', () => {
     }
   });
 
-  it('reserves the accent glow instead of spending it', () => {
-    // Glow is the strongest emphasis the theme has. Both glows are inventoried shadows, and there
-    // are only two — the accent itself and the control-sized version of it.
+  it('reserves the glow roles instead of spending them', () => {
+    //
+    // Glow is the strongest emphasis the theme has. Phase 7.1 allowed two roles: the brand accent
+    // and the primary control. Phase 7.2 added exactly one — the destructive action — because
+    // "this cannot be undone" is a different decision from "do this", and a filled red control
+    // carrying a green control's shadow reads as the same weight as the green one.
+    //
+    // The reservation is therefore a *list of roles* rather than a count. Adding a fourth glow
+    // means naming the decision it highlights, in the manifest, where it can be reviewed — which
+    // is what stops a decorative glow from appearing next to a real one.
     const glows = ALL_TOKEN_VARIABLES.filter((token) => token.startsWith('--shadow-glow'));
-    expect(glows.sort()).toEqual(['--shadow-glow', '--shadow-glow-control']);
-    expect(Object.values(GLOW_TOKENS).sort()).toEqual(glows);
+    expect(glows.sort()).toEqual([...Object.values(GLOW_TOKENS)].sort());
+    expect(GLOW_ROLES).toEqual(['accent', 'control', 'danger']);
     for (const token of glows) {
       expect(value(token), token).toMatch(/^0 0 0 1px|^0 10px 30px/);
     }
@@ -441,9 +452,37 @@ describe('Task 3 — visual depth', () => {
     expect(elevations).toEqual(['--shadow-panel', '--shadow-popover', '--shadow-glow']);
   });
 
-  it('declares both gradients as utilities rather than at a call site', () => {
-    for (const token of ['--gradient-panel', '--gradient-sheen']) {
-      expect(value(token), token).toMatch(/^linear-gradient\(/);
+  it('separates control depth from surface elevation', () => {
+    // A control is not a surface. `ELEVATION` says how panels stack; `CONTROL_DEPTH` says how a
+    // pressable face sits in the plane it is on, and the two must not borrow each other's shadows.
+    const depth = Object.values(CONTROL_DEPTH);
+    expect(depth).toHaveLength(3);
+    for (const token of depth) {
+      expect(ALL_TOKEN_VARIABLES, `${token} is not inventoried`).toContain(token);
+      expect(value(token), token).toMatch(/rgb\(/);
+    }
+    // The resting stack carries its own lit top edge, so a control never needs two shadow
+    // utilities at once — `box-shadow` is one property, and the second would replace the first.
+    expect(value(CONTROL_DEPTH.resting)).toMatch(/inset 0 1px 0 0 rgb\(/);
+    expect(value(CONTROL_DEPTH.raised)).toMatch(/inset 0 1px 0 0 rgb\(/);
+    // The well is the inverse: it is recessed rather than lit.
+    expect(value(CONTROL_DEPTH.litEdge)).toMatch(/^inset 0 1px 2px 0 rgb\(/);
+
+    const elevations = ELEVATION.map((level) => level.shadow).filter(
+      (shadow): shadow is string => shadow !== null,
+    );
+    for (const token of depth) {
+      expect(elevations, `${token} is also an elevation`).not.toContain(token);
+    }
+  });
+
+  it('declares every gradient as a utility rather than at a call site', () => {
+    const gradients = TOKEN_GROUPS.find((group) => group.group === 'gradient')!.variables;
+    // A gradient family this small is only worth having if each member is a named effect; five is
+    // the floor today (panel, sheen, three control faces) plus the lit edge and the veil.
+    expect(gradients.length).toBeGreaterThanOrEqual(5);
+    for (const token of gradients) {
+      expect(value(token), token).toMatch(/^(?:linear|radial)-gradient\(/);
       // Declared is not enough: each must be the background-image of a utility, so a component
       // asks for the effect by name.
       const utility = new RegExp(`background-image:\\s*var\\(${token}\\)`);
@@ -451,6 +490,14 @@ describe('Task 3 — visual depth', () => {
     }
     expect(CODE).toMatch(/\.panel-gradient\s*\{/);
     expect(CODE).toMatch(/\.surface-sheen\s*\{/);
+
+    // Every control face is one of those utilities, and it is the only way to reach its gradient.
+    for (const face of CONTROL_FACES) {
+      expect(gradients, `${face.utility} has no gradient`).toContain(face.gradient);
+      expect(CODE, `.${face.utility} does not draw its gradient`).toMatch(
+        new RegExp(`\\.${face.utility}\\s*\\{[^}]*background-image:\\s*var\\(${face.gradient}\\)`),
+      );
+    }
   });
 });
 

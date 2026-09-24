@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { ListFilter, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
-import { Input } from '../Input';
+import { Input, Select } from '../Input';
 import { cn } from '../../lib/cn';
 import {
   COMPLIANCE_LABEL,
@@ -43,10 +43,6 @@ export interface TradeFiltersProps {
   className?: string;
 }
 
-const SELECT_CLASS =
-  'h-9 w-full rounded-[var(--radius-control)] border border-border bg-surface-sunken px-2 text-caption text-text ' +
-  'transition-colors duration-[var(--duration-fast)] hover:border-border-strong focus:border-primary focus:outline-none';
-
 function Facet({
   label,
   value,
@@ -63,13 +59,9 @@ function Facet({
   return (
     <label className={cn('block min-w-0', className)}>
       <span className="mb-1 block text-caption font-medium text-text-faint">{label}</span>
-      <select
-        className={SELECT_CLASS}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
+      <Select density="sm" value={value} onChange={(event) => onChange(event.target.value)}>
         {children}
-      </select>
+      </Select>
     </label>
   );
 }

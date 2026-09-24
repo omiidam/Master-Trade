@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
-import { AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { Badge } from '../Badge';
-import { IconButton } from '../Button';
+import { Alert, type AlertTone } from '../Alert';
 import { cn } from '../../lib/cn';
 import { formatRelative } from '../../lib/format';
 
@@ -25,16 +24,17 @@ export interface RealtimeNotificationProps {
   className?: string;
 }
 
-const ICONS: Record<NotificationLevel, ReactNode> = {
-  info: <Info size={15} aria-hidden />,
-  warning: <AlertTriangle size={15} aria-hidden />,
-  danger: <AlertCircle size={15} aria-hidden />,
-};
-
-const TONES: Record<NotificationLevel, string> = {
-  info: 'border-info-border bg-info-soft text-info',
-  warning: 'border-warning-border bg-warning-soft text-warning',
-  danger: 'border-danger-border bg-danger-soft text-danger',
+/**
+ * The stream's own word for a level, mapped onto the feedback system's tone.
+ *
+ * `danger` is the *event* vocabulary (a dropped frame, a refused cancellation); `error` is the
+ * feedback vocabulary (something failed). They are the same red and deliberately different names,
+ * so that renaming a tone cannot silently rename a stream level.
+ */
+const LEVEL_TONE: Record<NotificationLevel, AlertTone> = {
+  info: 'info',
+  warning: 'warning',
+  danger: 'error',
 };
 
 /**
@@ -44,6 +44,10 @@ const TONES: Record<NotificationLevel, string> = {
  * cancellation) is labelled `client`, because attributing the client's own defensive
  * message to the server would misrepresent where the claim came from — which is the
  * same provenance rule the backend applies to events.
+ *
+ * Since Phase 7.2 this renders the shared `Alert` rather than its own panel, so an inline notice,
+ * a failure state and a toast are one component in three places. What stays here is the part that
+ * is about a *realtime* notice: its level vocabulary, its origin label and its timestamp.
  */
 export function RealtimeNotification({
   notification,
@@ -52,39 +56,27 @@ export function RealtimeNotification({
   className,
 }: RealtimeNotificationProps): ReactNode {
   return (
-    <div
-      role={notification.level === 'info' ? 'status' : 'alert'}
-      className={cn(
-        'flex items-start gap-3 rounded-[var(--radius-panel)] border px-4 py-3',
-        TONES[notification.level],
-        className,
-      )}
-    >
-      <span className="mt-0.5 shrink-0">{ICONS[notification.level]}</span>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-body font-medium">{notification.title}</p>
-          {notification.origin === 'client' ? (
-            <Badge tone="outline">raised by this client</Badge>
+    <Alert
+      tone={LEVEL_TONE[notification.level]}
+      title={notification.title}
+      meta={
+        notification.origin === 'client' ? (
+          <Badge shape="tag" tone="outline">
+            raised by this client
+          </Badge>
+        ) : null
+      }
+      description={
+        <>
+          {notification.body ? (
+            <p className={cn(compact && 'line-clamp-2')}>{notification.body}</p>
           ) : null}
-        </div>
-        {notification.body ? (
-          <p className={cn('mt-0.5 text-caption opacity-90', compact && 'line-clamp-2')}>
-            {notification.body}
-          </p>
-        ) : null}
-        <p className="mt-1 text-caption opacity-70">{formatRelative(notification.at)}</p>
-      </div>
-      {onDismiss ? (
-        <IconButton
-          size="sm"
-          variant="ghost"
-          label="Dismiss this notification"
-          onClick={() => onDismiss(notification.id)}
-        >
-          <X size={13} aria-hidden />
-        </IconButton>
-      ) : null}
-    </div>
+          <p className="mt-1 opacity-70">{formatRelative(notification.at)}</p>
+        </>
+      }
+      {...(onDismiss === undefined ? {} : { onDismiss: () => onDismiss(notification.id) })}
+      dismissLabel="Dismiss this notification"
+      {...(className === undefined ? {} : { className })}
+    />
   );
 }

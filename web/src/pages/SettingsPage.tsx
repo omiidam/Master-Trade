@@ -13,6 +13,7 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
 import { ReadOnlyValue } from '../components/Input';
+import { FeedbackStatesPanel } from '../components/FeedbackStates';
 import { InterfaceStatesPanel } from '../components/InterfaceStates';
 import { TabPanel, Tabs } from '../components/Tabs';
 import { Tooltip } from '../components/Tooltip';
@@ -462,6 +463,8 @@ export function SettingsPage() {
             errorCode="UNAUTHENTICATED"
             hint="A state is only shown when a surface can actually reach it; adding a fourth state here would mean adding a behaviour, not a picture."
           />
+
+          <FeedbackStatesPanel description="The six things this workstation can say back — a report, a confirmation or a decision — and the transient form of the same message. The toasts are real: raise one and it appears with the tone's own lifetime." />
         </TabPanel>
       </Tabs>
     </Workspace>

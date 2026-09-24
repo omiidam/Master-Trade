@@ -33,9 +33,17 @@
   --color-info: #6ea8fe;
   --color-info-soft: #111f36;
   --color-success: #3ddc97;
+  /* `success` used to borrow `primary-soft`, which made an "ok" badge and a brand badge the same
+   * object. It gets its own fill and edge in Phase 7.2: `primary` is the *brand* teal, `success`
+   * is the confirmation green, and the two must be distinguishable at a glance. */
+  --color-success-soft: #0d2a1d;
   --color-warning: #f5b544;
   --color-warning-soft: #2c2110;
   --color-danger: #f87171;
+  /* The deeper red a filled destructive surface needs, and the ink that sits on it — the pair
+   * that lets "this cannot be undone" read louder than "this failed" without shouting. */
+  --color-danger-strong: #e05a5a;
+  --color-danger-fg: #1b0507;
   --color-danger-soft: #2b1417;
   --color-ai: #a78bfa;
   --color-ai-soft: #1d1733;
@@ -50,11 +58,11 @@
    * exactly the drift a token prevents — one tweak to the danger edge was fifteen edits. Kept
    * alongside the tone they belong to, so a surface and its border are chosen together.
    *
-   * `primary` and `success` currently resolve to the same value: they are separate roles that
-   * happen to agree today, and they are separate tokens so they are free to disagree later.
+   * `primary` and `success` resolve to *similar* rather than identical values, deliberately: they
+   * are neighbouring greens, and telling them apart is the whole job of keeping both.
    */
   --color-primary-border: #14453a;
-  --color-success-border: #14453a;
+  --color-success-border: #17522f;
   --color-info-border: #1b2c49;
   --color-warning-border: #3d2c12;
   --color-danger-border: #3d1c20;
@@ -193,11 +201,41 @@
   --shadow-popover: 0 26px 60px -24px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.03);
   --shadow-glow: 0 0 0 1px rgb(53 214 164 / 0.25), 0 12px 40px -18px rgb(53 214 164 / 0.35);
   --shadow-glow-control: 0 10px 30px -16px rgb(53 214 164 / 0.7);
+  /* The destructive glow. A third glow, and the last one: it is what separates "this failed"
+   * from "this cannot be undone", and it is spent only on the destructive feedback surface. */
+  --shadow-glow-danger: 0 10px 30px -16px rgb(224 90 90 / 0.55);
 
   /*
-   * Gradients. Two, both structural: the sheen that lights the top of a panel so stacked surfaces
-   * separate, and the travelling highlight behind a loading shape. Neither is decoration, and
-   * neither is written at a call site.
+   * Control depth, as opposed to surface elevation.
+   *
+   * Each is one complete stack rather than a lift plus a separate edge token: `box-shadow` is a
+   * single property, so a control cannot combine two shadow utilities — the second would simply
+   * replace the first. So the lit top edge (`inset 0 1px 0`) is *inside* each stack, which is
+   * also the honest model: a machined face has one lighting condition, not two.
+   *
+   *   resting → a control at rest on a surface
+   *   raised  → the same control under the pointer, or at the top of a press
+   *   inset   → a well, recessed into the surface: an input, a select, a code block
+   *
+   * Deliberately not part of `ELEVATION`: that ladder is about surfaces stacking, and a button on
+   * a card is not a third surface.
+   */
+  --shadow-control:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 1px 2px 0 rgb(0 0 0 / 0.5),
+    0 8px 20px -14px rgb(0 0 0 / 0.7);
+  --shadow-control-raised:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.1), 0 2px 5px 0 rgb(0 0 0 / 0.55),
+    0 16px 30px -14px rgb(0 0 0 / 0.75);
+  --shadow-control-inset:
+    inset 0 1px 2px 0 rgb(0 0 0 / 0.45), inset 0 0 0 1px rgb(255 255 255 / 0.02),
+    0 1px 0 0 rgb(255 255 255 / 0.04);
+
+  /*
+   * Gradients. Structural, never decorative: the sheen that lights the top of a panel so stacked
+   * surfaces separate, the travelling highlight behind a loading shape, and the three *control
+   * faces*. A control is a top-lit object rather than a flat rectangle, and that single gradient
+   * is what separates a pressed surface from a filled div. None is written at a call site — each
+   * is reached through a named utility in the layer below.
    */
   --gradient-panel: linear-gradient(180deg, rgb(255 255 255 / 0.025) 0%, rgb(255 255 255 / 0) 55%);
   --gradient-sheen: linear-gradient(
@@ -206,6 +244,40 @@
     var(--color-border),
     var(--color-surface-raised)
   );
+  /*
+   * The control faces. Three fills, each a top-lit gradient rather than a flat colour, because a
+   * flat fill is what makes an interface read as a generic dashboard: light from above is what
+   * makes a control look like something you press.
+   */
+  --gradient-control: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.07) 0%,
+    rgb(255 255 255 / 0.015) 100%
+  );
+  --gradient-accent: linear-gradient(180deg, #41e0ac 0%, var(--color-primary-strong) 100%);
+  --gradient-danger-fill: linear-gradient(
+    180deg,
+    var(--color-danger) 0%,
+    var(--color-danger-strong) 100%
+  );
+  /*
+   * The lit edge, and the veil.
+   *
+   * The edge is the single detail that most makes a raised surface read as a *plate* rather than
+   * a filled rectangle: a hairline of light along the top, fading out before the corners so it
+   * never fights the radius. Every raised surface in the product shares it.
+   *
+   * The veil is the opposite: the near-black scrim of an overlay, carrying a faint brand wash so a
+   * dialog opens *inside* the workstation rather than on a plain dimmed sheet.
+   */
+  --gradient-edge: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.14) 22%,
+    rgb(255 255 255 / 0.14) 78%,
+    transparent 100%
+  );
+  --gradient-veil: radial-gradient(120% 80% at 50% -10%, rgb(53 214 164 / 0.1) 0%, transparent 62%);
 
   /* Motion */
   --duration-fast: 140ms;
@@ -218,6 +290,9 @@
   --z-shell: 10;
   --z-overlay: 40;
   --z-modal: 60;
+  /* Above the modal, below the tooltip: a toast must be readable over a dialog, and a tooltip is
+   * the one thing the user is actively pointing at. */
+  --z-toast: 70;
   --z-tooltip: 80;
 }
 
@@ -332,6 +407,39 @@
   /* The skeleton sweep. A token, so the highlight is the same everywhere a shape is loading. */
   .surface-sheen {
     background-image: var(--gradient-sheen);
+  }
+
+  /* Control faces: the sheen every neutral control shares, and the two semantic fills. */
+  .control-sheen {
+    background-image: var(--gradient-control);
+  }
+
+  .control-accent {
+    background-image: var(--gradient-accent);
+  }
+
+  .control-danger {
+    background-image: var(--gradient-danger-fill);
+  }
+
+  /*
+   * The lit top edge. A pseudo-element rather than a shadow so it fades out before the corners and
+   * can be applied to any raised surface without changing that surface's box-shadow. The host must
+   * be `position: relative`.
+   */
+  .edge-highlight::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    inset-inline: 0.5rem;
+    height: 1px;
+    pointer-events: none;
+    background-image: var(--gradient-edge);
+  }
+
+  /* The modal scrim's brand wash, under the panel and over the dimmed page. */
+  .overlay-veil {
+    background-image: var(--gradient-veil);
   }
 
   .glass {

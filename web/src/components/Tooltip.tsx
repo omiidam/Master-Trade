@@ -39,7 +39,11 @@ export function Tooltip({
           sideOffset={6}
           collisionPadding={8}
           className={cn(
-            'z-[var(--z-tooltip)] max-w-64 rounded-[var(--radius-control)] border border-border-strong',
+            // A tooltip is a raised surface like any other, so it wears the same three- token
+            // depth: the raised surface, the panel gradient that lights its top, and the lit
+            // edge. It is the smallest surface in the product and still belongs to the system.
+            'relative z-[var(--z-tooltip)] max-w-64 rounded-[var(--radius-control)]',
+            'border border-border-strong panel-gradient edge-highlight',
             'bg-surface-raised px-2.5 py-1.5 text-caption text-text shadow-popover',
             'select-none',
             className,

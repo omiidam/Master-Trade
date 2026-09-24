@@ -1,19 +1,18 @@
 import type { ReactNode } from 'react';
-import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
-import { cn } from '../lib/cn';
+import { Alert, type AlertTone } from './Alert';
 
 export type ErrorSeverity = 'info' | 'warning' | 'error';
 
-const ICONS: Record<ErrorSeverity, ReactNode> = {
-  info: <Info size={16} aria-hidden />,
-  warning: <AlertTriangle size={16} aria-hidden />,
-  error: <AlertCircle size={16} aria-hidden />,
-};
-
-const TONES: Record<ErrorSeverity, string> = {
-  info: 'border-info-border bg-info-soft text-info',
-  warning: 'border-warning-border bg-warning-soft text-warning',
-  error: 'border-danger-border bg-danger-soft text-danger',
+/**
+ * Severity is the caller's word; tone is the feedback system's.
+ *
+ * They line up one-to-one today and the mapping is still written out, so that adding a tone cannot
+ * silently reclassify every failure already on screen.
+ */
+const SEVERITY_TONE: Record<ErrorSeverity, AlertTone> = {
+  info: 'info',
+  warning: 'warning',
+  error: 'error',
 };
 
 export interface ErrorStateProps {
@@ -27,9 +26,16 @@ export interface ErrorStateProps {
 }
 
 /**
- * Failure surface. It reports the typed error code instead of a raw provider
- * payload, and it never offers a "retry trade"-style control — only UI actions
- * the caller supplies.
+ * Failure surface.
+ *
+ * Phase 7.2 turned this into the failure *tone* of the one feedback primitive rather than a second
+ * red panel: it, `RealtimeNotification` and every toast now render the same component, so the six
+ * states cannot drift apart into six slightly different implementations. What is left here is the
+ * part that is genuinely about failure — the naming, the severity vocabulary and the rule that a
+ * failure reports its typed backend code instead of a raw provider payload.
+ *
+ * It never offers a "retry trade"-style control either; it renders only UI actions the caller
+ * supplies.
  */
 export function ErrorState({
   title,
@@ -40,23 +46,13 @@ export function ErrorState({
   className,
 }: ErrorStateProps) {
   return (
-    <div
-      role="alert"
-      className={cn('rounded-[var(--radius-panel)] border px-4 py-3', TONES[severity], className)}
-    >
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 shrink-0">{ICONS[severity]}</span>
-        <div className="min-w-0 flex-1">
-          <p className="text-body font-medium">{title}</p>
-          {description ? <p className="mt-0.5 text-caption opacity-90">{description}</p> : null}
-          {code ? (
-            <p className="num mt-2 inline-block rounded-[var(--radius-control)] border border-current/30 px-2 py-0.5 text-caption">
-              {code}
-            </p>
-          ) : null}
-          {action ? <div className="mt-3">{action}</div> : null}
-        </div>
-      </div>
-    </div>
+    <Alert
+      tone={SEVERITY_TONE[severity]}
+      title={title}
+      {...(description === undefined ? {} : { description })}
+      {...(code === undefined ? {} : { code })}
+      {...(action === undefined ? {} : { actions: action })}
+      {...(className === undefined ? {} : { className })}
+    />
   );
 }

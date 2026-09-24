@@ -50,24 +50,48 @@ export function Tabs({
         inside its parent, and the triggers stop shrinking so a long label cannot squash
         its neighbours down to initials.
       */}
+      {/* The strip is a *rail*: a recessed well (inset stack) with the active tab standing on it
+          as a raised control. That inversion — sunken track, raised selection — is what makes the
+          current tab unmistakable without a heavy fill. */}
       <RadixTabs.List
         aria-label={ariaLabel}
-        className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain rounded-[var(--radius-control)] border border-border bg-surface-sunken p-1"
+        className="flex w-full min-w-0 flex-nowrap items-center gap-1 overflow-x-auto overscroll-x-contain rounded-[var(--radius-control)] border border-border bg-surface-sunken p-1 shadow-control-inset"
       >
         {items.map((item) => (
           <RadixTabs.Trigger
             key={item.id}
             value={item.id}
             className={cn(
-              'inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[calc(var(--radius-control)-2px)] px-3 py-1.5',
-              'text-caption font-medium text-text-muted transition-colors',
-              'hover:text-text data-[state=active]:bg-surface-raised data-[state=active]:text-text',
-              'data-[state=active]:shadow-panel',
+              'group relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap',
+              'rounded-[calc(var(--radius-control)-2px)] px-3 py-1.5',
+              'text-caption font-medium text-text-muted',
+              'transition-[background-color,color,box-shadow] duration-[var(--duration-fast)]',
+              'ease-[var(--ease-standard)]',
+              'hover:bg-surface-raised/60 hover:text-text',
+              'data-[state=active]:bg-surface-raised data-[state=active]:text-text',
+              'data-[state=active]:shadow-control',
             )}
           >
-            {item.icon}
-            {item.label}
-            {item.badge}
+            {/*
+             * The lit face and the accent rail are separate always-present layers toggled by
+             * opacity, rather than gradients applied conditionally: `control-sheen` is a plain
+             * class, not a Tailwind utility, so it cannot take a `data-[state=active]:` variant.
+             * The face paints *behind* the label; the rail paints over the bottom edge, which is
+             * the one accent mark this control gets.
+             */}
+            <span
+              aria-hidden
+              className="control-sheen pointer-events-none absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-[var(--duration-fast)] group-data-[state=active]:opacity-100"
+            />
+            <span className="relative inline-flex items-center gap-2">
+              {item.icon}
+              {item.label}
+              {item.badge}
+            </span>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-2 bottom-0 h-px rounded-full bg-primary opacity-0 transition-opacity duration-[var(--duration-fast)] group-data-[state=active]:opacity-100"
+            />
           </RadixTabs.Trigger>
         ))}
       </RadixTabs.List>

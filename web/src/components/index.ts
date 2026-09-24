@@ -9,7 +9,7 @@
  */
 
 export { Badge, EpistemicBadge, ProvenanceBadge } from './Badge';
-export type { BadgeProps, BadgeTone } from './Badge';
+export type { BadgeProps, BadgeShape, BadgeTone } from './Badge';
 
 // Brand marks (Phase 5.8). Both render the generated icon set, so the interface, the
 // browser tab and the desktop launcher show one logo rather than three lookalikes.
@@ -28,7 +28,7 @@ export {
   CardTitle,
   Section,
 } from './Card';
-export type { CardProps } from './Card';
+export type { CardEmphasis, CardProps, CardTone } from './Card';
 
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
@@ -86,11 +86,22 @@ export type {
   UsageProgressBarProps,
 } from './usage';
 
+// Feedback and overlays (Phase 7.2). One primitive, six tones: `ErrorState`, `RealtimeNotification`
+// and every toast are this component in three places, so the tones cannot drift into six versions.
+export { Alert, alertRole } from './Alert';
+export type { AlertProps, AlertTone } from './Alert';
+
 export { ErrorState } from './ErrorState';
 export type { ErrorStateProps, ErrorSeverity } from './ErrorState';
 
-export { Field, Input, ReadOnlyValue, Textarea } from './Input';
-export type { FieldProps } from './Input';
+export { ToastProvider, ToastViewport, useToast } from './Toast';
+export type { ToastApi, ToastOptions } from './Toast';
+
+export { FeedbackStatesPanel } from './FeedbackStates';
+export type { FeedbackStatesPanelProps } from './FeedbackStates';
+
+export { Field, Input, ReadOnlyValue, Select, Textarea } from './Input';
+export type { FieldProps, SelectDensity, SelectProps } from './Input';
 
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';

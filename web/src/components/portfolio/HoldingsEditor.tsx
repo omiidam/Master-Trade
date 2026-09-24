@@ -6,7 +6,7 @@ import { ASSET_CLASSES, MAX_SYMBOL_LENGTH, SYMBOL_PATTERN } from '@shared/profil
 import { Badge } from '../Badge';
 import { Button, IconButton } from '../Button';
 import { Card, CardContent } from '../Card';
-import { Field, Input } from '../Input';
+import { Field, Input, Select } from '../Input';
 import { assetClassLabel } from './labels';
 
 /**
@@ -34,10 +34,6 @@ import { assetClassLabel } from './labels';
  * not restate a rule in the browser: two validators that can disagree is the failure mode the
  * API schema exists to avoid.
  */
-
-const SELECT_CLASS =
-  'w-full rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 h-9 text-text ' +
-  'focus:border-primary focus:outline-none';
 
 interface DraftPosition {
   key: string;
@@ -238,9 +234,8 @@ export function HoldingsEditor({
 
           <Field label="Base currency">
             {(inputProps) => (
-              <select
+              <Select
                 {...inputProps}
-                className={SELECT_CLASS}
                 value={baseCurrency}
                 onChange={(event) => setBaseCurrency(event.target.value)}
               >
@@ -249,7 +244,7 @@ export function HoldingsEditor({
                     {currency}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
@@ -304,9 +299,8 @@ export function HoldingsEditor({
 
                 <Field label="Asset class">
                   {(inputProps) => (
-                    <select
+                    <Select
                       {...inputProps}
-                      className={SELECT_CLASS}
                       value={position.assetClass}
                       onChange={(event) => update(position.key, { assetClass: event.target.value })}
                     >
@@ -315,15 +309,14 @@ export function HoldingsEditor({
                           {assetClassLabel(assetClass)}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   )}
                 </Field>
 
                 <Field label="Currency">
                   {(inputProps) => (
-                    <select
+                    <Select
                       {...inputProps}
-                      className={SELECT_CLASS}
                       value={position.currency}
                       onChange={(event) => update(position.key, { currency: event.target.value })}
                     >
@@ -332,7 +325,7 @@ export function HoldingsEditor({
                           {currency}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   )}
                 </Field>
 
