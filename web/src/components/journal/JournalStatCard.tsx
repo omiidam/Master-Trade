@@ -89,7 +89,18 @@ export function JournalStatCard({
         actions={
           hint ? (
             <Tooltip content={hint}>
-              <span className="text-text-faint" tabIndex={0} aria-label={`About ${label}`}>
+              {/*
+                A 13px glyph is a comfortable target for a pointer and an unusable one for a thumb,
+                and this is the only way to read what the figure is measured against — so the
+                control is a 28px box with the icon centred in it, pulled back into place by equal
+                negative margins. The margin box is 16px, which is what the flex line measures, so
+                the header does not grow by a pixel; only the tappable area did.
+              */}
+              <span
+                className="-my-1.5 -me-1.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-text-faint"
+                tabIndex={0}
+                aria-label={`About ${label}`}
+              >
                 <Info size={13} aria-hidden />
               </span>
             </Tooltip>

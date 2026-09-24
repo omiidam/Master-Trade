@@ -623,11 +623,28 @@
 }
 
 @layer utilities {
-  /* Numeric readouts: tabular figures so columns of numbers line up. */
+  /*
+   * Numeric readouts: tabular figures so columns of numbers line up, and an isolated
+   * left-to-right run.
+   *
+   * The isolation is for the RTL toggle. A figure is a *technical* string — `+2.60R`, `−1,425`,
+   * `2026-09-19 10:20`, `XAUUSD` — and a leading sign is a neutral character in the Unicode bidi
+   * algorithm: with right-to-left text on the same line, `−1.00R` resolves to `1.00R−`, which is a
+   * different number wearing the same digits. `unicode-bidi: isolate` gives the figure its own
+   * bidi context and `direction: ltr` fixes the order inside it, so the sign stays where the reader
+   * of a trading terminal expects it no matter what is written beside it.
+   *
+   * Measured on the built bundle: every signed figure in the journal already resolves
+   * left-to-right under `dir="rtl"`, because the product ships no Persian copy yet and a figure
+   * alone in a cell is a single run. This is the rule that keeps that true when it does — and it is
+   * a no-op today, which is exactly why it is cheap to state now.
+   */
   .num {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.01em;
+    direction: ltr;
+    unicode-bidi: isolate;
   }
 
   .panel-gradient {

@@ -125,7 +125,9 @@ export function KnowledgeSearch({
                     type="button"
                     aria-pressed={isActive}
                     onClick={() => onToggleFacet?.(facet.id)}
-                    className="rounded-[var(--radius-pill)] focus-visible:outline-none"
+                    // No `focus-visible:outline-none`: a filter the keyboard cannot see is
+                    // unfilterable, and `rounded-pill` is here so the ring follows the chip.
+                    className="rounded-[var(--radius-pill)]"
                   >
                     <Badge tone={isActive ? 'primary' : 'outline'} dot={!isActive}>
                       {facet.label}

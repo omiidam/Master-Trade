@@ -440,10 +440,6 @@ describe('Task 2 — the shell and the well have one home', () => {
       why: 'a segmented rail is a control that scrolls, not a card',
     },
     {
-      file: 'web/src/components/journal/JournalTabs.tsx',
-      why: 'the journal repeats the rail shape for its own tab strip',
-    },
-    {
       file: 'web/src/components/journal/TradeForm.tsx',
       why: 'the field controls inside the form',
     },

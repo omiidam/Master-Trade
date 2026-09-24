@@ -25,14 +25,17 @@ same attack.
 
 ## 1. The register
 
-| id       | Severity | Component                                                                    | Attack case | Status | Fixed in |
-| -------- | -------- | ---------------------------------------------------------------------------- | ----------- | ------ | -------- |
-| VULN-001 | HIGH     | `src/vector/memory.ts` — `InMemoryVectorMemory.upsert`                       | SEC-087     | FIXED  | Phase 6  |
-| VULN-002 | MEDIUM   | `packages/shared/src/portfolio/model.ts`, `src/db/repositories/portfolio.ts` | SEC-093     | FIXED  | Phase 6  |
-| VULN-003 | MEDIUM   | `src/instructions/loader.ts` — `loadInstructions`                            | SEC-016     | FIXED  | Phase 6  |
-| VULN-004 | MEDIUM   | `packages/shared/src/core/logging.ts` — `SECRET_VALUE`                       | SEC-035     | FIXED  | Phase 6  |
-| VULN-005 | MEDIUM   | `src/desktop/sidecar.ts` — `handleExit`                                      | SEC-129     | FIXED  | Phase 6  |
-| VULN-006 | MEDIUM   | `src/desktop/sidecar.ts` — `stop`                                            | SEC-131     | FIXED  | Phase 6  |
+| id       | Severity | Component                                                                     | Attack case | Status | Fixed in |
+| -------- | -------- | ----------------------------------------------------------------------------- | ----------- | ------ | -------- |
+| VULN-001 | HIGH     | `src/vector/memory.ts` — `InMemoryVectorMemory.upsert`                        | SEC-087     | FIXED  | Phase 6  |
+| VULN-002 | MEDIUM   | `packages/shared/src/portfolio/model.ts`, `src/db/repositories/portfolio.ts`  | SEC-093     | FIXED  | Phase 6  |
+| VULN-003 | MEDIUM   | `src/instructions/loader.ts` — `loadInstructions`                             | SEC-016     | FIXED  | Phase 6  |
+| VULN-004 | MEDIUM   | `packages/shared/src/core/logging.ts` — `SECRET_VALUE`                        | SEC-035     | FIXED  | Phase 6  |
+| VULN-005 | MEDIUM   | `src/desktop/sidecar.ts` — `handleExit`                                       | SEC-129     | FIXED  | Phase 6  |
+| VULN-006 | MEDIUM   | `src/desktop/sidecar.ts` — `stop`                                             | SEC-131     | FIXED  | Phase 6  |
+| VULN-007 | HIGH     | `web/src/components/Tabs.tsx` — the focus ring, and the journal's second tabs | SEC-161     | FIXED  | Phase 7  |
+| VULN-008 | MEDIUM   | `web/src/components/journal/JournalStatCard.tsx` — the figure hint            | SEC-162     | FIXED  | Phase 7  |
+| VULN-009 | HIGH     | `web/src/components/Table.tsx` — the scroll container and `sr-only`           | SEC-155     | FIXED  | Phase 7  |
 
 Accepted, with reasoning, in §4. Deferred work is listed in
 [security-gate.md](./security-gate.md) §11.
@@ -241,6 +244,60 @@ were observed.
   exactly one `stop` signal and the supervisor settles in `stopped`.
 - **Re-test result:** PASS.
 - **First detected:** Phase 6, end-of-phase security gate. **Fixed in:** Phase 6.
+
+### VULN-007 — a focusable panel drew no focus ring, and a second tab strip was why
+
+- **Attack:** SEC-161 scans every class list in the UI for a suppressed outline that nothing replaces.
+- **Root cause:** the journal carried its own tab rail, trigger and panel because it wanted a sliding
+  active indicator. The duplicate drifted from the shared control, and the way it drifted was
+  `focus-visible:outline-none` on the trigger and on the content — with the product's global
+  `:focus-visible` ring suppressed at a specificity the utility wins, and nothing drawn in its place.
+  The panel is focusable on purpose (Radix moves focus into it so arrow keys can scroll it), so the one
+  control a keyboard user reached _after_ the strip was the one control that gave no sign it was there.
+- **Impact:** a keyboard-only operator cannot tell which control has focus. In a workstation whose
+  controls place, close and archive records, acting on the wrong one is a data-integrity event rather
+  than a cosmetic one, which is why this is graded HIGH even though no remote party is involved.
+- **Fix:** the journal's tab component was deleted and the journal renders the shared `Tabs`;
+  `TabPanel` no longer suppresses the ring. A second implementation of a control is not variety — it is
+  a place for the two to disagree.
+- **Regression test:** SEC-161, plus `tests/frontend-integration.test.ts`, which asserts there is
+  exactly one tab strip in the tree and that the ring is stated once, in `global.css`.
+- **Re-test result:** PASS.
+- **First detected:** Phase 7.4, the Phase 7 final gate. **Fixed in:** Phase 7.4.
+
+### VULN-008 — the only way to read a figure was a 13px target
+
+- **Attack:** SEC-162 reads the product's smallest control size and the size of the journal's figure
+  hint.
+- **Root cause:** the hint was a bare 13×13 `<Info>` glyph inside a focusable `span`. Correct for a
+  pointer, unusable for a thumb — and it is the only way to read what a figure is measured against, so
+  the control a reader most needs on a phone was the smallest one on the screen.
+- **Impact:** on a touch device the hint is effectively unreachable, and a mis-tap beside it does
+  nothing, which reads as a broken control.
+- **Fix:** a 28px box with the icon centred and equal negative margins, so the margin box the flex line
+  measures is unchanged (16px) and the header does not grow by a pixel. Logical margins, so it sits at
+  the end of the head in both writing directions.
+- **Regression test:** SEC-162, and the same assertion in `tests/frontend-integration.test.ts`.
+- **Re-test result:** PASS.
+- **First detected:** Phase 7.4. **Fixed in:** Phase 7.4.
+
+### VULN-009 — a reader-only label escaped its scroll container and widened the document
+
+- **Attack:** SEC-155 looks for a horizontal scroll container that is not positioned.
+- **Root cause:** `sr-only` is `position: absolute`. A reader-only span at the far right of a 1080px
+  table row therefore took the nearest _positioned_ ancestor — the `Card` behind the table, positioned
+  for its own shine — as its containing block, escaped the scroller's clip and contributed to the
+  document's scrollable overflow. The journal's trade history could be panned **329px** into empty
+  space at 390px while every element measured inside the viewport, which is exactly why the earlier
+  sweep, comparing `scrollWidth` to `clientWidth`, did not see it.
+- **Impact:** a page that pans into a void, and a detection method that hides it. Recorded here because
+  the _detection_ was half the finding: the probe that catches it asks the browser to pan
+  (`scrollLeft = 800`, read it back) instead of measuring widths.
+- **Fix:** every scroll container in the tree is positioned, so its own clip contains its absolute
+  descendants; the horizontal scroll stays inside the table.
+- **Regression test:** SEC-155 and `tests/frontend-data-components.test.ts`.
+- **Re-test result:** PASS.
+- **First detected:** Phase 7.3. **Fixed in:** Phase 7.3; re-tested by this gate in Phase 7.4.
 
 ---
 

@@ -90,7 +90,6 @@ const COMPONENT_FILES = [
   'FullscreenChartViewer.tsx',
   'JournalCalendar.tsx',
   'JournalStatCard.tsx',
-  'JournalTabs.tsx',
   'MetricBar.tsx',
   'MistakeTag.tsx',
   'PerformanceChart.tsx',
@@ -159,7 +158,6 @@ describe('trading journal module', () => {
     const barrel = readFileSync(join(journalDir, 'index.ts'), 'utf8');
     const required = [
       'JournalStatCard',
-      'JournalTabs',
       'PerformanceChart',
       'ChartToolbar',
       'TradeTable',

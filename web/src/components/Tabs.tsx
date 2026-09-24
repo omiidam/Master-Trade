@@ -21,6 +21,13 @@ export interface TabsProps {
 /**
  * Keyboard-navigable tabs (arrow keys, home/end) via Radix; the active tab is
  * marked with `data-state` so styling and tests can read it without guessing.
+ *
+ * This is the product's **only** tab strip. The journal carried a second one — its own rail, its own
+ * trigger, its own panel — because it wanted a sliding active indicator; the duplicate drifted, and
+ * the way it drifted was that it suppressed the focus ring while the shared trigger kept it, so the
+ * journal was the one screen where tabbing the strip showed nothing. A second implementation of a
+ * control is not variety, it is a place for the two to disagree, so the journal now uses this one and
+ * its own is gone.
  */
 export function Tabs({
   items,
@@ -104,6 +111,16 @@ export function Tabs({
   );
 }
 
+/**
+ * One tab's content.
+ *
+ * Focusable, so a keyboard user lands *inside* the panel they just opened and can scroll it — which
+ * is why it must also be visible when it has focus. It used to suppress the ring with
+ * `focus-visible:outline-none` and draw nothing in its place, so the one control a keyboard user
+ * reaches after the strip was the one control that gave no sign it was there. The product's global
+ * `:focus-visible` ring is now left to do its job; the ring is drawn outside the box and so cannot
+ * move anything.
+ */
 export function TabPanel({
   value,
   children,
@@ -114,11 +131,7 @@ export function TabPanel({
   className?: string;
 }) {
   return (
-    <RadixTabs.Content
-      value={value}
-      className={cn('focus-visible:outline-none', className)}
-      tabIndex={0}
-    >
+    <RadixTabs.Content value={value} className={className} tabIndex={0}>
       {children}
     </RadixTabs.Content>
   );

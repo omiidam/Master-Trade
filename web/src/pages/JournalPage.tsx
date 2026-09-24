@@ -38,8 +38,6 @@ import {
   DirectionBadge,
   JournalCalendar,
   JournalStatCard,
-  JournalTabPanel,
-  JournalTabs,
   MetricBar,
   MistakeTag,
   PerformanceChart,
@@ -52,6 +50,7 @@ import {
   TradeTable,
   TradeTimeline,
 } from '../components/journal';
+import { TabPanel, Tabs } from '../components/Tabs';
 import { formatTimestamp } from '../lib/format';
 import {
   EMOTIONAL_STATE_LABEL,
@@ -260,14 +259,14 @@ export function JournalPage() {
         </Card>
       </Grid>
 
-      <JournalTabs
+      <Tabs
         items={TABS.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
         value={tab}
         onValueChange={setTab}
         aria-label="Journal sections"
       >
         {/* Overview ------------------------------------------------------- */}
-        <JournalTabPanel value="overview">
+        <TabPanel value="overview">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {mockJournalStats.map((stat) => (
               <JournalStatCard
@@ -394,10 +393,10 @@ export function JournalPage() {
             source="synthetic-journal-analytics"
             updatedAt="2026-09-19T16:45:00Z"
           />
-        </JournalTabPanel>
+        </TabPanel>
 
         {/* Trade history -------------------------------------------------- */}
-        <JournalTabPanel value="history">
+        <TabPanel value="history">
           <TradeFilters
             filters={filters}
             onChange={setFilters}
@@ -455,10 +454,10 @@ export function JournalPage() {
               </CardContent>
             </Card>
           </Grid>
-        </JournalTabPanel>
+        </TabPanel>
 
         {/* Add trade ------------------------------------------------------ */}
-        <JournalTabPanel value="add">
+        <TabPanel value="add">
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <TradeForm onCancel={() => setTab('history')} className="xl:col-span-1" />
             <div className="space-y-4">
@@ -512,10 +511,10 @@ export function JournalPage() {
               </Card>
             </div>
           </div>
-        </JournalTabPanel>
+        </TabPanel>
 
         {/* Trade details -------------------------------------------------- */}
-        <JournalTabPanel value="details">
+        <TabPanel value="details">
           <Card>
             <CardHeader divider>
               <div>
@@ -869,10 +868,10 @@ export function JournalPage() {
               <TradeTimeline events={buildTradeTimeline(selected)} />
             </>
           )}
-        </JournalTabPanel>
+        </TabPanel>
 
         {/* Analytics ------------------------------------------------------ */}
-        <JournalTabPanel value="analytics">
+        <TabPanel value="analytics">
           <AnalyticsPanel
             range={analyticsRange}
             onRangeChange={setAnalyticsRange}
@@ -881,10 +880,10 @@ export function JournalPage() {
             onRangeFromChange={setAnalyticsFrom}
             onRangeToChange={setAnalyticsTo}
           />
-        </JournalTabPanel>
+        </TabPanel>
 
         {/* Calendar ------------------------------------------------------- */}
-        <JournalTabPanel value="calendar">
+        <TabPanel value="calendar">
           <JournalCalendar
             days={mockCalendarDays}
             month={mockCalendarMonth}
@@ -922,10 +921,10 @@ export function JournalPage() {
               </CardContent>
             </Card>
           </Grid>
-        </JournalTabPanel>
+        </TabPanel>
 
         {/* Reviews and lessons -------------------------------------------- */}
-        <JournalTabPanel value="reviews">
+        <TabPanel value="reviews">
           <Grid columns={2}>
             <Card>
               <CardHeader divider>
@@ -1123,8 +1122,8 @@ export function JournalPage() {
             awaiting a review · scope {describeRange(analyticsRange, analyticsFrom, analyticsTo)}{' '}
             for the analytics section above.
           </p>
-        </JournalTabPanel>
-      </JournalTabs>
+        </TabPanel>
+      </Tabs>
     </Workspace>
   );
 }

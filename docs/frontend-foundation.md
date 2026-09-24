@@ -1237,3 +1237,78 @@ table, a tooltip or a chart that legitimately needed the box, which is why the s
 The backend-dependent tables (portfolio holdings, evaluation history, the plan comparison) render
 their unavailable state in the preview, so their markup is covered by the typecheck and the source
 contract rather than by the browser sweep.
+
+## 17. Phase 7.4 — the system, as the application actually uses it
+
+7.1–7.3 built the system. This section is about the gaps between its parts, which is where a design
+system fails in practice: a second implementation of a control that drifts, a cue that disappears, a
+target nobody can hit, a figure that reorders itself in one writing direction. The contract suite is
+`tests/frontend-integration.test.ts` (11 tests) and it states each rule as what the product must _not_
+contain, because that is what a later change can break without noticing.
+
+### Responsive
+
+Measured, not asserted from classes. At **1440 / 834 / 390**, every one of the 14 drawer sections and
+every tab reachable inside them was swept with the pan probe from §16 — `scrollLeft = 800`, read it
+back — and the answer is **0 on every view**. The rail collapses to icons at 834 and expands to 264px
+at 1440; content grids start at one column and widen at their breakpoints; the journal's tab rail keeps
+one row and scrolls inside its own box rather than wrapping into three (the Phase 5.10 failure mode).
+
+No shadows, shine, gradients or glow were changed in this phase, and the earlier rule that none of them
+may move, resize or paint outside its card is still asserted by the 7.2.4 suite. `overflow-hidden` is
+still forbidden as an overflow fix, for the reason §16 records.
+
+### Accessibility and interaction
+
+- **One tab strip.** The journal had its own rail, trigger and panel, because it wanted a sliding
+  active indicator. The duplicate is gone — `JournalTabs.tsx` deleted, the journal renders the shared
+  `Tabs` — and with it went the defect that made the duplication more than untidy: the journal's
+  trigger and panel carried `focus-visible:outline-none` with nothing drawn in its place, so the one
+  control a keyboard user reached _after_ the strip was the one control that showed no sign it was
+  there.
+- **One focus ring, stated once** in `global.css`, and the suite fails on an `outline-none` that has no
+  ring, shadow, border colour or underline beside it. Five exceptions are named with their reasons —
+  they are field borders and dialog surfaces, and the suite also asserts each named exception is still a
+  real line, so the list cannot rot into blanket permission.
+- **Targets.** The journal's figure hint was a bare 13×13 glyph and the only way to read what a figure
+  is measured against. It is a 28px box with the icon centred and equal negative margins, so the margin
+  box the flex line measures is unchanged and the header does not grow. The product's smallest button
+  stays 32px, asserted so a future `xs` size cannot be added quietly.
+- **Direction.** The shell's toggle sets `documentElement.dir`, and two rules keep the RTL case honest:
+  the chart frame pins its plot to `direction: ltr` (a mirrored series reverses the axis while the
+  labels stay upright), and `.num` now declares `unicode-bidi: isolate; direction: ltr`. A sign is a
+  _neutral_ in the bidi algorithm, so `−1.00R` beside right-to-left text resolves to `1.00R−` — a
+  different number wearing the same digits. Measured on the built bundle under `dir="rtl"`, all ten
+  signed figures in the journal already resolve left-to-right, because the product ships no Persian copy
+  and a figure alone in a cell is a single run; the rule is what keeps that true when it does. It is a
+  no-op today, which is why it was cheap to state.
+- Contrast is unchanged from the 7.2.2 palette (19 assertions in `frontend-color-harmony.test.ts`),
+  which is what made the touch-target and focus findings the only accessibility defects in the phase.
+
+### Integration
+
+Every page builds its screens from the shared parts: the suite fails on a raw `<table>`, a raw
+`role="tablist"` or a direct Radix import inside `web/src/pages`. The audit found the one duplicate
+that mattered (the tabs) and no others worth removing: `panel-gradient`/`edge-highlight` are used by
+`Card`, `Modal`, `Tooltip` and `Alert` — each a panel that owns its own face — and the plan comparison's
+bordered frame is a deliberate plate around a matrix, with its reason written at the call site.
+Variety was left alone: the six card surfaces, the two table densities, the four chart tones and the
+per-category `surface` assignments from 7.2.4 are all still there.
+
+### Verified
+
+- Both typechecks clean; `format:check` clean.
+- **1359** unit tests across **70** files, including the new 11-test integration contract and the
+  12-attack Phase 7 security stage.
+- `npm run build` and `npm run build:web` clean; `npm run desktop:verify` **0 errors, 4 warnings**.
+- **27** browser end-to-end assertions, and four of these rules were already checked there at runtime
+  rather than in source: no sideways scroll at five viewports (1440×900, 1024×768, 768×1024, 430×932,
+  390×844, 375×812), "keeps every control big enough to touch at phone widths" across every drawer
+  section at three widths, "survives a right-to-left mirror without overflowing", and "names every
+  control and every image the browser paints". What this phase added to that layer is the part it did
+  not have: a ring on the panel a keyboard user lands _inside_, and a target rule that covers a
+  focusable span rather than only the elements a form would post.
+- Pan sweep with the pan probe: 0 on all 14 sections and their tabs at 1440 / 834 / 390, with the rail
+  collapsed at 834 and expanded at 1440.
+- The Phase 7 security stage: 12 attacks, 12 pass, 0 not applicable, 0 unresolved CRITICAL or HIGH —
+  recorded in `docs/security-gate-baseline.json` under `phase7`, with the Phase 6 checkpoint untouched.

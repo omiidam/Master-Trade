@@ -269,3 +269,39 @@ Not applicable: the per-principal memory ownership case, and nothing else.
 
 **The product is not described here as secure.** What is described is a set of attacks that were made,
 a set of defects that were found and closed, and a suite that keeps them closed.
+
+---
+
+## 15. Phase 7 — the presentation surface, re-run
+
+Phase 7 built the UI layer, so the Phase 7 final gate ran this suite again **and** pointed the same
+harness at that layer. Two checkpoints rather than one edited total:
+
+| Checkpoint     | Suite                                                     | Attacks | Result                             |
+| -------------- | --------------------------------------------------------- | ------- | ---------------------------------- |
+| End of Phase 6 | `tests/security-gate/stages-01-02.ts` … `stages-09-10.ts` | 150     | 149 pass, 1 not applicable, 0 fail |
+| End of Phase 7 | `tests/security-gate/phase-07.ts` (stage 11)              | 12      | 12 pass, 0 not applicable, 0 fail  |
+
+`docs/security-gate-baseline.json` keeps the Phase 6 numbers under their own keys and records the new
+stage under `phase7`, because the Phase 6 counts are evidence about the Phase 6 tree: folding later
+work into them would make them evidence of nothing. Stage 11 is twelve cases over five kinds of
+boundary — a style _value_ that could become a class name (`surface`, `emphasis`, `density`, `as`), a
+content value that could become code or a destination (no markup sink, no dynamic evaluation, no data
+driven `href`, no presentation in the content modules), a hidden label that could widen the document,
+a cue that could disappear (the focus ring, the target size), and a figure that could stop being a
+figure under `dir="rtl"`.
+
+Three findings, all fixed, all re-tested by the stage: **VULN-007** (a focusable panel with no focus
+ring, and the second tab implementation that let the two drift), **VULN-008** (a 13px target that was
+the only way to read a figure), **VULN-009** (a reader-only label escaping its scroll container and
+widening the document by 329px). §4 of the knowledge base has one more entry than it did: the
+`sr-only` defect is recorded there because the _detection_ was half of it — the sweep that missed it
+compared widths instead of asking the browser to pan.
+
+**0 unresolved CRITICAL. 0 unresolved HIGH.** The gate criteria are unchanged, and they are asserted
+at stage scope as well as in total.
+
+What Stage 11 does **not** claim: it is not a browser-level security test. It reads the source and the
+stylesheet, which is what this layer can prove from Node — a rendered-DOM check for the same five
+boundaries lives in the browser suite (`tests/browser/e2e.test.ts`) and in the runtime probes recorded
+in `docs/frontend-foundation.md` §17.

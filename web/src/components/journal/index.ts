@@ -14,9 +14,6 @@
 export { JournalStatCard } from './JournalStatCard';
 export type { JournalStatCardProps } from './JournalStatCard';
 
-export { JournalTabs, JournalTabPanel } from './JournalTabs';
-export type { JournalTabItem, JournalTabsProps } from './JournalTabs';
-
 export { PerformanceChart, formatChartValue } from './PerformanceChart';
 export type {
   ChartAnnotation,

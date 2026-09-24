@@ -61,6 +61,27 @@
     "SEC-143": "same missing capability file as SEC-060.",
     "SEC-144": "read the echo of a caller-supplied correlation id as a secret leak."
   },
+  "phase7": {
+    "$comment": "Stage 11, added at the end of Phase 7. The twelve attacks in tests/security-gate/phase-07.ts run through the same harness as the Phase 6 gate above, and tests/security-gate/phase-07.test.ts asserts every number here against an actual run. It is a separate checkpoint on purpose: the numbers above are evidence about the Phase 6 tree, and folding later work into them would make them evidence of nothing.",
+    "stage": 11,
+    "title": "The presentation surface (Phase 7)",
+    "harness": "tests/security-gate/phase-07.ts (SEC-151 - SEC-162)",
+    "totalAttacks": 12,
+    "pass": 12,
+    "fail": 0,
+    "notApplicable": 0,
+    "cleared": true,
+    "findings": {
+      "critical": 0,
+      "high": 2,
+      "medium": 1,
+      "low": 0,
+      "fixed": 3,
+      "accepted": 0,
+      "deferred": 0
+    },
+    "findingIds": ["VULN-007", "VULN-008", "VULN-009"]
+  },
   "safety": {
     "liveTradingEnabled": false,
     "brokerExecutionEnabled": false,
