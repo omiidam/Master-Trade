@@ -1,7 +1,7 @@
 import { Gauge, ShieldCheck } from 'lucide-react';
 import type { UsageStatusData } from '@shared/api/contracts';
 import { Badge } from '../Badge';
-import { Card, CardHeader, CardTitle } from '../Card';
+import { Card, CardHeader, CardTile, CardTitle } from '../Card';
 import { CreditBalance, UsageProgressBar } from './CreditBalance';
 import { FeatureEntitlementBadge } from './FeatureEntitlementBadge';
 import { UsageLimitNotice } from './UpgradePrompt';
@@ -72,10 +72,7 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {usage.features.map((feature) => (
-            <div
-              key={feature.id}
-              className="space-y-1.5 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-            >
+            <CardTile key={feature.id} className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-body-sm font-medium text-text">{feature.label}</span>
                 <FeatureEntitlementBadge feature={feature} />
@@ -97,7 +94,7 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
                   unit="uses"
                 />
               )}
-            </div>
+            </CardTile>
           ))}
         </div>
 

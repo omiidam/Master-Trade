@@ -1,7 +1,7 @@
 import { AlertTriangle, Gauge } from 'lucide-react';
 import type { PortfolioInsight, WeightSet } from '@shared/portfolio/model';
 import { Badge } from '../Badge';
-import { Card, CardContent } from '../Card';
+import { Card, CardContent, CardTile } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatPercent, insightSeverityLabel, insightSeverityTone } from './labels';
 
@@ -39,7 +39,7 @@ export interface ConcentrationRiskCardProps {
 
 function Panel({ set, title }: { set: WeightSet; title: string }) {
   return (
-    <div className="space-y-3 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-3">
+    <CardTile space="roomy" className="space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-body-sm font-medium text-text">{title}</span>
         <Badge tone="outline">
@@ -75,7 +75,7 @@ function Panel({ set, title }: { set: WeightSet; title: string }) {
           ? 'Measured from market values, so it moves with prices.'
           : 'Measured from the shares you declared, so it reflects intent rather than prices.'}
       </p>
-    </div>
+    </CardTile>
   );
 }
 

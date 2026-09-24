@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Badge } from '../Badge';
+import { Card } from '../Card';
 import { cn } from '../../lib/cn';
 
 export interface FormSectionProps {
@@ -38,13 +39,7 @@ export function FormSection({
   className,
 }: FormSectionProps) {
   return (
-    <section
-      className={cn(
-        'rounded-[var(--radius-panel)] border bg-surface shadow-panel',
-        issues > 0 ? 'border-danger-border' : 'border-border',
-        className,
-      )}
-    >
+    <Card emphasis={issues > 0 ? 'danger' : 'none'} className={className}>
       <h3>
         <button
           type="button"
@@ -95,6 +90,6 @@ export function FormSection({
         </button>
       </h3>
       {open ? <div className="px-4 py-4">{children}</div> : null}
-    </section>
+    </Card>
   );
 }

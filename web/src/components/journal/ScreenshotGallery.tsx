@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Eye, ImageOff } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
+import { Card, CardTile, CardTitle } from '../Card';
 import { FullscreenChartViewer } from './FullscreenChartViewer';
 import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
@@ -36,13 +37,7 @@ function AttachmentPreview({
 }) {
   const tone = KIND_TONE[attachment.kind];
   return (
-    <div
-      className={cn(
-        'relative overflow-hidden rounded-[var(--radius-control)] border border-border bg-surface-sunken',
-        className,
-      )}
-      style={{ height }}
-    >
+    <CardTile space="none" className={cn('relative overflow-hidden', className)} style={{ height }}>
       <svg
         viewBox="0 0 320 180"
         preserveAspectRatio="none"
@@ -91,7 +86,7 @@ function AttachmentPreview({
       <Badge tone={tone} className="absolute end-2 top-2">
         {ATTACHMENT_KIND_LABEL[attachment.kind]}
       </Badge>
-    </div>
+    </CardTile>
   );
 }
 
@@ -136,16 +131,14 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
     setIndex((value) => (value + delta + attachments.length) % attachments.length);
 
   return (
-    <section
+    <Card
+      as="section"
       aria-label="Screenshots and attachments"
-      className={cn(
-        'space-y-3 rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel',
-        className,
-      )}
+      className={cn('space-y-3 p-4', className)}
     >
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-title font-semibold text-text">Screenshots and attachments</h3>
+          <CardTitle>Screenshots and attachments</CardTitle>
           <p className="mt-0.5 text-caption text-text-muted">{JOURNAL_ATTACHMENT_NOTE}</p>
         </div>
         <Badge tone="outline">
@@ -253,7 +246,7 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
       >
         <AttachmentPreview attachment={current} height={520} />
       </FullscreenChartViewer>
-    </section>
+    </Card>
   );
 }
 

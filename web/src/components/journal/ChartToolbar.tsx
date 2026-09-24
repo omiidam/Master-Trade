@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '../Button';
 import { cn } from '../../lib/cn';
+import { CardTile } from '../Card';
 
 export type ChartTone = 'primary' | 'danger' | 'info' | 'warning' | 'ai' | 'muted';
 
@@ -62,10 +63,11 @@ export function ChartToolbar({
     <div className={cn('flex flex-wrap items-center justify-between gap-2', className)}>
       <div className="flex flex-wrap items-center gap-2">
         {ranges && ranges.length > 0 ? (
-          <div
+          <CardTile
+            space="none"
             role="group"
             aria-label="Chart timeframe"
-            className="inline-flex items-center gap-0.5 rounded-[var(--radius-control)] border border-border bg-surface-sunken p-0.5"
+            className="inline-flex items-center gap-0.5 p-0.5"
           >
             {ranges.map((option) => {
               const active = option === range;
@@ -87,7 +89,7 @@ export function ChartToolbar({
                 </button>
               );
             })}
-          </div>
+          </CardTile>
         ) : null}
         {children}
       </div>

@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from 'react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
+import { Card, CardTile, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { AI_REVIEW_NOTICE, AI_REVIEW_STATE_LABEL, AI_REVIEW_STATE_ORDER } from '../../mock/journal';
 import type { AiReviewState } from '../../mock/journal';
@@ -80,13 +81,7 @@ export interface AIReviewPanelProps {
  */
 export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewPanelProps) {
   return (
-    <section
-      aria-label="Review assistance"
-      className={cn(
-        'rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel',
-        className,
-      )}
-    >
+    <Card as="section" aria-label="Review assistance" className={cn('p-4', className)}>
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-start gap-2">
           <span
@@ -96,7 +91,7 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
             {ICONS[state]}
           </span>
           <div>
-            <h3 className="text-title font-semibold text-text">Review assistance</h3>
+            <CardTitle>Review assistance</CardTitle>
             <p className="mt-0.5 text-caption text-text-muted">
               {tradeRef ? `${tradeRef} · ` : ''}
               {EXPLANATION[state]}
@@ -110,9 +105,9 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
 
       <div className="mt-3">
         {state === 'not-available' ? (
-          <p className="rounded-[var(--radius-control)] border border-dashed border-border-strong bg-surface-sunken/60 px-3 py-3 text-caption text-text-muted">
+          <CardTile as="p" space="roomy" className="border-dashed text-caption text-text-muted">
             {AI_REVIEW_NOTICE}
-          </p>
+          </CardTile>
         ) : state === 'pending' ? (
           <p className="text-caption text-text-muted">
             Queued. A pending review is the absence of a review, and it is labelled that way rather
@@ -137,15 +132,14 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
             </p>
             <ul className="space-y-3">
               {COMPLETED_SECTIONS.map((section) => (
-                <li
-                  key={section.heading}
-                  className="rounded-[var(--radius-control)] border border-border bg-surface-sunken p-3"
-                >
-                  <p className="text-body font-medium text-text">{section.heading}</p>
-                  <p className="mt-0.5 text-caption text-text-muted">{section.body}</p>
-                  <p className="mt-2 text-caption text-text-faint italic">
-                    awaiting a connected provider — no generated text is stored
-                  </p>
+                <li key={section.heading}>
+                  <CardTile space="roomy">
+                    <p className="text-body font-medium text-text">{section.heading}</p>
+                    <p className="mt-0.5 text-caption text-text-muted">{section.body}</p>
+                    <p className="mt-2 text-caption text-text-faint italic">
+                      awaiting a connected provider — no generated text is stored
+                    </p>
+                  </CardTile>
                 </li>
               ))}
             </ul>
@@ -177,7 +171,7 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
           </div>
         )}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -201,10 +195,11 @@ export function AIReviewStateGallery({
     <section className={cn('space-y-3', className)} aria-label="Review states">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-caption font-semibold text-text-muted uppercase">Review states</p>
-        <div
+        <CardTile
+          space="none"
           role="group"
           aria-label="Review state to preview"
-          className="inline-flex flex-wrap items-center gap-0.5 rounded-[var(--radius-control)] border border-border bg-surface-sunken p-0.5"
+          className="inline-flex flex-wrap items-center gap-0.5 p-0.5"
         >
           {AI_REVIEW_STATE_ORDER.map((state) => (
             <button
@@ -222,7 +217,7 @@ export function AIReviewStateGallery({
               {AI_REVIEW_STATE_LABEL[state]}
             </button>
           ))}
-        </div>
+        </CardTile>
       </div>
       <AIReviewPanel state={value} {...(tradeRef ? { tradeRef } : {})} />
     </section>

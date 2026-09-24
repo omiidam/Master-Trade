@@ -1,4 +1,5 @@
 import { Skeleton, SkeletonCard } from '../Skeleton';
+import { Card } from '../Card';
 import { cn } from '../../lib/cn';
 
 export interface LoadingStateProps {
@@ -26,14 +27,7 @@ export function LoadingState({
   className,
 }: LoadingStateProps) {
   return (
-    <div
-      aria-busy="true"
-      aria-live="polite"
-      className={cn(
-        'rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel',
-        className,
-      )}
-    >
+    <Card aria-busy="true" aria-live="polite" className={cn('p-4', className)}>
       <p className="text-body font-medium text-text">{label}</p>
       <p className="mt-0.5 text-caption text-text-muted">{description}</p>
       <div className="mt-3">
@@ -54,6 +48,6 @@ export function LoadingState({
           <SkeletonCard rows={rows} />
         )}
       </div>
-    </div>
+    </Card>
   );
 }

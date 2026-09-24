@@ -1,6 +1,8 @@
 import { CircleDashed, ShieldAlert } from 'lucide-react';
 import type { AssumptionNotice as AssumptionNoticeView } from '@shared/quality/readiness';
 import { Badge } from '../Badge';
+import { Card } from '../Card';
+import { cn } from '../../lib/cn';
 import { inputLabel } from './labels';
 
 /**
@@ -31,13 +33,12 @@ export function AssumptionNotice({ notice, className }: AssumptionNoticeProps) {
   const refused = !notice.permitted;
 
   return (
-    <article
-      className={
-        className ??
-        `space-y-2 rounded-[var(--radius-card)] border p-3 ${
-          refused ? 'border-danger-border bg-danger-soft' : 'border-border bg-surface-sunken'
-        }`
-      }
+    <Card
+      as="article"
+      tone={refused ? 'default' : 'sunken'}
+      emphasis={refused ? 'danger' : 'none'}
+      wash={refused}
+      className={cn('space-y-2 p-3', className)}
       aria-label={`Assumption: ${inputLabel(notice.field)}`}
     >
       <div className="flex flex-wrap items-center gap-1.5">
@@ -55,6 +56,6 @@ export function AssumptionNotice({ notice, className }: AssumptionNoticeProps) {
 
       <p className="text-body-sm text-text-muted">{notice.statement}</p>
       <p className="text-caption text-text-faint">{notice.reason}</p>
-    </article>
+    </Card>
   );
 }

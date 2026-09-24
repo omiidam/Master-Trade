@@ -3,6 +3,7 @@ import type { DimensionAssessment, QualityReport } from '@shared/quality/model';
 import { Badge } from '../Badge';
 import { DataQualityBadge } from './DataQualityBadge';
 import { dimensionLabel } from './labels';
+import { CardTile } from '../Card';
 
 /**
  * How good the declared inputs are, with no particular analysis in mind.
@@ -41,10 +42,7 @@ export function DimensionGrid({
       <h4 className="text-body-sm font-medium text-text">Dimensions</h4>
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="list">
         {dimensions.map((dimension) => (
-          <li
-            key={dimension.dimension}
-            className="space-y-1 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-          >
+          <CardTile key={dimension.dimension} className="space-y-1">
             <div className="flex items-center justify-between gap-2">
               <span className="text-body-sm font-medium text-text">
                 {dimensionLabel(dimension.dimension)}
@@ -56,7 +54,7 @@ export function DimensionGrid({
               />
             </div>
             <p className="text-caption text-text-faint">{dimension.question}</p>
-          </li>
+          </CardTile>
         ))}
       </ul>
     </div>
@@ -106,13 +104,10 @@ export function InputQualitySummary({
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {COUNT_ROWS.map((row) => (
-          <div
-            key={row.key}
-            className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-          >
+          <CardTile key={row.key}>
             <p className="text-caption text-text-muted">{row.label}</p>
             <p className="text-h3 font-semibold tabular-nums text-text">{report.counts[row.key]}</p>
-          </div>
+          </CardTile>
         ))}
       </div>
 

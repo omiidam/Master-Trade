@@ -3,7 +3,15 @@ import { cn } from '../../lib/cn';
 import { formatPercent } from '../../lib/format';
 import { Badge, type BadgeTone } from '../Badge';
 import { Button } from '../Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTile,
+  CardTitle,
+} from '../Card';
 import { Tooltip } from '../Tooltip';
 import { ProgressIndicator } from './ProgressIndicator';
 import { EXAM_STATE_LABEL, type ExamDefinition, type ExamRunState } from '../../mock/exams';
@@ -72,21 +80,21 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
             tablet, where there is room for them side by side without shrinking the
             label to the point of wrapping mid-word. */}
         <dl className="grid grid-cols-1 gap-2 text-caption sm:grid-cols-3">
-          <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-2.5 py-2">
+          <CardTile space="tight">
             <dt className="flex items-center gap-1 text-text-faint">
               <HelpCircle size={12} aria-hidden />
               Questions
             </dt>
             <dd className="num mt-0.5 text-text">{exam.questionCount}</dd>
-          </div>
-          <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-2.5 py-2">
+          </CardTile>
+          <CardTile space="tight">
             <dt className="flex items-center gap-1 text-text-faint">
               <Clock size={12} aria-hidden />
               Time
             </dt>
             <dd className="num mt-0.5 text-text">{exam.durationMinutes}m</dd>
-          </div>
-          <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-2.5 py-2">
+          </CardTile>
+          <CardTile space="tight">
             <dt className="flex items-center gap-1 text-text-faint">
               <Target size={12} aria-hidden />
               Best
@@ -94,7 +102,7 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
             <dd className={cn('num mt-0.5', belowPass ? 'text-danger' : 'text-text')}>
               {exam.bestScore === null ? '—' : formatPercent(exam.bestScore, 0)}
             </dd>
-          </div>
+          </CardTile>
         </dl>
 
         {progress ? (

@@ -1,7 +1,7 @@
 import { FolderTree, History, Layers, Wallet } from 'lucide-react';
 import type { PortfolioViewData } from '@shared/api/contracts';
 import { Badge } from '../Badge';
-import { Card, CardContent } from '../Card';
+import { Card, CardContent, CardTile } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatNumber, scopeLabel } from './labels';
 
@@ -86,14 +86,11 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
               ],
             ] as const
           ).map(([label, value, hint]) => (
-            <div
-              key={label}
-              className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-            >
+            <CardTile key={label}>
               <dt className="text-caption text-text-muted">{label}</dt>
               <dd className="text-h3 font-semibold tabular-nums text-text">{value}</dd>
               <p className="text-caption text-text-faint">{hint}</p>
-            </div>
+            </CardTile>
           ))}
         </dl>
 

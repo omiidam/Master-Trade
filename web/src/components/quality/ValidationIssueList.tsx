@@ -1,6 +1,7 @@
 import { SEVERITY_ORDER, type QualityIssue } from '@shared/quality/model';
 import { DataQualityBadge } from './DataQualityBadge';
 import { dimensionLabel, inputLabel, issueCodeLabel } from './labels';
+import { CardTile } from '../Card';
 
 /**
  * Every finding, in the order that matters, with its evidence.
@@ -48,10 +49,7 @@ export function ValidationIssueList({ issues, emptyMessage, className }: Validat
   return (
     <ul className={className ?? 'space-y-2'} aria-label="Validation findings" role="list">
       {orderIssues(issues).map((issue, index) => (
-        <li
-          key={`${issue.field}:${issue.code}:${index}`}
-          className="flex flex-col gap-1 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-        >
+        <CardTile key={`${issue.field}:${issue.code}:${index}`} className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <DataQualityBadge kind="severity" value={issue.severity} />
             <span className="text-body-sm font-medium text-text">{inputLabel(issue.field)}</span>
@@ -63,7 +61,7 @@ export function ValidationIssueList({ issues, emptyMessage, className }: Validat
           <p className="text-caption text-text-faint">
             <span className="font-mono">{issue.code}</span> — {issueCodeLabel(issue.code)}
           </p>
-        </li>
+        </CardTile>
       ))}
     </ul>
   );

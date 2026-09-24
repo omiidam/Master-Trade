@@ -649,3 +649,182 @@ state hook, so a visual primitive cannot quietly grow a client.
 
 The 7.1 and 7.2 suites were not weakened: the only additions are the new rules above.
 18 new assertions cover this phase, all read from source and offline.
+
+## 13. Phase 7.2.2 — colour harmony and one card system
+
+### The idea: harmony is a relationship, not a list
+
+The palette before this phase was not ugly. It was **unrelated**: six accents chosen one at
+a time, each defensible on its own, with no stated reason any two of them sat where they
+did. The symptom that made it a defect rather than a taste: `--color-primary` (hue 161) and
+`--color-success` (hue 154) were **seven degrees apart**. The brand accent and the
+confirmation green were one colour wearing two names, and no amount of "the ladders are
+ordered" would have caught it, because both ladders were ordered.
+
+The fix is a rule with a number in it. Every accent is now placed on one wheel relative to
+one brand hue, and the relationship is _measurable_ rather than editorial:
+
+| family                                | relationship  | distance from brand |
+| ------------------------------------- | ------------- | ------------------- |
+| brand (`--color-primary`, hue 190)    | the origin    | —                   |
+| information (`--color-info`, 215)     | analogous     | 25°                 |
+| reasoning (`--color-ai`, 258)         | analogous     | 68°                 |
+| confirmation (`--color-success`, 152) | analogous     | 38°                 |
+| caution (`--color-warning`, 38)       | complementary | 152°                |
+| loss (`--color-danger`, 2)            | complementary | 172°                |
+
+`MIN_HUE_SEPARATION` is 20 degrees, and `BRAND_HUE` is 190. `ACCENT_FAMILIES` in
+`web/src/design/tokens.ts` records each family's base, its well, its edge and the hue it
+claims; the suite **re-derives** the hue from the hex in the stylesheet and checks both the
+number and the angle. A declared relationship that does not match the geometry fails, which
+is how `confirmation` was caught still being described as complementary at 38 degrees.
+
+Confirmation staying _analogous_ is the point, not a compromise. The two greens were never
+wrong to be neighbours — they were wrong to be indistinguishable. Thirty-eight degrees is
+far enough that a green tick and a cyan accent stop reading as one colour, and close enough
+that the accent family still looks like one family.
+
+### The neutrals are an axis, not a set of greys
+
+Every surface, edge and ink sits inside `NEUTRAL_AXIS`: hue 210–222, saturation 10–46. That
+band is what makes a dark interface read as one material. The suite asserts it token by
+token, so a grey that drifts warmer or more saturated fails rather than quietly tinting
+everything beside it.
+
+### Legibility became a measurement
+
+Phase 7.1 asserted the ladders were ordered — necessary, not sufficient: a ladder can be in
+the right order with every step on it unreadable. `CONTRAST_RULES` is the other half: one
+row per reading a person actually does, with a WCAG floor per row. The suites compute the
+ratios from the stylesheet, so the numbers in this document are checked rather than
+trusted.
+
+The row that changed a value is `--color-text-faint`. It carried captions, hints and
+footnotes at **3.37:1 on a card** and **3.15:1 on a raised one** — sentences nobody could
+comfortably read. It now clears 4.5:1 against every surface it can land on (4.89 on a
+card, 4.57 on a raised panel, 5.08 in a well). The hierarchy is unchanged; only its floor
+moved.
+
+Body text was already above AA and is held at **7:1** (AAA) on purpose — a dark terminal
+is looked at for hours. Filled controls are measured on their own fill (`--color-primary-fg`
+on `--color-primary-strong`, 6.37:1), the focus ring on the surface it outlines (9.89:1),
+and the two edges as non-text indicators at 1.15:1 and 1.4:1 — a card's rim has to resolve
+without becoming a line.
+
+### Semantic colour, stated once
+
+`SEMANTIC_USAGE` names the token behind each state the interface can state — positive,
+negative, neutral, warning, information, error, active, inactive, selected, unselected,
+unavailable — and says what each one _means_. Two rules fall out of it:
+
+- **A fill implies an edge, never the reverse.** A tinted panel with a neutral rim reads as
+  a rendering mistake, so a state that owns a wash owns its border. But `unselected` and
+  `unavailable` are outlined states on purpose: a border around nothing is exactly how
+  "offered and not active" is drawn.
+- **A state may not wear the brand accent unless the state _is_ the accent.** `active` and
+  `selected` do, because they mean "the current thing". An outcome wearing the brand colour is
+  the original confusion, and the suite fails on it directly.
+
+Colour is never the only signal: every row is named after a meaning rather than a hue, and
+the suite asserts that none of the vocabulary mentions a colour word. A gain is stated by a
+sign and a figure, a caution by a word; the hue agrees with the statement rather than
+carrying it alone.
+
+### Task 2: one shell, one well, four knobs
+
+The card system is `web/src/components/Card.tsx` and it is deliberately small. A card is
+four decisions, each answering a different question:
+
+| knob       | answers                         | values                                                         |
+| ---------- | ------------------------------- | -------------------------------------------------------------- |
+| `tone`     | which layer is this?            | `default`, `raised`, `sunken`                                  |
+| `variant`  | where does the light come from? | `plain`, `accent`                                              |
+| `emphasis` | which card is the screen about? | `none`, `accent`, `success`, `warning`, `danger`, `info`, `ai` |
+| `density`  | how much air does it get?       | `compact`, `cozy`, `spacious`                                  |
+
+Plus `wash` (a state card takes its tone's fill as well as its edge), `as` (`div`, `section`,
+`article`, `figure`) and `interactive`. Those are the additions this phase made, and each
+one closed a real duplicate.
+
+**`variant="accent"` is the agent's under-lit face.** Phase 7.2.1 built a card lit from
+below for the agent surface; that light is now the card system's `accent` variant, so "the
+light moved" is how the product says _this one is the feature_ — instead of "this one is
+brighter". It replaces `panel-gradient edge-highlight` rather than stacking with it, because
+both are `background-image` and `cn` is a plain join that does not resolve conflicts.
+
+**`wash` is the fill half of a state.** `emphasis` alone states a tone in the edge, which is
+right for a card in a grid of cards — the fill belongs to the panel. But a refusal, a retry,
+an upgrade prompt _is_ the state, and that meant `border-danger-border bg-danger-soft`
+written by hand wherever it appeared, always as a pair because two halves that move together
+should be asked for once.
+
+**`CardTile` is the well, at four spacings and two depths.** `rounded-[var(--radius-control)]
+border border-border bg-surface-sunken px-3 py-2` was the single most-copied string in the
+tree. The padding is a prop (`none`, `tight`, `default`, `roomy`) rather than a `className`
+because `cn` does not dedupe: a caller writing `py-3` beside the tile's own `py-2` leaves two
+utilities on one property and the winner to the stylesheet's order. `none` is a real step —
+a well that _frames_ a screenshot or holds a control rail has no padding of its own.
+
+### What was removed from the call sites
+
+- **The hand-written wells — fifty-odd of them — collapsed onto `CardTile`** (46 usages
+  today, plus the ones the exceptions below keep). Seven near-identical paddings — `px-3 py-2`,
+  `px-2.5 py-2`, `px-3 py-3`, `p-3`, `px-3 py-2.5`, `px-2.5 py-1.5`, `px-2` — folded to four
+  steps.
+- **Card shells across every implemented page and component** moved onto `Card`: 206 usages
+  across 76 files. The brief was "do not update only selected pages", and the audit that
+  enforced it is the scan below rather than a list of files someone remembered.
+- **`--radius-card`, an undefined token**, was in use in four quality panels. Because
+  `rounded-[var(--radius-card)]` resolved to nothing, those four rendered with **no corner
+  radius at all**. They are `Card`s now, and the token is gone.
+- `ConnectionStatus` filled its `success` panel with `bg-primary-soft` — the brand's wash.
+  An "ok" surface and a brand surface were literally the same plate; it is `bg-success-soft`.
+- Five hand-rolled copies of the "state card" (border + soft fill) became `emphasis` +
+  `wash`; four hand-rolled raised micro-plates (`radius-inset`, `radius-tile`) became
+  `CardTile tone="raised"`, collapsing two radius steps that meant the same thing.
+
+### The rule that keeps it from drifting back
+
+The suite fails on the _literals_: `rounded-[var(--radius-panel)] border border-border
+bg-surface` and the sunken well base may only be written in `Card.tsx`. Exceptions are a
+list with a stated reason each, and the suite also asserts that **every exception is still
+real** — an allowlist entry for a file that no longer needs it is how an allowlist becomes a
+loophole.
+
+The eight remaining copies are all controls or marks, and each is a different kind of thing
+from a surface:
+
+- `Input`, `TradeForm`, `TradeTable`, `CancelTaskControl` — form controls that own their own
+  `focus-visible` and invalid treatment;
+- `Tabs` and `JournalTabs` — a segmented rail that scrolls, with a selected state of its own;
+- `AcademyPage`, `ExamsPage` — fixed-size numbered marks, which are figures rather than
+  surfaces.
+
+### Deliberately not converted, with the reason
+
+- **`Modal`** is a dialog at popover elevation. The card system's elevation is the panel, and
+  an overlay is not a panel — forcing it in would mean teaching `Card` a fifth knob for one
+  call site.
+- **A selectable _card_ that is a `<button>`** (the decisions list) keeps its own shell: it
+  needs `focus-visible` ring handling and a `aria-current`, and it is a control. Its selected
+  and unselected _values_ are already the accent pair the token set defines.
+- **The sticky action bar** in `TradeForm` is an action bar, not a card: it is translucent,
+  blurred and pinned.
+- **`AgentCard`'s inner panel** is the one place the under-lit face is composed at a nested
+  radius: the frame is a 1px padding band, so the inner surface has to be `radius-panel - 1px`
+  to sit concentrically. The _light_ is the shared `agent-glow` utility, so there is still one
+  definition of it.
+- **Progress tracks** (`h-1.5 rounded-pill bg-surface-sunken`) are tracks. They are a recess
+  in a bar, not a well containing content.
+
+### What was not changed
+
+No new features, no page redesigned, no component API broken: the additions to `Card` and
+`CardTile` are new optional props, so every existing call site compiled unchanged. The 7.1,
+7.2 and 7.2.1 suites were not weakened — one assertion was made _narrower_ (the card tone
+check now reads the entry's own value rather than the comments around it) and one was
+extended (`agent-glow` gained the card system as a reader, because the accent variant is the
+same light rather than a second copy of it).
+
+19 new assertions cover this phase in `tests/frontend-color-harmony.test.ts`, all read from
+source and offline, plus the two contract updates above.

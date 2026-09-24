@@ -18,6 +18,7 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
+  CardTile,
   CardTitle,
   Section,
 } from '../components/Card';
@@ -487,12 +488,7 @@ export function MemoryPage() {
               {mockKnowledge
                 .filter((record) => memoryStatus(record) === 'archived')
                 .map((record) => (
-                  <div
-                    key={record.id}
-                    className={cn(
-                      'rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2',
-                    )}
-                  >
+                  <CardTile key={record.id} className={cn('')}>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-body text-text">{record.title}</span>
                       <TrustBadge status="archived" />
@@ -501,7 +497,7 @@ export function MemoryPage() {
                     <p className="mt-1 text-caption text-text-faint">
                       updated {formatRelative(record.updatedAt)} · v{record.version}
                     </p>
-                  </div>
+                  </CardTile>
                 ))}
             </CardContent>
           </Card>

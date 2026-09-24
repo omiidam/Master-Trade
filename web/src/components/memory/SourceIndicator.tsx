@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { ProvenanceSource } from '@shared/core/provenance';
 import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
+import { CardTile } from '../Card';
 
 const ICON: Record<ProvenanceSource, ReactNode> = {
   tool: <Sparkles size={12} aria-hidden />,
@@ -85,16 +86,17 @@ export function SourceIndicator({
     <div className={cn('space-y-2', className)}>
       <ul className="space-y-1.5">
         {sources.map((source) => (
-          <li
+          <CardTile
+            space="tight"
             key={`${source.kind}:${source.ref}`}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-2.5 py-1.5"
+            className="flex flex-wrap items-center justify-between gap-2"
           >
             <span className="inline-flex items-center gap-1.5 text-caption text-text-muted">
               {ICON[source.kind]}
               {source.label}
             </span>
             <span className="num text-caption text-text-faint">{source.ref}</span>
-          </li>
+          </CardTile>
         ))}
       </ul>
       {note ? <p className="text-caption text-text-muted">{note}</p> : null}

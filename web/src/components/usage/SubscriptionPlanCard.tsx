@@ -1,7 +1,7 @@
 import { Check, Lock, Minus, ShieldAlert } from 'lucide-react';
 import type { UsagePlanView } from '@shared/api/contracts';
 import { Badge } from '../Badge';
-import { Card, CardHeader, CardTitle } from '../Card';
+import { Card, CardHeader, CardTile, CardTitle } from '../Card';
 import { usageCategoryLabel } from './labels';
 
 /**
@@ -97,13 +97,13 @@ export function SubscriptionPlanCard({
           ))}
         </div>
 
-        <p className="inline-flex items-start gap-1.5 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2 text-caption text-text-muted">
+        <CardTile className="inline-flex items-start gap-1.5 text-caption text-text-muted">
           <ShieldAlert size={13} aria-hidden className="mt-0.5 shrink-0 text-warning" />
           <span>
             Price: not offered. This build has no payment integration, so this plan is not
             purchasable and no amount is displayed.
           </span>
-        </p>
+        </CardTile>
       </div>
     </Card>
   );

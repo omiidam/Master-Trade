@@ -1,7 +1,7 @@
 import { MessageCircleQuestion } from 'lucide-react';
 import type { ClarifyingPrompt, ContextIssue } from '@shared/profile/model';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
 
 /**
@@ -56,9 +56,10 @@ export function ClarifyingPrompts({ prompts, questions = [], onAnswer }: Clarify
           <>
             <ul className="space-y-2">
               {prompts.map((prompt) => (
-                <li
+                <CardTile
+                  as="li"
                   key={`${prompt.key}-${prompt.reason}`}
-                  className="flex flex-col gap-2 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0 space-y-1">
                     <p className="text-body-sm text-text">{prompt.question}</p>
@@ -76,12 +77,12 @@ export function ClarifyingPrompts({ prompts, questions = [], onAnswer }: Clarify
                       </button>
                     ) : null}
                   </div>
-                </li>
+                </CardTile>
               ))}
             </ul>
 
             {questions.length > 0 ? (
-              <div className="space-y-2 rounded-[var(--radius-control)] border border-border-strong bg-surface-sunken px-3 py-2">
+              <CardTile className="space-y-2">
                 <p className="text-caption font-medium text-warning">
                   Declarations that do not fit together
                 </p>
@@ -98,7 +99,7 @@ export function ClarifyingPrompts({ prompts, questions = [], onAnswer }: Clarify
                 <p className="text-caption text-text-faint">
                   These are surfaced as questions, not resolved by choosing one side for you.
                 </p>
-              </div>
+              </CardTile>
             ) : null}
           </>
         )}

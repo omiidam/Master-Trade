@@ -3,7 +3,15 @@ import { cn } from '../../lib/cn';
 import { formatPercent, formatRelative } from '../../lib/format';
 import { Badge, type BadgeTone } from '../Badge';
 import { Button } from '../Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTile,
+  CardTitle,
+} from '../Card';
 import { Tooltip } from '../Tooltip';
 import {
   EXPERIMENT_STATUS_LABEL,
@@ -81,13 +89,13 @@ export function ResearchCard({ experiment, onOpen, className }: ResearchCardProp
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2">
+        <CardTile>
           <p className="flex items-center gap-1.5 text-caption font-medium text-text-muted">
             <Lightbulb size={12} aria-hidden />
             Hypothesis
           </p>
           <p className="mt-1 text-caption text-text">{experiment.hypothesis}</p>
-        </div>
+        </CardTile>
 
         <p className="text-caption text-text-muted">{experiment.method}</p>
 

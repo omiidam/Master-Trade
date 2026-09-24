@@ -1,4 +1,5 @@
 import { Badge } from '../Badge';
+import { Card, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { RMultipleIndicator } from './RMultipleIndicator';
 import type { JournalTrade } from '../../mock/journal';
@@ -74,16 +75,10 @@ export function RiskSummary({ trade, className }: { trade: JournalTrade; classNa
   const divergences = rows.filter((row) => row.differs).length;
 
   return (
-    <section
-      aria-label="Planned versus actual"
-      className={cn(
-        'rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel',
-        className,
-      )}
-    >
+    <Card as="section" aria-label="Planned versus actual" className={cn('p-4', className)}>
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-title font-semibold text-text">Planned versus actual</h3>
+          <CardTitle>Planned versus actual</CardTitle>
           <p className="mt-0.5 text-caption text-text-muted">
             The plan is what was written before entry; the actual column is what the record shows.
           </p>
@@ -147,6 +142,6 @@ export function RiskSummary({ trade, className }: { trade: JournalTrade; classNa
           </span>
         ) : null}
       </div>
-    </section>
+    </Card>
   );
 }

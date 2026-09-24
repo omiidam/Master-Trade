@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { DataProvenance } from '@shared/marketdata/provider';
+import { Card } from '../Card';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { cn } from '../../lib/cn';
 
@@ -97,10 +98,7 @@ export function ChartAdapter({
         </div>
       </div>
 
-      <div
-        className="overflow-hidden rounded-[var(--radius-panel)] border border-border bg-surface-sunken"
-        style={{ direction: 'ltr' }}
-      >
+      <Card tone="sunken" className="overflow-hidden" style={{ direction: 'ltr' }}>
         <svg
           viewBox={`0 0 ${VIEW_WIDTH} 100`}
           preserveAspectRatio="none"
@@ -157,7 +155,7 @@ export function ChartAdapter({
             />
           ) : null}
         </svg>
-      </div>
+      </Card>
 
       <ProvenanceBanner provenance={provenance} source={source} updatedAt={updatedAt} />
       <p className="text-caption text-text-faint">

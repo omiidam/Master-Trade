@@ -37,12 +37,22 @@ export {
   Card,
   CardContent,
   CardDescription,
+  CardDivider,
   CardFooter,
   CardHeader,
+  CardTile,
   CardTitle,
   Section,
 } from './Card';
-export type { CardEmphasis, CardProps, CardTone } from './Card';
+export type {
+  CardDensity,
+  CardEmphasis,
+  CardProps,
+  CardTileSpace,
+  CardTileTone,
+  CardTone,
+  CardVariant,
+} from './Card';
 
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';

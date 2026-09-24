@@ -4,6 +4,7 @@ import { LineChart } from 'lucide-react';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { EmptyState } from '../EmptyState';
 import { ErrorState } from '../ErrorState';
+import { Card } from '../Card';
 import {
   CHART_TONE_VAR,
   ChartToolbar,
@@ -251,12 +252,7 @@ export function PerformanceChart({
   );
 
   return (
-    <figure
-      className={cn(
-        'flex flex-col gap-3 rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel',
-        className,
-      )}
-    >
+    <Card as="figure" className={cn('flex flex-col gap-3 p-4', className)}>
       {header}
       {hasData ? renderControls(false) : null}
 
@@ -292,7 +288,7 @@ export function PerformanceChart({
           {provenance ? <div className="mt-3">{provenanceStrip}</div> : null}
         </FullscreenChartViewer>
       ) : null}
-    </figure>
+    </Card>
   );
 }
 
@@ -389,7 +385,7 @@ function ChartSurface({
   };
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius-panel)] border border-border bg-surface-sunken">
+    <Card tone="sunken" className="overflow-hidden">
       <svg
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         preserveAspectRatio="none"
@@ -577,6 +573,6 @@ function ChartSurface({
           />
         ) : null}
       </svg>
-    </div>
+    </Card>
   );
 }

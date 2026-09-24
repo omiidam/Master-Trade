@@ -29,7 +29,15 @@ import type {
 } from '@shared/decisions/model';
 import type { DecisionReadinessDecision } from '@shared/decisions/readiness';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Section } from '../Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTile,
+  CardTitle,
+  Section,
+} from '../Card';
 import { EmptyState } from '../EmptyState';
 import { cn } from '../../lib/cn';
 import {
@@ -75,10 +83,10 @@ export function HypotheticalScenarioBadge({
 
 function Chip({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="min-w-0 rounded-[var(--radius-inset)] border border-border bg-surface-raised px-3 py-2">
+    <CardTile tone="raised" className="min-w-0">
       <p className="text-caption text-text-muted">{label}</p>
       <p className="mt-0.5 truncate text-body font-medium text-text">{value}</p>
-    </div>
+    </CardTile>
   );
 }
 
@@ -335,7 +343,7 @@ export function DecisionReadinessPanel({
         )}
 
         {readiness.clarifications.length > 0 ? (
-          <div className="rounded-[var(--radius-inset)] border border-border bg-surface-raised p-3">
+          <CardTile tone="raised" space="roomy">
             <p className="text-caption font-medium text-text">What would change the answer</p>
             <ul className="mt-1.5 list-disc space-y-1 pl-5">
               {readiness.clarifications.map((question) => (
@@ -347,7 +355,7 @@ export function DecisionReadinessPanel({
                 </li>
               ))}
             </ul>
-          </div>
+          </CardTile>
         ) : null}
 
         <p className="text-caption text-text-muted">{readiness.note}</p>

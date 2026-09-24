@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { EmptyState } from '../EmptyState';
+import { Card, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
 import { TRADE_EVENT_LABEL } from '../../mock/journal';
@@ -62,14 +63,8 @@ export function TradeTimeline({
   const ordered = [...events].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
 
   return (
-    <section
-      aria-label="Trade history"
-      className={cn(
-        'rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel',
-        className,
-      )}
-    >
-      <h3 className="text-title font-semibold text-text">Record history</h3>
+    <Card as="section" aria-label="Trade history" className={cn('p-4', className)}>
+      <CardTitle>Record history</CardTitle>
       <p className="mt-0.5 text-caption text-text-muted">
         Appended in order. Nothing here is overwritten, so an earlier reading stays available.
       </p>
@@ -100,6 +95,6 @@ export function TradeTimeline({
           </li>
         ))}
       </ol>
-    </section>
+    </Card>
   );
 }

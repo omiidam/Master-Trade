@@ -1,3 +1,4 @@
+import { Card, type CardEmphasis } from '../Card';
 import { cn } from '../../lib/cn';
 import type { ConnectionState } from '../../realtime/client.js';
 
@@ -66,12 +67,38 @@ export const CONNECTION_PRESENTATION: Record<ConnectionState | 'initialising', P
   denied: { tone: 'danger', label: 'Not permitted', dotClass: 'bg-danger', willRetry: false },
 };
 
+/** The compact pill's own classes. A pill is a control-sized mark, not a card, so it keeps them. */
 const TONE_CLASSES: Record<ConnectionTone, string> = {
   neutral: 'border-border bg-surface-raised text-text-muted',
   info: 'border-info-border bg-info-soft text-info',
-  success: 'border-success-border bg-primary-soft text-success',
+  success: 'border-success-border bg-success-soft text-success',
   warning: 'border-warning-border bg-warning-soft text-warning',
   danger: 'border-danger-border bg-danger-soft text-danger',
+};
+
+/**
+ * The full panel is a state *card*, so its tone is stated in the card's own vocabulary.
+ *
+ * The two tables are deliberately separate now: the pill and the panel both wanted the tone, but
+ * only the pill is a control. `success` used to fill this panel with `primary-soft` — the brand's
+ * wash — which is the exact confusion Phase 7.2.2 set out to end: an "ok" surface and a brand
+ * surface were the same plate. It is `success-soft` now, and `neutral` is a raised plate rather
+ * than a tinted one.
+ */
+const TONE_EMPHASIS: Record<ConnectionTone, CardEmphasis> = {
+  neutral: 'none',
+  info: 'info',
+  success: 'success',
+  warning: 'warning',
+  danger: 'danger',
+};
+
+const TONE_INK: Record<ConnectionTone, string> = {
+  neutral: 'text-text-muted',
+  info: 'text-info',
+  success: 'text-success',
+  warning: 'text-warning',
+  danger: 'text-danger',
 };
 
 /**
@@ -119,14 +146,13 @@ export function ConnectionStatus({
   }
 
   return (
-    <div
+    <Card
       role="status"
       aria-live="polite"
-      className={cn(
-        'rounded-[var(--radius-panel)] border px-4 py-3',
-        TONE_CLASSES[presentation.tone],
-        className,
-      )}
+      tone={presentation.tone === 'neutral' ? 'raised' : 'default'}
+      emphasis={TONE_EMPHASIS[presentation.tone]}
+      wash={presentation.tone !== 'neutral'}
+      className={cn('px-4 py-3', TONE_INK[presentation.tone], className)}
     >
       <div className="flex flex-wrap items-center gap-2">
         <span aria-hidden className={cn('h-2 w-2 rounded-full', presentation.dotClass)} />
@@ -165,6 +191,6 @@ export function ConnectionStatus({
           </div>
         </dl>
       ) : null}
-    </div>
+    </Card>
   );
 }

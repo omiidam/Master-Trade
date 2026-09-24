@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Activity, Radio } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
+import { Card, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
 import { cn } from '../../lib/cn';
 import { formatRelative } from '../../lib/format';
@@ -61,19 +62,13 @@ export function AgentActivityFeed({
   className,
 }: AgentActivityFeedProps): ReactNode {
   return (
-    <section
-      aria-label="Agent activity"
-      className={cn(
-        'rounded-[var(--radius-panel)] border border-border bg-surface shadow-panel',
-        className,
-      )}
-    >
+    <Card as="section" aria-label="Agent activity" className={className}>
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <span aria-hidden className="text-text-faint">
             <Activity size={14} />
           </span>
-          <h3 className="text-body font-semibold text-text">Activity</h3>
+          <CardTitle>Activity</CardTitle>
           <Badge tone={live ? 'success' : 'neutral'} icon={<Radio size={11} aria-hidden />}>
             {live ? 'live' : 'not live'}
           </Badge>
@@ -135,6 +130,6 @@ export function AgentActivityFeed({
           </ol>
         )}
       </div>
-    </section>
+    </Card>
   );
 }

@@ -26,6 +26,7 @@ import { Tooltip } from '../components/Tooltip';
 import { cn } from '../lib/cn';
 import { COMPACT_SHELL_QUERY, useMediaQuery } from '../lib/useMediaQuery';
 import { useUiStore } from '../store/ui';
+import { CardTile } from '../components/Card';
 
 const ICONS: Record<NavIconName, ReactNode> = {
   gauge: <Gauge size={17} aria-hidden />,
@@ -162,7 +163,7 @@ export function Sidebar() {
             </Button>
           </Tooltip>
         ) : (
-          <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken p-3">
+          <CardTile space="roomy">
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5 text-caption text-text-muted">
                 <ShieldCheck size={14} aria-hidden className="text-primary" />
@@ -188,7 +189,7 @@ export function Sidebar() {
             >
               Safety details
             </Button>
-          </div>
+          </CardTile>
         )}
       </div>
     </aside>

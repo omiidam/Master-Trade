@@ -1,7 +1,7 @@
 import { CalendarClock, CreditCard, ShieldAlert } from 'lucide-react';
 import type { UsageStatusData } from '@shared/api/contracts';
 import { Badge, type BadgeTone } from '../Badge';
-import { Card, CardHeader, CardTitle } from '../Card';
+import { Card, CardHeader, CardTile, CardTitle } from '../Card';
 import { Tooltip } from '../Tooltip';
 import { CreditBalance } from './CreditBalance';
 import { describeReset, subscriptionStatusLabel } from './labels';
@@ -83,14 +83,14 @@ export function SubscriptionStatusCard({
         </div>
 
         {usage.purchasable === false ? (
-          <p className="inline-flex items-start gap-1.5 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2 text-caption text-text-muted">
+          <CardTile className="inline-flex items-start gap-1.5 text-caption text-text-muted">
             <ShieldAlert size={13} aria-hidden className="mt-0.5 shrink-0 text-warning" />
             <span>
               This build has no payment integration, so no plan is purchasable and no price is
               shown. A change of plan is recorded only as an administrative grant, with the decision
               on file.
             </span>
-          </p>
+          </CardTile>
         ) : null}
 
         {usage.durable ? null : (

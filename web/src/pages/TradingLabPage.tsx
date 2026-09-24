@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { Calculator, Check, FileText, Gavel, Lock, ShieldCheck, Wrench } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTile,
+  CardTitle,
+} from '../components/Card';
 import { ChartAdapter } from '../components/charts/ChartAdapter';
 import { EmptyState } from '../components/EmptyState';
 import { InterfaceStatesPanel } from '../components/InterfaceStates';
@@ -216,7 +223,7 @@ export function TradingLabPage() {
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken p-3">
+              <CardTile space="roomy">
                 <p className="text-caption text-text-muted">Rule text</p>
                 <p className="mt-1 text-body text-text">
                   “Skip any setup where the invalidation level cannot be written before entry.”
@@ -224,7 +231,7 @@ export function TradingLabPage() {
                 <p className="mt-2 text-caption text-text-faint">
                   Status: draft → evaluation attached → awaiting human activation
                 </p>
-              </div>
+              </CardTile>
               <ol className="space-y-2 text-caption text-text-muted">
                 <li className="flex gap-2">
                   <FileText size={14} aria-hidden className="mt-0.5 shrink-0 text-info" />

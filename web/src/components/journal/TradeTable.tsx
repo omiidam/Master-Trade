@@ -10,6 +10,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { Badge } from '../Badge';
+import { Card } from '../Card';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
 import { ErrorState } from '../ErrorState';
@@ -263,13 +264,7 @@ export function TradeTable({
   }
 
   return (
-    <section
-      aria-label="Trade history"
-      className={cn(
-        'space-y-3 rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel',
-        className,
-      )}
-    >
+    <Card as="section" aria-label="Trade history" className={cn('space-y-3 p-4', className)}>
       {toolbar}
 
       {ordered.length === 0 ? (
@@ -406,6 +401,6 @@ export function TradeTable({
           </div>
         </>
       )}
-    </section>
+    </Card>
   );
 }

@@ -5,9 +5,47 @@
  * Declared once here (Tailwind v4 `@theme` emits them as CSS custom properties)
  * and inventoried in web/src/design/tokens.ts. Values are semantic, never
  * literal-at-the-call-site: a component asks for `--color-surface`, not a hex.
+ *
+ * The palette, and the strategy behind it.
+ *
+ * Three groups, chosen for a reason rather than picked one at a time:
+ *
+ *   Neutrals   one axis. Every surface, border and text step sits at hue 213–218 with the
+ *              lightness doing all the work, so the product is a single blue-black material and
+ *              depth reads as distance from the viewer, never as a second colour.
+ *   Brand      one hue (190, a trading cyan) that steps lightness to make its own ladder:
+ *              strong → base → soft → border, plus a dark ink for type on a filled face.
+ *   States     the *other* half of the wheel. Success, warning and danger are the warm and
+ *              green complements of the cool axis; information and AI sit inside it as the
+ *              brand's own analogues.
+ *
+ * Phase 7.2.2 rebuilt two of those relationships, because measurement said they were wrong.
+ *
+ * 1. **The brand was green.** It sat at hue 161 and `--color-success` at 154 — seven degrees
+ *    apart, which is not two colours, it is one colour with two names. A brand accent that
+ *    cannot be told from a confirmation green fails the one job the pair exists to do. Paint
+ *    moved it (plus the focus ring and every accent wash derived from it) to hue 190: the cyan
+ *    the design reference asks for, 38 degrees from success, and 25 from information — a
+ *    deliberate analogous pair rather than a collision. The identity is intact (still a cool,
+ *    high-contrast terminal accent) and the semantic ramp owns green, amber and red alone.
+ * 2. **The ladders drifted.** Every `-soft` and `-border` is the *same hue as its base at a
+ *    fixed lightness step* — soft at 12%, border at 19–20% — so a warning panel and a danger
+ *    panel are the same depth of well and only their hue differs. Before this they ranged from
+ *    10.8% to 14.5% and drifted up to 12 degrees off their own base, which is what makes a set
+ *    of state surfaces look hand-tuned rather than designed.
+ *
+ * Two things this file no longer does: it does not repeat a brand hex inside a gradient (every
+ * accent wash is a `color-mix` of the brand token, so the hue has one home), and the epistemic
+ * and provenance labels are aliases of the state colours rather than seven more literals that
+ * happen to match them. `tests/frontend-palette.test.ts` holds each of those claims.
  */
 @theme {
-  /* Surfaces */
+  /*
+   * Surfaces, darkest first.
+   *
+   * `sunken` is not the darkest surface — `bg` is — because a well is read against the panel
+   * it is cut into, and a card can sit on a page or on another card.
+   */
   --color-bg: #05070b;
   --color-bg-elevated: #080c12;
   --color-surface: #0b1017;
@@ -16,38 +54,58 @@
   /* What sits *between* the viewer and a modal: a scrim, not a surface. */
   --color-overlay: rgb(0 0 0 / 0.7);
 
-  /* Borders and text */
+  /*
+   * Borders and text.
+   *
+   * `text-faint` moved up the ladder in Phase 7.2.2: it was 3.37:1 on the default card surface
+   * and 3.15:1 on a raised one, and it carries captions, hints and footnotes — sentences, not
+   * decoration. A caption nobody can read is not restraint, it is a defect. It now clears 4.5:1
+   * against *every* surface it can sit on (4.89 on a card, 4.57 on a raised panel), which turns
+   * "the ladder is ordered" into "every step is legible". `muted` and `text` keep their steps, so
+   * the hierarchy is unchanged; only its floor moved.
+   */
   --color-border: #1b2430;
   --color-border-strong: #2a3644;
   --color-text: #e9eef6;
   --color-text-muted: #8d9aad;
-  --color-text-faint: #5c6879;
+  --color-text-faint: #758295;
 
-  /* Brand + states */
-  --color-primary: #35d6a4;
-  --color-primary-strong: #17b98a;
-  --color-primary-fg: #04120d;
-  --color-primary-soft: #0f2a23;
+  /*
+   * The brand, and the states it must stay clear of.
+   *
+   * `primary` is the accent a control commits with; `primary-strong` is the bottom of the fill
+   * gradient and doubles as the brand's text-safe step on a dark surface; `primary-fg` is the ink
+   * that sits on both. That triple is the whole reason a filled accent button can carry a dark
+   * label at 6:1 while the same hue at 52% carries body text — lightness is doing the work, and
+   * the hue never has to change to make a state readable.
+   */
+  --color-primary: #25c4e4;
+  --color-primary-strong: #18a3bf;
+  --color-primary-fg: #051214;
+  --color-primary-soft: #0f292f;
   /* One step deeper than `--color-primary-soft`; the hover of a soft control. */
-  --color-primary-soft-hover: #123329;
-  --color-info: #6ea8fe;
-  --color-info-soft: #111f36;
-  --color-success: #3ddc97;
-  /* `success` used to borrow `primary-soft`, which made an "ok" badge and a brand badge the same
-   * object. It gets its own fill and edge in Phase 7.2: `primary` is the *brand* teal, `success`
-   * is the confirmation green, and the two must be distinguishable at a glance. */
-  --color-success-soft: #0d2a1d;
-  --color-warning: #f5b544;
-  --color-warning-soft: #2c2110;
-  --color-danger: #f87171;
+  --color-primary-soft-hover: #12343a;
+  --color-info: #6fa7f6;
+  --color-info-soft: #112136;
+  /*
+   * `success` used to borrow `primary-soft`, which made an "ok" badge and a brand badge the same
+   * object; Phase 7.2 gave it its own fill and edge, and 7.2.2 finished the job by moving the
+   * brand *off* its hue. The two are now 38 degrees apart, which is the distance at which a
+   * green tick and a cyan accent stop being one colour wearing two hats.
+   */
+  --color-success: #39d08a;
+  --color-success-soft: #0f2e20;
+  --color-warning: #f7b23b;
+  --color-warning-soft: #2d2211;
+  --color-danger: #f6746f;
   /* The deeper red a filled destructive surface needs, and the ink that sits on it — the pair
    * that lets "this cannot be undone" read louder than "this failed" without shouting. */
-  --color-danger-strong: #e05a5a;
-  --color-danger-fg: #1b0507;
-  --color-danger-soft: #2b1417;
-  --color-ai: #a78bfa;
-  --color-ai-soft: #1d1733;
-  --color-focus: #59e0b8;
+  --color-danger-strong: #da5c58;
+  --color-danger-fg: #190507;
+  --color-danger-soft: #2b1214;
+  --color-ai: #ac8bf9;
+  --color-ai-soft: #1e1532;
+  --color-focus: #50cae2;
 
   /*
    * The edge of a tinted state surface.
@@ -61,23 +119,32 @@
    * `primary` and `success` resolve to *similar* rather than identical values, deliberately: they
    * are neighbouring greens, and telling them apart is the whole job of keeping both.
    */
-  --color-primary-border: #14453a;
-  --color-success-border: #17522f;
-  --color-info-border: #1b2c49;
-  --color-warning-border: #3d2c12;
-  --color-danger-border: #3d1c20;
-  --color-ai-border: #2b2450;
+  --color-primary-border: #17414a;
+  --color-success-border: #1a4d35;
+  --color-info-border: #1a2f4d;
+  --color-warning-border: #47361a;
+  --color-danger-border: #401c1e;
+  --color-ai-border: #2f224f;
 
-  /* Epistemic labels (docs/architecture.md § 7) */
-  --color-fact: #8ab4f8;
-  --color-analysis: #35d6a4;
-  --color-hypothesis: #f5b544;
-  --color-uncertainty: #a78bfa;
+  /*
+   * Epistemic labels (docs/architecture.md § 7) and market-data provenance
+   * (docs/market-data.md).
+   *
+   * Aliases, not values. Each of these was a hex that happened to equal a state colour — four of
+   * them exactly, three a shade away — so the product had two places to change one idea. `Badge`
+   * already reasons about them in terms of tones (`fact` is the info tone, `analysis` the brand
+   * tone, `hypothesis` warning, `uncertainty` AI); these aliases are that same table expressed in
+   * the stylesheet, and the palette suite asserts the two agree. A chart that colours a fact blue
+   * and a badge that labels one "information" are now, provably, the same blue.
+   */
+  --color-fact: var(--color-info);
+  --color-analysis: var(--color-primary);
+  --color-hypothesis: var(--color-warning);
+  --color-uncertainty: var(--color-ai);
 
-  /* Market-data provenance (docs/market-data.md) */
-  --color-provenance-synthetic: #f5b544;
-  --color-provenance-historical: #6ea8fe;
-  --color-provenance-live: #f87171;
+  --color-provenance-synthetic: var(--color-warning);
+  --color-provenance-historical: var(--color-info);
+  --color-provenance-live: var(--color-danger);
 
   /* Typography */
   --font-sans:
@@ -199,11 +266,11 @@
    */
   --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.02), 0 18px 40px -28px rgb(0 0 0 / 0.9);
   --shadow-popover: 0 26px 60px -24px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.03);
-  --shadow-glow: 0 0 0 1px rgb(53 214 164 / 0.25), 0 12px 40px -18px rgb(53 214 164 / 0.35);
-  --shadow-glow-control: 0 10px 30px -16px rgb(53 214 164 / 0.7);
+  --shadow-glow: 0 0 0 1px rgb(37 196 228 / 0.25), 0 12px 40px -18px rgb(37 196 228 / 0.35);
+  --shadow-glow-control: 0 10px 30px -16px rgb(37 196 228 / 0.7);
   /* The destructive glow. A third glow, and the last one: it is what separates "this failed"
    * from "this cannot be undone", and it is spent only on the destructive feedback surface. */
-  --shadow-glow-danger: 0 10px 30px -16px rgb(224 90 90 / 0.55);
+  --shadow-glow-danger: 0 10px 30px -16px rgb(218 92 88 / 0.55);
 
   /*
    * Control depth, as opposed to surface elevation.
@@ -255,7 +322,11 @@
     rgb(255 255 255 / 0.07) 0%,
     rgb(255 255 255 / 0.015) 100%
   );
-  --gradient-accent: linear-gradient(180deg, #41e0ac 0%, var(--color-primary-strong) 100%);
+  --gradient-accent: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary) 78%, white 22%) 0%,
+    var(--color-primary-strong) 100%
+  );
   --gradient-danger-fill: linear-gradient(
     180deg,
     var(--color-danger) 0%,
@@ -278,7 +349,26 @@
     rgb(255 255 255 / 0.14) 78%,
     transparent 100%
   );
-  --gradient-veil: radial-gradient(120% 80% at 50% -10%, rgb(53 214 164 / 0.1) 0%, transparent 62%);
+  /*
+   * The under-lit edge: `.edge-highlight` read upside down.
+   *
+   * A surface whose light comes off the floor takes its hairline along the bottom, and there it is
+   * the accent rather than white — the accent *is* the light in that treatment, so a white line
+   * would be a second, unrelated source. It fades before the corners for the same reason the top
+   * edge does: a highlight that reaches a radius fights it.
+   */
+  --gradient-edge-under: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-primary) 45%, transparent) 22%,
+    color-mix(in srgb, var(--color-primary) 45%, transparent) 78%,
+    transparent 100%
+  );
+  --gradient-veil: radial-gradient(
+    120% 80% at 50% -10%,
+    color-mix(in srgb, var(--color-primary) 10%, transparent) 0%,
+    transparent 62%
+  );
 
   /*
    * The message composer's frame, and the gleam in its top-left corner.
@@ -313,8 +403,16 @@
    */
   --gradient-agent-glow:
     linear-gradient(0deg, rgb(255 255 255 / 0.055) 0%, transparent 36%),
-    radial-gradient(120% 86% at 8% 114%, rgb(53 214 164 / 0.17) 0%, transparent 58%),
-    radial-gradient(94% 70% at 92% 108%, rgb(53 214 164 / 0.1) 0%, transparent 56%);
+    radial-gradient(
+      120% 86% at 8% 114%,
+      color-mix(in srgb, var(--color-primary) 17%, transparent) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      94% 70% at 92% 108%,
+      color-mix(in srgb, var(--color-primary) 10%, transparent) 0%,
+      transparent 56%
+    );
   --gradient-agent-ring: linear-gradient(
     0deg,
     rgb(255 255 255 / 0.26) 0%,
@@ -329,8 +427,8 @@
   --gradient-agent-sheen: linear-gradient(
     0deg,
     transparent 0%,
-    rgb(53 214 164 / 0.9) 40%,
-    rgb(53 214 164 / 0.9) 60%,
+    color-mix(in srgb, var(--color-primary) 90%, transparent) 40%,
+    color-mix(in srgb, var(--color-primary) 90%, transparent) 60%,
     transparent 100%
   );
 
@@ -362,9 +460,21 @@
     min-height: 100vh;
     background-color: var(--color-bg);
     background-image:
-      radial-gradient(1100px 620px at 12% -10%, rgb(53 214 164 / 0.09), transparent 60%),
-      radial-gradient(900px 520px at 100% 0%, rgb(167 139 250 / 0.07), transparent 62%),
-      radial-gradient(1200px 700px at 50% 120%, rgb(110 168 254 / 0.06), transparent 60%),
+      radial-gradient(
+        1100px 620px at 12% -10%,
+        color-mix(in srgb, var(--color-primary) 9%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        900px 520px at 100% 0%,
+        color-mix(in srgb, var(--color-ai) 7%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        1200px 700px at 50% 120%,
+        color-mix(in srgb, var(--color-info) 6%, transparent),
+        transparent 60%
+      ),
       linear-gradient(180deg, var(--color-bg) 0%, #04060a 100%);
     background-attachment: fixed;
     color: var(--color-text);
@@ -490,6 +600,24 @@
     height: 1px;
     pointer-events: none;
     background-image: var(--gradient-edge);
+  }
+
+  /*
+   * The under-lit edge, for a surface lit from below.
+   *
+   * The same construction as `.edge-highlight` — an absolutely positioned 1px rule, so it is outside
+   * the flow and cannot change the card's box — and the same 0.5rem inset, so it stops short of the
+   * corners instead of painting over the radius. It is the *last* child position rather than the
+   * first, which is what lets a card carry both treatments without either one hiding the other.
+   */
+  .edge-under::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    inset-inline: 0.5rem;
+    height: 1px;
+    pointer-events: none;
+    background-image: var(--gradient-edge-under);
   }
 
   /* The modal scrim's brand wash, under the panel and over the dimmed page. */

@@ -1,6 +1,7 @@
 import { Info, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { Sparkline } from '../charts/Sparkline';
 import { Tooltip } from '../Tooltip';
+import { Card, type CardEmphasis } from '../Card';
 import { cn } from '../../lib/cn';
 import type { StatTone } from '../../mock/journal';
 
@@ -26,11 +27,17 @@ const TONE_TEXT: Record<StatTone, string> = {
   warning: 'text-warning',
 };
 
-const TONE_RING: Record<StatTone, string> = {
-  positive: 'border-success-border',
-  negative: 'border-danger-border',
-  neutral: 'border-border',
-  warning: 'border-warning-border',
+/**
+ * The stat's tone, stated as the card's own emphasis rather than as a border utility.
+ *
+ * A metric card is exactly what `emphasis` is for: it is the card the eye lands on in a row of
+ * four, and it says which way its figure went in its edge, not in a badge.
+ */
+const TONE_EMPHASIS: Record<StatTone, CardEmphasis> = {
+  positive: 'success',
+  negative: 'danger',
+  neutral: 'none',
+  warning: 'warning',
 };
 
 const TONE_ICON = {
@@ -61,13 +68,10 @@ export function JournalStatCard({
   const Icon = TONE_ICON[tone];
   const strokeTone = tone === 'negative' ? 'info' : 'primary';
   return (
-    <div
-      className={cn(
-        'relative flex h-full flex-col justify-between gap-3 rounded-[var(--radius-panel)]',
-        'border bg-surface p-4 shadow-panel panel-gradient',
-        TONE_RING[tone],
-        className,
-      )}
+    <Card
+      emphasis={TONE_EMPHASIS[tone]}
+      density="compact"
+      className={cn('relative flex h-full flex-col justify-between gap-3 p-4', className)}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-caption font-medium tracking-wide text-text-muted uppercase">{label}</p>
@@ -103,6 +107,6 @@ export function JournalStatCard({
           <Sparkline values={sparkline} tone={strokeTone} width={72} height={24} />
         ) : null}
       </div>
-    </div>
+    </Card>
   );
 }

@@ -2,6 +2,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Rows3 } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
+import { Card, CardDescription, CardTile, CardTitle } from '../Card';
 import { RuleComplianceBadge } from './RuleComplianceBadge';
 import { SetupBadge } from './SetupBadge';
 import { MistakeTag } from './MistakeTag';
@@ -121,16 +122,10 @@ export function JournalCalendar({
   const monthRisk = monthDays.reduce((sum, day) => sum + day.riskTotal, 0);
 
   return (
-    <section
-      aria-label="Trading calendar"
-      className={cn(
-        'space-y-4 rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel',
-        className,
-      )}
-    >
+    <Card as="section" aria-label="Trading calendar" className={cn('space-y-4 p-4', className)}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-title font-semibold text-text">
+          <CardTitle>
             {view === 'month'
               ? new Date(Date.UTC(month.year, month.month - 1, 1)).toLocaleDateString('en-GB', {
                   month: 'long',
@@ -138,17 +133,18 @@ export function JournalCalendar({
                   timeZone: 'UTC',
                 })
               : `Week of ${formatDayLabel(weekCells[0]?.date ?? anchorDate)}`}
-          </h3>
-          <p className="mt-0.5 text-caption text-text-muted">
+          </CardTitle>
+          <CardDescription className="mt-0.5">
             {monthTrades} trades · {monthRisk.toLocaleString('en-US')} committed risk across{' '}
             {monthDays.length} trading {monthDays.length === 1 ? 'day' : 'days'} this month.
-          </p>
+          </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div
+          <CardTile
+            space="none"
             role="group"
             aria-label="Calendar view"
-            className="inline-flex items-center gap-0.5 rounded-[var(--radius-control)] border border-border bg-surface-sunken p-0.5"
+            className="inline-flex items-center gap-0.5 p-0.5"
           >
             {(
               [
@@ -172,7 +168,7 @@ export function JournalCalendar({
                 {option.label}
               </button>
             ))}
-          </div>
+          </CardTile>
           <Button
             variant="ghost"
             size="sm"
@@ -313,7 +309,7 @@ export function JournalCalendar({
           }
         />
       ) : (
-        <div className="space-y-3 rounded-[var(--radius-panel)] border border-border bg-surface-sunken p-4">
+        <Card tone="sunken" className="space-y-3 p-4">
           <header className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h4 className="text-body font-semibold text-text">
@@ -393,8 +389,8 @@ export function JournalCalendar({
             <ChevronLeft size={12} aria-hidden />
             Screenshots for these records live on each trade; open a record to see them.
           </div>
-        </div>
+        </Card>
       )}
-    </section>
+    </Card>
   );
 }

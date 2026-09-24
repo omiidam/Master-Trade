@@ -1,3 +1,4 @@
+import { Card } from './Card';
 import { cn } from '../lib/cn';
 
 export type SkeletonShape = 'text' | 'block' | 'circle';
@@ -29,14 +30,19 @@ export function Skeleton({ shape = 'text', className, width }: SkeletonProps) {
   );
 }
 
-/** Card-shaped skeleton used while a page panel is "loading". */
+/**
+ * Card-shaped skeleton used while a page panel is "loading".
+ *
+ * It is a real `Card`, so the placeholder occupies the same plate as what replaces it: a skeleton
+ * that drew its own border and fill was a second, silently drifting definition of a card.
+ */
 export function SkeletonCard({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="space-y-3 rounded-[var(--radius-panel)] border border-border bg-surface p-4">
+    <Card aria-hidden className="space-y-3 p-4">
       <Skeleton shape="text" width="40%" />
       {Array.from({ length: rows }, (_, index) => (
         <Skeleton key={index} shape="text" width={`${90 - index * 12}%`} />
       ))}
-    </div>
+    </Card>
   );
 }

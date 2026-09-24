@@ -1,7 +1,15 @@
 import { AlertTriangle, Divide, Flame, Repeat, Sigma } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Section } from '../Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTile,
+  CardTitle,
+  Section,
+} from '../Card';
 import { Input } from '../Input';
 import { ProgressIndicator } from '../exams/ProgressIndicator';
 import { PerformanceChart } from './PerformanceChart';
@@ -61,8 +69,8 @@ function BreakdownTable({
   plannedLabel?: string;
 }) {
   return (
-    <section className="rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel">
-      <h3 className="text-title font-semibold text-text">{title}</h3>
+    <Card as="section" className="p-4">
+      <CardTitle>{title}</CardTitle>
       <p className="mt-0.5 text-caption text-text-muted">{description}</p>
       <table className="mt-3 w-full border-collapse">
         <caption className="sr-only">
@@ -136,7 +144,7 @@ function BreakdownTable({
         Rows are buckets of the same records, not independent samples — a bucket with a small sample
         is a hint, not a finding.
       </p>
-    </section>
+    </Card>
   );
 }
 
@@ -172,10 +180,11 @@ export function AnalyticsPanel({
   const rangeLabel = describeRange(range, rangeFrom, rangeTo);
   const timeframe = (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <div
+      <CardTile
+        space="none"
         role="group"
         aria-label="Analytics timeframe"
-        className="inline-flex flex-wrap items-center gap-0.5 rounded-[var(--radius-control)] border border-border bg-surface-sunken p-0.5"
+        className="inline-flex flex-wrap items-center gap-0.5 p-0.5"
       >
         {TRADE_RANGES.map((value) => {
           const active = value === range;
@@ -196,7 +205,7 @@ export function AnalyticsPanel({
             </button>
           );
         })}
-      </div>
+      </CardTile>
       {/*
         A custom window is only actionable once its bounds exist, so the two date
         fields appear with the control that selects them rather than hidden behind

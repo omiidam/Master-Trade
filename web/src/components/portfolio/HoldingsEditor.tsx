@@ -5,7 +5,7 @@ import type { Portfolio, PortfolioDocumentBody } from '@shared/portfolio/model';
 import { ASSET_CLASSES, MAX_SYMBOL_LENGTH, SYMBOL_PATTERN } from '@shared/profile/model';
 import { Badge } from '../Badge';
 import { Button, IconButton } from '../Button';
-import { Card, CardContent } from '../Card';
+import { Card, CardContent, CardTile } from '../Card';
 import { Field, Input, Select } from '../Input';
 import { assetClassLabel } from './labels';
 
@@ -266,10 +266,7 @@ export function HoldingsEditor({
 
         <div className="space-y-3">
           {positions.map((position, index) => (
-            <fieldset
-              key={position.key}
-              className="space-y-3 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-3"
-            >
+            <CardTile as="fieldset" key={position.key} space="roomy" className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <legend className="text-body-sm font-medium text-text">Position {index + 1}</legend>
                 <IconButton
@@ -406,7 +403,7 @@ export function HoldingsEditor({
                   />
                 )}
               </Field>
-            </fieldset>
+            </CardTile>
           ))}
         </div>
 

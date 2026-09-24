@@ -7,6 +7,8 @@ import { AssumptionNotice } from './AssumptionNotice';
 import { ClarificationQuestionCard } from './ClarificationQuestionCard';
 import { DimensionGrid } from './InputQualitySummary';
 import { ValidationIssueList } from './ValidationIssueList';
+import { Card, CardTile } from '../Card';
+import { cn } from '../../lib/cn';
 
 /**
  * Whether one requested analysis may run, and in what form.
@@ -58,10 +60,9 @@ export function AnalysisReadinessPanel({
   const planned = decision.capability === 'planned';
 
   return (
-    <section
-      className={
-        className ?? 'space-y-4 rounded-[var(--radius-card)] border border-border bg-surface p-4'
-      }
+    <Card
+      as="section"
+      className={cn('space-y-4 p-4', className)}
       aria-label={`Readiness for ${decision.requestedType}`}
     >
       <header className="space-y-2">
@@ -102,15 +103,12 @@ export function AnalysisReadinessPanel({
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {COUNT_ROWS.map((row) => (
-          <div
-            key={row.key}
-            className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-          >
+          <CardTile key={row.key}>
             <p className="text-caption text-text-muted">{row.label}</p>
             <p className="text-h3 font-semibold tabular-nums text-text">
               {decision.counts[row.key]}
             </p>
-          </div>
+          </CardTile>
         ))}
       </div>
 
@@ -185,6 +183,6 @@ export function AnalysisReadinessPanel({
       </div>
 
       <p className="text-caption text-text-faint">{decision.note}</p>
-    </section>
+    </Card>
   );
 }

@@ -127,12 +127,12 @@ export function AgentWorkspacePage() {
                 const isAgent = message.role === 'agent';
                 return (
                   <Reveal key={message.id} index={index}>
-                    <article
-                      className={
-                        isAgent
-                          ? 'rounded-[var(--radius-panel)] border border-border bg-surface-sunken p-3.5'
-                          : 'rounded-[var(--radius-panel)] border border-info-border bg-info-soft/60 p-3.5'
-                      }
+                    <Card
+                      as="article"
+                      tone={isAgent ? 'sunken' : 'default'}
+                      emphasis={isAgent ? 'none' : 'info'}
+                      wash={!isAgent}
+                      className="p-3.5"
                     >
                       <header className="flex flex-wrap items-center gap-2">
                         <span
@@ -164,7 +164,7 @@ export function AgentWorkspacePage() {
                           ))}
                         </footer>
                       ) : null}
-                    </article>
+                    </Card>
                   </Reveal>
                 );
               })}

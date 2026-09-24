@@ -11,7 +11,14 @@ import {
 } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTile,
+  CardTitle,
+} from '../components/Card';
 import { ReadOnlyValue } from '../components/Input';
 import { FeedbackStatesPanel } from '../components/FeedbackStates';
 import { InterfaceStatesPanel } from '../components/InterfaceStates';
@@ -141,10 +148,7 @@ export function SettingsPage() {
                   ['--color-warning', 'Warning'],
                   ['--color-danger', 'Danger'],
                 ].map(([token, label]) => (
-                  <div
-                    key={token}
-                    className="flex items-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-2.5 py-1.5"
-                  >
+                  <CardTile space="tight" key={token} className="flex items-center gap-2">
                     <span
                       aria-hidden
                       className="h-4 w-4 rounded-[4px]"
@@ -152,7 +156,7 @@ export function SettingsPage() {
                     />
                     <span className="text-caption text-text-muted">{label}</span>
                     <span className="num text-caption text-text-faint">{token}</span>
-                  </div>
+                  </CardTile>
                 ))}
               </div>
               <p className="text-caption text-text-faint">{THEME.notes}</p>

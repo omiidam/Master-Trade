@@ -10,6 +10,7 @@ import {
   issueTone,
 } from './labels';
 import type { PortfolioMetrics, PositionMetrics } from '@shared/portfolio/model';
+import { CardTile } from '../Card';
 
 /**
  * Every position, with what could be computed about it and what could not.
@@ -127,18 +128,13 @@ function Row({ position }: { position: PositionMetrics }) {
 export function HoldingsTable({ metrics, className }: HoldingsTableProps) {
   if (metrics.positions.length === 0) {
     return (
-      <div
-        className={cn(
-          'rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-3',
-          className,
-        )}
-      >
+      <CardTile space="roomy" className={cn('', className)}>
         <p className="text-body-sm text-text">No positions to show.</p>
         <p className="text-caption text-text-muted">
           Nothing has been declared for this account yet. Nothing is displayed in place of a
           holding: an illustrative row would be a factual claim about somebody's money.
         </p>
-      </div>
+      </CardTile>
     );
   }
 

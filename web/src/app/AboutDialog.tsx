@@ -5,6 +5,7 @@ import { Modal } from '../components/Modal';
 import { MOCK_DATA_NOTICE, MOCK_GENERATED_AT } from '../mock/data';
 import { PREVIEW_NOTICE } from '../config/navigation';
 import { useUiStore } from '../store/ui';
+import { CardTile } from '../components/Card';
 
 const REAL = [
   'Design tokens, theme and the component library',
@@ -65,9 +66,9 @@ export function AboutDialog() {
             </ul>
           </section>
         </div>
-        <p className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2 text-caption text-text-faint">
+        <CardTile className="text-caption text-text-faint">
           {MOCK_DATA_NOTICE} Preview snapshot: {MOCK_GENERATED_AT}.
-        </p>
+        </CardTile>
       </div>
     </Modal>
   );

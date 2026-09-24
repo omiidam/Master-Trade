@@ -3,6 +3,7 @@ import type { UsageFeatureViewData, UsageStatusData } from '@shared/api/contract
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { denialHeading } from './labels';
+import { CardTile } from '../Card';
 
 /**
  * Three refusals, three surfaces, and the difference between them is the product decision.
@@ -32,12 +33,7 @@ export function UpgradePrompt({ feature, upgradePlanName, className }: UpgradePr
   if (feature.allowed || !feature.upgradeOffered) return null;
 
   return (
-    <div
-      className={
-        className ??
-        'space-y-1.5 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2'
-      }
-    >
+    <CardTile className={className ?? 'space-y-1.5'}>
       <div className="flex items-center gap-1.5">
         <ArrowUpRight size={14} aria-hidden className="text-info" />
         <p className="text-body-sm font-medium text-text">
@@ -51,7 +47,7 @@ export function UpgradePrompt({ feature, upgradePlanName, className }: UpgradePr
         Nothing here can take a payment: this build has no payment integration, and every plan is
         declared as not purchasable.
       </p>
-    </div>
+    </CardTile>
   );
 }
 
@@ -135,10 +131,10 @@ export function InsufficientCreditsState({
 export function DisabledFeatureNotice({ feature }: { feature: UsageFeatureViewData }) {
   if (feature.denial !== 'feature-disabled') return null;
   return (
-    <div className="flex items-start gap-2 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2">
+    <CardTile className="flex items-start gap-2">
       <ShieldAlert size={14} aria-hidden className="mt-0.5 shrink-0 text-text-faint" />
       <p className="text-body-sm text-text-muted">{feature.stateReason ?? feature.reason}</p>
-    </div>
+    </CardTile>
   );
 }
 
@@ -150,7 +146,7 @@ export interface ComingSoonNoticeProps {
 export function ComingSoonNotice({ feature, action }: ComingSoonNoticeProps) {
   if (feature.denial !== 'feature-coming-soon') return null;
   return (
-    <div className="space-y-1 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2">
+    <CardTile className="space-y-1">
       <p className="text-body-sm text-text-muted">
         {feature.stateReason ??
           'This capability is included in your plan and has not been built yet.'}
@@ -160,7 +156,7 @@ export function ComingSoonNotice({ feature, action }: ComingSoonNoticeProps) {
         {feature.creditCost} credits per invocation once it exists.
       </p>
       {action === undefined ? null : action}
-    </div>
+    </CardTile>
   );
 }
 

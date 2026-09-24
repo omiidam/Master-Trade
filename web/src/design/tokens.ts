@@ -196,9 +196,9 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   {
     group: 'gradient',
     summary:
-      'The panel sheen, the loading sweep, the three control faces, the lit top edge, the ' +
-      'overlay veil, the composer frame and the agent card’s under-light. Structural, never ' +
-      'decorative.',
+      'The panel sheen, the loading sweep, the three control faces, the lit edge and its ' +
+      'under-lit inverse, the overlay veil, the composer frame and the agent card’s under-light. ' +
+      'Structural, never decorative.',
     variables: [
       '--gradient-panel',
       '--gradient-sheen',
@@ -206,6 +206,7 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
       '--gradient-accent',
       '--gradient-danger-fill',
       '--gradient-edge',
+      '--gradient-edge-under',
       '--gradient-veil',
       '--gradient-ring',
       '--gradient-specular',
@@ -449,3 +450,318 @@ export const CONTROL_FACES: readonly ControlFace[] = [
   { role: 'accent', gradient: '--gradient-accent', utility: 'control-accent' },
   { role: 'danger', gradient: '--gradient-danger-fill', utility: 'control-danger' },
 ];
+
+/* ------------------------------------------------------------------------ */
+/* Phase 7.2.2 — colour harmony                                             */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * The neutral axis.
+ *
+ * Every surface, border and text step in the product is the same material: a blue-black whose hue
+ * does not move, with lightness doing all the work. That is what makes depth read as distance from
+ * the viewer rather than as a second colour creeping in — and it is a claim the suite can check,
+ * because a hue that drifts is exactly how a palette becomes "a collection of colours" one edit at
+ * a time. The saturation ceiling is what makes these neutrals rather than a tinted theme: at or
+ * under 46% and this dark, none of them reads as a hue of its own.
+ */
+export const NEUTRAL_AXIS = {
+  hue: [210, 222] as const,
+  saturation: [10, 46] as const,
+  tokens: [
+    '--color-bg',
+    '--color-bg-elevated',
+    '--color-surface',
+    '--color-surface-raised',
+    '--color-surface-sunken',
+    '--color-border',
+    '--color-border-strong',
+    '--color-text',
+    '--color-text-muted',
+    '--color-text-faint',
+  ],
+} as const;
+
+/**
+ * A colour family: a base, the well and edge that go with it, and where it sits on the wheel.
+ *
+ * The `relationship` is the harmony decision, stated as the geometry the suite measures: the
+ * distance from `BRAND_HUE`, so a declared relationship is a fact about the stylesheet rather than
+ * a word in a comment.
+ *
+ *   brand          the accent the product commits with — the wheel's origin
+ *   analogous      within 90 degrees of it: a neighbouring hue with a second job
+ *   complementary  past 90 degrees: a hue that carries an outcome, so an outcome can never be
+ *                  mistaken for the brand
+ *
+ * `role` carries the meaning, `relationship` carries the angle, and the two are separate on purpose:
+ * a state can be analogous and still be unmistakable, which is exactly what confirmation is now.
+ */
+export interface AccentFamily {
+  /** What the family is for, in one word the interface would use. */
+  role: string;
+  base: string;
+  soft?: string;
+  border?: string;
+  relationship: 'brand' | 'analogous' | 'complementary';
+  /** The hue the family is built on; the suite re-derives it from the stylesheet and compares. */
+  hue: number;
+}
+
+export const ACCENT_FAMILIES: readonly AccentFamily[] = [
+  {
+    role: 'brand',
+    base: '--color-primary',
+    soft: '--color-primary-soft',
+    border: '--color-primary-border',
+    relationship: 'brand',
+    hue: 190,
+  },
+  {
+    role: 'information',
+    base: '--color-info',
+    soft: '--color-info-soft',
+    border: '--color-info-border',
+    relationship: 'analogous',
+    hue: 215,
+  },
+  {
+    role: 'reasoning',
+    base: '--color-ai',
+    soft: '--color-ai-soft',
+    border: '--color-ai-border',
+    relationship: 'analogous',
+    hue: 258,
+  },
+  {
+    role: 'confirmation',
+    base: '--color-success',
+    soft: '--color-success-soft',
+    border: '--color-success-border',
+    // Analogous rather than opposite, and that is the whole 7.2.2 story: confirmation used to sit
+    // *seven* degrees from the brand, which made one hue wear two names. It is a neighbouring green
+    // now, moved far enough round the wheel to read as its own colour while staying in the brand's
+    // family — the `relationship` states the geometry, `role` states the job.
+    relationship: 'analogous',
+    hue: 152,
+  },
+  {
+    role: 'caution',
+    base: '--color-warning',
+    soft: '--color-warning-soft',
+    border: '--color-warning-border',
+    relationship: 'complementary',
+    hue: 38,
+  },
+  {
+    role: 'loss',
+    base: '--color-danger',
+    soft: '--color-danger-soft',
+    border: '--color-danger-border',
+    relationship: 'complementary',
+    hue: 2,
+  },
+];
+
+/**
+ * The brand's hue, and how far a semantic colour has to stay from it.
+ *
+ * Phase 7.2.2 moved the brand here because it was *seven* degrees from `--color-success` — two names
+ * for one green, which is the failure mode this number exists to prevent. Twenty degrees is the
+ * floor at which a state and the accent stop being confusable at a glance; the closest pair today
+ * is information at twenty-five.
+ */
+export const BRAND_HUE = 190;
+export const MIN_HUE_SEPARATION = 20;
+
+/**
+ * How the interface states a condition, and what each state is allowed to mean.
+ *
+ * One row per state, naming the token that carries it — so "which green is a gain?" has an answer
+ * in a file rather than in whichever component happened to be written first. `fill` and `edge` are
+ * present only where the state owns a surface of its own: a state that is only ever text does not
+ * get to invent a panel.
+ *
+ * Colour is never the *only* signal. Every state here is also carried by a word, an icon or a sign,
+ * which is why the rows are named after meanings (a gain, a caution) rather than after hues.
+ */
+export interface SemanticUsage {
+  state: string;
+  /** The token for the state's text, icon or mark. */
+  ink: string;
+  /** The recessed surface the state is stated on, where it has one. */
+  fill?: string;
+  /** The edge that pairs with the fill. */
+  edge?: string;
+  means: string;
+}
+
+export const SEMANTIC_USAGE: readonly SemanticUsage[] = [
+  {
+    state: 'positive',
+    ink: '--color-success',
+    fill: '--color-success-soft',
+    edge: '--color-success-border',
+    means: 'a gain, a pass, a thing that went the way it was meant to',
+  },
+  {
+    state: 'negative',
+    ink: '--color-danger',
+    fill: '--color-danger-soft',
+    edge: '--color-danger-border',
+    means: 'a loss, a fail, a thing that did not',
+  },
+  {
+    state: 'neutral',
+    ink: '--color-text',
+    means: 'a figure with no direction: a count, a size, a duration',
+  },
+  {
+    state: 'warning',
+    ink: '--color-warning',
+    fill: '--color-warning-soft',
+    edge: '--color-warning-border',
+    means: 'attention is due, and no outcome has been recorded yet',
+  },
+  {
+    state: 'information',
+    ink: '--color-info',
+    fill: '--color-info-soft',
+    edge: '--color-info-border',
+    means: 'context: provenance, scope, a stated limitation',
+  },
+  {
+    state: 'error',
+    ink: '--color-danger',
+    fill: '--color-danger-soft',
+    edge: '--color-danger-border',
+    means: 'something that was asked for could not be done',
+  },
+  {
+    state: 'active',
+    ink: '--color-primary',
+    means: 'the thing currently in view, or the one being acted on',
+  },
+  {
+    state: 'inactive',
+    ink: '--color-text-muted',
+    means: 'present and readable, but not the current thing',
+  },
+  {
+    state: 'selected',
+    ink: '--color-primary',
+    fill: '--color-primary-soft',
+    edge: '--color-primary-border',
+    means: 'the option the reader has chosen',
+  },
+  {
+    state: 'unselected',
+    ink: '--color-text-muted',
+    edge: '--color-border',
+    means: 'an option that is offered and not chosen',
+  },
+  {
+    state: 'unavailable',
+    ink: '--color-text-faint',
+    edge: '--color-border',
+    means: 'not offered in this state, by permission or by plan — not broken',
+  },
+];
+
+/**
+ * The legibility contract, as pairs and floors.
+ *
+ * Phase 7.1 asserted the ladders were *ordered*, which is necessary and not sufficient: a ladder can
+ * be in the right order and every step on it unreadable. This is the other half — the contrast each
+ * pair of tokens has to clear, so "the palette is legible" is a measurement rather than a claim.
+ *
+ * The floors are WCAG 2.1 AA: 4.5:1 for text, 3:1 for large text and for a non-text indicator (a
+ * focus ring, a status edge). Two entries deliberately sit above AA — the interface's body text
+ * clears AAA at 7:1, because a dark terminal is looked at for hours — and one sits below it on
+ * purpose: disabled content is exempt from AA because it is not read, only recognised as
+ * unavailable, and the floor there is that it stays *visible* against its ground.
+ */
+export interface ContrastRule {
+  subject: string;
+  ink: string;
+  ground: string;
+  min: number;
+}
+
+export const CONTRAST_RULES: readonly ContrastRule[] = [
+  { subject: 'body text on the page', ink: '--color-text', ground: '--color-bg', min: 7 },
+  { subject: 'body text on a card', ink: '--color-text', ground: '--color-surface', min: 7 },
+  {
+    subject: 'body text on a raised card',
+    ink: '--color-text',
+    ground: '--color-surface-raised',
+    min: 7,
+  },
+  { subject: 'secondary text', ink: '--color-text-muted', ground: '--color-surface', min: 4.5 },
+  {
+    subject: 'secondary text on a raised card',
+    ink: '--color-text-muted',
+    ground: '--color-surface-raised',
+    min: 4.5,
+  },
+  { subject: 'annotation text', ink: '--color-text-faint', ground: '--color-surface', min: 4.5 },
+  {
+    subject: 'annotation text on a raised card',
+    ink: '--color-text-faint',
+    ground: '--color-surface-raised',
+    min: 4.5,
+  },
+  {
+    subject: 'annotation text in a well',
+    ink: '--color-text-faint',
+    ground: '--color-surface-sunken',
+    min: 4.5,
+  },
+  { subject: 'brand text on a card', ink: '--color-primary', ground: '--color-surface', min: 4.5 },
+  {
+    subject: 'ink on a filled accent control',
+    ink: '--color-primary-fg',
+    ground: '--color-primary-strong',
+    min: 4.5,
+  },
+  {
+    subject: 'ink on a filled destructive control',
+    ink: '--color-danger-fg',
+    ground: '--color-danger-strong',
+    min: 4.5,
+  },
+  {
+    subject: 'unavailable text',
+    ink: '--color-text-faint',
+    ground: '--color-surface-raised',
+    min: 3,
+  },
+  { subject: 'the focus ring', ink: '--color-focus', ground: '--color-surface', min: 3 },
+  {
+    subject: 'a card edge',
+    ink: '--color-border',
+    ground: '--color-surface',
+    min: 1.15,
+  },
+  {
+    subject: 'a strong edge',
+    ink: '--color-border-strong',
+    ground: '--color-surface',
+    min: 1.4,
+  },
+];
+
+/**
+ * The state inks, each measured against the well it is stated on.
+ *
+ * Derived from `SEMANTIC_USAGE` rather than written out again, so a state that gains a fill is
+ * measured the moment it gains one — the suite reads this list, not a second copy of it.
+ */
+export const STATE_ON_FILL_RULES: readonly ContrastRule[] = SEMANTIC_USAGE.filter(
+  (usage): usage is SemanticUsage & { fill: string } => usage.fill !== undefined,
+).map((usage) => ({
+  subject: `${usage.state} on its own well`,
+  ink: usage.ink,
+  ground: usage.fill,
+  min: 4.5,
+}));

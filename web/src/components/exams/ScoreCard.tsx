@@ -1,7 +1,7 @@
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import { formatPercent, formatTimestamp } from '../../lib/format';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../Card';
+import { Card, CardContent, CardFooter, CardHeader, CardTile, CardTitle } from '../Card';
 import { Sparkline } from '../charts/Sparkline';
 
 export interface ScorePointInput {
@@ -79,7 +79,7 @@ export function ScoreCard({
         </div>
 
         {hasTrend ? (
-          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2">
+          <CardTile className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-caption text-text-muted">
               {delta !== null && delta >= 0 ? (
                 <span className="text-primary">
@@ -96,7 +96,7 @@ export function ScoreCard({
               </span>
             </div>
             <Sparkline values={values} width={96} height={22} tone={passed ? 'primary' : 'info'} />
-          </div>
+          </CardTile>
         ) : (
           <p className="text-caption text-text-faint">
             {values.length === 0

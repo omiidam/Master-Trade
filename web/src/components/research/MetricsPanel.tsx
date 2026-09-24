@@ -4,7 +4,7 @@ import type { DataProvenance } from '@shared/marketdata/provider';
 import { cn } from '../../lib/cn';
 import { formatPercent } from '../../lib/format';
 import { Badge } from '../Badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { Tooltip } from '../Tooltip';
@@ -154,14 +154,11 @@ export function MetricsPanel({
           className={cn('grid gap-2', columns === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3')}
         >
           {tiles.map((tile) => (
-            <div
-              key={tile.id}
-              className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2.5"
-            >
+            <CardTile key={tile.id}>
               <dt className="text-caption text-text-faint">{tile.label}</dt>
               <dd className="num mt-1 text-figure text-text">{tile.value}</dd>
               <dd className="mt-1.5 text-caption text-text-faint">{tile.hint}</dd>
-            </div>
+            </CardTile>
           ))}
         </dl>
 

@@ -2,6 +2,8 @@ import { HelpCircle } from 'lucide-react';
 import type { ClarificationQuestion } from '@shared/quality/readiness';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
+import { Card } from '../Card';
+import { cn } from '../../lib/cn';
 import { clarificationReasonLabel, inputLabel } from './labels';
 
 /**
@@ -43,11 +45,10 @@ export function ClarificationQuestionCard({
     index === undefined ? null : total === undefined ? `${index}.` : `${index} of ${total}`;
 
   return (
-    <article
-      className={
-        className ??
-        'rounded-[var(--radius-card)] border border-border bg-surface-sunken p-3 space-y-2'
-      }
+    <Card
+      as="article"
+      tone="sunken"
+      className={cn('space-y-2 p-3', className)}
       aria-label={`Clarification required: ${inputLabel(question.field)}`}
     >
       <div className="flex flex-wrap items-center gap-1.5">
@@ -78,6 +79,6 @@ export function ClarificationQuestionCard({
           </Button>
         </div>
       )}
-    </article>
+    </Card>
   );
 }

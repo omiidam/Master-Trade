@@ -1,11 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { CircleAlert, FileText, Paperclip, Save, Send, ShieldCheck, Trash2 } from 'lucide-react';
+import { CircleAlert, FileText, Paperclip, Save, Send, Trash2 } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { ErrorState } from '../ErrorState';
 import { Field, Input, Textarea } from '../Input';
 import { Modal } from '../Modal';
 import { Tooltip } from '../Tooltip';
+import { Alert } from '../Alert';
 import { FormSection } from './FormSection';
 import { ChecklistField } from './ChecklistField';
 import { PsychologyScale } from './PsychologyScale';
@@ -589,21 +590,11 @@ export function TradeForm({
       ) : null}
 
       {submitState.kind === 'saved' ? (
-        <div
-          role="status"
-          className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-success-border bg-primary-soft px-4 py-3 text-success"
-        >
-          <ShieldCheck size={16} aria-hidden className="mt-0.5 shrink-0" />
-          <div>
-            <p className="text-body font-medium">
-              {submitState.mode === 'submitted' ? 'Record written' : 'Draft written'}
-            </p>
-            <p className="mt-0.5 text-caption opacity-90">
-              A written record is appended to the journal; it never activates a rule and never
-              reaches a broker.
-            </p>
-          </div>
-        </div>
+        <Alert
+          tone="success"
+          title={submitState.mode === 'submitted' ? 'Record written' : 'Draft written'}
+          description="A written record is appended to the journal; it never activates a rule and never reaches a broker."
+        />
       ) : null}
 
       <div className="space-y-2">{SECTION_ORDER.map((id) => section(id))}</div>

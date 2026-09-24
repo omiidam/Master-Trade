@@ -3,6 +3,8 @@ import type { InputRef } from '@shared/quality/model';
 import type { ClarificationQuestion } from '@shared/quality/readiness';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
+import { Card } from '../Card';
+import { cn } from '../../lib/cn';
 import { ClarificationQuestionCard } from './ClarificationQuestionCard';
 import { inputLabel } from './labels';
 
@@ -46,8 +48,10 @@ export function MissingInformationPanel({
 }: MissingInformationPanelProps) {
   if (gaps.length === 0 && clarifications.length === 0) {
     return (
-      <section
-        className={className ?? 'rounded-[var(--radius-card)] border border-border p-4'}
+      <Card
+        as="section"
+        emphasis="success"
+        className={cn('p-4', className)}
         aria-label="Missing information"
       >
         <div className="flex items-center gap-2">
@@ -59,12 +63,12 @@ export function MissingInformationPanel({
           statement that the answer will be complete — only that it will not be missing a declared
           requirement.
         </p>
-      </section>
+      </Card>
     );
   }
 
   return (
-    <section className={className ?? 'space-y-3'} aria-label="Missing information">
+    <section className={cn('space-y-3', className)} aria-label="Missing information">
       <div className="flex flex-wrap items-center gap-2">
         <CircleHelp size={16} aria-hidden className="text-text-muted" />
         <h3 className="text-body-sm font-medium text-text">What is not known yet</h3>

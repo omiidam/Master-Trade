@@ -16,7 +16,7 @@ import type {
 } from '@shared/portfolio/model';
 import type { PortfolioReadinessDecision } from '@shared/portfolio/readiness';
 import { Badge } from '../Badge';
-import { Card, CardContent } from '../Card';
+import { Card, CardContent, CardTile } from '../Card';
 import { cn } from '../../lib/cn';
 import {
   describePriceAge,
@@ -92,9 +92,12 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
         </div>
 
         {decisions.map((decision) => (
-          <section
+          <CardTile
+            as="section"
             key={decision.scope}
-            className="space-y-2 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-3"
+            space="roomy"
+            className="space-y-2"
+            aria-label={scopeLabel(decision.scope)}
           >
             <div className="flex flex-wrap items-center gap-1.5">
               <h4 className="text-body-sm font-medium text-text">{scopeLabel(decision.scope)}</h4>
@@ -154,7 +157,7 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
             ) : null}
 
             <p className="text-caption text-text-faint">{decision.note}</p>
-          </section>
+          </CardTile>
         ))}
       </CardContent>
     </Card>
@@ -219,14 +222,11 @@ export function PortfolioQualitySummary({
               ],
             ] as const
           ).map(([label, value, hint]) => (
-            <div
-              key={label}
-              className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-            >
+            <CardTile key={label}>
               <dt className="text-caption text-text-muted">{label}</dt>
               <dd className="text-body font-semibold tabular-nums text-text">{value}</dd>
               <p className="text-caption text-text-faint">{hint}</p>
-            </div>
+            </CardTile>
           ))}
         </dl>
 
@@ -326,10 +326,7 @@ export function MissingHoldingData({ gaps, className }: MissingHoldingDataProps)
 
         <ul className="space-y-2" role="list">
           {gaps.map((gap) => (
-            <li
-              key={gap.code}
-              className="space-y-1 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-            >
+            <CardTile as="li" key={gap.code} className="space-y-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge tone={issueTone(gap.code)}>{issueMeaning(gap.code)}</Badge>
                 <span className="font-mono text-caption text-text-faint">{gap.code}</span>
@@ -342,7 +339,7 @@ export function MissingHoldingData({ gaps, className }: MissingHoldingDataProps)
                   ))}
                 </ul>
               ) : null}
-            </li>
+            </CardTile>
           ))}
         </ul>
       </CardContent>
@@ -398,9 +395,9 @@ export function PortfolioSnapshotTimeline({
 
         <ol className="space-y-2" role="list">
           {snapshots.map((snapshot) => (
-            <li
+            <CardTile
               key={snapshot.version}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
+              className="flex flex-wrap items-center justify-between gap-2"
             >
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge tone={snapshot.version === currentVersion ? 'primary' : 'outline'}>
@@ -416,7 +413,7 @@ export function PortfolioSnapshotTimeline({
                   changed by <span className="font-mono">{snapshot.changedBy}</span>
                 </p>
               </div>
-            </li>
+            </CardTile>
           ))}
         </ol>
 
@@ -498,10 +495,7 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
             </p>
             <ul className="grid gap-2 sm:grid-cols-2" role="list">
               {currencies.map((group) => (
-                <li
-                  key={group.currency}
-                  className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-                >
+                <CardTile key={group.currency} className="flex items-center justify-between gap-2">
                   <span className="text-body-sm text-text-muted">
                     {group.currency} · {group.positions} position
                     {group.positions === 1 ? '' : 's'}
@@ -509,7 +503,7 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
                   <span className="text-body-sm tabular-nums text-text">
                     {formatNumber(group.marketValue)}
                   </span>
-                </li>
+                </CardTile>
               ))}
             </ul>
             {currencies.length > 1 ? (

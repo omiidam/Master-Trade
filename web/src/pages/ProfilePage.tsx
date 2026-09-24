@@ -10,7 +10,14 @@ import {
 import { FIELD_KEYS, FIELD_LABELS, type FieldKey } from '@shared/profile/model';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTile,
+  CardTitle,
+} from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { Skeleton } from '../components/Skeleton';
@@ -411,9 +418,9 @@ export function ProfilePage() {
               ) : (
                 <ul className="space-y-2">
                   {profile.history.map((entry) => (
-                    <li
+                    <CardTile
                       key={entry.version}
-                      className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
+                      className="flex items-center justify-between gap-3"
                     >
                       <span className="text-body-sm text-text">Version {entry.version}</span>
                       <span className="text-caption text-text-muted">
@@ -422,7 +429,7 @@ export function ProfilePage() {
                       <Badge tone="neutral">
                         {entry.changedBy === profile.userId ? 'You' : entry.changedBy}
                       </Badge>
-                    </li>
+                    </CardTile>
                   ))}
                 </ul>
               )}

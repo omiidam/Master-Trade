@@ -22,6 +22,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
+  CardTile,
   CardTitle,
   Section,
 } from '../components/Card';
@@ -946,10 +947,7 @@ export function JournalPage() {
                 ) : (
                   <ul className="space-y-2">
                     {awaitingReview.map((trade) => (
-                      <li
-                        key={trade.id}
-                        className="flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-                      >
+                      <CardTile key={trade.id} className="flex flex-wrap items-center gap-2">
                         <span className="num text-caption text-text-muted">{trade.ref}</span>
                         <span className="text-body text-text">{trade.symbol}</span>
                         <DirectionBadge direction={trade.direction} />
@@ -963,7 +961,7 @@ export function JournalPage() {
                         >
                           Review
                         </Button>
-                      </li>
+                      </CardTile>
                     ))}
                   </ul>
                 )}
@@ -1133,11 +1131,11 @@ export function JournalPage() {
 
 function SummaryCell({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2">
+    <CardTile>
       <p className="text-caption text-text-muted">{label}</p>
       <p className="num mt-0.5 text-body text-text">{value}</p>
       {hint ? <p className="mt-0.5 text-caption text-text-faint">{hint}</p> : null}
-    </div>
+    </CardTile>
   );
 }
 

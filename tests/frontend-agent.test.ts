@@ -295,6 +295,10 @@ describe('Task 2 — the agent card', () => {
     expect(referencing).toEqual([
       'web/src/components/agent/AgentCard.tsx',
       'web/src/components/agent/MessageComposer.tsx',
+      // Phase 7.2.2 turned the agent's under-lit face into the card system's `accent` variant, so
+      // the glow now has one more *reader* and still no second definition: `Card` names the same
+      // `agent-glow` utility rather than restating the gradient.
+      'web/src/components/Card.tsx',
       // The inventory, which is where a gradient is registered before it can be used.
       'web/src/design/tokens.ts',
     ]);

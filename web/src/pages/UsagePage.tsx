@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Coins, History, Layers, ShieldCheck, Wallet } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card, CardContent } from '../components/Card';
+import { Card, CardContent, CardTile } from '../components/Card';
 import { ErrorState } from '../components/ErrorState';
 import { Skeleton } from '../components/Skeleton';
 import { TabPanel, Tabs } from '../components/Tabs';
@@ -199,14 +199,11 @@ export function UsagePage() {
                   ['Expired', usage.totals.expired, 'Unused allowance at the end of a period'],
                 ] as const
               ).map(([label, value, hint]) => (
-                <div
-                  key={label}
-                  className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-                >
+                <CardTile key={label}>
                   <dt className="text-caption text-text-muted">{label}</dt>
                   <dd className="text-h3 font-semibold tabular-nums text-text">{value}</dd>
                   <p className="text-caption text-text-faint">{hint}</p>
-                </div>
+                </CardTile>
               ))}
             </dl>
 
@@ -231,10 +228,7 @@ export function UsagePage() {
 
                 <ul className="space-y-3" role="list">
                   {usage.features.map((feature) => (
-                    <li
-                      key={feature.id}
-                      className="space-y-2 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-3"
-                    >
+                    <CardTile space="roomy" key={feature.id} className="space-y-2">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-body font-medium text-text">{feature.label}</span>
                         <FeatureEntitlementBadge feature={feature} />
@@ -276,7 +270,7 @@ export function UsagePage() {
                       {feature.allowed ? null : (
                         <p className="text-caption text-text-muted">{feature.reason}</p>
                       )}
-                    </li>
+                    </CardTile>
                   ))}
                 </ul>
 

@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2, Clock, Loader2, XCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Badge, type BadgeTone } from '../Badge';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../Card';
+import { Card, CardContent, CardFooter, CardHeader, CardTile, CardTitle } from '../Card';
 import { JobProgressIndicator } from './JobProgressIndicator';
 import { CancelTaskControl } from './CancelTaskControl';
 import { cn } from '../../lib/cn';
@@ -106,9 +106,7 @@ export function JobStatusCard({
         </dl>
 
         {job.error ? (
-          <p className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2 text-caption text-text-muted">
-            {job.error}
-          </p>
+          <CardTile className="text-caption text-text-muted">{job.error}</CardTile>
         ) : null}
       </CardContent>
 

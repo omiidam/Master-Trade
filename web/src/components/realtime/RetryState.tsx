@@ -1,6 +1,7 @@
 import { RefreshCw, ShieldAlert, WifiOff } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
+import { Card } from '../Card';
 import { cn } from '../../lib/cn';
 
 export type RetryKind = 'retrying' | 'exhausted' | 'permission-denied' | 'offline';
@@ -46,16 +47,20 @@ export function RetryState({
   const presentation = PRESENTATION[kind];
   // A refusal cannot be retried into a success: no button, just the reason.
   const canRetry = kind !== 'permission-denied';
+  // A refusal and an exhausted budget are both dead ends, and both are the danger state rather
+  // than a neutral one: `retrying` and `offline` are still in motion.
+  const refused = kind === 'permission-denied' || kind === 'exhausted';
 
   return (
-    <div
+    <Card
       role="status"
       aria-live="polite"
+      tone={refused ? 'default' : 'raised'}
+      emphasis={refused ? 'danger' : 'none'}
+      wash={refused}
       className={cn(
-        'flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-panel)] border px-4 py-3',
-        kind === 'permission-denied' || kind === 'exhausted'
-          ? 'border-danger-border bg-danger-soft text-danger'
-          : 'border-border bg-surface-raised text-text-muted',
+        'flex flex-wrap items-center justify-between gap-3 px-4 py-3',
+        refused ? 'text-danger' : 'text-text-muted',
         className,
       )}
     >
@@ -93,6 +98,6 @@ export function RetryState({
           {pending ? 'Trying…' : 'Try again'}
         </Button>
       ) : null}
-    </div>
+    </Card>
   );
 }

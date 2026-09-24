@@ -34,7 +34,15 @@ import {
 } from '@shared/capabilities/model';
 import { Badge } from '../Badge';
 import type { BadgeTone } from '../Badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Section } from '../Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTile,
+  CardTitle,
+  Section,
+} from '../Card';
 import { cn } from '../../lib/cn';
 
 /**
@@ -96,9 +104,9 @@ export function CapabilityCard({ capability }: { capability: CapabilityView }) {
         <p className="text-caption text-text-muted">{capability.description}</p>
 
         {/* The reason, in the server's words, with the state's full meaning. */}
-        <p className="rounded-[var(--radius-inset)] border border-border bg-surface-raised px-3 py-2 text-caption text-text">
+        <CardTile as="p" tone="raised" className="text-caption text-text">
           {capability.stateReason}
-        </p>
+        </CardTile>
 
         <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Fact label="Availability">
@@ -259,13 +267,10 @@ export function CapabilitySummary({
   return (
     <div className={cn('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5', className)}>
       {counts.map((entry) => (
-        <div
-          key={entry.state}
-          className="min-w-0 rounded-[var(--radius-tile)] border border-border bg-surface-raised px-3 py-2"
-        >
+        <CardTile key={entry.state} tone="raised" className="min-w-0">
           <p className="text-caption text-text-muted">{STATE_LABEL[entry.state]}</p>
           <p className="mt-0.5 text-title font-semibold tabular-nums text-text">{entry.count}</p>
-        </div>
+        </CardTile>
       ))}
     </div>
   );

@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react';
 import type { PortfolioInsight } from '@shared/portfolio/model';
 import { Badge } from '../Badge';
-import { Card, CardContent } from '../Card';
+import { Card, CardContent, CardTile } from '../Card';
 import {
   insightSeverityLabel,
   insightSeverityTone,
@@ -58,15 +58,12 @@ export function PortfolioInsightCard({ insight, className }: PortfolioInsightCar
         {insight.metrics.length > 0 ? (
           <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {insight.metrics.map((metric) => (
-              <div
-                key={metric.label}
-                className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-              >
+              <CardTile key={metric.label}>
                 <dt className="text-caption text-text-muted">{metric.label}</dt>
                 <dd className="text-body-sm font-semibold tabular-nums text-text">
                   {metric.value}
                 </dd>
-              </div>
+              </CardTile>
             ))}
           </dl>
         ) : null}

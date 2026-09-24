@@ -3,6 +3,7 @@ import { ListFilter, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { Input, Select } from '../Input';
+import { Card } from '../Card';
 import { cn } from '../../lib/cn';
 import {
   COMPLIANCE_LABEL,
@@ -210,13 +211,7 @@ export function TradeFilters({
   );
 
   return (
-    <section
-      aria-label="Trade filters"
-      className={cn(
-        'space-y-3 rounded-[var(--radius-panel)] border border-border bg-surface p-4 shadow-panel',
-        className,
-      )}
-    >
+    <Card as="section" aria-label="Trade filters" className={cn('space-y-3 p-4', className)}>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <span
@@ -276,6 +271,6 @@ export function TradeFilters({
           : `Showing ${matched} of ${total} records — the active filters are narrowing the set.`}
         {filters.setupId === 'all' ? '' : ` Setup filter: ${setupLabel(filters.setupId)}.`}
       </p>
-    </section>
+    </Card>
   );
 }

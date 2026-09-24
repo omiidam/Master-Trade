@@ -1,7 +1,7 @@
 import { Coins, TriangleAlert } from 'lucide-react';
 import type { PortfolioMetrics } from '@shared/portfolio/model';
 import { Badge } from '../Badge';
-import { Card, CardContent } from '../Card';
+import { Card, CardContent, CardTile } from '../Card';
 import { formatMoney, formatSignedPercent } from './labels';
 
 /**
@@ -42,7 +42,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
         </div>
 
         {priced === 0 ? (
-          <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-3">
+          <CardTile space="roomy">
             <p className="text-body-sm text-text">
               No position has both a quantity and a current price, so there is no value to report.
             </p>
@@ -50,7 +50,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
               This is not a portfolio worth nothing — it is a composition the product cannot value
               yet. A zero here would have been a factual claim, which is why none is shown.
             </p>
-          </div>
+          </CardTile>
         ) : (
           <div className="space-y-1">
             <p className="text-caption text-text-muted">
@@ -79,10 +79,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
             </p>
             <ul className="grid gap-2 sm:grid-cols-2" role="list">
               {totals.byCurrency.map((group) => (
-                <li
-                  key={group.currency}
-                  className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-                >
+                <CardTile key={group.currency}>
                   <p className="text-caption text-text-muted">
                     {group.currency} · {group.positions} position
                     {group.positions === 1 ? '' : 's'}
@@ -90,7 +87,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
                   <p className="text-h3 font-semibold tabular-nums text-text">
                     {formatMoney(group.marketValue, group.currency)}
                   </p>
-                </li>
+                </CardTile>
               ))}
             </ul>
           </div>
@@ -127,14 +124,11 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
               ],
             ] as const
           ).map(([label, value, hint]) => (
-            <div
-              key={label}
-              className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2"
-            >
+            <CardTile key={label}>
               <dt className="text-caption text-text-muted">{label}</dt>
               <dd className="text-body font-semibold tabular-nums text-text">{value}</dd>
               <p className="text-caption text-text-faint">{hint}</p>
-            </div>
+            </CardTile>
           ))}
         </dl>
 

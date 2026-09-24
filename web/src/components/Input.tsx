@@ -6,6 +6,7 @@ import type {
   TextareaHTMLAttributes,
 } from 'react';
 import { useId } from 'react';
+import { CardTile } from './Card';
 import { cn } from '../lib/cn';
 
 /**
@@ -146,10 +147,10 @@ export function ReadOnlyValue({
   hint?: string;
 }) {
   return (
-    <div className="rounded-[var(--radius-control)] border border-border bg-surface-sunken px-3 py-2 shadow-control-inset">
+    <CardTile>
       <p className="text-caption text-text-muted">{label}</p>
       <p className="num mt-0.5 text-body text-text">{value}</p>
       {hint ? <p className="mt-0.5 text-caption text-text-faint">{hint}</p> : null}
-    </div>
+    </CardTile>
   );
 }

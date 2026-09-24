@@ -214,16 +214,20 @@ describe('Task 2 — content components', () => {
     for (const tone of ['default', 'raised', 'sunken']) {
       expect(card, `${tone} is not a card tone`).toMatch(new RegExp(`\\n {2}${tone}:`));
     }
+    // The face is the entry's own value, not the slice up to the next key: the map's neighbours are
+    // separated by comments that name the utilities, and a comment is not a class on the surface.
+    // The slice opens on the newline that precedes the key, so the entry itself is the second line.
+    const faceOf = (tone: string): string => (entry(card, tone).split('\n')[1] ?? '').trim();
     // A panel is lit: the surface, the panel gradient and the lit top edge travel together.
     for (const tone of ['default', 'raised']) {
-      const body = entry(card, tone);
+      const body = faceOf(tone);
       expect(body, tone).toMatch(/shadow-panel/);
       expect(body, tone).toMatch(/panel-gradient/);
       expect(body, tone).toMatch(/edge-highlight/);
     }
     // A well is the inverse — recessed, and therefore not lit.
-    expect(entry(card, 'sunken')).toMatch(/shadow-control-inset/);
-    expect(entry(card, 'sunken')).not.toMatch(/edge-highlight/);
+    expect(faceOf('sunken')).toMatch(/shadow-control-inset/);
+    expect(faceOf('sunken')).not.toMatch(/edge-highlight/);
   });
 
   it('marks one card as the emphasis, and only that one glows', () => {
