@@ -33,6 +33,7 @@ import {
   LANGUAGE_PROFILE_FIELDS,
   LANGUAGE_PROFILE_VERSION,
   LANGUAGE_REGISTERS,
+  REPLY_SOURCES,
   LANGUAGE_STYLES,
   LANGUAGE_VERBOSITIES,
   LANGUAGE_WORDINGS,
@@ -196,6 +197,13 @@ describe('language detection (Task 1)', () => {
     expect(general.wording).toBe('general');
     expect(general.context.terms).toEqual([]);
     expect(general.context.domains).toEqual([]);
+
+    // The English side of the lexicon is this product's vocabulary too: an English question that names a
+    // concept is technical wording, and the concept is recognised whichever language named it.
+    const english = detectLanguage(ENGLISH);
+    expect(english.context.terms).toContain('stop-loss');
+    expect(english.wording).toBe('technical');
+    expect(english.context.domains).toContain('trading');
   });
 
   it('separates the spoken register from the written one, and stays neutral without evidence', () => {
@@ -273,6 +281,14 @@ describe('language detection (Task 1)', () => {
     // A message about a language is not a request for one. This is the case a keyword search gets wrong.
     expect(detectLanguage('زبان فارسی سخته').request).toBeNull();
     expect(detectLanguage(ENGLISH).request).toBeNull();
+
+    // A request for a *term* is not a request for a language either: `با معادل فارسی بگو` asks for the
+    // Persian word for something, and reading it as `answer me in Persian` switches the reply language on
+    // the strength of a sentence about vocabulary.
+    expect(detectLanguage('این را با معادل فارسی بگو').request).toBeNull();
+    expect(detectLanguage('واژه فارسیاش چیست؟').request).toBeNull();
+    // ...while the plain request next to it still is one.
+    expect(detectLanguage('این را فارسی بگو').request?.language).toBe('fa');
   });
 
   it('infers nothing about the person, and carries no field that could', () => {
@@ -332,6 +348,24 @@ describe('the linguistic profile (Task 2)', () => {
     expect(LANGUAGE_WORDINGS).toContain(profile.wording);
     expect(LANGUAGE_STYLES).toContain(profile.style);
     expect(LANGUAGE_VERBOSITIES).toContain(profile.verbosity);
+  });
+
+  it('lets a request inside the message outrank the stored choice', () => {
+    const asking = detectLanguage('please reply in Persian: what is a stop-loss?');
+    const requested = resolveLanguage('en', asking);
+
+    // The setting is explicit and the request is more explicit: it was made now, in words, and the reply
+    // says which of the two was passed over rather than quietly reconciling them.
+    expect(requested).toMatchObject({ language: 'fa', source: 'requested', overridden: true });
+    expect(requested.reason).toContain('outranks');
+    // With nothing chosen there is nothing to outrank, so the request is not an override at all.
+    expect(resolveLanguage('auto', asking)).toMatchObject({
+      language: 'fa',
+      source: 'requested',
+      overridden: false,
+    });
+    // And the sources are the closed list, in the order of their precedence.
+    expect(REPLY_SOURCES).toEqual(['requested', 'explicit', 'detected', 'default']);
   });
 
   it('lets an explicit choice win, and records that it did', () => {

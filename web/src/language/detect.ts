@@ -505,6 +505,19 @@ const REQUEST_STARTERS: readonly string[] = [
   'بکن',
   'بگیر',
   'بگیرید',
+  // The imperatives this product's own vocabulary takes, closed and named. They are checked as *whole
+  // final words*, so `بازار` is not the imperative `باز` and a statement ending in one is still a
+  // statement: only a word that is itself the verb counts.
+  'بگذار',
+  'بگذارید',
+  'ببند',
+  'ببندید',
+  'بفرست',
+  'بفرستید',
+  'بخر',
+  'بفروش',
+  'بزن',
+  'بساز',
   'write',
   'reply',
   'answer',
@@ -626,12 +639,28 @@ const REQUESTS: readonly {
   { language: 'en', pattern: /\benglish\s+please\b/iu, confidence: 0.9 },
 ];
 
+/**
+ * Words that turn "Persian" into a request for a *term* rather than for a language.
+ *
+ * `با معادل فارسی بگو` asks for the Persian word for something, and a pattern that keys on `فارسی بگو`
+ * would read it as `answer me in Persian` — a language request that was never made, against a setting the
+ * person did choose. The distinction is one word, so it is checked as one word.
+ */
+const TERM_REQUEST_WORDS: readonly string[] = ['معادل', 'واژه', 'کلمه', 'برابر'];
+
+function requestIsAboutATerm(text: string, index: number): boolean {
+  // `\s*$` rather than `\s+$` because a Persian request pattern may itself begin with the whitespace it
+  // allows, so the word being looked for can be the last thing before the match with no gap at all.
+  const before = text.slice(Math.max(0, index - 24), index);
+  return TERM_REQUEST_WORDS.some((word) => new RegExp(`${word}[\\s\u200C]*$`, 'u').test(before));
+}
+
 function explicitRequestIn(text: string): LanguageRequest | null {
   for (const entry of REQUESTS) {
     const match = text.match(entry.pattern);
-    if (match !== null) {
-      return { language: entry.language, phrase: match[0].trim(), confidence: entry.confidence };
-    }
+    if (match === null || match.index === undefined) continue;
+    if (requestIsAboutATerm(text, match.index)) continue;
+    return { language: entry.language, phrase: match[0].trim(), confidence: entry.confidence };
   }
   return null;
 }
@@ -640,6 +669,20 @@ function explicitRequestIn(text: string): LanguageRequest | null {
  * Technical wording
  * ──────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * Whether a message names a concept, in either language.
+ *
+ * The English side is matched too, and case-insensitively, because it is the product's vocabulary just as
+ * much as the Persian is — "the English the product already shows" is the lexicon's own description of
+ * that field. Without it an English question about a stop-loss read as *general* wording, which is the
+ * one reading the phase's "English + technical context" case depends on getting right.
+ */
+function names(text: string, lower: string, form: string): boolean {
+  return /[A-Za-z]/u.test(form)
+    ? standaloneMatches(lower, form.toLowerCase()).length > 0
+    : standaloneMatches(text, form).length > 0;
+}
+
 /** The lexicon concepts a message names, and the domains they belong to. */
 function termsIn(
   text: string,
@@ -647,9 +690,10 @@ function termsIn(
 ): { terms: string[]; domains: TerminologyDomain[] } {
   const terms: string[] = [];
   const domains: TerminologyDomain[] = [];
+  const lower = text.toLowerCase();
   for (const term of lexiconTerms(memory)) {
-    const forms = [term.preferredFa, ...allAlternatives(term)];
-    if (!forms.some((form) => standaloneMatches(text, form).length > 0)) continue;
+    const forms = [term.preferredFa, term.english, ...allAlternatives(term)];
+    if (!forms.some((form) => names(text, lower, form))) continue;
     terms.push(term.id);
     if (!domains.includes(term.domain)) domains.push(term.domain);
   }

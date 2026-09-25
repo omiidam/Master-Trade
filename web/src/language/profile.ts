@@ -13,19 +13,24 @@
  * combines them. A later stage that conflated them would have to re-decide the precedence every time,
  * which is exactly how two stages end up disagreeing about the same conversation.
  *
- * The precedence rule, in one sentence: **an explicit choice wins, otherwise the message decides.**
+ * The precedence rule, in one sentence: **an instruction in the message wins, then an explicit choice, and
+ * only then what the reading implies.**
  *
- *   - preference `fa` and an English message → Persian. That is the override the phase asks for, and it
- *     is the reason the setting exists: a Persian speaker reading English documentation still wants the
- *     answer in Persian, and no amount of detection can know that.
+ *   - a message that asks (`به انگلیسی جواب بده`) → what it asked for, `source: 'requested'`. This is the
+ *     sharpest case of the phase's rule that an explicit instruction outranks a learned or stored
+ *     preference: the request was made *now*, in words, and a setting chosen last month cannot outweigh
+ *     it. Where the stored choice disagreed, the reply says that it was passed over.
+ *   - preference `fa` and an English message → Persian. That is the override Phase 7.5.3.1 asks for, and
+ *     it is the reason the setting exists: a Persian speaker reading English documentation still wants
+ *     the answer in Persian, and no amount of detection can know that.
  *   - preference `auto` and a Finglish message → Persian, because Finglish *is* Persian written in Latin
  *     letters and answering it in English would answer a different question.
  *   - preference `auto` and a message with no letters at all → the product's own language, and the
  *     profile says `default` rather than `detected`, because nothing was detected.
  *
- * `overridden` is recorded rather than implied. When it is true, the profile is stating that the person's
- * setting disagreed with the message, which is a fact a later stage may want to act on — and one that
- * would otherwise be invisible.
+ * `overridden` is recorded rather than implied. When it is true, the profile is stating that two explicit
+ * statements disagreed — a setting and a request, or a setting and the message — which is a fact a later
+ * stage may want to act on, and one that would otherwise be invisible.
  *
  * What this module does not do
  * ---------------------------
@@ -76,8 +81,14 @@ export const LANGUAGE_PROFILE_VERSION = 1;
 export const REPLY_LANGUAGES = ['fa', 'en'] as const;
 export type ReplyLanguage = (typeof REPLY_LANGUAGES)[number];
 
-/** Where the reply's language came from. `default` means nothing was detected and nothing was chosen. */
-export const REPLY_SOURCES = ['explicit', 'detected', 'default'] as const;
+/**
+ * Where the reply's language came from.
+ *
+ * `requested` is the strongest source there is — the message asked — and `default` the weakest: nothing
+ * was read and nothing was chosen. The order of this list is the precedence, with the last two the only
+ * ones that are not explicit statements.
+ */
+export const REPLY_SOURCES = ['requested', 'explicit', 'detected', 'default'] as const;
 export type ReplySource = (typeof REPLY_SOURCES)[number];
 
 export interface LanguageReply {
@@ -111,6 +122,26 @@ export function resolveLanguage(
   preference: LanguagePreference,
   detection: LanguageDetection,
 ): LanguageReply {
+  // An instruction inside the message comes first, before the setting: it is the most explicit signal
+  // available, it was given for this turn rather than for every turn, and the phase's rule about explicit
+  // instructions outranking stored preferences is what it is. The request vocabulary cannot produce
+  // `mixed` or `unknown`, so this narrows to the two languages a reply may be written in.
+  const request = detection.request;
+  if (request !== null) {
+    const requested: ReplyLanguage = request.language === 'en' ? 'en' : 'fa';
+    const setting: ReplyLanguage | 'auto' = preference;
+    const lost = setting !== 'auto' && setting !== requested;
+    return {
+      language: requested,
+      source: 'requested',
+      overridden: lost,
+      reason:
+        setting === 'auto' || !lost
+          ? `The message asks for ${describe(requested)} (${request.phrase}), so that is the language of the reply.`
+          : `The message asks for ${describe(requested)} (${request.phrase}), which outranks the ${describe(setting)} setting chosen for this person.`,
+    };
+  }
+
   if (preference !== 'auto') {
     const overridden = detection.language !== 'unknown' && !matches(preference, detection.language);
     return {

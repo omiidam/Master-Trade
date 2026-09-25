@@ -1737,3 +1737,94 @@ after Persian has been chosen, because the switch sets the language of the _answ
   the card in Settings. `detect.ts` and `profile.ts` are **not in the built JavaScript at all** — nothing
   in the interface imports them, and the shipped bundle contains no `finglish` and no `stopwords`, which is
   the measured form of "this phase did not put a language model in the product's download".
+
+## 23. Phase 7.5.3.2 — what the turn is like, and a way to say how to answer it
+
+Three more modules on the same shelf — `web/src/language/context.ts` (Task 1), `communication.ts` (Task 2)
+and `guidance.ts` (Task 3) — plus one extension to 7.5.3.1's resolver. Nothing renders them and nothing in
+`web/src` imports them, so the running application is unchanged again; the bundle argument at the end of §22
+still holds, and the suite is `tests/language-context.test.ts` (22 tests). The language record, including
+the six defects that running it found, is `docs/persian-language.md`.
+
+### The context adds readings; it does not re-derive them
+
+§22 read one message and said what it _is_. This phase asks what the interaction looks like, which is the
+thing a response stage actually needs, and the phase's six bullets split cleanly into two halves: three the
+earlier phase already answers and three it cannot.
+
+Formality **is** 7.5.3.1's register, carried with the same confidence and the same markers, because a second
+opinion about politeness is a second thing for the interface to disagree with. The suite asserts the two
+agree on four messages, which is what makes "one language system" checkable. The dimensions that are new
+are new questions: `setting` is the situation rather than the phrasing — `سلام، حد ضرر را چک کن` is an
+informal greeting around a work request, and both readings are right — `expertise` is a _gradation_ of how
+much of the message is the product's own vocabulary, and `intent` adds the one shape the earlier phase
+cannot see, a statement that runs to several sentences or ties itself to the conversation and is therefore
+making a point rather than reporting a fact.
+
+Each dimension carries its evidence as a field, and the evidence is either verbatim from the message or a
+store id for a concept the message named. Wording is measured as _density_, which is why `حد ضرر چیه؟`
+reads as technical — a third of its three words are the product's vocabulary — and that is a fact about the
+sentence rather than a guess about the writer. There is no dimension about a person, the produced object's
+field names are a closed list the suite compares against, and the conflict case worth naming is that
+`plain` wording and a _question about a stop-loss_ are two different dimensions, so the product can answer
+`حد ضرر چیه؟` plainly and still call it technical.
+
+### The strongest source wins, and the loser is named
+
+Four things can have an opinion about each preference, and the file states their order once: an **explicit
+instruction in the message** (`خلاصه بگو`, `رسمی بنویس`, `با معادل فارسی`), then **the message itself**,
+then **what previous turns looked like**, then the **default**. The ordering of the middle two is the
+design decision: the message is evidence about _this turn_, a learned preference is evidence about _the
+person's standing style_, and the standing style is consulted only where the turn is silent. A person who
+usually wants one line and who this time writes a paragraph and asks for detail gets the detailed answer.
+
+What is learned is **counts of closed-vocabulary readings** — no message, no word from one, no identifier,
+no timestamp. The suite walks the stored value and requires every leaf to be a number, which is the
+property that makes a learned store reviewable: a histogram of _how_ somebody writes cannot become a record
+of _what_ they wrote. Nothing writes a preference from those counts — they are an input to a resolution
+whose output carries `source: 'observed'` and a reason — so a learned reading can never silently replace a
+trusted one; and the memory is bounded and decays, because a style from a year ago should not outlive the
+current one. Register and detail are counted, and terminology deliberately is not: terminology is never
+silent, so a count of past turns would only ever be a third and weaker opinion.
+
+The phase's rule about explicit instructions outranking everything also settled the question §22 left open.
+`resolveLanguage` now reads an instruction _inside the message_ first (`به انگلیسی جواب بده`), then the
+stored setting, then the reading, and `requested` joins the closed list of sources at the top. When a
+stored choice was passed over the reason says so, which is the only way a later stage can tell that two
+explicit statements disagreed.
+
+### Guidance is a specification, and it cannot carry a fact
+
+The output of Task 3 is a set of wording instructions whose every string comes from a closed catalogue in
+the file: the tone, depth, terminology style and structure are closed vocabularies, the notes are **ids**
+the response layer resolves against `GUIDANCE_NOTES`, and even the `reason` is assembled from
+`GUIDANCE_CLAUSES` rather than from the readings — which matters, because _a reading's_ reason quotes the
+message, and guidance that quotes the message is guidance that can drift into restating it.
+
+The suite turns that into two measurements. A message carrying a token that appears nowhere else cannot get
+that token into the guidance, and no string in a guidance contains a digit at all — so guidance cannot
+carry a number. And two messages whose facts differ but whose readings match produce **byte-identical**
+guidance, which is the mechanical form of the phase's real requirement: guidance may change wording,
+structure, depth, terminology and formality, and it may not change facts, calculations, tool results,
+permissions, safety rules, trading restrictions or uncertainty. `GUIDANCE_INVARIANTS` is exactly those
+seven and travels with every guidance; `GUIDANCE_FIELDS` is the closed field list the suite compares the
+produced object against, so a field added to carry a result fails here rather than reaching a model.
+
+The four cases the phase names come out as it describes them: Persian and technical is Persian with the
+product's own term forms and every figure verbatim, Persian and conversational is natural Persian with the
+bookish copula called out by name, English and technical is English with the product's English wording, and
+a mixed message keeps the English beside the Persian form instead of translating a term that has no Persian
+counterpart.
+
+### Verified
+
+- Both typechecks clean; `format:check` clean; `npm run build` and `npm run build:web` clean.
+- **1537** unit tests across **76** files (1514/75 before), including the new 22-test context suite and one
+  added case in the detection suite for the precedence change.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**, and the browser end-to-end suite
+  unchanged: nothing renders, no stylesheet changed, and the two cases §22 added still pass on the same
+  bundle.
+- No new dependency. `context.ts`, `communication.ts` and `guidance.ts` join `detect.ts` and `profile.ts` as
+  code the product ships but does not yet call, and the note catalogue is checked for reachability: every
+  note in it is produced by some message in the suite's corpus, so no instruction can sit in the catalogue
+  untested.

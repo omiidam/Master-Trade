@@ -28,6 +28,13 @@
  *   - `profile.ts` — the same reading as one value a later stage consumes, plus the precedence rule
  *                   between a person's explicit choice and what their message looks like.
  *   - `preference.ts` — the choice itself, and where it is kept (not in the knowledge store).
+ *   - `context.ts` — Phase 7.5.3.2's reading of an interaction: whether the turn is work or small talk,
+ *                   how much of it is the product's vocabulary, how much detail it wants, whether it is
+ *                   asking or telling, and how the two scripts are mixed.
+ *   - `communication.ts` — those readings plus the person's choices, resolved into one profile by the
+ *                   rule that an explicit instruction outranks the message, which outranks history.
+ *   - `guidance.ts` — the structured wording instructions a response stage applies, and the list of
+ *                   things they are not allowed to change.
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
  *
  * Nothing here renders, and the interface is still English: the layer is not a translation (Phase
@@ -205,6 +212,82 @@ export type {
   LanguagePreferenceReading,
   PreferenceStorage,
 } from './preference.js';
+
+export {
+  CONTEXT_CONCISE_REQUESTS,
+  CONTEXT_DETAILED_REQUESTS,
+  CONTEXT_DIMENSIONS,
+  CONTEXT_DISCOURSE_CONNECTIVES,
+  CONTEXT_EXPERTISES,
+  CONTEXT_FORMAL_REQUESTS,
+  CONTEXT_GREETINGS,
+  CONTEXT_INFORMAL_REQUESTS,
+  CONTEXT_INTENTS,
+  CONTEXT_MIXINGS,
+  CONTEXT_SETTINGS,
+  CONTEXT_VERSION,
+  analyzeCommunication,
+  contextReadings,
+} from './context.js';
+export type {
+  CommunicationContext,
+  CommunicationContextOptions,
+  ContextDepth,
+  ContextDimension,
+  ContextExpertise,
+  ContextIntent,
+  ContextMixing,
+  ContextReading,
+  ContextSetting,
+} from './context.js';
+
+export {
+  COMMUNICATION_OBSERVATION_KEY,
+  COMMUNICATION_VERSION,
+  OBSERVATION_MINIMUM,
+  OBSERVATION_WINDOW,
+  PREFERENCE_SOURCES,
+  TERMINOLOGY_REQUESTS,
+  TERMINOLOGY_STYLES,
+  communicationProfile,
+  dominantObservation,
+  emptyObservations,
+  mergeObservations,
+  observeCommunication,
+  parseObservations,
+  readCommunicationObservations,
+  resolveCommunication,
+  writeCommunicationObservations,
+} from './communication.js';
+export type {
+  CommunicationObservations,
+  CommunicationProfile,
+  CommunicationProfileOptions,
+  ObservationReading,
+  PreferenceReading,
+  PreferenceSource,
+  TerminologyStyle,
+} from './communication.js';
+
+export {
+  GUIDANCE_CLAUSES,
+  GUIDANCE_FIELDS,
+  GUIDANCE_INVARIANTS,
+  GUIDANCE_NOTES,
+  GUIDANCE_STRUCTURES,
+  GUIDANCE_TONES,
+  GUIDANCE_VERSION,
+  guidanceFor,
+  responseGuidance,
+} from './guidance.js';
+export type {
+  GuidanceClauseId,
+  GuidanceInvariant,
+  GuidanceNoteId,
+  GuidanceStructure,
+  GuidanceTone,
+  ResponseGuidance,
+} from './guidance.js';
 
 export { COMPOUND_PAIRS, REGISTER_FORMS, SPELLING_RULES } from './spelling.js';
 

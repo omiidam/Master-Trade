@@ -554,6 +554,104 @@ primary/secondary variant. It is **not** a UI translation, and nothing here acti
 user-facing language: the browser suite asserts `document.documentElement.lang` is still `en` after
 Persian has been chosen, because the switch sets the language of the _answer_.
 
+## Phase 7.5.3.2 — the context, the preferences, and the guidance
+
+Three modules, one extension, and one deliberate refusal. `context.ts` reads what the _interaction_ looks
+like rather than what the message _is_; `communication.ts` resolves four preferences from four sources with
+a stated order; `guidance.ts` turns that into wording instructions a response stage can apply. The refusal
+is the fourth: no engine, no prompt text, no model call and no tone-of-voice library — the phase says the
+adaptive response system is a later sub-phase, and the way to keep that true is to ship the structured
+input and stop.
+
+### The six dimensions, and which of them are new
+
+| dimension     | where it comes from                                                                   |
+| ------------- | ------------------------------------------------------------------------------------- |
+| `formality`   | 7.5.3.1's register, carried with its markers and its confidence — never recomputed    |
+| `setting`     | new: small talk or work, from greetings, markers and the subject matter               |
+| `expertise`   | new: a gradation of how much of the message is the product's vocabulary               |
+| `depth`       | new: what was _asked for_ over how long the message happens to be                     |
+| `intent`      | 7.5.3.1's style, plus `discussion` for a statement that is making a point             |
+| `terminology` | new: how Persian and English are mixed, which is what decides whether a term survives |
+
+Two of the six are the earlier phase's answers, and carrying them rather than re-deriving them is the point:
+formality _is_ the register, and a second opinion about politeness is a second thing for the interface to
+disagree with. The suite asserts they agree.
+
+`setting` and `formality` are separate dimensions because they answer different questions, and the case that
+proves it is `سلام، حد ضرر را چک کن` — a greeting (conversational) around a work request (professional), in
+the informal register. The two readings are both right, and a single "tone" value would have had to pick
+one. When the two countable readings tie, the tie is broken by **the subject matter** — the one signal that
+is content rather than phrasing — and a tie with no subject in it stays unresolved rather than becoming a
+coin toss.
+
+`expertise` is measured as _density_, and the honest consequence is that `حد ضرر چیه؟` reads as **technical
+wording**: three words, one of which is a concept. That is a fact about the sentence. It is not a claim
+about the person, which is why the same message is simultaneously a _question asked in plain wording about
+the product's subject_ — the two dimensions disagree on purpose, and the response stage needs both.
+
+### Four sources, and the one ordering that matters
+
+Explicit instruction → the message → what previous turns looked like → the default. The interesting
+ordering is the middle one, and it is argued in the file rather than left implicit: **the message is
+evidence about this turn, a learned preference is evidence about the person's standing style, and the
+standing style is only consulted where the turn is silent.** Both directions are asserted, because only one
+of them is the interesting one: a learned `informal` does not soften a message that carries formal markers,
+and it does fill in for a message that claims no register at all.
+
+What is learned is a **histogram of closed-vocabulary readings** — register and detail counts, sample count,
+and nothing else. There is no field for a message, a word from one, a user, a session or a time, and the
+suite walks the stored value and requires every leaf to be a number. That is the property that makes a
+learned store reviewable: a count of _how_ somebody writes cannot become a record of _what_ they wrote, and
+it cannot hold a credential. Three further consequences are deliberate:
+
+- **Nothing writes a preference from those counts.** There is no path from the histogram to a stored
+  setting; the counts are an input to a resolution whose output is labelled `source: 'observed'` with the
+  8-of-8 arithmetic in its reason. A learned reading therefore cannot silently replace a trusted one.
+- **The memory is bounded.** Past `OBSERVATION_WINDOW` turns the counts are halved and the sample count with
+  them, so a style from a year ago does not outlive the current one and the store cannot grow without limit.
+- **A tie is a tie.** `informal 3, neutral 3` is somebody whose turns change, so it resolves to nothing
+  rather than to whichever value sorts first.
+
+The learned store lives beside the language setting (`master-trade.language.observations`) and not in
+`LanguageMemory`: cited, reviewed, shared knowledge about Persian is a different kind of thing from a
+per-user count of turns.
+
+### Terminology balance is folded into terminology style, on purpose
+
+The phase lists "preferred terminology style" and "Persian/English terminology balance" as two preferences.
+They are one dimension here — `product-terms`, `english-terms`, `bilingual` — because two fields can
+contradict each other: `product-terms` with "keep the English too" is not a third setting, it is a
+contradiction, and a response stage handed a contradiction invents a rule nobody can explain. The single
+dimension is decided from the message's own mixing (a Persian reply to a person writing whole English
+clauses keeps the English beside our form) and from an explicit request for the terms themselves, which
+outranks both.
+
+### Guidance, and the list of things it may not touch
+
+`responseGuidance` is a pure total function from a resolved profile to a specification of _wording_: a tone,
+a depth, a terminology style, a structure, and a list of note ids. Every string it can produce comes from a
+closed catalogue in the file — the notes, the clauses the reason is assembled from, the tone and structure
+vocabularies — so a message's own words cannot reach it. The suite proves that twice: a token that appears
+nowhere else cannot get into the guidance, and no string in a guidance contains a digit, so guidance cannot
+carry a figure.
+
+`GUIDANCE_INVARIANTS` is the list the phase names — facts, calculations, tool results, permissions, safety
+rules, trading restrictions, uncertainty — and it travels with every guidance rather than living in a
+document, because the thing that must not change is the thing a response stage is most likely to change
+while "just rewording": a rounded figure, a softened uncertainty, an implied permission. The mechanical
+form of that promise is that the guidance has no field, no note and no reason a value could sit in, and the
+suite asserts the produced object's field names against a closed list.
+
+### The switch's precedence rule, settled
+
+7.5.3.1 left one question open and named it: an explicit request _inside_ the message was read and then
+outranked by the stored setting. The phase's own rule — explicit instructions above learned or stored
+preferences — answers it, so `resolveLanguage` now reads the request first, `requested` joins
+`REPLY_SOURCES` at the head of the precedence list, and the reason says when a stored choice was passed
+over. A request for a _term_ is not a request for a language, and that distinction is now a rule of its own
+(see below), because the two are one word apart in Persian.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -568,6 +666,45 @@ malformed code is still shown as itself so the mistake stays visible. Regression
 
 The English path is untouched by this: `labels.ts#formatMoney` is a different function with a different
 caller contract, and its behaviour is asserted unchanged by the same suite.
+
+### 7.5.3.2: six defects, and the pattern in them
+
+Running the new readings on a corpus of real turns turned up six things, and four of them are the same kind
+of mistake: a count that was right about the tokens and wrong about the language.
+
+1. **An English message's own vocabulary was invisible.** `termsIn` matched a term's Persian forms only, so
+   `Should I move my stop-loss to break-even?` read as _general_ wording and an _unclear_ setting — the
+   exact case the phase's "English + technical" example is built on. The English side of a term is this
+   product's vocabulary just as much as the Persian side is (the lexicon calls that field "the English the
+   product already shows"), so it is matched too, case-insensitively.
+2. **The mixed-script reader counted tokens instead of phrases.** `قیمت XAUUSD ... Risk/reward is 2.6.` came
+   out as `stray` — a word or two — because two of the three Latin words in the clause are our vocabulary
+   and only `is` was left over. A whole English clause was being read as a stray word. The reader now takes
+   _runs_ of Latin and asks how long the run containing a non-vocabulary word is; `is` is what makes
+   `Risk/reward is` a clause, and the reading now says so.
+3. **One instruction counted as two, and turned into none.** The closed list contains both `رسمی` and
+   `رسمی بنویس`, and the rule that a message asking two contradictory things gets neither meant
+   `این را رسمی بنویس` — one clear request — resolved to _no_ request. Requests are now collected as
+   **values** rather than as matches, so two entries that ask for the same style are one request.
+4. **A duplicated signal let a greeting outvote the subject.** `hey` is both a greeting and an informal
+   English marker, so a casual work question counted two conversational signals against one work signal and
+   read as small talk. Signals are de-duplicated, the tie is broken by the subject matter rather than by
+   phrasing, and the two English cases now read as work.
+5. **A request for a term was read as a request for a language.** `این را با معادل فارسی بگو` asks for the
+   Persian _word_ for something, and 7.5.3.1's `فارسی بگو` pattern read it as "answer me in Persian" — a
+   language request that was never made, against a setting the person did choose. The distinction is the
+   words `معادل`, `واژه`, `کلمه` and `برابر`, so it is checked as those words, from both directions.
+6. **A Persian imperative at the end of a sentence was not seen at all.** `حد ضرر را ... ببند.` was a
+   _statement_, because the clause-final verb list only had four verbs. It is now a closed list of the
+   imperatives this product's own vocabulary takes — `بگذار`, `ببند`, `بفرست`, `بخر`, `بفروش`, `بزن`,
+   `بساز` — checked as whole final words, so `بازار` is not the imperative `باز`.
+
+A seventh defect was found by reading the resolver rather than by running it: **the learned store had a
+terminology dimension that nothing ever wrote.** The counts were consulted and never recorded, so that
+branch could not fire. It was removed rather than wired up, and the reasoning is the interesting part —
+register and detail are the dimensions where a standing style is worth knowing _and_ the current turn can be
+silent about it, while terminology is decided by the script mixing in the message in front of you. A
+counter for it would have been a third, weaker opinion with no gap to fill.
 
 ### 7.5.3.1: two defects in the reading, and one in the check on it
 
@@ -646,7 +783,19 @@ correction-replay reconstruction, determinism and idempotence, the English corpu
 promote → runs path, the deprecate → stops path, `approveForm` and its refusal, the agent-proposal
 parking path, and a snapshot round trip that keeps all three decisions.
 
-Phase 7.5.3.1 adds `tests/language-detection.test.ts` — 23 tests over the reading rather than over the
+Phase 7.5.3.2 adds `tests/language-context.test.ts` — 22 tests over the interaction rather than over a
+single message. The context: the register reading asserted to be 7.5.3.1's own, work against small talk
+with the tie-break named, the wording gradation including the short question that reads as technical by
+density, the explicit request for more or less detail and the message that asks both ways, `discussion`
+against the three shapes it extends, and the four mixing readings with the healthy case and the stray word
+told apart. The preferences: the priority order asserted in both directions, the learned store walked leaf
+by leaf to prove every leaf is a number, the window and the minimum, the tie that stays a tie, a store that
+round-trips and a store that throws, and the in-message request passing over a stored choice. The guidance:
+the four cases the phase names, the closed field list, the seven invariants, no digit in any string, a
+token that cannot leak into it, two messages whose facts differ producing identical guidance, and a
+completeness case that requires every note in the catalogue to be reachable.
+
+Phase 7.5.3.1 adds `tests/language-detection.test.ts` — 24 tests over the reading rather than over the
 knowledge. Detection: Persian, English, the two mixed messages, the technical sentence, the spoken and the
 written register, the three styles and the band that is neither, Finglish including the two cases where
 the honest answer is `en`, the five explicit language requests and the one message _about_ a language that
@@ -677,7 +826,9 @@ stays English, and that all three options fit 375 px without panning the page.
 
 The four Persian suites are **132 tests** together: 46 for the store and the locale, 26 for the
 correction pipeline, 28 for the lexicon, and 32 for grammar, spelling and the QA pipeline. The language
-analysis of 7.5.3.1 adds 23 more in a fifth suite, `tests/language-detection.test.ts`.
+analysis adds 46 more across two suites: 24 in `tests/language-detection.test.ts` for the reading of a
+message and the switch, and 22 in `tests/language-context.test.ts` for the interaction, the preferences
+and the guidance.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
@@ -687,6 +838,7 @@ npx vitest run tests/persian-normalization.test.ts   # 7.5.2.1: the correction p
 npx vitest run tests/persian-terminology.test.ts     # 7.5.2.2: the lexicon
 npx vitest run tests/persian-qa.test.ts              # 7.5.2.3: grammar, spelling, the pipeline
 npx vitest run tests/language-detection.test.ts      # 7.5.3.1: the reading, the profile, the switch
+npx vitest run tests/language-context.test.ts        # 7.5.3.2: the context, the preferences, the guidance
 npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```
