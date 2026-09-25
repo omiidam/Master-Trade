@@ -8,7 +8,10 @@
  *
  *   - **Character normalization** (`normalizePersianText`) — the folds that make two visually
  *     identical strings the same string: the Arabic yeh and kaf onto their Persian letters, the
- *     Arabic-Indic digits onto the Persian set, and the removal of the marks Persian does not write.
+ *     Arabic presentation forms onto their base letters, the Arabic-Indic digits onto the Persian
+ *     set, and the removal of the marks Persian does not write. It is an *identity* pass over one
+ *     string; the content pipeline that corrects mixed Persian and technical text is `normalize.ts`,
+ *     and the difference between the two is deliberate — see both contracts below.
  *   - **Digits in both directions** (`toPersianDigits`, `toLatinDigits`) — because a Persian reader
  *     wants ۳۳۴۵ in prose and a machine, a clipboard and a search box want 3345.
  *   - **Separators, punctuation and numbering** as *constants* (`PERSIAN_DECIMAL_SEPARATOR` and
@@ -103,13 +106,33 @@ export const BIDI_CONTROLS = {
   popDirectionalIsolate: '\u2069',
 } as const;
 
-/** The Arabic letters that Persian does not write, and their Persian counterparts. */
+/**
+ * The Arabic script, for the compatibility fold below.
+ *
+ * Scoped rather than applied to the whole string, because NFKC is a *text-wide* operation by nature:
+ * run it over Latin text and it happily rewrites full-width digits and the `fi` ligature, which is a
+ * change to English this phase has no reason to make (Phase 7.5.2.1 explains the same choice in
+ * `rules.ts`).
+ */
+const ARABIC_SCRIPT = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+/gu;
+
+/**
+ * The Arabic letters that Persian does not write, and their Persian counterparts.
+ *
+ * `\u06AA` and `\u06AB` are the two kaf variants — SWASH KAF and KAF WITH RING — added in Phase
+ * 7.5.2.1. They are the one pair here that Unicode keeps as distinct letters rather than spelling as
+ * a form of another, so this fold is a product decision stated as `orthography.kaf-variants` in
+ * `seed.ts`, not a Unicode mapping. It can be retired by deprecating that entry.
+ */
 const LETTER_FOLDS: readonly (readonly [string, string])[] = [
   // ARABIC LETTER YEH and ARABIC LETTER ALEF MAKSURA → ARABIC LETTER FARSI YEH.
   ['\u064A', '\u06CC'],
   ['\u0649', '\u06CC'],
   // ARABIC LETTER KAF → ARABIC LETTER KEHEH.
   ['\u0643', '\u06A9'],
+  // ARABIC LETTER SWASH KAF and ARABIC LETTER KAF WITH RING → ARABIC LETTER KEHEH.
+  ['\u06AA', '\u06A9'],
+  ['\u06AB', '\u06A9'],
 ];
 
 /**
@@ -174,15 +197,23 @@ function digitIndex(character: string): number {
  *
  * This is an *identity* operation, not a display one: two strings that a reader sees as the same
  * word should compare equal, hash equal and match in a search index. So it folds the Arabic letters
- * Persian never writes, the Arabic-Indic digits, the marks and the tatweel — and it **keeps** the
- * ZWNJ, the digits that are already Persian, and anything Latin. A technical figure inside the text
- * survives it untouched, which is what makes it safe to run over mixed content.
+ * Persian never writes, the Arabic presentation forms onto their base letters (Unicode NFKC, scoped
+ * to the Arabic script), the Arabic-Indic digits, the marks and the tatweel — and it **keeps** the
+ * ZWNJ, the digits that are already Persian, and anything Latin.
+ *
+ * Two things are worth saying about the digits, because Phase 7.5.2.1 sharpened the question. This
+ * function folds *every* digit it finds, Latin ones included, because its caller is asking whether
+ * two strings are the same string and a number written in Persian digits is the same number. What it
+ * is **not** is a display pass: a figure that must stay `3345.20` is the business of
+ * `normalizePersianContent` in `normalize.ts`, which decides per figure by asking what the text
+ * around it is. The split matters — running this one over `XAUUSD 3345.20` to "tidy" a screen would
+ * corrupt a price, and it is the reason the two functions exist rather than one with a flag.
  *
  * Idempotent by construction: every rule maps onto a value the rules leave alone, which the suite
  * asserts rather than assumes.
  */
 export function normalizePersianText(input: string): string {
-  let output = input;
+  let output = input.replace(ARABIC_SCRIPT, (run) => run.normalize('NFKC'));
   for (const [from, to] of LETTER_FOLDS) {
     output = output.split(from).join(to);
   }

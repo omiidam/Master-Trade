@@ -121,9 +121,10 @@ Two things were considered and **left out**, rather than half-done:
 - **Arabic teh marbuta U+0629 → heh.** Common in practice, but it is a word-level decision in some
   words and a letter-level one in others; it belongs in the store as a reviewed rule with examples,
   not in a normalizer as a letter table.
-- **ZWNJ _placement_.** Writing `میرود` correctly is word-level Persian typography. This phase keeps
+- **ZWNJ _placement_.** Writing `میرود` correctly is word-level Persian typography. Phase 7.5.1 keeps
   the ZWNJ exactly as it found it (only an edge or space-adjacent one is dropped, where it joins
-  nothing) and does not invent placement rules.
+  nothing) and does not invent placement rules. Phase 7.5.2.1 automates the same _hygiene_ half and
+  **reports** the placement half — see below — rather than guessing.
 
 ### The technical-figure rule
 
@@ -216,6 +217,109 @@ mentioned in a phase brief. Recorded as deferred with that trigger.
   stage 12 for the language boundary (an agent proposal reaching interface copy, a snapshot smuggling
   an untrusted entry) is a natural next step and is _not_ part of this phase.
 
+## Phase 7.5.2.1 — the correction pipeline
+
+Phase 7.5.1 answered _"are these two strings the same string?"_ — `normalizePersianText`, an identity
+pass over one string. This phase answers a different question, _"is this text written the way Persian is
+written?"_, and the difference is context. Two new modules hold it: `web/src/language/rules.ts` (the
+catalogue) and `web/src/language/normalize.ts` (the pipeline and its report).
+
+### Text is runs, not a document
+
+A rule asks what it is looking at before it decides. Three contexts exist, and the third is the one that
+makes the other two safe:
+
+| Context        | What it is                                                                                         | Who may edit it                                            |
+| -------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Technical span | a URL, an email, a path or slash token (`BTC/USDT`), a code span, a dotted identifier (`index.ts`) | nobody, ever                                               |
+| Numeric span   | a figure with a separator: `3345.20`, `2026-09-19`, `1:3`, `۱۲٬۳۴۵٫۶۷`                             | the digit rules, and only a _bare_ figure in Persian prose |
+| Prose          | everything else                                                                                    | the Persian rules, each guarded by its own neighbours      |
+
+Prose is where the interesting decision lives, and it is deliberately not a flag. A mark is folded only
+when the **nearer of its two neighbouring letters is Persian**, which is why `quote, said the shell` keeps
+its comma and `نسبت ریسک 1:3` keeps its colon while `قیمت ورود 3345 است` reads as `قیمت ورود ۳۳۴۵ است`. A
+tie goes to Persian (a bare figure inside a Persian sentence is the commoner case); text with no letter
+on either side is left alone, because a normalizer that decides what a string _means_ is the thing this
+layer exists to prevent.
+
+The split from Phase 7.5.1 is now load-bearing, and the suite asserts it: `normalizePersianText` still
+folds every digit, because a comparison key wants `3345` and `۳۳۴۵` to be one number — and
+`normalizePersianContent` leaves `XAUUSD 3345.20` alone, because a screen that reformats a price corrupts
+it. 7.5.1's docstring claimed the identity pass was "safe to run over mixed content"; that claim was
+false for digits, and it is now replaced by the honest two-function contract.
+
+### The rules
+
+Nineteen rules in five kinds — six character folds (including Unicode NFKC **scoped to Arabic script**,
+so the `fi` ligature and full-width digits in English text stay as they are), two digit rules, four
+spacing rules, four ZWNJ rules, two punctuation rules, and two that only report.
+
+- **Character**: the Arabic yeh/alef maksura, the Arabic kaf, the two kaf variants (swash kaf and kaf
+  with ring, the one fold here that is a product decision rather than a Unicode mapping), the presentation
+  forms, the tatweel, the vowel marks.
+- **Digit**: Arabic-Indic → Persian. A figure carrying a separator is a technical figure and keeps Latin
+  digits; a bare figure in Persian prose does not; and where the text is ambiguous, nothing is decided.
+- **Spacing**: horizontal runs collapse, line-trailing whitespace goes, no space before a mark, exactly
+  one after it. Newlines, blank lines and **indentation** are structure and are never touched — the suite
+  asserts an indented block survives byte for byte.
+- **ZWNJ**: runs collapse, a ZWNJ beside a space or at an edge goes (it joins nothing), and every ZWNJ
+  between two letters stays exactly where it was.
+- **Punctuation**: `, ; ?` → `، ؛ ؟` in Persian prose; the percent sign **follows its figure**, because
+  that is what CLDR does — `fa-IR` emits U+066A beside Persian digits and `fa-IR-u-nu-latn` emits `%`
+  beside Latin ones, so `۲٫۵%` becomes `۲٫۵٪` and `2.5%` does not change at all.
+
+### What it refuses to fix, and why that is the design
+
+Two rules only report. The load-bearing one is `zwnj.attach-candidate`: a space where Persian writes a
+half-space — after `می`/`نمی`, before `ها`/`های`/`تر`/`ترین` — is found and handed to a reviewer. It is
+not corrected because the same letters are also words of their own (`می` is _wine_; `تر` is _wetter_), and
+telling a prefix from a noun needs a lexicon this phase does not have and would not want to guess at. The
+entry that authorises it, `rule.zwnj-placement`, carries `confidence: 0.7` — that uncertainty recorded
+rather than hidden.
+
+Everything the pipeline writes is reported exactly: which rule, which version of it, which knowledge key
+authorised it, the offset, and the characters it replaced. Nothing is passed through a rewritten blob,
+so a correction can be reviewed without diffing two strings.
+
+### `@persian-tools/persian-tools`, re-checked
+
+7.5.1 recorded that the library's `fixHalfSpace` was **rejected on provenance** and named this phase as
+the one where the question would come back. It came back, and the answer is unchanged — for a reason this
+phase could now demonstrate rather than predict. `fixHalfSpace` decides placement with a private rule
+table; a pipeline that called it would be adopting a third party's unpublished orthography as ours, and
+the report would have nothing honest to cite. What this phase has instead is a rule that _finds_ the same
+cases and hands them to a reviewer, which is what makes the half-space question answerable at all.
+
+The library's character folds (`arabicToPersian`-style conversions) are the other tempting overlap, and
+they are three mapping lines here, each one cited to a Unicode code point and each one already stored as
+knowledge. Neither is worth a dependency, and the trigger that would change that is unchanged too:
+Persian spoken-word forms — a number read aloud, a date in words — which still have no caller.
+
+### How it is governed
+
+The catalogue is data, and each rule names the **language-memory key** that authorises it. The gate is
+the store from 7.5.1:
+
+- a rule runs only while that key holds a **trusted** entry — `proposed` and `validated` are not enough,
+  because a correction changes text a reader sees;
+- an **agent proposal cancels nothing and enables nothing**: the suite proposes a rule entry from
+  `agent-proposal`, proves the pipeline ignores it, then has a human reviewer accept it and proves the
+  rule starts working;
+- **deprecating** an entry retires its rule with no code change — the suite retires the spacing rules and
+  watches the text stop being corrected, while the character rules on other keys keep working;
+- a trusted **`exception`** entry contributes protected literals (its `examples`), which is the mechanism
+  for the string a normalizer is right about in general and wrong about here. No exception is _seeded_,
+  because none is justified yet; the mechanism and its test are the hook, and the fix for a future
+  false positive is knowledge rather than a branch.
+
+`authorisedRules`, `protectedLiterals` and `normalizationRuleKeys` are exported so a review tool, a build
+step or a later phase can ask the same questions this pipeline asks.
+
+One extension is named rather than half-built. Making the half-space rules **automatic** needs a
+word-level `from → to` pair in the schema; today's `mapping` is deliberately one code point in, one code
+point or nothing out, and widening it would break the invariant Phase 7.5.1 asserts (`normalizePersianText(mapping.from) === mapping.to`).
+The trigger is a reviewed entry per pattern, and the schema change lands with it, not before.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -237,6 +341,13 @@ The contract suite is `tests/persian-language.test.ts` — 46 tests over the sto
 update path, the locale's agreement with CLDR, normalization idempotence, bidi isolation, the sealed
 font, and the English formatters producing exactly what they produced.
 
+Phase 7.5.2.1 adds `tests/persian-normalization.test.ts` — 26 tests whose first case refuses to pass if a
+rule in the catalogue has no regression case of its own. Beyond the per-rule cases: a corpus of English,
+symbols, URLs, paths, identifiers and figures comes out byte-identical with an empty change list; the
+whole corpus is normalized twice and asserted idempotent and deterministic; the four governance paths
+above are exercised end to end; and the RTL-safety test keeps an isolated signed figure sign-first and
+asserts the pipeline never writes a bidi control of its own.
+
 The browser suite's `the Persian language foundation, in a browser` section adds two measurements it
 could not make in source: **zero** requests for the Persian face before a Persian element exists and a
 real, glyph-covering fetch the moment one does; and a signed figure painted sign-first inside a
@@ -246,7 +357,8 @@ page.
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
 npm run fonts:check       # re-hash what is vendored, write nothing
-npx vitest run tests/persian-language.test.ts   # this phase's contract suite
+npx vitest run tests/persian-language.test.ts        # 7.5.1: the store, the locale, the font
+npx vitest run tests/persian-normalization.test.ts   # 7.5.2.1: the correction pipeline
 npm run test:e2e          # the browser suite, including both measurements above
 npm run validate          # the full gate
 ```

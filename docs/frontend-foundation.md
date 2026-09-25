@@ -1417,3 +1417,77 @@ currency to claim`, and the English `formatMoney` path is untouched.
 - Desktop, tablet and phone are unchanged: the seven-viewport "never scrolls sideways" sweep
   (1920/1440/1024/768/430/390/375), the touch-target sweep and the RTL mirror check all pass against the
   same bundle that carries the new face and the new stylesheet rule.
+
+## 19. Phase 7.5.2.1 — Persian that is normalized before anyone has to fix it by hand
+
+Phase 7.5.1 built the store and the locale; this phase is the _correction_ layer over them, and it is two
+new modules with no UI of their own — `web/src/language/rules.ts` (nineteen rules, in five kinds) and
+`web/src/language/normalize.ts` (the pipeline and its report). Nothing imports them from the interface
+yet: no screen is translated, so nothing in the product calls them, and the whole phase costs the running
+application zero bytes. The full record is in `docs/persian-language.md`; the contract suite is
+`tests/persian-normalization.test.ts` (26 tests).
+
+### The question that makes it a different job from 7.5.1
+
+`normalizePersianText` (7.5.1) answers _"are these two strings the same string?"_ and folds every digit
+to do it. `normalizePersianContent` (this phase) answers _"is this text written the way Persian is
+written?"_ over mixed content, and it must therefore know **where** it is: a URL, an email, a path or
+slash token (`BTC/USDT`), a code span, a dotted identifier (`index.ts`) and a figure with a separator
+(`3345.20`, `2026-09-19`, `1:3`) are runs nothing may edit. The suite asserts the split directly —
+`normalizePersianText('XAUUSD 3345.20')` folds, `normalizePersianContent('XAUUSD 3345.20').text` does
+not — because 7.5.1's docstring claimed the identity pass was "safe to run over mixed content", and for
+digits that claim was false. It is replaced by the honest two-function contract rather than a flag.
+
+Context is decided by neighbours rather than by a flag: a mark is folded only when the nearer of its two
+neighbouring letters is Persian, so `quote, said the shell` keeps its comma and `نسبت ریسک 1:3` keeps its
+colon while `قیمت ورود 3345 است` becomes `قیمت ورود ۳۳۴۵ است`. Ties go to Persian; text with no letter on
+either side is left exactly as given.
+
+### What it fixes, and what it only reports
+
+Fixed: the six character folds (including NFKC **scoped to the Arabic script**, so `fi` and `２` in
+English text are untouched), Arabic-Indic → Persian digits, digit shape by context, four spacing rules
+(never touching newlines, blank lines or indentation), four ZWNJ hygiene rules (a ZWNJ beside a space or
+at an edge joins nothing; one between two letters is never touched), and the Persian comma/semicolon/
+question mark plus a percent sign that **follows its figure**, which is what CLDR itself does
+(`fa-IR` → U+066A, `fa-IR-u-nu-latn` → `%`).
+
+Reported and not fixed: the half-space that Persian writes and a space that a typist wrote — after
+`می`/`نمی`, before `ها`/`های`/`تر`/`ترین` — because the same letters are also words of their own, and a
+figure wearing Persian digits beside a technical token. Those are the two `report` rules; the entry that
+authorises the first carries `confidence: 0.7`, so the uncertainty is stored rather than hidden.
+
+### The learnable half, wired rather than described
+
+Every rule names the language-memory key that authorises it, and the pipeline asks the store:
+
+- a rule runs only while its key holds a **trusted** entry (`proposed` and `validated` are not enough —
+  a correction is text a reader sees);
+- an **agent proposal enables nothing**: the suite proposes a rule's entry from `agent-proposal`, proves
+  the text is untouched, has a human reviewer accept it, and proves the rule starts working;
+- **deprecating** an entry retires its rule with no code change, while rules on other keys keep working;
+- a trusted **`exception`** entry contributes protected literals — the mechanism for the string a
+  normalizer is right about in general and wrong about here. None is seeded, because none is justified
+  yet; the mechanism and its test are the hook.
+
+Making the half-space rules _automatic_ needs a word-level `from → to` pair in the schema; today's
+`mapping` is one code point in, one code point or nothing out, and widening it would break the invariant
+7.5.1 asserts. The trigger is a reviewed entry per pattern, and the schema change lands with it.
+
+### Verified
+
+- Both typechecks clean; `format:check` clean.
+- **1431** unit tests across **72** files (1405/71 before), including the new 26-test pipeline suite: one
+  regression case per rule with a first test that fails if a rule ships without one, a corpus of English,
+  symbols, URLs, paths, identifiers and figures that comes out byte-identical with an empty change list,
+  idempotence and determinism over the whole corpus, the four governance paths, and an RTL-safety case.
+- `npm run build` and `npm run build:web` clean; `npm run desktop:verify` **0 errors, 4 warnings across 51
+  checks** (unchanged).
+- **30** browser end-to-end cases, up from 29. The new one runs the pipeline in Node and paints its output
+  in the browser at 390×844 inside a `dir="rtl"`, `lang="fa"` wrapper: the painted text equals the
+  corrected text, the technical figure inside it renders as a real run, and the paragraph neither exceeds
+  the viewport nor pans the page. The seven-viewport sideways sweep, the touch-target sweep and the RTL
+  mirror check all still pass, on the same bundle, with no component or stylesheet change in this phase.
+- The rules were run over deliberately broken Persian as well as correct Persian, including a mixed
+  paragraph (`XAUUSD در تایمفریم ۱ ساعته، 3345.20 را شکست و R آن 2.60 بود.`) that the pipeline reports as
+  already correct — no change, no finding, which is the answer that matters for a paragraph a human wrote.

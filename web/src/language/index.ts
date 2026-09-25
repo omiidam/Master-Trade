@@ -10,6 +10,9 @@
  *                   change it.
  *   - `fa.ts`     — the locale foundation: normalization, digits, separators, bidi isolation, and
  *                   the `Intl`-backed formatters. Knows nothing about trust and holds no copy.
+ *   - `rules.ts`  — the correction catalogue of Phase 7.5.2.1: what each rule does, which store key
+ *                   authorises it, and which parts of a string it refuses to touch.
+ *   - `normalize.ts` — the pipeline those rules run in, and the report it produces.
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
  *
  * Nothing here renders, and nothing here is imported by the running interface yet: the interface is
@@ -59,6 +62,41 @@ export { LanguageMemory } from './memory.js';
 export type { LanguageDeprecation, LanguageProposalResult, LanguageReviewInput } from './memory.js';
 
 export { SEED_LANGUAGE_KNOWLEDGE, seededLanguageMemory } from './seed.js';
+
+export {
+  FIGURE_PATTERN,
+  NORMALIZATION_RULES,
+  NORMALIZATION_RULE_KINDS,
+  findSpans,
+  isBareNumber,
+  isPersianProse,
+  normalizationRule,
+  normalizationRuleKeys,
+  overlapsSpan,
+} from './rules.js';
+export type {
+  NormalizationEnforcement,
+  NormalizationFinding,
+  NormalizationRule,
+  NormalizationRuleKind,
+  RuleEdit,
+  RuleInput,
+  Span,
+  SpanKind,
+} from './rules.js';
+
+export {
+  authorisedRules,
+  isNormalizedPersian,
+  normalizePersianContent,
+  persianFindings,
+  protectedLiterals,
+} from './normalize.js';
+export type {
+  NormalizationChange,
+  NormalizationOptions,
+  NormalizationReport,
+} from './normalize.js';
 
 export {
   ARABIC_INDIC_DIGITS,

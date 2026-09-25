@@ -39,6 +39,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { NAV_SECTIONS } from '../../web/src/config/navigation.js';
+import { normalizePersianContent } from '../../web/src/language/index.js';
 import {
   ACCESSIBILITY_PROBE,
   CLIPPING_PROBE,
@@ -758,6 +759,59 @@ suite('the Product Foundation in a real browser', () => {
       expect(after.loaded).toBe(true);
       expect(after.coversText).toBe(true);
       expect(after.requests).toBeGreaterThan(0);
+    });
+
+    it('paints a corrected Persian paragraph without overflowing a phone', async () => {
+      // The correction pipeline runs here, in Node, and the browser paints exactly what it produced.
+      // Two claims in one measurement: the corrections (a Persian comma, a collapsed run, a figure
+      // left as a technical token) did not break the layout at phone width, and nothing in the
+      // paragraph escaped its own line to pan the page.
+      const corrected = normalizePersianContent(
+        'XAUUSD  \u062F\u0631 \u062A\u0627\u06CC\u0645 \u0641\u0631\u06CC\u0645 \u06F1 \u0633\u0627\u0639\u062A\u0647 , 3345.20 \u0631\u0627 \u0634\u06A9\u0633\u062A ?',
+      ).text;
+      const figure = '3345.20';
+      expect(corrected).toContain('\u060C');
+      expect(corrected).toContain(figure);
+
+      await session.setViewport(390, 844);
+      await session.goto(`${server.origin}/`);
+      const measured = await session.evaluateJson<{
+        overflow: number;
+        text: string;
+        figureWidth: number;
+        paragraphWidth: number;
+      }>(`
+        (() => {
+          const wrapper = document.createElement('div');
+          wrapper.dir = 'rtl';
+          wrapper.lang = 'fa';
+          const paragraph = document.createElement('p');
+          const corrected = ${JSON.stringify(corrected)};
+          const [before, after] = corrected.split(${JSON.stringify(figure)});
+          paragraph.append(document.createTextNode(before));
+          const span = document.createElement('span');
+          span.className = 'num';
+          span.textContent = ${JSON.stringify(figure)};
+          paragraph.append(span, document.createTextNode(after));
+          wrapper.append(paragraph);
+          document.body.append(wrapper);
+          const report = {
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            text: paragraph.textContent,
+            figureWidth: span.getBoundingClientRect().width,
+            paragraphWidth: paragraph.getBoundingClientRect().width,
+          };
+          wrapper.remove();
+          return JSON.stringify(report);
+        })()
+      `);
+
+      // The page really painted what the pipeline produced, the figure rendered as a real run, and
+      // the corrected paragraph fits the phone it was rendered on.
+      expect(measured.text).toBe(corrected);
+      expect(measured.figureWidth, 'the figure painted nothing').toBeGreaterThan(0);
+      expect(measured.paragraphWidth).toBeLessThanOrEqual(390);
+      expect(measured.overflow, 'the corrected paragraph panned the page').toBeLessThanOrEqual(0);
     });
 
     it('keeps a signed figure left-to-right inside a paragraph that is right-to-left', async () => {
