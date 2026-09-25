@@ -1925,3 +1925,62 @@ it was rewriting:
 7. **Seven test files asserted on English sentences that had moved into the catalogue.** They read through
    `tests/helpers/source-copy.ts`, which resolves the keys a file mentions into the English it renders, so
    each one still asserts what the surface _says_ rather than which id it says it with.
+
+## 25. Phase 7.5.3.4.1 — the language of the answer, and the boundary it crosses as data
+
+Phases 7.5.3.1–7.5.3.3 built the layer that _reads_ (a message, an interaction) and the layer that _renders_
+(the catalogue). This sub-phase is the first one that hands a **decision** to a model, and the interesting
+part of it is not the rule but where the rule can live: the signals are all in the interface process — a
+sentence a person typed, a setting in their own storage, a count of their own turns — and the prompt is
+built in the other one.
+
+### The two sides cannot share code, so they share a verdict
+
+`tests/monorepo-boundary.test.ts` holds the boundary one-way and in both directions: nothing under `src/`
+may import the frontend, and no frontend file may reach into `src/` by relative path. There is therefore no
+version of this phase in which `src/llm/prompt.ts` detects a language itself; doing that would be the second
+detection the phase forbids. What crosses is the resolved value, on the request that already exists:
+
+| Piece                         | Where                          | What it does                                                                                                        |
+| ----------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `responseControl`             | `web/src/language/response.ts` | Reads the message once, resolves `.reply` through the four signals, returns 7.5.3.2's `.guidance` for the same turn |
+| `storedResponseOptions`       | same file                      | The seam: the preference and the learned store read from the modules that own them, so no caller touches storage    |
+| `RESPONSE_LANGUAGES`          | `packages/shared/src/types.ts` | The two languages, as a shared vocabulary — asserted equal to the language layer's own list                         |
+| `responseLanguage`            | `agentChatBodySchema`          | Optional `fa` \| `en` on the turn request; absent means the prompt is byte-identical to before                      |
+| `withResponseLanguage`        | `src/llm/prompt.ts`            | The directive appended to the instruction text, or the text unchanged                                               |
+| `RESPONSE_LANGUAGE_DIRECTIVE` | same file                      | Two closed strings: the language, what the instruction may not change, and what cannot overrule it                  |
+
+The synchronous adapter has no prompt builder, so it receives the directive inside the instructions it
+already gets; the provider path receives it through `buildTurnMessages`. Both go through the same function, so
+the two paths cannot state the language differently.
+
+### Precedence, and the step that joined it
+
+`resolveLanguage` now reads four signals in the order the phase names: a request in the message, the explicit
+choice, what previous turns showed, then the reading. `observed` joined `REPLY_SOURCES` between the second
+and the third — above the reading because it is evidence about the person rather than about one sentence,
+below the choice because it is inferred and the choice is stated. The learned store gained the language
+dimension under the rules it already had: a minimum sample count, a tie is not a habit, counts halve past
+the window, and every leaf is still a number.
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1576** unit tests across **78** files (1554/77 before), including the new `tests/response-language.test.ts`
+  (22 tests) and the precedence list in `tests/language-detection.test.ts` updated to name `observed`.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**; the browser suite is unchanged at **32**
+  cases, because this phase renders nothing.
+- No new dependency, no new persistence key, and no field added to 7.5.3.1's profile: the learned step is an
+  input to the resolution, not a new claim about a person.
+
+### What verification found
+
+Two defects, both a chain with one more link than expected, both caught by reading the new code against its
+callers rather than by running it:
+
+1. **The guidance would have described an inferred decision as no decision at all.** `responseGuidance` maps
+   the reply's `source` to one of its closed clauses, and its chain was exhaustive over 7.5.3.1's four
+   sources — so `observed` fell through to `default-language`: _"Nothing was read and nothing was chosen"_,
+   on a turn that had been decided by a learned preference. `observed-language` is now a clause of its own.
+2. **`learnedLanguage` indexed a store a first run does not have.** Fine for a caller with a history and a
+   crash for the caller with none — which is every new installation. The parameter is now `| null`.

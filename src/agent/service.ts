@@ -24,6 +24,7 @@ import {
   DEFAULT_SAFETY_PROFILE,
   type EpistemicKind,
   type ModelStatement,
+  type ResponseLanguage,
   type SafetyProfile,
 } from '../../packages/shared/src/types.js';
 import {
@@ -197,6 +198,13 @@ export class AgentService {
       readiness?: AnalysisReadinessDecision | null;
       /** The structured capability result, echoed back on both outcomes. */
       capability?: CapabilityResult | null;
+      /**
+       * The language the answer is owed in, resolved by the caller that holds the signals.
+       *
+       * A wording instruction and nothing more: it reaches the prompt and stops there, so a refusal, a
+       * gated turn and a tool execution are all exactly what they were without it.
+       */
+      responseLanguage?: ResponseLanguage;
     } = {},
   ): Promise<AgentAsyncTurn> {
     const refusal = options.readiness === undefined ? null : refusalFor(options.readiness);
@@ -271,6 +279,8 @@ export class AgentService {
       readiness?: AnalysisReadinessDecision | null;
       /** The structured capability result, echoed back on both outcomes. */
       capability?: CapabilityResult | null;
+      /** The language the answer is owed in, resolved by the caller that holds the signals. */
+      responseLanguage?: ResponseLanguage;
     } = {},
   ): AgentTurn {
     const refusal = options.readiness === undefined ? null : refusalFor(options.readiness);
@@ -290,7 +300,11 @@ export class AgentService {
     }
 
     const readiness = options.readiness ?? null;
-    const outcome = this.orchestrator.run(message);
+    const outcome = this.orchestrator.run(message, {
+      ...(options.responseLanguage === undefined
+        ? {}
+        : { responseLanguage: options.responseLanguage }),
+    });
     if (outcome.status === 'blocked') {
       return {
         status: 'blocked',

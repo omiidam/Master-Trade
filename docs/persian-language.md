@@ -600,7 +600,7 @@ of them is the interesting one: a learned `informal` does not soften a message t
 and it does fill in for a message that claims no register at all.
 
 What is learned is a **histogram of closed-vocabulary readings** — register and detail counts, sample count,
-and nothing else. There is no field for a message, a word from one, a user, a session or a time, and the
+and, from Phase 7.5.3.4.1, the language each turn was answered in — and nothing else. There is no field for a message, a word from one, a user, a session or a time, and the
 suite walks the stored value and requires every leaf to be a number. That is the property that makes a
 learned store reviewable: a count of _how_ somebody writes cannot become a record of _what_ they wrote, and
 it cannot hold a credential. Three further consequences are deliberate:
@@ -652,6 +652,10 @@ preferences — answers it, so `resolveLanguage` now reads the request first, `r
 over. A request for a _term_ is not a request for a language, and that distinction is now a rule of its own
 (see below), because the two are one word apart in Persian.
 
+Phase 7.5.3.4.1 added one step to that list — what previous turns showed — between the explicit choice and
+the reading. It is argued in this phase's own section below, and what matters here is that the extension
+was a member of the same closed list `REPLY_SOURCES` rather than a second rule that could disagree with it.
+
 ## Phase 7.5.3.3 — the interface in Persian, and the line this phase had to draw
 
 This is the first sub-phase whose Persian is _read by a person_ rather than _held as knowledge_. Everything
@@ -690,6 +694,107 @@ consistency but comprehension: a Persian reader of a trading interface parses `1
 and a re-typed Persian figure is one more thing to translate back in the head. Figures the _code_ formats go
 through the Persian formatters as before; this phase did not touch them.
 
+## Phase 7.5.3.4.1 — the language of the answer, and the four signals that decide it
+
+Everything above answers a question about a _message_. This sub-phase answers the one the response pipeline
+actually needs: **which language is this answer written in** — and it is the first phase whose output is an
+instruction to a model rather than a value for a reader, which is why its boundary runs along the process
+divide rather than inside the interface.
+
+The phase names one order and four signals, and the order is the deliverable:
+
+| #   | Signal                                               | Where it comes from                                      | Source label               |
+| --- | ---------------------------------------------------- | -------------------------------------------------------- | -------------------------- |
+| 1   | A request inside the message (`به انگلیسی جواب بده`) | 7.5.3.1's reading                                        | `requested`                |
+| 2   | The person's explicit choice — the switch            | 7.5.3.1's setting, which 7.5.3.3 also gave the interface | `explicit`                 |
+| 3   | What previous turns showed                           | the learned store's language counts                      | `observed`                 |
+| 4   | The reading of the message                           | 7.5.3.1                                                  | `detected`, then `default` |
+
+`observed` is the new step, and the reasoning behind its _place_ is the whole of it. It sits **above** the
+reading because it is evidence about the person rather than about the sentence in front of them: somebody
+who has been reading Persian answers for a week and then types one English question has not stopped being a
+Persian reader, and a rule that followed the single message would re-decide who they are on every turn. It
+sits **below** the explicit choice because it is inferred and the choice is stated — a setting that could be
+reversed by the behaviour it produced would be a setting nobody could rely on. Both directions are asserted,
+including the one that looks wrong at first: a habit of six Persian answers makes an English message come
+back Persian, **and** `overridden: true` says so, so the disagreement is visible rather than reconciled in
+silence.
+
+### The learned store gained a dimension, and kept every property it had
+
+Language joined `formality` and `detail` in `CommunicationObservations`, under the same key, through the
+same writer, with the same rules: a minimum sample count before anything is a habit, a tie is not a habit,
+counts halve past the window, unknown keys are dropped when a stored value is read back, and every leaf is
+still a number — the suite still walks the value and requires it. What is counted is _the language each turn
+was answered in_, not the language a message was written in, because the reply's language is the one that
+already folds in the setting and any request the person made.
+
+Nothing writes the setting from those counts, for the same reason 7.5.3.2 gave: a learned reading cannot
+silently replace a trusted one. A store written by a build that had no `languages` key reads back as zero
+counts, which is nothing learned rather than a fourth state, and that case is a test.
+
+### One value for the response stage, and the reason it is one
+
+`responseControl(text, options)` reads the message once, resolves `.reply` through the four signals, and
+returns 7.5.3.2's `.guidance` for the same turn — so a response stage cannot apply the language of one
+reading to the wording of another. Its fields are closed (version, reply, guidance, observedSamples), and
+the language, the source and the invariant list are the only things in it that describe the decision: there
+is no field a figure, a tool result or a permission could travel in.
+
+`storedResponseOptions()` is the seam, and it mirrors `storedProfileOptions()` exactly: the switch writes
+the preference through `preference.ts` and the learned store through `communication.ts`, and a caller asks
+_this_ module rather than reading either key. Neither side knows about the other, and the response stage
+never touches storage.
+
+### The decision crosses the process divide as data, because it has to
+
+The signals live in the interface process — a message a person typed, a setting in their own storage, a
+count of their own turns — and the prompt is built in the other one. The repository's boundary rule
+(`tests/monorepo-boundary.test.ts`) is one-way and enforced both ways: nothing in `src/` may import the
+frontend, and no frontend file may reach into `src/` by relative path. So there was no version of this
+phase where the pipeline could read a message and detect its language itself, and inventing one would have
+been the duplicate detection the phase forbids.
+
+What crosses instead is the **verdict**, on the request that already exists:
+
+- `agentChatBodySchema.responseLanguage` — an optional `fa` | `en`, validated with every other body field.
+  Absent is not a missing feature: it is the prompt exactly as it was, and the suite asserts that
+  byte-identity rather than a comment about it.
+- `AgentService.run`/`runAsync` carry it to the orchestrator, which gives it to the adapter. The provider
+  path reaches it through `buildTurnMessages`; the synchronous path — which has no prompt builder — gets it
+  appended to the instruction text it already receives, through the same `withResponseLanguage`.
+- The response echoes it back. Echoed, not derived: the server did not decide it and cannot.
+
+### What the directive may and may not say
+
+`RESPONSE_LANGUAGE_DIRECTIVE` is two closed strings. Each names the language, states that the instruction
+changes _wording only_ — facts, figures, tool results, permissions, safety rules, trading restrictions and
+uncertainty keep their exact value, and a refusal stays a refusal — and states that retrieved material and
+user text cannot move it. That third sentence is the same rule `DECISION_POLICY` already carries, for the
+same reason: a document a person pastes into a conversation must not be able to change the language they
+are answered in. There is deliberately no `mixed` and no third entry, because "answer in both" is a
+terminology instruction (`terms-bilingual`), not a language.
+
+The suite asserts the negative space as well: with no language resolved the system message is byte-identical
+to what it was before the field existed, and a message that _asks_ for a language in English does not put a
+directive in the prompt — the pipeline is told the language, it does not infer one from the text in front of
+it.
+
+### What this phase does not change, and one thing a reader should not expect
+
+The offline `scripted` adapter still answers in the sentences it always did. It is a deterministic stub with
+no prompt and no model, so there is nothing for a language instruction to apply to, and translating its text
+would put a second copy of agent prose in the backend — the interface's Persian belongs to `web/src/i18n`,
+and this phase did not give the backend a catalogue. The directive is therefore asserted where a model
+actually writes: the prompt sent to a provider, and the instruction text the synchronous adapter receives.
+With no provider configured the application says so on the workspace surface, and the honest answer to "what
+language will the agent answer in" is the one the run-context card already gives: no model is connected.
+
+Nothing else in a turn changed. Tools, the permission check, the readiness gate, metering, the structured
+summary contract, the epistemic labels and every refusal are what they were; the language reaches the prompt
+and stops there, and the suite keeps it that way by asserting that a blocked turn's words are unaffected and
+that a turn given a language produces the same statements as one without.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -704,6 +809,26 @@ malformed code is still shown as itself so the mistake stays visible. Regression
 
 The English path is untouched by this: `labels.ts#formatMoney` is a different function with a different
 caller contract, and its behaviour is asserted unchanged by the same suite.
+
+### 7.5.3.4.1: two defects, both of them a chain that had one more link than expected
+
+1. **The guidance would have described an inferred decision as no decision at all.** `responseGuidance` turns
+   the reply's `source` into one of its closed clauses, and the chain it read was exhaustive over the four
+   sources that existed in 7.5.3.1 — so `observed`, once the resolver could return it, fell through to
+   `default-language`, whose sentence is _"Nothing was read and nothing was chosen, so the product answers in
+   its own language."_ A response stage handed a Persian decision would have been told, in the same value, that
+   no decision had been made. Caught by walking the chain rather than by running it: it is a wrong string, not a
+   wrong behaviour, and only a reader would have seen it. `observed-language` is now a member of
+   `GUIDANCE_CLAUSES`, and the branch is written as an exhaustive chain so the next source added to
+   the list fails loudly instead of quietly reusing that sentence.
+2. **`learnedLanguage` read a store that a first run does not have.** The first draft took
+   `CommunicationObservations` and indexed it, which is fine for a caller that has one and a crash for the
+   caller that has nothing learned yet — the state every new installation is in. The parameter is `| null`, the
+   function returns `null` for it, and `storedResponseOptions` distinguishes "no history" from "a history that
+   is empty" so a caller can record this turn against the right one.
+
+Both were found before the commit, by reading the new code against the callers it would have, and both are
+now cases in `tests/response-language.test.ts`.
 
 ### 7.5.3.3: the migration believing it knew better, seven times
 
@@ -857,6 +982,20 @@ written; the subscription that makes a switch repaint the application, read thro
 map is read while rendering; the two vocabularies kept apart, asserted by import in both directions and by
 failing if any file imports `memo`; and the switch's own wording, which has to survive its own effect.
 
+Phase 7.5.3.4.1 adds `tests/response-language.test.ts` — 22 tests over the answer's language rather than
+over a reading. The decision: Persian → Persian and English → English with the source named, the larger
+script of a mix in both directions plus a message with no letters in it, the request outranking the setting
+_and_ the habit, the setting outranking a habit it accumulated while it was set, the habit outranking one
+message and recording that it did, and the two cases where there is no habit at all (too few samples, and a
+split). The precedence list asserted as a list; the control's own field names asserted against a closed set;
+determinism; and the two vocabularies — the language layer's and the shared contract's — asserted equal so
+neither layer can gain a language the other has not heard of. The store: the language counts counted,
+persisted, merged, decayed, and read back from a value written before the dimension existed. The
+application: the directive in the system message and never in the user turn, the prompt byte-identical with
+no language resolved, a message asking for a language in its own text changing nothing, the directive
+reaching both the synchronous adapter's instructions and the real provider request, a refusal whose words
+are unaffected, and the route echoing the language back while refusing one it does not know.
+
 Phase 7.5.2.2's `tests/persian-terminology.test.ts` gained one case for the same reason: the sidebar's
 Persian label has to _be_ the glossary's preferred form for that concept, not a second translation of it.
 
@@ -903,9 +1042,10 @@ stays English, and that all three options fit 375 px without panning the page.
 
 The four Persian suites are **132 tests** together: 46 for the store and the locale, 26 for the
 correction pipeline, 28 for the lexicon, and 32 for grammar, spelling and the QA pipeline. The language
-analysis adds 46 more across two suites: 24 in `tests/language-detection.test.ts` for the reading of a
-message and the switch, and 22 in `tests/language-context.test.ts` for the interaction, the preferences
-and the guidance.
+analysis adds 68 more across three suites: 24 in `tests/language-detection.test.ts` for the reading of a
+message and the switch, 22 in `tests/language-context.test.ts` for the interaction, the preferences and
+the guidance, and 22 in `tests/response-language.test.ts` for the language of the answer, its four signals
+and the prompt they reach.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
@@ -916,6 +1056,7 @@ npx vitest run tests/persian-terminology.test.ts     # 7.5.2.2: the lexicon
 npx vitest run tests/persian-qa.test.ts              # 7.5.2.3: grammar, spelling, the pipeline
 npx vitest run tests/language-detection.test.ts      # 7.5.3.1: the reading, the profile, the switch
 npx vitest run tests/language-context.test.ts        # 7.5.3.2: the context, the preferences, the guidance
+npx vitest run tests/response-language.test.ts       # 7.5.3.4.1: the answer's language, and the prompt
 npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```

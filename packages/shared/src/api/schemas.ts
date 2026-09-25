@@ -27,6 +27,7 @@ import { ANALYSIS_TYPES } from '../quality/readiness.js';
 import { MAX_MOVEMENT } from '../usage/credits.js';
 import { FEATURE_IDS } from '../usage/features.js';
 import { PLAN_IDS, SUBSCRIPTION_STATUSES } from '../usage/plans.js';
+import { RESPONSE_LANGUAGES } from '../types.js';
 import type { ValidationResult } from './contracts.js';
 
 export const MAX_MESSAGE_LENGTH = 8_000;
@@ -61,6 +62,10 @@ const FIELD_KEYS_AS_ENUM = [...FIELD_KEYS] as [
   (typeof FIELD_KEYS)[number],
   ...(typeof FIELD_KEYS)[number][],
 ];
+const RESPONSE_LANGUAGES_AS_ENUM = [...RESPONSE_LANGUAGES] as [
+  (typeof RESPONSE_LANGUAGES)[number],
+  ...(typeof RESPONSE_LANGUAGES)[number][],
+];
 
 const identifier = z.string().trim().min(1).max(MAX_ID_LENGTH);
 
@@ -90,6 +95,20 @@ export const agentChatBodySchema = z.strictObject({
    * carrying the stage that produced it.
    */
   capabilityId: z.string().trim().min(3).max(64).optional(),
+  /**
+   * The language the answer must be written in, when the caller resolved one (Phase 7.5.3.4).
+   *
+   * Optional, and its absence changes nothing at all: the prompt is built exactly as it was, and the
+   * model writes in whichever language it would have written in. When it is present it is a *wording*
+   * instruction to the model and nothing else — every fact, figure, tool result, permission, safety rule
+   * and uncertainty note keeps its value, and a refusal stays a refusal.
+   *
+   * It is supplied by the caller because the signals that decide it are the caller's: the request inside
+   * the message, the person's own language choice, what their previous turns showed, and the reading of
+   * the message. Resolving it here would mean reading a person's preference on the server, which is the
+   * one place it does not live.
+   */
+  responseLanguage: z.enum(RESPONSE_LANGUAGES_AS_ENUM).optional(),
   /**
    * The caller's own name for *this attempt*, when it may be retried.
    *

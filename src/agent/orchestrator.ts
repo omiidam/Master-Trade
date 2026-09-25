@@ -21,8 +21,10 @@ import type { StructuredSummary } from '../llm/summary.js';
 import type {
   EpistemicKind,
   ModelStatement,
+  ResponseLanguage,
   SafetyProfile,
 } from '../../packages/shared/src/types.js';
+import { withResponseLanguage } from '../llm/prompt.js';
 
 /** The reasoning component. Phase 1: scripted; later: real LLM. */
 export interface ModelAdapter {
@@ -125,13 +127,18 @@ export class Orchestrator {
   }
 
   /** Run one full agent turn. Throws if lifecycle is misused. */
-  run(userInput: string): RunOutcome {
+  run(userInput: string, options: { responseLanguage?: ResponseLanguage } = {}): RunOutcome {
     this.lifecycle.start(); // IDLE -> LOADING -> READY
 
     try {
       // 1. Model reasons (no tool access of its own).
       this.lifecycle.transitionTo('RUNNING');
-      const instructions = renderInstructions(this.deps.instructions);
+      // The synchronous adapter has no prompt builder, so the language directive travels in the text it
+      // already receives. With nothing resolved this is the rendered instructions, byte for byte.
+      const instructions = withResponseLanguage(
+        renderInstructions(this.deps.instructions),
+        options.responseLanguage,
+      );
       const statements = this.deps.model.respond(userInput, instructions);
 
       // 2. Requested tool calls are permission-checked and executed here.
@@ -175,6 +182,7 @@ export class Orchestrator {
       correlationId?: string;
       context?: readonly ContextSection[];
       subject?: Subject;
+      responseLanguage?: ResponseLanguage;
     } = {},
   ): Promise<AsyncRunOutcome> {
     const adapter = this.deps.asyncModel;
@@ -191,6 +199,9 @@ export class Orchestrator {
         userInput,
         instructions,
         context: options.context ?? [instructionsSection(instructions)],
+        ...(options.responseLanguage === undefined
+          ? {}
+          : { responseLanguage: options.responseLanguage }),
       });
 
       this.lifecycle.transitionTo('RESPONDING');

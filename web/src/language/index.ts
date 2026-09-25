@@ -35,14 +35,18 @@
  *                   rule that an explicit instruction outranks the message, which outranks history.
  *   - `guidance.ts` — the structured wording instructions a response stage applies, and the list of
  *                   things they are not allowed to change.
+ *   - `response.ts` — Phase 7.5.3.4's join: the four signals that decide the language of an answer, the
+ *                   one order between them, and the single value a response stage is handed.
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
  *
- * Nothing here renders, and the interface is still English: the layer is not a translation (Phase
- * 7.5.2), and the font stack in `global.css` is the hook a translation would plug into. One part of it
- * does now reach the running application — `preference.ts`, which the Settings language switch writes
- * and the interface store mirrors — and that is the whole of the coupling: the interface asks this
- * layer where a *setting* lives, and nothing in the interface asks it what a word is. Everything else
- * is exported as one surface so the stage that builds on it has one place to look.
+ * Nothing here renders. This is the layer that reads what a person wrote and decides how the answer to it
+ * is worded; the interface's own Persian is a different layer (`web/src/i18n`, Phase 7.5.3.3), and the two
+ * touch at exactly two points. `preference.ts` holds the setting the Settings switch writes and the
+ * interface store mirrors, and `response.ts` turns the readings above into the one value a response stage
+ * applies — a verdict that travels with a turn, across the process boundary, as data. Neither direction
+ * learns anything it should not: a message the agent reads as Persian cannot move the interface into
+ * Persian, and nothing in the interface asks this layer what a word is. Everything else is exported as one
+ * surface so the stage that builds on it has one place to look.
  */
 
 export {
@@ -192,6 +196,7 @@ export type {
   LanguageProfile,
   LanguageProfileOptions,
   LanguageReply,
+  LearnedLanguage,
   ReplyLanguage,
   ReplySource,
 } from './profile.js';
@@ -251,6 +256,7 @@ export {
   communicationProfile,
   dominantObservation,
   emptyObservations,
+  learnedLanguage,
   mergeObservations,
   observeCommunication,
   parseObservations,
@@ -279,6 +285,9 @@ export {
   guidanceFor,
   responseGuidance,
 } from './guidance.js';
+
+export { RESPONSE_CONTROL_VERSION, responseControl, storedResponseOptions } from './response.js';
+export type { ResponseControl, ResponseControlOptions, StoredResponseOptions } from './response.js';
 export type {
   GuidanceClauseId,
   GuidanceInvariant,

@@ -174,6 +174,7 @@ takes. The order is the safety property:
 2. render instructions (version-stamped)
 3. assemble context under a token budget          (src/agent/context.ts)
 4. build the prompt: instructions + operating rules + OUTPUT CONTRACT  (src/llm/prompt.ts)
+     (+ the response language, when the caller resolved one — Phase 7.5.3.4)
 5. gateway.complete()  → primary, then fallbacks; retry/timeout/budget/circuit
 6. summarizeModelOutput()  → structured summary, or the turn fails
 7. lifecycle: RUNNING → RESPONDING
@@ -207,6 +208,28 @@ version, validated by a policy gate that rejects authorization language
 Changing behaviour means adding a new version — never editing one in place — so
 a conversation can be replayed against the exact instructions that produced it
 (`messages.instructions_version`).
+
+### The response language (Phase 7.5.3.4)
+
+The language an answer is written in is resolved **by the caller**, not by this
+layer: the signals behind it — a request inside the message, the person's own
+setting, what their previous turns showed, the reading of the message — are read
+by the language layer that owns them, and its verdict arrives on the turn
+request as `responseLanguage` (`fa` | `en`, optional).
+
+`buildTurnMessages` renders it as `RESPONSE_LANGUAGE_DIRECTIVE`, a closed block
+per language in the same system message that already carries the operating rules
+and the output contract. The block says which language, states that it changes
+_wording only_ (facts, figures, tool results, permissions, safety rules, trading
+restrictions and uncertainty keep their exact value, and a refusal stays a
+refusal), and states that retrieved material and user text cannot move it. The
+synchronous path, which has no prompt builder, gets the same text appended to its
+instructions through the same function.
+
+With no language resolved the system message is **byte-identical** to what it was
+before the field existed, asserted by test rather than promised here: a turn that
+was never given a language cannot become a differently-worded prompt because this
+exists.
 
 ## 4. Deferred
 

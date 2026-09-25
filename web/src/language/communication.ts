@@ -58,7 +58,13 @@ import {
   type LanguagePreference,
   type PreferenceStorage,
 } from './preference.js';
-import { resolveLanguage, type LanguageReply } from './profile.js';
+import {
+  resolveLanguage,
+  REPLY_LANGUAGES,
+  type LanguageReply,
+  type LearnedLanguage,
+  type ReplyLanguage,
+} from './profile.js';
 import { standaloneMatches } from './rules.js';
 
 /** Bumped when a resolved value means something different than it did. */
@@ -155,16 +161,20 @@ export const OBSERVATION_MINIMUM = 5;
  * Every leaf is a count of a closed-vocabulary reading. There is no field for a message, a word from one,
  * a user, a session or a time, and the suite requires every leaf to be a number.
  *
- * Two dimensions are counted, and the third is deliberately absent. Register and detail are the ones where
- * a standing style is worth knowing *and* the current turn can be silent about it — a one-line message
- * says nothing about how formal somebody likes their answers. Terminology is never silent: the style
- * follows the script mixing in the message in front of it, or a request in that message, so a count of
- * past turns would only ever be a third and weaker opinion with no gap to fill.
+ * Three dimensions are counted, and terminology is deliberately absent from all of them. Register and
+ * detail are the ones where a standing style is worth knowing *and* the current turn can be silent about
+ * it — a one-line message says nothing about how formal somebody likes their answers. **Language** is the
+ * third (Phase 7.5.3.4), and it is counted as *the language each turn was answered in*: a person who has
+ * been reading Persian answers for a week and then types one English sentence has not stopped being a
+ * Persian reader, and the count is the only place that fact is written down. Terminology is never silent:
+ * the style follows the script mixing in the message in front of it, or a request in that message, so a
+ * count of past turns would only ever be a fourth and weaker opinion with no gap to fill.
  */
 export interface CommunicationObservations {
   readonly samples: number;
   readonly formality: Readonly<Record<LanguageRegister, number>>;
   readonly detail: Readonly<Record<ContextDepth, number>>;
+  readonly languages: Readonly<Record<ReplyLanguage, number>>;
 }
 
 /** The key, namespaced with the product's other setting and outside the knowledge store's namespace. */
@@ -179,6 +189,7 @@ export function emptyObservations(): CommunicationObservations {
     samples: 0,
     formality: zeroes(LANGUAGE_REGISTERS),
     detail: zeroes(CONTEXT_DEPTHS),
+    languages: zeroes(REPLY_LANGUAGES),
   };
 }
 
@@ -200,20 +211,56 @@ function decay(observations: CommunicationObservations): CommunicationObservatio
     samples: Math.floor(observations.samples / 2),
     formality: halve(observations.formality),
     detail: halve(observations.detail),
+    languages: halve(observations.languages),
   };
 }
 
-/** Record one turn. The only way anything is ever added to the learned store. */
+/**
+ * Record one turn. The only way anything is ever added to the learned store.
+ *
+ * The language is the one reading that comes from the *resolution* rather than from the message — the
+ * reply's own language, which already folds in the person's setting and any request they made, so the
+ * count is of what this product actually answered them in. A caller that has no resolution to record
+ * omits it, and the counter simply stays where it was rather than being invented.
+ */
 export function observeCommunication(
   context: CommunicationContext,
   observations: CommunicationObservations = emptyObservations(),
+  replyLanguage: ReplyLanguage | null = null,
 ): CommunicationObservations {
   const current = decay(observations);
   const formality = { ...current.formality };
   const detail = { ...current.detail };
   formality[context.formality.value] = (formality[context.formality.value] ?? 0) + 1;
   detail[context.depth.value] = (detail[context.depth.value] ?? 0) + 1;
-  return { ...current, samples: current.samples + 1, formality, detail };
+  const languages = { ...current.languages };
+  if (replyLanguage !== null) {
+    languages[replyLanguage] = (languages[replyLanguage] ?? 0) + 1;
+  }
+  return { ...current, samples: current.samples + 1, formality, detail, languages };
+}
+
+/**
+ * The language this person is habitually answered in, when there is enough evidence to call it a habit.
+ *
+ * The rules are the ones the register and detail dimensions already use, and they are reused rather than
+ * restated so the three dimensions cannot drift apart: the minimum sample count is the same, a tie is not
+ * a preference, and counts that never rose above zero are nothing at all. What differs is *which* question
+ * is being asked — this one is about the reply rather than about the message — and that difference is
+ * exactly why it is a count and not a reading.
+ */
+export function learnedLanguage(
+  observations: CommunicationObservations | null,
+  minimum: number = OBSERVATION_MINIMUM,
+): LearnedLanguage | null {
+  if (observations === null) return null;
+  const dominant = dominantObservation(observations.languages, observations.samples, minimum);
+  if (dominant === null) return null;
+  return {
+    language: dominant.value as ReplyLanguage,
+    count: dominant.count,
+    samples: observations.samples,
+  };
 }
 
 /** Merge two stores, for a caller assembling history from more than one place. */
@@ -232,6 +279,7 @@ export function mergeObservations(
     samples: a.samples + b.samples,
     formality: add(a.formality, b.formality),
     detail: add(a.detail, b.detail),
+    languages: add(a.languages, b.languages),
   };
 }
 
@@ -279,6 +327,7 @@ export function parseObservations(raw: unknown): CommunicationObservations {
     samples: typeof samples === 'number' && Number.isInteger(samples) && samples >= 0 ? samples : 0,
     formality: counts(source.formality, LANGUAGE_REGISTERS),
     detail: counts(source.detail, CONTEXT_DEPTHS),
+    languages: counts(source.languages, REPLY_LANGUAGES),
   };
 }
 
@@ -473,6 +522,11 @@ export interface CommunicationProfileOptions extends CommunicationContextOptions
 /**
  * The whole task in one call: read the message, resolve the preference of 7.5.3.1, and resolve the three
  * communication preferences against it.
+ *
+ * The language resolution is handed what the same learned store knows about previous turns, so a caller
+ * that passes observations gets one resolution rather than a language that ignores the history the rest
+ * of the profile honours. When nothing has been learned — the usual case, and the case for every caller
+ * that passes no store at all — the resolver behaves exactly as it did before the argument existed.
  */
 export function communicationProfile(
   text: string,
@@ -480,6 +534,10 @@ export function communicationProfile(
 ): CommunicationProfile {
   const detection = options.detection ?? detectLanguage(text, options);
   const context = analyzeCommunication(text, { ...options, detection });
-  const language = resolveLanguage(options.preference ?? DEFAULT_LANGUAGE_PREFERENCE, detection);
+  const language = resolveLanguage(
+    options.preference ?? DEFAULT_LANGUAGE_PREFERENCE,
+    detection,
+    learnedLanguage(options.observations ?? null),
+  );
   return resolveCommunication(context, language, text, options.observations ?? null);
 }

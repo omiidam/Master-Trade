@@ -127,6 +127,7 @@ export const GUIDANCE_CLAUSES = {
   conversational: 'The register is conversational.',
   'explicit-choice': 'The language was chosen outright.',
   'requested-language': 'The message asked for the language it is answered in.',
+  'observed-language': 'The language follows what this person is habitually answered in.',
   'detected-language': 'The language follows the message.',
   'default-language':
     'Nothing was read and nothing was chosen, so the product answers in its own language.',
@@ -266,13 +267,18 @@ export function responseGuidance(profile: CommunicationProfile): ResponseGuidanc
 
   const clauses: GuidanceClauseId[] = [
     language.language,
+    // One clause per source, and the chain is exhaustive on purpose: a source added to 7.5.3.1's list
+    // without a clause here would silently describe itself as "nothing was read and nothing was chosen",
+    // which is the one sentence a guidance may not say about a decision it did make.
     language.source === 'explicit'
       ? 'explicit-choice'
       : language.source === 'requested'
         ? 'requested-language'
-        : language.source === 'detected'
-          ? 'detected-language'
-          : 'default-language',
+        : language.source === 'observed'
+          ? 'observed-language'
+          : language.source === 'detected'
+            ? 'detected-language'
+            : 'default-language',
     tone === 'formal' ? 'formal' : tone === 'conversational' ? 'conversational' : 'neutral',
     context.expertise.value,
     SETTING_CLAUSES[context.setting.value],

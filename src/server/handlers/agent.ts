@@ -19,6 +19,7 @@
  */
 
 import type { AgentChatBody } from '../../../packages/shared/src/api/schemas.js';
+import type { ResponseLanguage } from '../../../packages/shared/src/types.js';
 import type { AgentAsyncTurn, AgentService, AgentTurn } from '../../agent/service.js';
 import type { AnalysisReadinessDecision } from '../../../packages/shared/src/quality/readiness.js';
 import {
@@ -62,6 +63,14 @@ export interface AgentChatResponseData {
    * rather than reading prose to guess at it.
    */
   capability?: CapabilityResult | null;
+  /**
+   * The language the answer was asked to be written in, echoed back.
+   *
+   * Present only when the caller resolved and supplied one. It is echoed rather than derived because the
+   * server did not decide it and cannot: the signals behind it are the caller's, and a client that shows
+   * "answered in Persian" has to be showing what it asked for.
+   */
+  responseLanguage?: ResponseLanguage;
   /** What the turn cost, and why. Absent only when the server does not meter turns. */
   usage?: {
     operationKey: string;
@@ -226,12 +235,20 @@ export function agentChatHandler(
             model: 'none',
             readiness: gatedReadiness,
             capability,
+            // A refusal is a complete result, so it echoes the language too: no model was consulted, and
+            // the answer the caller asked for is the answer they did not get.
+            ...(body.responseLanguage === undefined
+              ? {}
+              : { responseLanguage: body.responseLanguage }),
           };
         }
 
         const turn = service.run(body.message, {
           readiness: gatedReadiness,
           capability,
+          ...(body.responseLanguage === undefined
+            ? {}
+            : { responseLanguage: body.responseLanguage }),
         });
         context.logger.info(
           'capability turn completed',
@@ -253,7 +270,12 @@ export function agentChatHandler(
           decide === undefined || principal === null
             ? null
             : await decide(principal.id, body.analysisType);
-        const turn = service.run(body.message, { readiness });
+        const turn = service.run(body.message, {
+          readiness,
+          ...(body.responseLanguage === undefined
+            ? {}
+            : { responseLanguage: body.responseLanguage }),
+        });
         context.logger.info(
           'gated agent turn completed',
           {
@@ -269,7 +291,9 @@ export function agentChatHandler(
         return turn;
       }
 
-      const turn = service.run(body.message);
+      const turn = service.run(body.message, {
+        ...(body.responseLanguage === undefined ? {} : { responseLanguage: body.responseLanguage }),
+      });
       context.logger.info(
         'agent turn completed',
         {
@@ -302,6 +326,7 @@ export function agentChatHandler(
         toolResultCount: turn.toolResultCount,
         statements: turn.statements,
         note: OFFLINE_NOTE,
+        ...(body.responseLanguage === undefined ? {} : { responseLanguage: body.responseLanguage }),
         ...(turn.readiness === undefined ? {} : { readiness: turn.readiness }),
         ...(turn.capability === undefined ? {} : { capability: turn.capability }),
         ...(usage === undefined ? {} : { usage }),

@@ -13,8 +13,8 @@
  * combines them. A later stage that conflated them would have to re-decide the precedence every time,
  * which is exactly how two stages end up disagreeing about the same conversation.
  *
- * The precedence rule, in one sentence: **an instruction in the message wins, then an explicit choice, and
- * only then what the reading implies.**
+ * The precedence rule, in one sentence: **an instruction in the message wins, then an explicit choice, then
+ * what previous turns showed, and only then what this reading implies.**
  *
  *   - a message that asks (`به انگلیسی جواب بده`) → what it asked for, `source: 'requested'`. This is the
  *     sharpest case of the phase's rule that an explicit instruction outranks a learned or stored
@@ -23,6 +23,10 @@
  *   - preference `fa` and an English message → Persian. That is the override Phase 7.5.3.1 asks for, and
  *     it is the reason the setting exists: a Persian speaker reading English documentation still wants
  *     the answer in Persian, and no amount of detection can know that.
+ *   - preference `auto`, a habit of being answered in Persian, and an English message → Persian,
+ *     `source: 'observed'`. This is Phase 7.5.3.4's step, and it is deliberately *above* the reading:
+ *     the learned counts describe the person, and the reading describes one message they typed. It sits
+ *     *below* the explicit choice for the same reason — a habit may be inferred, a setting may not.
  *   - preference `auto` and a Finglish message → Persian, because Finglish *is* Persian written in Latin
  *     letters and answering it in English would answer a different question.
  *   - preference `auto` and a message with no letters at all → the product's own language, and the
@@ -85,11 +89,25 @@ export type ReplyLanguage = (typeof REPLY_LANGUAGES)[number];
  * Where the reply's language came from.
  *
  * `requested` is the strongest source there is — the message asked — and `default` the weakest: nothing
- * was read and nothing was chosen. The order of this list is the precedence, with the last two the only
- * ones that are not explicit statements.
+ * was read, nothing was chosen and nothing was learned. The order of this list is the precedence: the
+ * first two are statements the person made, `observed` is what their own previous turns showed, and the
+ * last two are what this one message implies.
  */
-export const REPLY_SOURCES = ['requested', 'explicit', 'detected', 'default'] as const;
+export const REPLY_SOURCES = ['requested', 'explicit', 'observed', 'detected', 'default'] as const;
 export type ReplySource = (typeof REPLY_SOURCES)[number];
+
+/**
+ * What previous turns of this conversation showed about the language to answer in.
+ *
+ * Counts, not a verdict about a person: `count` turns of `samples` were answered in `language`. The
+ * caller that owns the learned store decides when there is enough evidence to call that a habit
+ * (`learnedLanguage` in `communication.ts`); this module only reads the answer it is handed.
+ */
+export interface LearnedLanguage {
+  readonly language: ReplyLanguage;
+  readonly count: number;
+  readonly samples: number;
+}
 
 export interface LanguageReply {
   readonly language: ReplyLanguage;
@@ -110,17 +128,24 @@ export interface LanguageProfile extends LanguageDetection {
 export interface LanguageProfileOptions extends DetectionOptions {
   /** The person's standing choice. Defaults to `auto`, which is what a first run has. */
   readonly preference?: LanguagePreference;
+  /** What previous turns showed, when there is enough of them to count. `null` is "nothing learned". */
+  readonly learned?: LearnedLanguage | null;
 }
 
 /**
- * The language a reply should be written in, given a choice and a reading of the message.
+ * The language a reply should be written in, given a choice, what previous turns showed, and a reading of
+ * the message.
  *
  * Exported on its own because it is the rule Task 3 names — the explicit selection overrides detection —
  * and a rule worth stating is worth testing without building a whole profile to test it.
+ *
+ * The learned argument is optional and defaults to nothing, so a caller that has no history calls this
+ * exactly as it always did and gets exactly what it always got.
  */
 export function resolveLanguage(
   preference: LanguagePreference,
   detection: LanguageDetection,
+  learned: LearnedLanguage | null = null,
 ): LanguageReply {
   // An instruction inside the message comes first, before the setting: it is the most explicit signal
   // available, it was given for this turn rather than for every turn, and the phase's rule about explicit
@@ -151,6 +176,23 @@ export function resolveLanguage(
       reason: overridden
         ? `This person chose ${describe(preference)}, and the message looks ${describe(detection.language)}; an explicit choice is what wins.`
         : `This person chose ${describe(preference)}.`,
+    };
+  }
+
+  // Then what their own previous turns showed. This step is above the reading of the message and below
+  // the setting: it is evidence about the person rather than a statement by them, so it may outweigh one
+  // message — and may never outweigh a choice. A habit that disagrees with the message is recorded, the
+  // same way a setting that disagrees with it is.
+  if (learned !== null) {
+    const overridden =
+      detection.language !== 'unknown' && !matches(learned.language, detection.language);
+    return {
+      language: learned.language,
+      source: 'observed',
+      overridden,
+      reason: overridden
+        ? `${learned.count} of ${learned.samples} previous turn(s) were answered in ${describe(learned.language)}, and this message reads ${describe(detection.language)}; a habit outranks the reading of one message.`
+        : `${learned.count} of ${learned.samples} previous turn(s) were answered in ${describe(learned.language)}.`,
     };
   }
 
@@ -251,7 +293,7 @@ export function languageProfile(
     profileVersion: LANGUAGE_PROFILE_VERSION,
     ...detection,
     preference,
-    reply: resolveLanguage(preference, detection),
+    reply: resolveLanguage(preference, detection, options.learned ?? null),
   };
 }
 
