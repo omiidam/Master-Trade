@@ -1312,3 +1312,108 @@ per-category `surface` assignments from 7.2.4 are all still there.
   collapsed at 834 and expanded at 1440.
 - The Phase 7 security stage: 12 attacks, 12 pass, 0 not applicable, 0 unresolved CRITICAL or HIGH —
   recorded in `docs/security-gate-baseline.json` under `phase7`, with the Phase 6 checkpoint untouched.
+
+## 18. Phase 7.5.1 — Persian, as a language the product owns
+
+The phase is explicitly _not_ translation. It is the layer a translation will be written into: a
+knowledge store with provenance, a locale foundation that agrees with Unicode and CLDR, and a typeface
+that ships as a file. Three artefacts — `web/src/language/model.ts` (the shape), `memory.ts` (the
+store), `fa.ts` (the locale) — plus `seed.ts` and `web/public/fonts/`. The full record, including the
+resource evaluation, is `docs/persian-language.md`; the contract suite is
+`tests/persian-language.test.ts` (46 tests).
+
+### The language memory
+
+An entry is `{ key, kind, locale, value, status, confidence, version, provenance, examples, mapping,
+notes }`, where `kind` is one of the seven categories the phase names and `provenance` carries an
+origin, **a mandatory reference** and a timestamp. `status` is the trust ladder — `proposed` →
+`validated` → `trusted`, with `deprecated` as retirement — and only `trusted` knowledge may be
+rendered as interface copy.
+
+The update path is the whole design: `propose → validate → version → review`. A proposal is
+schema-validated before it is looked at, its `baseVersion` must match what the store holds (a proposal
+written against version 2 cannot silently replace version 4 — it fails with `CONFLICT`), and the status
+it ends up with is **decided by the store from its origin, never by the caller**. `human-review` and
+`upstream-standard` may be trusted; `agent-proposal` may not, ever: model output is parked as `pending`
+and cannot touch a trusted entry even with a correct `baseVersion`. Promotion takes a review with a
+trusted origin, so an agent cannot review its own proposal, and the reviewer's provenance — not the
+model's — becomes the provenance of what is current. Nothing is edited in place: a correction archives
+what it replaced, `revisions(key)` holds every version, and `history()` is an append-only log.
+
+**Separate from Agent Memory and Secrets, as a shape rather than a policy.** Agent Memory mints `mem_*`
+ids (`src/memory/store.ts`) and holds statements expected to change; this store addresses `lang:<key>`
+and holds reviewed decisions, and a key reading as an Agent Memory id is refused at the door. The
+language directory cannot reach `src/` at all — the declared boundary makes it unresolvable — and no
+entry has a field a credential could occupy: the suite pins the exact field list and fails if any field
+ever matches `/secret|token|credential|password/`. A durable store is **not** built; the snapshot is
+the persistence seam, exactly as `src/memory/store.ts` was in memory in Phase 1.
+
+The seed is deliberately small and deliberately _only_ what this phase can source: the orthographic
+rules whose authority is Unicode, plus two decisions this phase recorded with `human-review` provenance
+(the technical-figure rule and the punctuation rule). There is no Persian glossary — inventing one
+would be the exact failure the store exists to prevent. Each orthographic rule that states a character
+mapping is asserted against `normalizePersianText`, so the store's prose and the code's behaviour are
+one fact stated twice.
+
+### The fa-IR locale foundation
+
+Normalization folds the Arabic letters Persian does not write (U+064A/U+0649 → U+06CC, U+0643 →
+U+06A9), the Arabic-Indic digits onto the Persian set, the tatweel and the Arabic vowel marks; it
+preserves the ZWNJ and anything Latin, and it is idempotent. Digits move in both directions. Mixed text
+is isolated with Unicode's LRI/RLI/FSI … PDI controls rather than a deprecated embedding. Dates, times,
+currency, relative time, plural categories and collation all come from `Intl` — and every separator,
+digit set and calendar claim this module hard-codes is asserted against CLDR rather than typed from
+memory: `arabext` numbering, U+066B/U+066C separators, U+066A percent sign, the Persian calendar, the
+`one`/`other` plural categories.
+
+Two things are stated with their edges rather than half-done. The vowel-mark removal names its range
+(U+064B–U+0652 and U+0670) and **excludes** U+0653–U+0655, the combining hamza and madda, because a
+decomposed Persian letter can legitimately be built from them — removing them would change a letter,
+not a vowel mark. And ZWNJ _placement_ is not implemented at all: this phase keeps the ZWNJ exactly as
+it found it, dropping only one at a string edge or beside a space where it joins nothing, because
+correct `میرود` typography is a word-level decision that belongs in the store as a reviewed rule rather
+than in a normalizer as a letter table.
+
+### The typeface
+
+Vazirmatn is vendored from a declared `vazirmatn@33.0.3` devDependency by `scripts/vendor-fonts.mjs` —
+the **variable** face, one 108.5 KB woff2 covering weights 100–900 instead of nine static files — with
+its OFL licence beside it and version, upstream, byte count and SHA-256 recorded in
+`web/public/fonts/vazirmatn.json`. The suite re-hashes the shipped file against that record, and the
+browser suite measures the rest. It is applied by `:lang(fa)` and never by `[dir='rtl']`: direction
+decides flow, language decides typeface, and keying the face to direction would change how _English_
+looks the moment the shell is mirrored. `@font-face` declaration downloads nothing, and nothing in the
+interface sets `lang="fa"` yet, so this costs the existing product zero bytes — measured below rather
+than argued. The desktop content security policy already permits it (`font-src 'self' data:`), so no
+remote font origin was added anywhere.
+
+`@persian-tools/persian-tools` was evaluated utility by utility and **not adopted**: everything the
+layer needs today is CLDR, Unicode code points, or a handful of mapping lines the store can cite, and
+the two functions that would add real value (word forms, half-space placement) are word-level Persian
+typography with a named reviewer still to come. DadmaTools is a Python NLP pipeline and is not a
+frontend dependency at any size; it stays deferred behind a real backend/offline NLP need. Both
+evaluations, with the trigger that would change each decision, are in `docs/persian-language.md`.
+
+### Verified
+
+- Both typechecks clean; `format:check` clean.
+- **1405** unit tests across **71** files (1359/70 before), including the new 46-test Persian contract
+  suite: store separation, the controlled update path, CLDR agreement, normalization idempotence, bidi
+  isolation, the sealed font, and the English formatters producing exactly what they produced.
+- One real defect, found by running the locale layer on values rather than only asserting them: a
+  missing currency code printed `۱٬۲۵۰٬۰۰۰٫۵ undefined`, because `Intl.NumberFormat` renders the name of
+  a missing currency instead of throwing. The code's shape is now checked before it is used, so a
+  missing or malformed code claims no symbol; the regression test is `claims no symbol when there is no
+currency to claim`, and the English `formatMoney` path is untouched.
+- `npm run build` and `npm run build:web` clean; the font and its provenance land in `web/dist/fonts`;
+  `npm run desktop:verify` **0 errors, 4 warnings** (unchanged).
+- **29** browser end-to-end cases, up from 27. Two are new and both are measurements: at 1440×900 the
+  built application reports `lang="en"`, a body font stack with no Vazirmatn in it and **zero** requests
+  for the font — then, once a `lang="fa"` element exists, the computed family resolves to Vazirmatn,
+  `document.fonts.check` is true _with the sample text_ (a coverage answer, not a load answer) and the
+  resource request appears, so the lazy fetch is real. The second renders a signed figure inside a
+  right-to-left paragraph and asserts the sign is painted to the left of the last character: the `.num`
+  isolation rule from §17, measured for the first time with Persian actually on the page.
+- Desktop, tablet and phone are unchanged: the seven-viewport "never scrolls sideways" sweep
+  (1920/1440/1024/768/430/390/375), the touch-target sweep and the RTL mirror check all pass against the
+  same bundle that carries the new face and the new stylesheet rule.

@@ -32,6 +32,8 @@
     "build:sidecar": "node scripts/build-sidecar.mjs",
     "brand:assets": "node scripts/build-brand-assets.mjs",
     "brand:measure": "node scripts/build-brand-assets.mjs --measure",
+    "fonts:vendor": "node scripts/vendor-fonts.mjs",
+    "fonts:check": "node scripts/vendor-fonts.mjs --check",
     "desktop:icons": "tauri icon assets/brand/master-trade-logo-source.png",
     "desktop:verify": "node dist/src/desktop/cli.js",
     "desktop:dev": "tauri dev",
@@ -52,6 +54,7 @@
     "prettier": "^3.4.2",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",
+    "vazirmatn": "^33.0.3",
     "vite": "^6.0.0",
     "vitest": "^4.1.11"
   },

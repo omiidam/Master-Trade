@@ -152,6 +152,31 @@
   --font-mono:
     'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', 'Consolas', ui-monospace, monospace;
   /*
+   * The third stack, and the reason it is a separate token rather than a fallback in `--font-sans`.
+   *
+   * Persian is a first-class language here (Phase 7.5.1), and a first-class language gets its own
+   * *typeface*, not the interface font with a Persian glyph bolted on the end. Vazirmatn is a
+   * Persian/Arabic face drawn for Persian: taller x-height, correct Persian letterforms (the Farsi
+   * yeh and keheh rather than their Arabic counterparts), and a digit set that matches Persian
+   * orthography. Inter has none of that — it has no Arabic script at all — so putting Vazirmatn
+   * second in `--font-sans` would mean the interface font won every Latin character in mixed text
+   * and lost every Persian one, which is the mixed-script failure this token exists to prevent.
+   *
+   * The fallbacks are deliberate and ordered: a system Arabic face that exists on Windows and macOS
+   * (Tahoma is the one Persian readers on Windows actually recognise), then `Noto Naskh Arabic` on
+   * the Linux side, then the sans stack's own tail, so a machine with no Persian font still renders
+   * shaped Persian text instead of tofu.
+   *
+   * **Applied by language, never by direction.** The selector is `:lang(fa)` (see `@layer base`),
+   * not `[dir='rtl']`: direction decides flow, language decides typeface. Keying the face off
+   * `dir` would silently change how *English* looks the moment the shell is mirrored, which is a
+   * change to existing behaviour bought with nothing.
+   *
+   * Like the other two stacks it pairs no line height: a family is not a type step, and a stack that
+   * forced its own leading would override every call site that sets `leading-*`.
+   */
+  --font-fa: 'Vazirmatn', 'Noto Naskh Arabic', Tahoma, 'Iranian Sans', system-ui, sans-serif;
+  /*
    * The type scale, ordered smallest to largest.
    *
    * Four steps carry a paired line height and weight, because those are the steps the product
@@ -514,10 +539,49 @@
   --z-tooltip: 80;
 }
 
+/*
+ * The Persian face, self-hosted and lazily fetched.
+ *
+ * Vendored from the declared `vazirmatn` dependency by `scripts/vendor-fonts.mjs`, which records the
+ * release and the SHA-256 of these bytes in `web/public/fonts/vazirmatn.json`, and re-hashed by
+ * `tests/persian-language.test.ts`. Nothing here is fetched from a third-party origin: the desktop
+ * shell's content security policy is `font-src 'self' data:`, so a font in this product can only
+ * ever be a file the product ships.
+ *
+ * One file, weights 100–900: the *variable* face, so the whole Persian weight ladder costs 111 KB
+ * rather than nine static files. `font-display: swap` for the same reason it is right everywhere
+ * else — the shape of the text is never blocked on the bytes arriving.
+ *
+ * Declaring a face downloads nothing. A browser fetches a font only when something resolves to it,
+ * and nothing in the English interface does: the rule that reaches this family is `:lang(fa)`. So
+ * this costs the existing product exactly zero bytes today, which is the condition for adding it
+ * before the interface is translated.
+ */
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   html {
     color-scheme: dark;
     background-color: var(--color-bg);
+  }
+
+  /*
+   * The Persian language rule: a language gets its own face, and English keeps the one it had.
+   *
+   * `:lang(fa)` matches by language *subtag*, so `lang="fa"`, `lang="fa-IR"` and a Persian element
+   * nested inside an English page all resolve here, while `lang="en"` — and everything that
+   * inherits it — continues to resolve `--font-sans`. The interface is not translated yet (Phase
+   * 7.5.2), so today this rule applies to nothing the product renders: it is the hook the language
+   * layer plugs into, stated while it is still free to state.
+   */
+  :lang(fa) {
+    font-family: var(--font-fa);
   }
 
   body {
@@ -626,6 +690,12 @@
   /*
    * Numeric readouts: tabular figures so columns of numbers line up, and an isolated
    * left-to-right run.
+   *
+   * Phase 7.5.1 keeps this rule exactly as it was, and gives it a *partner* rather than a
+   * replacement: a technical figure stays Latin and mono (`.num`), while Persian *prose* uses
+   * Persian digits and the Persian face (`:lang(fa)`). That is the trading-terminal convention and
+   * it is the honest one — `XAUUSD ۳۳۴۵٫۲۰` is a symbol and a price, and a reader who copies either
+   * one expects the characters they already type.
    *
    * The isolation is for the RTL toggle. A figure is a *technical* string — `+2.60R`, `−1,425`,
    * `2026-09-19 10:20`, `XAUUSD` — and a leading sign is a neutral character in the Unicode bidi

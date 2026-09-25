@@ -119,6 +119,9 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
     variables: [
       '--font-sans',
       '--font-mono',
+      // The Persian/Arabic stack (Phase 7.5.1). A family of its own rather than a fallback in
+      // `--font-sans`, and applied by `:lang(fa)` rather than by direction — see the stylesheet.
+      '--font-fa',
       '--font-weight-normal',
       '--font-weight-medium',
       '--font-weight-semibold',

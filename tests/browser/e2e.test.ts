@@ -691,4 +691,126 @@ suite('the Product Foundation in a real browser', () => {
       );
     });
   });
+
+  /* ---------------------------------------------------------------------- */
+  /* G. The Persian language foundation (Phase 7.5.1)                        */
+  /* ---------------------------------------------------------------------- */
+
+  describe('the Persian language foundation, in a browser', () => {
+    it('declares a Persian face, and spends nothing on it until Persian is on the page', async () => {
+      await session.setViewport(1440, 900);
+      await session.goto(`${server.origin}/`);
+
+      interface FaceReport {
+        loaded: boolean;
+        requests: number;
+        family: string;
+        lang: string;
+      }
+      const before = await session.evaluateJson<FaceReport>(`JSON.stringify({
+         loaded: document.fonts.check('16px Vazirmatn'),
+         requests: performance.getEntriesByType('resource')
+           .filter((entry) => entry.name.includes('Vazirmatn')).length,
+         family: getComputedStyle(document.body).fontFamily,
+         lang: document.documentElement.lang,
+       })`);
+
+      // English is English: the document declares it, the body keeps the interface stack, and the
+      // Persian face has cost the running product nothing at all.
+      expect(before.lang).toBe('en');
+      expect(before.family).not.toContain('Vazirmatn');
+      expect(before.loaded).toBe(false);
+      expect(before.requests).toBe(0);
+
+      const after = await session.evaluateJson<{
+        family: string;
+        loaded: boolean;
+        coversText: boolean;
+        requests: number;
+      }>(`
+        (async () => {
+          const sample = '\u0642\u06CC\u0645\u062A \u0648\u0631\u0648\u062F \u06F3\u06F3\u06F4\u06F5';
+          const paragraph = document.createElement('p');
+          paragraph.lang = 'fa';
+          paragraph.textContent = sample;
+          document.body.append(paragraph);
+          await document.fonts.load('16px Vazirmatn', sample);
+          await document.fonts.ready;
+          const report = {
+            family: getComputedStyle(paragraph).fontFamily,
+            loaded: document.fonts.check('16px Vazirmatn'),
+            // The second argument makes this a *coverage* question rather than a load question: the
+            // answer is true only if the face actually has glyphs for Persian letters and Persian
+            // digits. A font that loaded but could not draw the text would fail here.
+            coversText: document.fonts.check('16px Vazirmatn', sample),
+            requests: performance.getEntriesByType('resource')
+              .filter((entry) => entry.name.includes('Vazirmatn')).length,
+          };
+          paragraph.remove();
+          return JSON.stringify(report);
+        })()
+      `);
+
+      // A Persian element resolves the language rule, the face really loads from the served file and
+      // covers the sample, and it was the *first* use that fetched it — which is what `:lang(fa)` is
+      // for.
+      expect(after.family.split(',')[0]?.trim().replace(/["']/g, '')).toBe('Vazirmatn');
+      expect(after.loaded).toBe(true);
+      expect(after.coversText).toBe(true);
+      expect(after.requests).toBeGreaterThan(0);
+    });
+
+    it('keeps a signed figure left-to-right inside a paragraph that is right-to-left', async () => {
+      interface FigureReport {
+        rtl: boolean;
+        signLeft: number;
+        tailLeft: number;
+        text: string;
+      }
+      // The rule from Phase 7.4, measured here for the first time with Persian actually on the page:
+      // a minus is a *neutral* in the bidi algorithm, so `-1.00R` beside right-to-left text resolves
+      // to `1.00R-` — a different number wearing the same digits. `.num` gives the figure its own
+      // left-to-right context, and the measurement below is where the sign ends up drawn.
+      const measured = await session.evaluateJson<FigureReport>(`
+        (() => {
+          const previous = document.documentElement.dir;
+          document.documentElement.dir = 'rtl';
+          const paragraph = document.createElement('p');
+          paragraph.lang = 'fa';
+          paragraph.style.cssText = 'position:absolute;top:0;left:0;white-space:nowrap';
+          paragraph.textContent = '\u0642\u06CC\u0645\u062A \u0648\u0631\u0648\u062F ';
+          const figure = document.createElement('span');
+          figure.className = 'num';
+          figure.textContent = '\u22121.00R';
+          paragraph.append(figure);
+          document.body.append(paragraph);
+
+          const text = figure.firstChild;
+          const length = figure.textContent.length;
+          const sign = document.createRange();
+          sign.setStart(text, 0);
+          sign.setEnd(text, 1);
+          const tail = document.createRange();
+          tail.setStart(text, length - 1);
+          tail.setEnd(text, length);
+          const report = {
+            rtl: getComputedStyle(paragraph).direction === 'rtl',
+            signLeft: sign.getBoundingClientRect().left,
+            tailLeft: tail.getBoundingClientRect().left,
+            text: figure.textContent,
+          };
+          paragraph.remove();
+          document.documentElement.dir = previous;
+          return JSON.stringify(report);
+        })()
+      `);
+
+      // The paragraph really was mirrored, so the measurement is about something.
+      expect(measured.rtl).toBe(true);
+      expect(measured.text).toBe('\u22121.00R');
+      // The sign is painted to the *left* of the last character: the figure reads sign-first, which is
+      // the order a reader of a trading terminal expects regardless of the sentence around it.
+      expect(measured.signLeft).toBeLessThan(measured.tailLeft);
+    });
+  });
 });

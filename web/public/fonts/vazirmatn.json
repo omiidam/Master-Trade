@@ -1,0 +1,20 @@
+{
+  "family": "Vazirmatn",
+  "version": "33.0.3",
+  "upstream": "https://github.com/rastikerdar/vazirmatn",
+  "license": "OFL-1.1",
+  "licenseFile": "Vazirmatn-OFL.txt",
+  "source": "npm:vazirmatn@33.0.3",
+  "files": [
+    {
+      "name": "Vazirmatn-Variable.woff2",
+      "bytes": 111152,
+      "sha256": "4e3fa217d38fdafc1fea4414ceb58ca5e662cf0ab5fa735a8c8c20e8b42cad92"
+    },
+    {
+      "name": "Vazirmatn-OFL.txt",
+      "bytes": 4391,
+      "sha256": "17e355067c8284f47743a1ee3b1ef7ff684ff0601eda357f9353b10b3016ab31"
+    }
+  ]
+}
