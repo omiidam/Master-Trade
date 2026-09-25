@@ -13,6 +13,9 @@
  *   - `rules.ts`  — the correction catalogue of Phase 7.5.2.1: what each rule does, which store key
  *                   authorises it, and which parts of a string it refuses to touch.
  *   - `normalize.ts` — the pipeline those rules run in, and the report it produces.
+ *   - `terminology.ts` — Phase 7.5.2.2's lexicon: the terms the product writes, their English
+ *                   equivalents, the forms it does not write, and the consistency check over them.
+ *   - `terminologyUpdates.ts` — the controlled path a new or corrected term arrives through.
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
  *
  * Nothing here renders, and nothing here is imported by the running interface yet: the interface is
@@ -62,6 +65,40 @@ export { LanguageMemory } from './memory.js';
 export type { LanguageDeprecation, LanguageProposalResult, LanguageReviewInput } from './memory.js';
 
 export { SEED_LANGUAGE_KNOWLEDGE, seededLanguageMemory } from './seed.js';
+
+export {
+  TERMINOLOGY,
+  TERMINOLOGY_DOMAINS,
+  TERMINOLOGY_DOMAIN_MEANING,
+  TERMINOLOGY_RECORDED_AT,
+  TERMINOLOGY_REFERENCE,
+  allAlternatives,
+  lexiconTerms,
+  lookupTerm,
+  preferredTerm,
+  terminologyFindings,
+  terminologyIn,
+  terminologyKey,
+  terminologyMemory,
+  terminologyProposals,
+  terminologyReport,
+  terminologyTerm,
+} from './terminology.js';
+export type {
+  LexiconTerm,
+  TermLookup,
+  TerminologyDomain,
+  TerminologyFinding,
+  TerminologyOptions,
+  TerminologyTerm,
+} from './terminology.js';
+
+export {
+  acceptTermCandidate,
+  rejectTermCandidate,
+  reviewTermCandidate,
+} from './terminologyUpdates.js';
+export type { TermCandidate, TermDecision } from './terminologyUpdates.js';
 
 export {
   FIGURE_PATTERN,

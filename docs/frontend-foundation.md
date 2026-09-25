@@ -1491,3 +1491,78 @@ Making the half-space rules _automatic_ needs a word-level `from → to` pair in
 - The rules were run over deliberately broken Persian as well as correct Persian, including a mixed
   paragraph (`XAUUSD در تایمفریم ۱ ساعته، 3345.20 را شکست و R آن 2.60 بود.`) that the pipeline reports as
   already correct — no change, no finding, which is the answer that matters for a paragraph a human wrote.
+
+## 20. Phase 7.5.2.2 — the vocabulary, as knowledge rather than as strings
+
+Two new modules — `web/src/language/terminology.ts` (the lexicon: catalogue, view, lookup, consistency)
+and `web/src/language/terminologyUpdates.ts` (candidate → validation → source → accepted or rejected →
+versioned) — plus six lines in `seed.ts` that compose the terms into the store. Nothing renders them: no
+component reads the lexicon, the interface is still English, and the phase costs the running application
+zero bytes. The full record, including the contested terms and every alternative rejected, is
+`docs/persian-terminology.md`; the suite is `tests/persian-terminology.test.ts` (28 tests).
+
+### One glossary, three pieces, and no second store
+
+The phase's hardest constraint is a negative one: _do not create duplicate terminology systems_. So the
+knowledge is not copied anywhere. The **catalogue** holds what a knowledge entry has no field for (the
+English equivalent, the domain, the forms the product does not write, the usage sentence, the
+confidence); the **store** holds the trusted, versioned half, one `terminology` entry per term whose
+`value` is the preferred form; and the **view** joins them with the store winning, because the store is
+what can be corrected, reviewed and retired. The seed _derives_ its entries from the catalogue
+(`terminologyProposals`), so a term is written down once and cannot drift into two glossaries — and the
+suite asserts the agreement in both directions, including that every store entry is a term the lexicon
+can show.
+
+The vocabulary is the product's, not a dictionary's: 57 terms across the six domains the phase names —
+**14 trading, 6 risk, 6 agent, 6 memory, 7 education, 18 ui** — with 85 forms recorded as _not_ what this
+product writes. Every page and group the shell renders has a preferred form, and the suite asserts the
+mapping covers all fourteen navigation entries and all three groups.
+
+### Consistency is reported, never rewritten
+
+`terminologyFindings` names one concept's inconsistency at a time: the form found, the form this product
+writes, the definition it belongs to, the offset, and a reason that says which of two facts it is —
+"used to write this, and version _n_ replaced it" versus "this is understood and is not the preferred
+form". A boundary check keeps it honest: `حد سود` inside `حد سوددهی` is not a match, `درس` inside `درسی`
+is not, and a half-space joins a word rather than separating one. Text inside a technical span is skipped.
+
+Nothing is rewritten, and that is a decision rather than an omission. Renaming a word inside a trade
+rationale, a lesson note or an imported record changes something a human wrote deliberately; what this
+product owns is the copy _it_ ships. So the check says what it found, and the copy that gets corrected is
+the copy somebody is about to write.
+
+The phase's "controlled alternatives where context genuinely requires a different wording" is the store's
+`exception` kind, reused from §19: a form a reviewer names in a trusted exception entry is approved, so
+the check stops reporting it while lookup still calls it an alternative and `preferredTerm` still returns
+the preferred form. The decision lives in the store with a person's provenance, and no code changes to
+allow it.
+
+### A candidate only moves through the controlled path
+
+Six checks run in the order a person would make them, each with its own refusal sentence: the candidate's
+shape; that a preferred form carries Persian letters; that it is already canonical (the Arabic kaf is
+refused with the canonical spelling named); that no alternative collides with another term's preferred
+form; that the preferred form is not a form the product already rejects; and — the rule that makes the
+store's history worth keeping — **a correction must name the form it replaces**, so the old form stays
+reported instead of being rediscovered. Then the store does what it already does: model output is parked
+as `pending` and cannot replace trusted terminology, a review promotes it with the _reviewer's_
+provenance, and a rejection is recorded rather than half-applied. A rejection is a value, not an
+exception, because "this word is not acceptable, and here is why" is an ordinary answer.
+
+The suite exercises nine kinds of bad candidate, the parked-then-accepted path, the parked-then-rejected
+path, a correction that becomes version 2 while version 1 is kept, a stale correction, and a snapshot
+round trip that preserves the term, the correction and the rejection.
+
+### Verified
+
+- Both typechecks clean; `format:check` clean.
+- **1459** unit tests across **73** files (1431/72 before), including the new 28-test terminology suite
+  and the three Persian suites together at 99 tests.
+- `npm run build` and `npm run build:web` clean; `npm run desktop:verify` **0 errors, 4 warnings across 51
+  checks** (unchanged).
+- Browser end-to-end unchanged at **30** cases: no component, stylesheet or bundle input changed in this
+  phase, so the seven-viewport sweep, the touch-target sweep and the RTL mirror check pass on the same
+  bundle — and the phase has no rendering to measure.
+- The store grew from 15 entries to **72** (15 rules + 57 terms), and the one 7.5.1 assertion that
+  required the `terminology` kind to be _empty_ was replaced by what is still true — no `translation`
+  entries exist, because naming the vocabulary is not writing the copy.

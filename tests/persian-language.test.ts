@@ -418,11 +418,13 @@ describe('the seeded knowledge is authority-backed and small on purpose', () => 
       expect(entry.version).toBe(1);
       expect(['human-review', 'upstream-standard']).toContain(entry.provenance.origin);
     }
-    // No terminology and no UI copy: a Persian glossary is a reviewed translation decision, and this
-    // phase is the layer those entries are written into rather than the phase that invents them.
-    expect(memory.list('terminology')).toEqual([]);
+    // No UI copy: a Persian translation is a reviewed decision with its own phase, and this phase is
+    // the layer those entries are written into rather than the phase that invents them. The
+    // *terminology* the store holds arrived in Phase 7.5.2.2, as a lexicon with a reviewer's provenance
+    // for every term; these assertions are about what this phase seeded, so they stay about the rules.
     expect(memory.list('translation')).toEqual([]);
     expect(memory.list('orthography').length).toBeGreaterThanOrEqual(6);
+    expect(memory.list('rule').length).toBeGreaterThanOrEqual(6);
   });
 
   it('states every orthographic mapping the normalizer actually applies', () => {

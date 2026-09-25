@@ -19,6 +19,11 @@
 
 import { LanguageMemory } from './memory.js';
 import type { LanguageProposal } from './model.js';
+import {
+  TERMINOLOGY_RECORDED_AT,
+  TERMINOLOGY_REFERENCE,
+  terminologyProposals,
+} from './terminology.js';
 
 /** The instant this phase's knowledge was recorded. Fixed, so a seeded store is reproducible. */
 const RECORDED_AT = '2026-09-25T00:00:00.000Z';
@@ -32,6 +37,14 @@ const UNICODE_PRESENTATION_FORMS = 'https://www.unicode.org/charts/PDF/UFB50.pdf
 /** The design record for the decisions that are this product's rather than Unicode's. */
 const PHASE_RECORD = 'docs/persian-language.md';
 
+/**
+ * The knowledge this store ships: the rules above, then the terminology lexicon of Phase 7.5.2.2.
+ *
+ * The terms are *derived* from the lexicon's catalogue rather than written a second time here. That is
+ * deliberate, and it is the only reason this file may import `terminology.ts`: one place writes a term
+ * down, the store owns its trust and its versions, and the two cannot drift into a glossary that
+ * disagrees with itself.
+ */
 export const SEED_LANGUAGE_KNOWLEDGE: readonly LanguageProposal[] = [
   {
     key: 'orthography.farsi-yeh',
@@ -268,6 +281,7 @@ export const SEED_LANGUAGE_KNOWLEDGE: readonly LanguageProposal[] = [
     notes:
       'Stated as a report, with the reason it is not a correction: the same letters are also words of their own \u2014 \u0645\u06CC is *wine*, \u062A\u0631 is *wetter* \u2014 and telling a prefix from a noun needs a lexicon this phase does not have and would not want to guess at. So the rule finds the shape of the problem and a reviewer decides. Confidence 0.7 is that uncertainty, recorded rather than hidden. Making it automatic is a schema extension to the entry (a word-level `from \u2192 to` pair) and a reviewed entry per pattern, both of which are named in `docs/persian-language.md` as the next step rather than done here.',
   },
+  ...terminologyProposals(TERMINOLOGY_RECORDED_AT, TERMINOLOGY_REFERENCE),
 ];
 
 /** A memory holding the seeded knowledge, applied through the ordinary proposal path. */
