@@ -27,6 +27,7 @@ import {
   type ResponseLanguage,
   type SafetyProfile,
 } from '../../packages/shared/src/types.js';
+import type { ResponseStyle } from '../../packages/shared/src/language/guidance.js';
 import {
   Orchestrator,
   scriptedModelAdapter,
@@ -205,6 +206,8 @@ export class AgentService {
        * gated turn and a tool execution are all exactly what they were without it.
        */
       responseLanguage?: ResponseLanguage;
+      /** How the answer is worded, resolved by the same caller (Phase 7.5.3.4.2). Same rule. */
+      responseStyle?: ResponseStyle;
     } = {},
   ): Promise<AgentAsyncTurn> {
     const refusal = options.readiness === undefined ? null : refusalFor(options.readiness);
@@ -281,6 +284,8 @@ export class AgentService {
       capability?: CapabilityResult | null;
       /** The language the answer is owed in, resolved by the caller that holds the signals. */
       responseLanguage?: ResponseLanguage;
+      /** How the answer is worded, resolved by the same caller (Phase 7.5.3.4.2). */
+      responseStyle?: ResponseStyle;
     } = {},
   ): AgentTurn {
     const refusal = options.readiness === undefined ? null : refusalFor(options.readiness);
@@ -304,6 +309,7 @@ export class AgentService {
       ...(options.responseLanguage === undefined
         ? {}
         : { responseLanguage: options.responseLanguage }),
+      ...(options.responseStyle === undefined ? {} : { responseStyle: options.responseStyle }),
     });
     if (outcome.status === 'blocked') {
       return {

@@ -32,9 +32,10 @@
  *                   how much of it is the product's vocabulary, how much detail it wants, whether it is
  *                   asking or telling, and how the two scripts are mixed.
  *   - `communication.ts` — those readings plus the person's choices, resolved into one profile by the
- *                   rule that an explicit instruction outranks the message, which outranks history.
- *   - `guidance.ts` — the structured wording instructions a response stage applies, and the list of
- *                   things they are not allowed to change.
+ *                   rule that an explicit instruction outranks a learned preference, which outranks
+ *                   the reading of the message.
+ *   - `guidance.ts` — the structured wording instructions a response stage applies, the list of things
+ *                   they are not allowed to change, and the shape they cross the boundary in.
  *   - `response.ts` — Phase 7.5.3.4's join: the four signals that decide the language of an answer, the
  *                   one order between them, and the single value a response stage is handed.
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
@@ -219,6 +220,9 @@ export type {
 
 export {
   CONTEXT_CONCISE_REQUESTS,
+  // Exported as well as `ContextDepth`, because it is the same list the response-style contract holds
+  // (Phase 7.5.3.4.2) and a reader comparing the two needs the value, not only its type.
+  CONTEXT_DEPTHS,
   CONTEXT_DETAILED_REQUESTS,
   CONTEXT_DIMENSIONS,
   CONTEXT_DISCOURSE_CONNECTIVES,
@@ -284,6 +288,7 @@ export {
   GUIDANCE_VERSION,
   guidanceFor,
   responseGuidance,
+  responseStyle,
 } from './guidance.js';
 
 export { RESPONSE_CONTROL_VERSION, responseControl, storedResponseOptions } from './response.js';

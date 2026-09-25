@@ -14,6 +14,7 @@
 import type { ContextSection } from './context.js';
 import type { LlmGateway, LlmProviderId, LlmUsage } from '../llm/provider.js';
 import { buildTurnMessages } from '../llm/prompt.js';
+import type { ResponseStyle } from '../../packages/shared/src/language/guidance.js';
 import { scriptedSummaryFor } from '../llm/providers/scripted.js';
 import { summarizeModelOutput, type StructuredSummary } from '../llm/summary.js';
 import type { ModelStatement, ResponseLanguage } from '../../packages/shared/src/types.js';
@@ -34,12 +35,14 @@ export interface ModelTurnRequest {
   /** Context already assembled under a token budget. */
   context: readonly ContextSection[];
   /**
-   * The language the answer is owed in, when the caller resolved one (Phase 7.5.3.4).
+   * The language the answer is owed in, when the caller resolved one (Phase 7.5.3.4.1).
    *
    * Carried to the prompt and nowhere else: it changes how the answer is worded, so the summary contract,
    * the tool requests and the epistemic labels are all exactly what they would have been without it.
    */
   responseLanguage?: ResponseLanguage;
+  /** How the answer is worded, when the caller resolved a style (Phase 7.5.3.4.2). Same rule. */
+  responseStyle?: ResponseStyle;
 }
 
 export interface ModelTurn {
@@ -105,6 +108,7 @@ export function createLlmModelAdapter(deps: LlmModelAdapterDeps): AsyncModelAdap
         ...(request.responseLanguage === undefined
           ? {}
           : { responseLanguage: request.responseLanguage }),
+        ...(request.responseStyle === undefined ? {} : { responseStyle: request.responseStyle }),
       });
 
       const response = await deps.gateway.complete({

@@ -21,10 +21,9 @@ import type { StructuredSummary } from '../llm/summary.js';
 import type {
   EpistemicKind,
   ModelStatement,
-  ResponseLanguage,
   SafetyProfile,
 } from '../../packages/shared/src/types.js';
-import { withResponseLanguage } from '../llm/prompt.js';
+import { withResponseDirectives, type ResponseDirectives } from '../llm/prompt.js';
 
 /** The reasoning component. Phase 1: scripted; later: real LLM. */
 export interface ModelAdapter {
@@ -127,17 +126,17 @@ export class Orchestrator {
   }
 
   /** Run one full agent turn. Throws if lifecycle is misused. */
-  run(userInput: string, options: { responseLanguage?: ResponseLanguage } = {}): RunOutcome {
+  run(userInput: string, options: ResponseDirectives = {}): RunOutcome {
     this.lifecycle.start(); // IDLE -> LOADING -> READY
 
     try {
       // 1. Model reasons (no tool access of its own).
       this.lifecycle.transitionTo('RUNNING');
-      // The synchronous adapter has no prompt builder, so the language directive travels in the text it
-      // already receives. With nothing resolved this is the rendered instructions, byte for byte.
-      const instructions = withResponseLanguage(
+      // The synchronous adapter has no prompt builder, so the directives travel in the text it already
+      // receives. With nothing resolved this is the rendered instructions, byte for byte.
+      const instructions = withResponseDirectives(
         renderInstructions(this.deps.instructions),
-        options.responseLanguage,
+        options,
       );
       const statements = this.deps.model.respond(userInput, instructions);
 
@@ -178,11 +177,10 @@ export class Orchestrator {
    */
   async runAsync(
     userInput: string,
-    options: {
+    options: ResponseDirectives & {
       correlationId?: string;
       context?: readonly ContextSection[];
       subject?: Subject;
-      responseLanguage?: ResponseLanguage;
     } = {},
   ): Promise<AsyncRunOutcome> {
     const adapter = this.deps.asyncModel;
@@ -202,6 +200,7 @@ export class Orchestrator {
         ...(options.responseLanguage === undefined
           ? {}
           : { responseLanguage: options.responseLanguage }),
+        ...(options.responseStyle === undefined ? {} : { responseStyle: options.responseStyle }),
       });
 
       this.lifecycle.transitionTo('RESPONDING');

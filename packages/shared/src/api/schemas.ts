@@ -27,6 +27,13 @@ import { ANALYSIS_TYPES } from '../quality/readiness.js';
 import { MAX_MOVEMENT } from '../usage/credits.js';
 import { FEATURE_IDS } from '../usage/features.js';
 import { PLAN_IDS, SUBSCRIPTION_STATUSES } from '../usage/plans.js';
+import {
+  GUIDANCE_DETAILS,
+  GUIDANCE_NOTES,
+  GUIDANCE_STRUCTURES,
+  GUIDANCE_TERMINOLOGY,
+  GUIDANCE_TONES,
+} from '../language/guidance.js';
 import { RESPONSE_LANGUAGES } from '../types.js';
 import type { ValidationResult } from './contracts.js';
 
@@ -66,6 +73,57 @@ const RESPONSE_LANGUAGES_AS_ENUM = [...RESPONSE_LANGUAGES] as [
   (typeof RESPONSE_LANGUAGES)[number],
   ...(typeof RESPONSE_LANGUAGES)[number][],
 ];
+const GUIDANCE_TONES_AS_ENUM = [...GUIDANCE_TONES] as [
+  (typeof GUIDANCE_TONES)[number],
+  ...(typeof GUIDANCE_TONES)[number][],
+];
+const GUIDANCE_DETAILS_AS_ENUM = [...GUIDANCE_DETAILS] as [
+  (typeof GUIDANCE_DETAILS)[number],
+  ...(typeof GUIDANCE_DETAILS)[number][],
+];
+const GUIDANCE_TERMINOLOGY_AS_ENUM = [...GUIDANCE_TERMINOLOGY] as [
+  (typeof GUIDANCE_TERMINOLOGY)[number],
+  ...(typeof GUIDANCE_TERMINOLOGY)[number][],
+];
+const GUIDANCE_STRUCTURES_AS_ENUM = [...GUIDANCE_STRUCTURES] as [
+  (typeof GUIDANCE_STRUCTURES)[number],
+  ...(typeof GUIDANCE_STRUCTURES)[number][],
+];
+/**
+ * The note ids, as a tuple.
+ *
+ * The *keys* of the catalogue rather than a second list of them: an id that has no note text cannot be
+ * sent, because it cannot be written down here, and a note that no id reaches cannot be applied by any
+ * caller. The two halves of the contract are therefore one list.
+ */
+const GUIDANCE_NOTE_IDS_AS_ENUM = Object.keys(GUIDANCE_NOTES) as [
+  keyof typeof GUIDANCE_NOTES,
+  ...(keyof typeof GUIDANCE_NOTES)[],
+];
+
+/**
+ * The style a caller resolved for a turn (Phase 7.5.3.4.2).
+ *
+ * Strict, and documented here for the same reason the whole validation layer is: this object selects which
+ * closed instructions the model reads, so an unknown key is not a field to ignore — it is a caller
+ * believing it changed something. Every value is a member of a closed vocabulary and every note is an id
+ * from `@shared/language/guidance`, which is what makes it impossible for a client to *author* wording: it
+ * can choose, and the sentences it chooses between are ours.
+ */
+export const responseStyleBodySchema = z.strictObject({
+  tone: z.enum(GUIDANCE_TONES_AS_ENUM),
+  detail: z.enum(GUIDANCE_DETAILS_AS_ENUM),
+  terminology: z.enum(GUIDANCE_TERMINOLOGY_AS_ENUM),
+  structure: z.enum(GUIDANCE_STRUCTURES_AS_ENUM),
+  /**
+   * The notes to apply. A list rather than a set, because the order is the order a response stage should
+   * read them in, and bounded because the catalogue is small: a caller sending more notes than exist is
+   * sending something that is not a style.
+   */
+  notes: z.array(z.enum(GUIDANCE_NOTE_IDS_AS_ENUM)).max(Object.keys(GUIDANCE_NOTES).length),
+});
+
+export type ResponseStyleBody = z.infer<typeof responseStyleBodySchema>;
 
 const identifier = z.string().trim().min(1).max(MAX_ID_LENGTH);
 
@@ -109,6 +167,16 @@ export const agentChatBodySchema = z.strictObject({
    * one place it does not live.
    */
   responseLanguage: z.enum(RESPONSE_LANGUAGES_AS_ENUM).optional(),
+  /**
+   * How the answer must be worded, when the caller resolved a style (Phase 7.5.3.4.2).
+   *
+   * Optional, and its absence changes nothing: no style block is added to the prompt. When it is present it
+   * is a set of choices from the product's own closed catalogues — a tone, a depth, a terminology style, a
+   * structure and the ids of the notes to apply — so the caller selects the wording instructions and cannot
+   * write one. It is a wording instruction and nothing else: facts, calculations, tool results, permissions,
+   * safety rules, trading restrictions and uncertainty keep their exact values, whatever the style says.
+   */
+  responseStyle: responseStyleBodySchema.optional(),
   /**
    * The caller's own name for *this attempt*, when it may be retried.
    *

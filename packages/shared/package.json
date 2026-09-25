@@ -20,6 +20,7 @@
     "./desktop/startup": "./src/desktop/startup.ts",
     "./frontend/viewModels": "./src/frontend/viewModels.ts",
     "./jobs/service": "./src/jobs/service.ts",
+    "./language/guidance": "./src/language/guidance.ts",
     "./marketdata/provider": "./src/marketdata/provider.ts",
     "./portfolio/model": "./src/portfolio/model.ts",
     "./portfolio/readiness": "./src/portfolio/readiness.ts",

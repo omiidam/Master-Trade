@@ -309,14 +309,19 @@ describe('the communication profile (Task 2)', () => {
     const requestedStyle = communicationProfile(`این را ${CONTEXT_FORMAL_REQUESTS[0]} بنویس`);
     expect(requestedStyle.formality).toMatchObject({ value: 'formal', source: 'explicit' });
 
-    // 2. The message itself, over anything learned.
+    // 2. A learned preference, over the reading of the message (reversed in Phase 7.5.3.4.2 — the phase
+    // rule is that a learned preference comes before automatic inference; `tests/adaptive-style.test.ts`
+    // holds the rule, and this case holds the *order* it sits in).
     const learnedChatty = learned(8, PERSIAN_INFORMAL);
     const formal = communicationProfile(`خواهشمندم گزارش را بررسی فرمایید.`, {
       observations: learnedChatty,
     });
-    expect(formal.formality).toMatchObject({ value: 'formal', source: 'detected' });
+    expect(formal.formality).toMatchObject({ value: 'informal', source: 'observed' });
+    // ...and the disagreement is visible rather than reconciled: the reason names both sides.
+    expect(formal.formality.reason).toContain('8 of 8');
+    expect(formal.formality.reason).toContain('formal');
 
-    // 3. History, where the message is silent — the same learned store, a message that claims nothing.
+    // 3. The reading, where nothing has been learned — the same message, an empty history.
     const silent = communicationProfile('معامله ثبت شد و گزارش ارسال گردید.', {
       observations: learnedChatty,
     });
@@ -330,19 +335,20 @@ describe('the communication profile (Task 2)', () => {
     expect(fresh.observedSamples).toBe(0);
   });
 
-  it('never lets a learned reading outrank the message in front of it', () => {
+  it('never lets a learned reading become a setting, and never lets it outrank a request', () => {
     const chatty = learned(OBSERVATION_MINIMUM + 3, PERSIAN_INFORMAL);
-    // The same history, two turns: one that claims no register and one that claims a formal one.
+    // The same history, two turns: one the habit agrees with, and one asking for the other register.
     const quiet = communicationProfile('معامله ثبت شد.', { observations: chatty });
-    const formal = communicationProfile(`خدمت شما ارسال گردد و خواهشمندم بررسی ${ZWNJ}فرمایید.`, {
+    const asked = communicationProfile(`این را ${CONTEXT_FORMAL_REQUESTS[0]} بنویس`, {
       observations: chatty,
     });
     expect(quiet.formality.source).toBe('observed');
-    expect(formal.formality.value).toBe('formal');
-    expect(formal.formality.source).toBe('detected');
+    // Asking is the one thing that always wins, which is what makes a learned preference correctable.
+    expect(asked.formality.value).toBe('formal');
+    expect(asked.formality.source).toBe('explicit');
     // A learned preference is never written down as a setting by any path: the profile reports it as an
     // input with its own source and the counts it came from, and the switch's value is untouched.
-    expect(formal.observedSamples).toBe(chatty.samples);
+    expect(asked.observedSamples).toBe(chatty.samples);
   });
 
   it('states the terminology style from the mixing and the reply language', () => {

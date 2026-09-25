@@ -9,17 +9,23 @@
  *
  *   1. **an explicit instruction in the message** — `خلاصه بگو`, `رسمی بنویس`, `با معادل فارسی`. It was
  *      asked for, now, in words. It wins. Always.
- *   2. **what this message looks like** — a four-word turn wants a short answer, and that is evidence
+ *   2. **what previous turns looked like** — the observations below, which are counts and nothing else.
+ *      A person's own standing preference, counted rather than guessed, and the source of it is named in
+ *      the reason so nobody is answered in a register they never asked for without being told why.
+ *   3. **what this message looks like** — a four-word turn wants a short answer, and that is evidence
  *      about *this* turn rather than about anybody's taste.
- *   3. **what previous turns looked like** — the observations below, which are counts and nothing else.
  *   4. **the default** — standard detail, neutral register, the product's own terminology.
  *
- * The ordering of 2 and 3 is the design decision in this file, and it is deliberate rather than
- * incidental: **the message is evidence about this turn, a learned preference is evidence about the
- * person's standing style, and the standing style is only consulted where the turn is silent.** A person
- * who usually wants one line and who this time writes a paragraph and asks for detail gets a detailed
- * answer. The rule is stated once in `resolveCommunication`, and the reason on each dimension names which
- * source won and which was passed over.
+ * The ordering of 2 and 3 is the design decision in this file, and it was **reversed** in Phase
+ * 7.5.3.4.2: 7.5.3.2 consulted the learned counts only where the reading of the message claimed nothing,
+ * and the adaptive-response phase's rule is that a learned preference comes before automatic inference.
+ * The argument is the one 7.5.3.4.1 made for the language of an answer — an inference is drawn from *one*
+ * turn and a learned preference is a count of the person's own — with the same safeguard: an explicit
+ * request still outranks both, and where the learned value disagrees with the reading the reason says so,
+ * so the disagreement is visible instead of being reconciled in silence. A person who usually wants one
+ * line and who this time writes a paragraph and asks for detail still gets a detailed answer, because
+ * asking is the one thing that always wins. The rule is stated once in `resolveCommunication`, and the
+ * reason on each dimension names which source won and which was passed over.
  *
  * What "learned" means here, and why it is safe to call it that
  * ------------------------------------------------------------
@@ -32,9 +38,9 @@
  * Three further consequences, all intentional:
  *
  *   - **Nothing here writes a preference.** There is no path from these counts to a stored setting. The
- *     counts are inputs to a resolution whose output carries `source: 'observed'` and a reason, so a
- *     learned preference can never silently replace a trusted one — it is a weaker input that says out
- *     loud that it is one.
+ *     counts are inputs to a resolution whose output carries `source: 'observed'` and a reason naming the
+ *     counts it came from, so a learned preference is always attributable — a reader of the profile can
+ *     see that it was inferred, from how many turns, and can disagree with it.
  *   - **The memory is bounded and decays.** Past `OBSERVATION_WINDOW` turns the counts are halved, so a
  *     style from a year ago does not outlive the person's current one, and the store cannot grow without
  *     limit.
@@ -51,6 +57,7 @@ import {
   type CommunicationContextOptions,
   type ContextDepth,
 } from './context.js';
+import { GUIDANCE_TERMINOLOGY } from '@shared/language/guidance';
 import { detectLanguage, LANGUAGE_REGISTERS, type LanguageRegister } from './detect.js';
 import {
   DEFAULT_LANGUAGE_PREFERENCE,
@@ -70,8 +77,14 @@ import { standaloneMatches } from './rules.js';
 /** Bumped when a resolved value means something different than it did. */
 export const COMMUNICATION_VERSION = 1;
 
-/** Where a resolved value came from, strongest first. */
-export const PREFERENCE_SOURCES = ['explicit', 'detected', 'observed', 'default'] as const;
+/**
+ * Where a resolved value came from, strongest first — the order `resolveCommunication` consults them in.
+ *
+ * `observed` moved ahead of `detected` in Phase 7.5.3.4.2, which is the phase's "learned preferences come
+ * before automatic inference" written down in the one place that lists the sources; a reader of this array
+ * should not have to read the resolver to learn which of the two wins.
+ */
+export const PREFERENCE_SOURCES = ['explicit', 'observed', 'detected', 'default'] as const;
 export type PreferenceSource = (typeof PREFERENCE_SOURCES)[number];
 
 /**
@@ -88,8 +101,13 @@ export type PreferenceSource = (typeof PREFERENCE_SOURCES)[number];
  *   - `bilingual` — the product's form, with the English beside it where the English is what the person
  *     is reading in. The mixed-message case: it preserves the terms a person already knows without
  *     translating the ones that have no Persian counterpart.
+ *
+ * The vocabulary is the response-style contract's (`@shared/language/guidance`, Phase 7.5.3.4.2):
+ * `TerminologyStyle` is `GuidanceTerminology` under this layer's older name, for the same reason the depth
+ * reading is — the value that says how a turn names concepts and the value that tells a response stage how
+ * to name them are the same value, and two lists for it could disagree.
  */
-export const TERMINOLOGY_STYLES = ['product-terms', 'english-terms', 'bilingual'] as const;
+export const TERMINOLOGY_STYLES = GUIDANCE_TERMINOLOGY;
 export type TerminologyStyle = (typeof TERMINOLOGY_STYLES)[number];
 
 /**
@@ -393,6 +411,15 @@ function explicitTerminologyIn(text: string): TerminologyStyle | null {
  * The text is passed alongside the context because an explicit instruction is a fact about the message
  * that the readings deliberately do not fold in: `requestedFormality` says that a style was asked for,
  * and the words that asked for it are needed to say so in the reason.
+ *
+ * The order is **explicit, learned, detected, default**, and the middle pair was reversed in Phase
+ * 7.5.3.4.2. 7.5.3.2 read the message first and fell back on the learned counts only where the reading
+ * claimed nothing; the phase rule for the adaptive response is that a learned preference comes before
+ * automatic inference, and this is that rule applied to style. The argument for the reversal is the one
+ * 7.5.3.4.1 already made for the language of an answer: an inference is drawn from *one* turn, a learned
+ * preference is a count of the person's own, and where the two disagree the disagreement is recorded in the
+ * reason and named to the person rather than reconciled in silence. An explicit request still outranks both,
+ * which is what makes the rule correctable: `رسمی بنویس` is answered as asked.
  */
 export function resolveCommunication(
   context: CommunicationContext,
@@ -410,20 +437,24 @@ export function resolveCommunication(
         reason: `The message asks for ${context.requestedFormality} wording, which outranks how it happens to be phrased.`,
       };
     }
+    const learned =
+      observations === null ? null : dominantObservation(observations.formality, samples);
+    if (learned !== null) {
+      const disagrees =
+        context.formality.value !== 'neutral' && context.formality.value !== learned.value;
+      return {
+        value: learned.value,
+        source: 'observed',
+        reason: disagrees
+          ? `${learned.count} of ${samples} previous turn(s) read as ${learned.value}, and this message reads ${context.formality.value}; a learned preference outranks the reading of one message, and the next request for a register outranks both.`
+          : `The message claims no register, and ${learned.count} of ${samples} previous turn(s) read as ${learned.value}.`,
+      };
+    }
     if (context.formality.value !== 'neutral') {
       return {
         value: context.formality.value,
         source: 'detected',
         reason: context.formality.reason,
-      };
-    }
-    const learned =
-      observations === null ? null : dominantObservation(observations.formality, samples);
-    if (learned !== null) {
-      return {
-        value: learned.value,
-        source: 'observed',
-        reason: `The message claims no register, and ${learned.count} of ${samples} previous turn(s) read as ${learned.value}.`,
       };
     }
     return {
@@ -442,17 +473,20 @@ export function resolveCommunication(
         reason: context.depth.reason,
       };
     }
-    if (context.depth.value !== 'standard') {
-      return { value: context.depth.value, source: 'detected', reason: context.depth.reason };
-    }
     const learned =
       observations === null ? null : dominantObservation(observations.detail, samples);
     if (learned !== null) {
+      const disagrees = context.depth.value !== 'standard' && context.depth.value !== learned.value;
       return {
         value: learned.value,
         source: 'observed',
-        reason: `The message asks for nothing either way, and ${learned.count} of ${samples} previous turn(s) asked for ${learned.value} detail.`,
+        reason: disagrees
+          ? `${learned.count} of ${samples} previous turn(s) asked for ${learned.value} detail, and this message reads ${context.depth.value}; a learned preference outranks the reading of one message, and the next request for a length outranks both.`
+          : `The message asks for nothing either way, and ${learned.count} of ${samples} previous turn(s) asked for ${learned.value} detail.`,
       };
+    }
+    if (context.depth.value !== 'standard') {
+      return { value: context.depth.value, source: 'detected', reason: context.depth.reason };
     }
     return {
       value: 'standard',

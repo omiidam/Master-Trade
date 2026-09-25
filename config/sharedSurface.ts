@@ -50,6 +50,11 @@ export const SHARED_SURFACE: Readonly<Record<string, string>> = {
   '@shared/desktop/startup': 'packages/shared/src/desktop/startup.ts',
   '@shared/frontend/viewModels': 'packages/shared/src/frontend/viewModels.ts',
   '@shared/jobs/service': 'packages/shared/src/jobs/service.ts',
+  // The response-style contract (Phase 7.5.3.4.2): the closed vocabularies, the note catalogue and the
+  // invariants. It is on the surface because a note is *resolved by the response stage* — the ids are
+  // written where the turn is read (`web/src/language/guidance.ts`) and the text is rendered where the
+  // answer is written (`src/llm/prompt.ts`), and two copies of an instruction are two instructions.
+  '@shared/language/guidance': 'packages/shared/src/language/guidance.ts',
   '@shared/marketdata/provider': 'packages/shared/src/marketdata/provider.ts',
   '@shared/portfolio/model': 'packages/shared/src/portfolio/model.ts',
   '@shared/portfolio/readiness': 'packages/shared/src/portfolio/readiness.ts',

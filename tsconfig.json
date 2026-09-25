@@ -31,6 +31,7 @@
       "@shared/desktop/startup": ["./packages/shared/src/desktop/startup.js"],
       "@shared/frontend/viewModels": ["./packages/shared/src/frontend/viewModels.js"],
       "@shared/jobs/service": ["./packages/shared/src/jobs/service.js"],
+      "@shared/language/guidance": ["./packages/shared/src/language/guidance.js"],
       "@shared/marketdata/provider": ["./packages/shared/src/marketdata/provider.js"],
       "@shared/portfolio/model": ["./packages/shared/src/portfolio/model.js"],
       "@shared/portfolio/readiness": ["./packages/shared/src/portfolio/readiness.js"],

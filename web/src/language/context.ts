@@ -34,6 +34,7 @@
  *      and the suite assert one.
  */
 
+import { GUIDANCE_DETAILS } from '@shared/language/guidance';
 import type { LanguageDetection, LanguageRegister } from './detect.js';
 import type { DetectionOptions } from './detect.js';
 import { detectLanguage } from './detect.js';
@@ -67,8 +68,15 @@ export type ContextSetting = (typeof CONTEXT_SETTINGS)[number];
 export const CONTEXT_EXPERTISES = ['plain', 'informed', 'technical'] as const;
 export type ContextExpertise = (typeof CONTEXT_EXPERTISES)[number];
 
-/** How much detail is wanted. Read from the message, or asked for in it. */
-export const CONTEXT_DEPTHS = ['concise', 'standard', 'detailed'] as const;
+/**
+ * How much detail is wanted. Read from the message, or asked for in it.
+ *
+ * The vocabulary is the response-style contract's (`@shared/language/guidance`, Phase 7.5.3.4.2):
+ * `ContextDepth` is `GuidanceDetail` under this layer's older name, because reading how much detail a turn
+ * wants and instructing how much to give are the same dimension — and a second list for it would be a
+ * second answer to the same question, one that could disagree with the value the response stage is handed.
+ */
+export const CONTEXT_DEPTHS = GUIDANCE_DETAILS;
 export type ContextDepth = (typeof CONTEXT_DEPTHS)[number];
 
 /**

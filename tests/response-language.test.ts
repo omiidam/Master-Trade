@@ -48,7 +48,7 @@ import {
   DECISION_POLICY,
   RESPONSE_LANGUAGE_DIRECTIVE,
   buildTurnMessages,
-  withResponseLanguage,
+  withResponseDirectives,
 } from '../src/llm/prompt.js';
 import { OUTPUT_CONTRACT } from '../src/llm/summary.js';
 import { AgentService } from '../src/agent/service.js';
@@ -303,9 +303,10 @@ describe('the response language (Task 1)', () => {
   it('hands the response stage one value, and nothing it could carry a figure in', () => {
     const control = responseControl(ENGLISH, { observations: answered(6, 'fa') });
 
-    // One value, closed: the language, its guidance, and how many turns informed it.
+    // One value, closed: the language, its guidance, the same decision in the shape the pipeline is handed
+    // (`style`, added in 7.5.3.4.2), and how many turns informed it.
     expect(Object.keys(control).sort()).toEqual(
-      ['guidance', 'observedSamples', 'reply', 'version'].sort(),
+      ['guidance', 'observedSamples', 'reply', 'style', 'version'].sort(),
     );
     expect(Object.keys(control.reply).sort()).toEqual(
       ['language', 'overridden', 'reason', 'source'].sort(),
@@ -440,10 +441,14 @@ describe('the pipeline applies the language it is handed (Task 1)', () => {
   it('changes the prompt only when a language was resolved', () => {
     const [system] = messagesOf(PERSIAN);
     expect(system?.content).toBe([INSTRUCTIONS, DECISION_POLICY, OUTPUT_CONTRACT].join('\n\n'));
-    // The helper the synchronous path uses is the same rule: no language, the same bytes back.
-    expect(withResponseLanguage(INSTRUCTIONS, null)).toBe(INSTRUCTIONS);
-    expect(withResponseLanguage(INSTRUCTIONS, undefined)).toBe(INSTRUCTIONS);
-    expect(withResponseLanguage(INSTRUCTIONS, 'fa')).toContain(RESPONSE_LANGUAGE_DIRECTIVE.fa);
+    // The helper the synchronous path uses is the same rule: nothing resolved, the same bytes back.
+    expect(withResponseDirectives(INSTRUCTIONS, {})).toBe(INSTRUCTIONS);
+    expect(withResponseDirectives(INSTRUCTIONS, { responseLanguage: undefined })).toBe(
+      INSTRUCTIONS,
+    );
+    expect(withResponseDirectives(INSTRUCTIONS, { responseLanguage: 'fa' })).toContain(
+      RESPONSE_LANGUAGE_DIRECTIVE.fa,
+    );
   });
 
   it('does not let the message choose the language the pipeline states', () => {
@@ -471,7 +476,9 @@ describe('the pipeline applies the language it is handed (Task 1)', () => {
 
     orchestrator.run(PERSIAN, { responseLanguage: 'fa' });
     orchestrator.run(PERSIAN);
-    expect(seen[0]?.instructions).toBe(withResponseLanguage(INSTRUCTIONS, 'fa'));
+    expect(seen[0]?.instructions).toBe(
+      withResponseDirectives(INSTRUCTIONS, { responseLanguage: 'fa' }),
+    );
     expect(seen[1]?.instructions).toBe(INSTRUCTIONS);
     // The message itself is never rewritten by the resolution: language analysis does not touch meaning.
     expect(seen[1]?.input).toBe(PERSIAN);

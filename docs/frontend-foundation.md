@@ -1947,7 +1947,7 @@ detection the phase forbids. What crosses is the resolved value, on the request 
 | `storedResponseOptions`       | same file                      | The seam: the preference and the learned store read from the modules that own them, so no caller touches storage    |
 | `RESPONSE_LANGUAGES`          | `packages/shared/src/types.ts` | The two languages, as a shared vocabulary — asserted equal to the language layer's own list                         |
 | `responseLanguage`            | `agentChatBodySchema`          | Optional `fa` \| `en` on the turn request; absent means the prompt is byte-identical to before                      |
-| `withResponseLanguage`        | `src/llm/prompt.ts`            | The directive appended to the instruction text, or the text unchanged                                               |
+| `withResponseDirectives`      | `src/llm/prompt.ts`            | The directives appended to the instruction text, or the text unchanged                                              |
 | `RESPONSE_LANGUAGE_DIRECTIVE` | same file                      | Two closed strings: the language, what the instruction may not change, and what cannot overrule it                  |
 
 The synchronous adapter has no prompt builder, so it receives the directive inside the instructions it
@@ -1984,3 +1984,57 @@ callers rather than by running it:
    on a turn that had been decided by a learned preference. `observed-language` is now a clause of its own.
 2. **`learnedLanguage` indexed a store a first run does not have.** Fine for a caller with a history and a
    crash for the caller with none — which is every new installation. The parameter is now `| null`.
+
+## 26. Phase 7.5.3.4.2 — how the answer is worded, and the one rule that moved
+
+7.5.3.4.1 decided the _language_ of an answer and crossed the process divide as a value. This sub-phase does
+the same for the answer's **style** — and the two things worth writing down are the rule that moved and the
+catalogue that had to change sides because of where each half of it is read.
+
+### The rule that moved
+
+The adaptive-response phase requires that **a learned preference comes before automatic inference**, and
+7.5.3.2 had the other order on both dimensions that have a learned counterpart:
+
+| Reader          | 7.5.3.2                             | 7.5.3.4.2                                     |
+| --------------- | ----------------------------------- | --------------------------------------------- |
+| The register    | explicit → the reading → the counts | explicit → the counts → the reading → default |
+| The length      | explicit → the reading → the counts | explicit → the counts → the reading → default |
+| The terminology | explicit → the reading              | unchanged — it has no counts, by design       |
+
+The reversal has the same shape as 7.5.3.4.1's `observed` step and the same safeguard: an explicit request
+outranks both, and where the counts disagree with the reading the reason names both sides rather than
+reconciling them in silence. `PREFERENCE_SOURCES` lists the sources in the order they are consulted, so the
+list and the resolver say the same thing.
+
+### The catalogue changed sides
+
+A note is an instruction about wording and it is resolved by the **response stage**, in the other process;
+the ids are produced where the turn is read. Two copies of an instruction are two instructions, so the
+contract — the four vocabularies, the note catalogue, the seven invariants and `ResponseStyle` — lives on the
+shared surface as `@shared/language/guidance`, and `web/src/language/guidance.ts` imports and re-exports it
+under the names this layer has used since 7.5.3.2. `tests/adaptive-style.test.ts` asserts the two surfaces are
+the **same objects** rather than equal copies, which is also how `CONTEXT_DEPTHS`/
+`GUIDANCE_DETAILS` and `TERMINOLOGY_STYLES`/`GUIDANCE_TERMINOLOGY` stopped being two lists for one dimension.
+
+### The pieces
+
+| Piece                       | Where                                      | What it does                                                                              |
+| --------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `resolveCommunication`      | `web/src/language/communication.ts`        | Explicit → learned → reading → default; unchanged signature, corrected order              |
+| `@shared/language/guidance` | `packages/shared/src/language/guidance.ts` | The vocabularies, the note texts, the seven invariants, and `ResponseStyle`               |
+| `responseStyle`             | `web/src/language/guidance.ts`             | The projection of a resolved guidance into the shape that crosses the boundary            |
+| `.style` on the control     | `web/src/language/response.ts`             | The same decision, so a caller has the value to send and the value to explain             |
+| `responseStyle`             | `agentChatBodySchema`                      | A strict object of closed values and catalogue note ids; absent means an unchanged prompt |
+| `responseStyleDirective`    | `src/llm/prompt.ts`                        | The note lines plus the invariants, rendered from the catalogue                           |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1588** unit tests across **79** files (1576/78 before), including the new `tests/adaptive-style.test.ts`
+  (12 tests) and the two precedence cases in `tests/language-context.test.ts` rewritten to hold the new
+  order.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**; the browser suite is unchanged at **32**
+  cases, because this phase renders nothing.
+- No new dependency, no new persistence key, no new memory: the style is a projection of a decision the
+  language layer already made, and the counts it reads are 7.5.3.2's own.

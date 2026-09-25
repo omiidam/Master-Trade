@@ -231,6 +231,31 @@ before the field existed, asserted by test rather than promised here: a turn tha
 was never given a language cannot become a differently-worded prompt because this
 exists.
 
+### The response style (Phase 7.5.3.4.2)
+
+How the answer is worded arrives the same way and from the same caller, as
+`responseStyle` (optional): a tone, a depth, a terminology style, a structure, and
+the ids of the wording notes to apply. The **text** of those notes lives in this
+tier's reach (`packages/shared/src/language/guidance.ts`, on the shared surface)
+and the **ids** are produced where the turn is read, so the block the model reads
+and the decision the caller made cannot be two different instructions.
+
+`responseStyleDirective` renders one line per note from that catalogue, then
+closes with the invariant list: facts, calculations, tool results, permissions,
+safety rules, trading restrictions and uncertainty are out of scope for a style,
+a refusal stays a refusal, and the instructions are wording instructions within
+the output contract — they never ask for a narration of how the answer was
+reached. The block is assembled from `GUIDANCE_NOTES` and nothing else: it can
+only select from the product's closed sentences, which is why a style cannot
+carry a figure, a result or a permission into the prompt.
+
+`withResponseDirectives(instructions, { responseLanguage, responseStyle })`
+appends both blocks in that order — language first, because `fa-formal` names a
+register of a language that has to be stated before it is used — and appends
+nothing when neither is resolved. The route validates the object strictly and
+echoes it back rather than inventing one: the server does not resolve a style, so
+it cannot tell a client what style it used.
+
 ## 4. Deferred
 
 - **Streaming** (`stream()` returning `AsyncIterable<LlmStreamChunk>`) and true

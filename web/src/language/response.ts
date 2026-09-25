@@ -17,9 +17,10 @@
  *
  * `resolveLanguage` holds that order, and this module is the one call that feeds all four into it: it
  * reads the message once, takes the preference and the learned store from where they are kept, and returns
- * the resolved language *with* 7.5.3.2's guidance for the same turn. A response stage therefore has one
- * thing to apply rather than three to assemble, and cannot apply the language of one reading to the
- * wording of another.
+ * the resolved language *with* 7.5.3.2's guidance for the same turn — and, from 7.5.3.4.2, with the same
+ * decision in the shape the response pipeline is handed (`style`). A response stage therefore has one thing
+ * to apply rather than three to assemble, and cannot apply the language of one reading to the wording of
+ * another.
  *
  * What it deliberately is not
  * --------------------------
@@ -47,7 +48,7 @@ import {
   type CommunicationProfileOptions,
 } from './communication.js';
 import { detectLanguage } from './detect.js';
-import { responseGuidance, type ResponseGuidance } from './guidance.js';
+import { responseGuidance, responseStyle, type ResponseGuidance } from './guidance.js';
 import {
   preferenceStorage,
   readLanguagePreference,
@@ -55,6 +56,7 @@ import {
   type PreferenceStorage,
 } from './preference.js';
 import type { LanguageReply } from './profile.js';
+import type { ResponseStyle } from '@shared/language/guidance';
 
 /**
  * The version of the control, bumped when a returned value means something different than it did.
@@ -64,13 +66,25 @@ import type { LanguageReply } from './profile.js';
  */
 export const RESPONSE_CONTROL_VERSION = 1;
 
-/** What a response stage applies to one turn: the language, and the wording instructions for it. */
+/** What a response stage applies to one turn: the language, and how to word the answer in it. */
 export interface ResponseControl {
   readonly version: number;
   /** The language the answer is written in, with the source that decided it and why. */
   readonly reply: LanguageReply;
-  /** How to word it — tone, depth, terminology, structure, and the invariant list. */
+  /**
+   * How to word it — tone, depth, terminology, structure, the notes to apply, and the invariant list.
+   *
+   * This is the value a person reads when they disagree with an answer's *style*, which is why it carries
+   * the `reason` and the evidence behind each dimension.
+   */
   readonly guidance: ResponseGuidance;
+  /**
+   * The same decision in the shape that crosses the process divide — Phase 7.5.3.4.2.
+   *
+   * A projection of `guidance` (`responseStyle`), carried here so a caller that resolves a turn has the
+   * value to send as well as the value to explain, and neither of them has to be assembled by hand.
+   */
+  readonly style: ResponseStyle;
   /** How many previous turns informed the resolution. Zero means nothing has been learned yet. */
   readonly observedSamples: number;
 }
@@ -97,10 +111,12 @@ export function responseControl(
     detection,
     observations,
   });
+  const guidance = responseGuidance(profile);
   return {
     version: RESPONSE_CONTROL_VERSION,
     reply: profile.language,
-    guidance: responseGuidance(profile),
+    guidance,
+    style: responseStyle(guidance),
     observedSamples: profile.observedSamples,
   };
 }

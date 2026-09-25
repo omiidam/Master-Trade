@@ -45,78 +45,38 @@ import type { ContextDepth, ContextExpertise, ContextIntent, ContextSetting } fr
 import type { LanguageRegister } from './detect.js';
 import type { ReplyLanguage } from './profile.js';
 
-/** Bumped when a note means something different than it did. */
-export const GUIDANCE_VERSION = 1;
-
 /**
- * How the reply should sound, in one word.
+ * The vocabularies, the note catalogue and the invariants are the *response-style contract*
+ * (`@shared/language/guidance`, Phase 7.5.3.4.2), imported and re-exported under the names this layer has
+ * used since 7.5.3.2.
  *
- * `neutral` is not a missing value: it is the register the product's own Persian copy is written in, and
- * a message that claims no register gets it rather than a guess.
+ * They are defined on the shared surface rather than here for one reason: a note is **resolved by the
+ * response stage**, which runs on the other side of the process divide, and two copies of an instruction
+ * are two instructions. This module owns the reading that produces the ids; the contract owns the text they
+ * resolve to, and neither can drift from the other without a compile error.
  */
-export const GUIDANCE_TONES = ['formal', 'neutral', 'conversational'] as const;
-export type GuidanceTone = (typeof GUIDANCE_TONES)[number];
-
-/** How the answer should be ordered. */
-export const GUIDANCE_STRUCTURES = ['direct-answer', 'explained', 'step-by-step'] as const;
-export type GuidanceStructure = (typeof GUIDANCE_STRUCTURES)[number];
-
-/**
- * What guidance is not allowed to touch.
- *
- * Carried in every guidance rather than stated once in a document, because the thing that must not change
- * is the thing a response stage is most likely to change while "just rewording": a rounded figure, a
- * softened uncertainty, an implied permission. The list is closed, and the suite asserts it is exactly
- * these seven.
- */
-export const GUIDANCE_INVARIANTS = [
-  'facts',
-  'calculations',
-  'tool-results',
-  'permissions',
-  'safety-rules',
-  'trading-restrictions',
-  'uncertainty',
-] as const;
-export type GuidanceInvariant = (typeof GUIDANCE_INVARIANTS)[number];
-
-/**
- * The notes a response stage applies, by id.
- *
- * Each one is an instruction about *wording*, and none of them can hold a value from a message: a note is
- * a fixed string here and the guidance carries the id. Anything that would need to name a figure, a
- * result or a permission belongs in the answer itself, where the tool results already are.
- */
-export const GUIDANCE_NOTES = {
-  'fa-formal':
-    'Write in the formal Persian register this product uses in its Persian copy: complete sentences and the polite forms, with no colloquial contractions.',
-  'fa-neutral': 'Write in Persian, in the register the conversation is already using.',
-  'fa-conversational':
-    'Write natural conversational Persian — the way a knowledgeable colleague would say it, not the way a letter would. Do not reach for bookish forms like «\u0645\u06CC\u200C\u0628\u0627\u0634\u062F».',
-  'en-formal':
-    'Write in formal English: complete sentences and the polite forms this product uses.',
-  'en-neutral': 'Write in English, in the register the conversation is already using.',
-  'en-conversational': 'Write natural conversational English, the way a colleague would say it.',
-  'terms-product':
-    'Name each concept with the form the Persian language store records for it, and keep a term in English only where the store has no Persian form for it.',
-  'terms-english': 'Name each concept in English, matching the wording the product shows.',
-  'terms-bilingual':
-    'Keep the English word beside the product\u2019s Persian form for a concept this person is already reading in English, and never translate a term that has no Persian counterpart. Do not gloss a term they used themselves in Persian.',
-  'detail-concise': 'Answer in as few words as the question allows. Lead with the answer and stop.',
-  'detail-standard':
-    'Answer at the length the question deserves: the answer first, then only what it needs.',
-  'detail-detailed':
-    'Explain the reasoning as well as the answer, in the order it was reached, so the conclusion can be checked.',
-  'structure-direct': 'Lead with the answer, then the one reason it rests on.',
-  'structure-explained': 'Answer, then say what the answer rests on, in that order.',
-  'structure-stepwise':
-    'Give the steps in order, so the instruction can be followed one at a time, without reordering or merging them.',
-  'figures-verbatim':
-    'Repeat every figure, symbol and date exactly as the tool results returned it. Never round, re-derive, re-scale or restate one.',
-  'ask-nothing-further':
-    'Do not ask a question the message already answered, and do not ask for permission the safety rules already give.',
-} as const;
-export type GuidanceNoteId = keyof typeof GUIDANCE_NOTES;
+export {
+  GUIDANCE_INVARIANTS,
+  GUIDANCE_NOTES,
+  GUIDANCE_STRUCTURES,
+  GUIDANCE_TONES,
+  GUIDANCE_VERSION,
+  type GuidanceInvariant,
+  type GuidanceNoteId,
+  type GuidanceStructure,
+  type GuidanceTone,
+} from '@shared/language/guidance';
+// The same names again, imported rather than exported: `export … from` does not bind anything locally, and
+// this module reads the catalogue as well as publishing it.
+import {
+  GUIDANCE_INVARIANTS,
+  GUIDANCE_VERSION,
+  type GuidanceInvariant,
+  type GuidanceNoteId,
+  type GuidanceStructure,
+  type GuidanceTone,
+  type ResponseStyle,
+} from '@shared/language/guidance';
 
 /** The clauses the `reason` is assembled from, so it too is closed and quotable. */
 export const GUIDANCE_CLAUSES = {
@@ -310,4 +270,27 @@ export function guidanceFor(
   options: CommunicationProfileOptions = {},
 ): ResponseGuidance {
   return responseGuidance(communicationProfile(text, options));
+}
+
+/**
+ * The same decision in the shape that crosses the process divide — Phase 7.5.3.4.2.
+ *
+ * A projection and nothing more: four values and the note ids, copied out of a resolved guidance, so the
+ * object a response stage is handed cannot become a second opinion about the same turn. What is *dropped*
+ * is as deliberate as what is kept — the `reason` stays here, because it is written for a person to read
+ * and disagree with, and a model has no business being told why it is being asked to sound a certain way;
+ * the language is not here either, because it travels as its own field and a turn whose language and style
+ * arrived in one object could be given one without the other.
+ *
+ * Exported as a function over a guidance rather than as a second resolver, which is the property that
+ * matters: there is one place where a style is decided, and this is how it is written down.
+ */
+export function responseStyle(guidance: ResponseGuidance): ResponseStyle {
+  return {
+    tone: guidance.tone,
+    detail: guidance.detail,
+    terminology: guidance.terminology,
+    structure: guidance.structure,
+    notes: guidance.notes,
+  };
 }

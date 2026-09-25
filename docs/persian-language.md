@@ -762,7 +762,8 @@ What crosses instead is the **verdict**, on the request that already exists:
   byte-identity rather than a comment about it.
 - `AgentService.run`/`runAsync` carry it to the orchestrator, which gives it to the adapter. The provider
   path reaches it through `buildTurnMessages`; the synchronous path — which has no prompt builder — gets it
-  appended to the instruction text it already receives, through the same `withResponseLanguage`.
+  appended to the instruction text it already receives, through the same helper (`withResponseLanguage`
+  then; `withResponseDirectives` from 7.5.3.4.2, when a second block joined it).
 - The response echoes it back. Echoed, not derived: the server did not decide it and cannot.
 
 ### What the directive may and may not say
@@ -794,6 +795,105 @@ Nothing else in a turn changed. Tools, the permission check, the readiness gate,
 summary contract, the epistemic labels and every refusal are what they were; the language reaches the prompt
 and stops there, and the suite keeps it that way by asserting that a blocked turn's words are unaffected and
 that a turn given a language produces the same statements as one without.
+
+## Phase 7.5.3.4.2 — the style of an answer, and the one rule this phase reversed
+
+7.5.3.2 read what kind of turn a message is and turned it into a _specification of wording_: a tone, a
+depth, a terminology style, a structure, and the ids of the notes to apply. That specification was produced,
+asserted and explained — and consumed by nothing. This sub-phase makes it reach the answer, and changes one
+rule on the way there.
+
+### The reversal, which is the phase's rule applied to style
+
+7.5.3.2 decided each dimension by asking **the message first** and falling back on the learned counts only
+where the reading claimed nothing. The phase rule for the adaptive response is the other way round —
+**a learned preference comes before automatic inference** — so the middle two steps of `resolveCommunication`
+swapped:
+
+| #   | Source                                 | Why it sits there                                                 |
+| --- | -------------------------------------- | ----------------------------------------------------------------- |
+| 1   | An explicit instruction in the message | Asked for, now, in words. Always wins.                            |
+| 2   | The learned preference (the counts)    | Evidence about the person, counted rather than guessed.           |
+| 3   | The reading of the message             | Evidence about this one sentence.                                 |
+| 4   | The default                            | Standard detail, neutral register, the product's own terminology. |
+
+The argument is 7.5.3.4.1's, applied to style rather than to language: an inference is drawn from _one_
+sentence, and a learned preference is a count of the person's own turns. The safeguard is the same one too.
+An explicit request still outranks both, so somebody who usually wants one line and who this time writes a
+paragraph and asks for detail gets a detailed answer — asking is the one thing that always wins — and where
+the learned value disagrees with the reading the reason names both sides instead of reconciling them in
+silence:
+
+> `7 of 7 previous turn(s) read as informal, and this message reads formal; a learned preference outranks the reading of one message, and the next request for a register outranks both.`
+
+What did **not** change: the counts are still counts, still bounded, still decaying, and still never written
+back as a setting. `PREFERENCE_SOURCES` now lists the sources in the order they are consulted, because it
+claimed "strongest first" while listing the old order — a comment that was true and then was not.
+
+### The catalogue had to live where the answer is written
+
+A note is an instruction about wording, and it is _resolved by the response stage_ — in the other process,
+where `src/llm/prompt.ts` builds the system message. The ids are produced where the turn is read
+(`web/src/language/guidance.ts`). Two copies of an instruction are two instructions that can disagree, and
+`tests/monorepo-boundary.test.ts` forbids carrying one across by relative path, so the contract moved to
+`@shared/language/guidance`: the four vocabularies, the note catalogue, the seven invariants and the shape a
+style travels in. `web/src/language/guidance.ts` imports it and re-exports it under the names this layer has
+used since 7.5.3.2, and the suite asserts the two surfaces are the **same objects** (`toBe`) rather than
+equal copies of them.
+
+That is also what let two vocabularies stop being written twice: `CONTEXT_DEPTHS` is `GUIDANCE_DETAILS` and
+`TERMINOLOGY_STYLES` is `GUIDANCE_TERMINOLOGY`, so the reading of how much detail a turn wants and the
+instruction of how much to give cannot be two different lists.
+
+### The five things the phase names, as they resolve
+
+| The requirement                   | The dimension | The values                                                |
+| --------------------------------- | ------------- | --------------------------------------------------------- |
+| concise versus detailed           | `detail`      | `concise` · `standard` · `detailed`                       |
+| formal versus conversational tone | `tone`        | `formal` · `neutral` · `conversational`, per language     |
+| technical versus simpler          | `expertise`   | decides the structure, and adds the figures-verbatim note |
+| preferred Persian/English terms   | `terminology` | `product-terms` · `english-terms` · `bilingual`           |
+| appropriate response structure    | `structure`   | `direct-answer` · `explained` · `step-by-step`            |
+
+`technical` gets no paragraph of its own in the prompt. It decides _how the answer is ordered_ and adds the
+one note that matters most on a turn full of figures — that every figure is repeated exactly as a tool
+returned it. That is the shape of the whole design: the dimensions a person would name are the ones the
+values carry, and the rest are notes.
+
+### What the style may not say, stated inside the style
+
+The block the model reads is assembled from the catalogue and closes with the list of what it may not touch —
+facts, calculations, tool results, permissions, safety rules, trading restrictions, uncertainty — plus two
+sentences that exist because of what a style _is_. A refusal stays a refusal and an uncertainty stays
+uncertain, whatever the style asked for; and the instructions are wording instructions within the output
+contract, so they never ask for a narration of how the answer was reached. That second sentence is not
+decoration: `detail-detailed` says to explain the reasoning "in the order it was reached", which is a
+request for a well-ordered explanation and not for a transcript, and a model that read it the other way
+would have produced exactly the chain-of-thought this product refuses to expose.
+
+No note has a placeholder and no note contains a digit — asserted over the whole catalogue rather than over
+the notes one turn happens to use — so nothing a caller sends can put a figure, a result or a permission
+into the prompt as an instruction about wording.
+
+### It crosses as a selection, never as wording
+
+`responseStyle` on the turn request is a strict object: four values from closed vocabularies and a list of
+note ids drawn from the catalogue's own keys. A client therefore **selects** wording and cannot author it —
+a value outside a vocabulary, a note id with no text, a note list that is not a list, a key that is not part
+of a style, and a list longer than the catalogue are each refused by the schema with a 400 rather than
+ignored. `responseControl` carries the same decision a second time as `.style` (`responseStyle(guidance)` — a
+projection, not a second opinion), so a caller has the value to send and the value to explain without
+assembling either. The `reason` is deliberately _not_ in what crosses: it is written for a person to read
+and disagree with, and a model has no business being told why it is being asked to sound a certain way.
+
+### The one thing a reader should not expect, as in 7.5.3.4.1
+
+The offline `scripted` adapter still answers in the sentences it always did — it is a deterministic stub with
+no prompt, so there is nothing for a style to apply to — and the interface still has no send path that would
+resolve a turn of its own. The style therefore reaches a model exactly where a model exists, asserted on the
+prompt that is actually sent, and the honest answer to "how will the agent word this" is still the one the
+run-context card gives: no model is connected. When the workspace's send path arrives it has one call to
+make — `responseControl(…)`, whose `.reply` and `.style` are the two things the request carries.
 
 ## What verification found
 
@@ -829,6 +929,25 @@ caller contract, and its behaviour is asserted unchanged by the same suite.
 
 Both were found before the commit, by reading the new code against the callers it would have, and both are
 now cases in `tests/response-language.test.ts`.
+
+### 7.5.3.4.2: four defects, three of them a decision written down twice
+
+1. **7.5.3.2's own suite asserted the rule this phase reverses.** Two cases in `tests/language-context.test.ts`
+   required `detected` to win over `observed` — a correct assertion about the old rule and a failing one about
+   the new. They were rewritten to hold the new order and to name both sides of the disagreement, because the
+   ordering of two sources is a decision that lives in the resolver _and_ in whatever asserts it, and a phase
+   that changes one has to change both.
+2. **`withResponseLanguage` had room for one directive and there were two.** The 7.5.3.4.1 helper took a
+   language, so a style had nowhere to go. It is `withResponseDirectives(instructions, { … })` now, and the
+   order it renders in — language first, style second — is a decision rather than a detail: `fa-formal` names
+   a register of a language that has to be stated before it is used.
+3. **`PREFERENCE_SOURCES` said "strongest first" and listed the old order.** After the reversal that comment
+   was the only place left claiming the reading outranked a habit. The list is in consulted order now, so a
+   reader does not have to open the resolver to learn which of two sources wins.
+4. **Two vocabularies were about to be written twice.** `CONTEXT_DEPTHS` and `TERMINOLOGY_STYLES` were
+   literals in the layer while the contract held the same values for the same dimensions — the reading of how
+   much detail a turn wants and the instruction of how much to give. They are the contract's own lists now,
+   and the suite asserts identity rather than equality so a copy cannot pass for one.
 
 ### 7.5.3.3: the migration believing it knew better, seven times
 
@@ -996,6 +1115,20 @@ no language resolved, a message asking for a language in its own text changing n
 reaching both the synchronous adapter's instructions and the real provider request, a refusal whose words
 are unaffected, and the route echoing the language back while refusing one it does not know.
 
+Phase 7.5.3.4.2 adds `tests/adaptive-style.test.ts` — 12 tests over the style of an answer. The resolution:
+an explicit instruction over a learned preference _and_ over the message, a learned preference over the
+reading of the message with the disagreement named in the reason, the reading where nothing has been
+learned, the default where nothing says anything, the five dimensions each drawn from a closed list with
+the layer's names asserted to be the shared contract's **own** lists, and the projection that carries the
+decision across the boundary. The application, and the requirement the phase is really about: the **same
+factual answer presented under two styles** — the instructions, the operating rules, the output contract and
+the question itself byte-identical, while the wording notes differ and the difference is exactly the style
+block; the blocks reaching both the synchronous instructions and the real provider request with the
+statements, epistemic labels and tool executions unchanged; a refusal that keeps its words whatever style
+was sent; every note in the catalogue proved to carry no digit and no placeholder; and five ways a client
+could try to author wording — a value outside a vocabulary, an unknown note id, a note list that is not a
+list, a key that is not part of a style, a list longer than the catalogue — each refused with a 400.
+
 Phase 7.5.2.2's `tests/persian-terminology.test.ts` gained one case for the same reason: the sidebar's
 Persian label has to _be_ the glossary's preferred form for that concept, not a second translation of it.
 
@@ -1042,10 +1175,11 @@ stays English, and that all three options fit 375 px without panning the page.
 
 The four Persian suites are **132 tests** together: 46 for the store and the locale, 26 for the
 correction pipeline, 28 for the lexicon, and 32 for grammar, spelling and the QA pipeline. The language
-analysis adds 68 more across three suites: 24 in `tests/language-detection.test.ts` for the reading of a
+analysis adds 80 more across four suites: 24 in `tests/language-detection.test.ts` for the reading of a
 message and the switch, 22 in `tests/language-context.test.ts` for the interaction, the preferences and
-the guidance, and 22 in `tests/response-language.test.ts` for the language of the answer, its four signals
-and the prompt they reach.
+the guidance, 22 in `tests/response-language.test.ts` for the language of the answer, its four signals
+and the prompt they reach, and 12 in `tests/adaptive-style.test.ts` for how the answer is worded once the
+language is settled and for the rule that a learned preference outranks a reading.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
@@ -1057,6 +1191,7 @@ npx vitest run tests/persian-qa.test.ts              # 7.5.2.3: grammar, spellin
 npx vitest run tests/language-detection.test.ts      # 7.5.3.1: the reading, the profile, the switch
 npx vitest run tests/language-context.test.ts        # 7.5.3.2: the context, the preferences, the guidance
 npx vitest run tests/response-language.test.ts       # 7.5.3.4.1: the answer's language, and the prompt
+npx vitest run tests/adaptive-style.test.ts          # 7.5.3.4.2: how the answer is worded
 npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```

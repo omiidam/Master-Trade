@@ -20,6 +20,7 @@
 
 import type { AgentChatBody } from '../../../packages/shared/src/api/schemas.js';
 import type { ResponseLanguage } from '../../../packages/shared/src/types.js';
+import type { ResponseStyle } from '../../../packages/shared/src/language/guidance.js';
 import type { AgentAsyncTurn, AgentService, AgentTurn } from '../../agent/service.js';
 import type { AnalysisReadinessDecision } from '../../../packages/shared/src/quality/readiness.js';
 import {
@@ -71,6 +72,13 @@ export interface AgentChatResponseData {
    * "answered in Persian" has to be showing what it asked for.
    */
   responseLanguage?: ResponseLanguage;
+  /**
+   * The style the answer was asked to be worded in, echoed back (Phase 7.5.3.4.2).
+   *
+   * Echoed for the same reason the language is: the server did not resolve it, and a client that shows
+   * "answered concisely" has to be showing what it asked for rather than what it hoped.
+   */
+  responseStyle?: ResponseStyle;
   /** What the turn cost, and why. Absent only when the server does not meter turns. */
   usage?: {
     operationKey: string;
@@ -240,6 +248,7 @@ export function agentChatHandler(
             ...(body.responseLanguage === undefined
               ? {}
               : { responseLanguage: body.responseLanguage }),
+            ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
           };
         }
 
@@ -249,6 +258,7 @@ export function agentChatHandler(
           ...(body.responseLanguage === undefined
             ? {}
             : { responseLanguage: body.responseLanguage }),
+          ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
         });
         context.logger.info(
           'capability turn completed',
@@ -275,6 +285,7 @@ export function agentChatHandler(
           ...(body.responseLanguage === undefined
             ? {}
             : { responseLanguage: body.responseLanguage }),
+          ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
         });
         context.logger.info(
           'gated agent turn completed',
@@ -293,6 +304,7 @@ export function agentChatHandler(
 
       const turn = service.run(body.message, {
         ...(body.responseLanguage === undefined ? {} : { responseLanguage: body.responseLanguage }),
+        ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
       });
       context.logger.info(
         'agent turn completed',
@@ -327,6 +339,7 @@ export function agentChatHandler(
         statements: turn.statements,
         note: OFFLINE_NOTE,
         ...(body.responseLanguage === undefined ? {} : { responseLanguage: body.responseLanguage }),
+        ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
         ...(turn.readiness === undefined ? {} : { readiness: turn.readiness }),
         ...(turn.capability === undefined ? {} : { capability: turn.capability }),
         ...(usage === undefined ? {} : { usage }),
