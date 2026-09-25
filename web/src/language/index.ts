@@ -23,11 +23,19 @@
  *   - `languageQa.ts` — the pipeline that runs all of the above in order, and the three decisions
  *                   (`promoteLanguageRule`, `retireLanguageRule`, `approveForm`) that make a
  *                   suggestion permanent.
+ *   - `detect.ts` — Phase 7.5.3.1's reading of a message: which script it is in, how it is written,
+ *                   and whether it asked for a language.
+ *   - `profile.ts` — the same reading as one value a later stage consumes, plus the precedence rule
+ *                   between a person's explicit choice and what their message looks like.
+ *   - `preference.ts` — the choice itself, and where it is kept (not in the knowledge store).
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
  *
- * Nothing here renders, and nothing here is imported by the running interface yet: the interface is
- * not translated (Phase 7.5.2), and the font stack in `global.css` is the hook this layer will plug
- * into. It is exported as one surface so the phase that does translate has one place to look.
+ * Nothing here renders, and the interface is still English: the layer is not a translation (Phase
+ * 7.5.2), and the font stack in `global.css` is the hook a translation would plug into. One part of it
+ * does now reach the running application — `preference.ts`, which the Settings language switch writes
+ * and the interface store mirrors — and that is the whole of the coupling: the interface asks this
+ * layer where a *setting* lives, and nothing in the interface asks it what a word is. Everything else
+ * is exported as one surface so the stage that builds on it has one place to look.
  */
 
 export {
@@ -143,6 +151,60 @@ export {
 } from './normalize.js';
 
 export { GRAMMAR_RULES } from './grammar.js';
+
+export {
+  LANGUAGE_KINDS,
+  LANGUAGE_REGISTERS,
+  LANGUAGE_STYLES,
+  LANGUAGE_VERBOSITIES,
+  LANGUAGE_WORDINGS,
+  detectLanguage,
+} from './detect.js';
+export type {
+  DetectionOptions,
+  LanguageContext,
+  LanguageDetection,
+  LanguageKind,
+  LanguageRegister,
+  LanguageRequest,
+  LanguageStyle,
+  LanguageVerbosity,
+  LanguageWording,
+} from './detect.js';
+
+export {
+  LANGUAGE_PROFILE_FIELDS,
+  LANGUAGE_PROFILE_VERSION,
+  REPLY_LANGUAGES,
+  REPLY_SOURCES,
+  languageProfile,
+  resolveLanguage,
+  storedProfileOptions,
+} from './profile.js';
+export type {
+  LanguageProfile,
+  LanguageProfileOptions,
+  LanguageReply,
+  ReplyLanguage,
+  ReplySource,
+} from './profile.js';
+
+export {
+  DEFAULT_LANGUAGE_PREFERENCE,
+  LANGUAGE_PREFERENCES,
+  LANGUAGE_PREFERENCE_KEY,
+  LANGUAGE_PREFERENCE_LABELS,
+  isLanguagePreference,
+  parseLanguagePreference,
+  preferenceStorage,
+  readLanguagePreference,
+  writeLanguagePreference,
+} from './preference.js';
+export type {
+  LanguagePreference,
+  LanguagePreferenceReading,
+  PreferenceStorage,
+} from './preference.js';
 
 export { COMPOUND_PAIRS, REGISTER_FORMS, SPELLING_RULES } from './spelling.js';
 

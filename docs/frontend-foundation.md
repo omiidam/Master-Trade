@@ -1653,3 +1653,87 @@ versioned decision with a reference rather than a flag in a config file.
   the machinery §18 already built). The 7.5.1 assertion that required all seeded knowledge to be current
   was replaced by what is still true: everything seeded is either current or deliberately waiting on a
   review, and nothing is lost.
+
+## 22. Phase 7.5.3.1 — reading a message, and the switch that outranks the reading
+
+Three modules — `web/src/language/detect.ts` (Task 1), `web/src/language/profile.ts` (Task 2) and
+`web/src/language/preference.ts` (Task 3) — plus the first piece of the Persian line a user can touch: a
+**Language** card in Settings → Appearance. The suite is `tests/language-detection.test.ts` (23 tests) and
+two new browser cases; the language record, including the two defects the verification found, is
+`docs/persian-language.md`.
+
+### Detection is a census, and it says so
+
+`detectLanguage` counts letters per script and matches closed lists, and nothing else. No model, no
+classifier, no score pretending to be a probability — because the layer around it stores _cited_ knowledge,
+and `detected: 'fa'` has to be answerable with "32 of the letters were Persian and none were Latin" rather
+than with "a model said so". Confidence is therefore a statement about **evidence**, not certainty: a
+visible formula over the share of letters in the winning script and how many letters there were. `XAUUSD`
+scores about 0.7 — real evidence and thin evidence — and a full sentence of one script scores 1.
+
+Three decisions follow from that, and each has a test. **Digits are not evidence**: a price reads the same
+in every language, so a message of digits alone is `unknown` with confidence 0 rather than Persian because
+of its Persian digits. **`mixed` is a first-class answer**: a Persian sentence full of `XAUUSD` is the
+normal shape of this product's text, and a detector that called it one language would be wrong about the
+case it exists for. **A mix's confidence is how evenly divided it is**, not how sure the census is of one
+language — one stray Latin token is a weak claim about mixing and it is already reported as the technical
+token it is. Finglish is a closed list plus three Latin shapes with a stated ceiling of 0.85, and it refuses
+to guess from one word: `salam` alone is `en`, and a message carrying English stopwords is English however
+Persian one of its words looks.
+
+Register comes from the register table §21 already owns plus two short closed lists; style is three
+mechanical predicates; verbosity is word-count bands and is called a band. A tie is `neutral` rather than a
+coin toss.
+
+### The profile is a value, and the reply is one rule
+
+Task 2 is one type: the detection, plus the person's standing choice, plus the resolution between them,
+under `LANGUAGE_PROFILE_VERSION`. The separation is the design — detection is about the _message_ and
+changes every time somebody types, the preference is about the _person_ and changes when they say so, and
+the reply is the only thing that combines them. `resolveLanguage` states the precedence in one sentence:
+**an explicit choice wins, otherwise the message decides.** Finglish resolves to Persian; a message with no
+letters resolves to the product's own language with `source: 'default'`, because nothing was detected; and
+when an explicit choice disagrees with the reading, `overridden` records it rather than reconciling it
+silently.
+
+The phase's honesty rule — analysis must never alter the meaning of the message — is structural rather than
+promised. The profile holds **no copy of the message**: counts, closed-vocabulary verdicts and the exact
+words that were evidence. The suite asserts every reported string is a verbatim substring of what was
+typed, that the corrected paragraph the normalizer would produce appears nowhere in the reading, and that
+the built profile's field names are exactly the closed list in `LANGUAGE_PROFILE_FIELDS` — so a field
+describing _who somebody is_ fails here instead of shipping quietly.
+
+### The switch overrides detection without joining the knowledge store
+
+`auto` is a **value**, not the absence of one. Without it, a person who never opens Settings has silently
+chosen English and a person who clears their choice cannot get back to automatic — and "override automatic
+detection when explicitly selected" needs both halves to mean anything.
+
+The preference is deliberately not in `LanguageMemory`: that store is shared, versioned and reviewed, and a
+per-user setting is none of those things. `preference.ts` owns the key, the validation and the storage
+access; the interface store **mirrors** the value so the control renders its selected state on the first
+paint, and `storedProfileOptions` is the single seam a later agent stage calls. Persistence is
+`localStorage` — the architecture has no settings API yet — and both directions go through one module that
+swallows a hostile or missing store instead of throwing. A failed write is reported (`languageStorable`) so
+the caption says the choice lasts until the app closes rather than showing a remembered state that is not
+one. When a settings API arrives, `preference.ts` is the only file that changes.
+
+The control is three buttons — Automatic, Persian (فارسی), English — beside Writing direction, using the
+pattern already on that page: selected state in `aria-pressed`, expressed through the primary/secondary
+variant. It is not a UI translation: the browser case asserts `document.documentElement.lang` is still `en`
+after Persian has been chosen, because the switch sets the language of the _answer_.
+
+### Verified
+
+- Both typechecks clean; `format:check` clean; `npm run build` and `npm run build:web` clean.
+- **1514** unit tests across **75** files (1491/74 before), including the new 23-test detection suite and
+  a `web/src/store/ui.ts` change that the root typecheck now sees — which is how the store's two
+  extensionless imports were found and corrected.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks** (unchanged).
+- Browser end-to-end at **32** cases (30 before). The two new ones are the phase's real rendering claims:
+  the switch adopts and writes the choice, survives a **reload** with the interface still English, has
+  exactly one pressed option, and puts all three options on screen at 375 px without panning the page.
+- No new dependency, and the bundle gains exactly one module: `preference.ts`, plus the store change and
+  the card in Settings. `detect.ts` and `profile.ts` are **not in the built JavaScript at all** — nothing
+  in the interface imports them, and the shipped bundle contains no `finglish` and no `stopwords`, which is
+  the measured form of "this phase did not put a language model in the product's download".

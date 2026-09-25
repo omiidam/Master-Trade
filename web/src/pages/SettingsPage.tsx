@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Database,
   KeyRound,
+  Languages,
   Layers,
   Monitor,
   Palette,
@@ -30,6 +31,7 @@ import { Grid, Workspace } from '../app/Workspace';
 import { THEME } from '../design/tokens';
 import { useShellStatus } from '../desktop/useShellStatus';
 import { mockBudget, mockProviders, mockSystemStatus } from '../mock/data';
+import { LANGUAGE_PREFERENCE_LABELS, LANGUAGE_PREFERENCES } from '../language/preference';
 import { useUiStore } from '../store/ui';
 import { cn } from '../lib/cn';
 
@@ -52,6 +54,9 @@ export function SettingsPage() {
   const setDirection = useUiStore((state) => state.setDirection);
   const density = useUiStore((state) => state.density);
   const setDensity = useUiStore((state) => state.setDensity);
+  const languagePreference = useUiStore((state) => state.languagePreference);
+  const languageStorable = useUiStore((state) => state.languageStorable);
+  const setLanguagePreference = useUiStore((state) => state.setLanguagePreference);
   const shell = useShellStatus();
 
   return (
@@ -97,6 +102,40 @@ export function SettingsPage() {
                 <p className="text-caption text-text-faint">
                   Charts and numeric readouts stay LTR on purpose: financial time series are read
                   left-to-right.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card surface="utility">
+              <CardHeader divider>
+                <div>
+                  <CardTitle className="text-body">Language</CardTitle>
+                  <CardDescription>
+                    The language the agent answers in. Automatic follows the language you write
+                  </CardDescription>
+                </div>
+                <Languages size={15} aria-hidden className="text-text-faint" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {LANGUAGE_PREFERENCES.map((option) => (
+                    <Button
+                      key={option}
+                      variant={languagePreference === option ? 'primary' : 'secondary'}
+                      onClick={() => setLanguagePreference(option)}
+                      aria-pressed={languagePreference === option}
+                    >
+                      {LANGUAGE_PREFERENCE_LABELS[option]}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-caption text-text-faint">
+                  {languagePreference === 'auto'
+                    ? 'Persian and English are both read from the message you send, and the answer follows it. Technical terms stay as they are written in either language.'
+                    : `${LANGUAGE_PREFERENCE_LABELS[languagePreference]} is chosen, so the answer stays in it whatever the message is written in.`}
+                  {languageStorable
+                    ? ''
+                    : ' This session has no writable setting store, so the choice lasts until the app closes.'}
                 </p>
               </CardContent>
             </Card>

@@ -62,9 +62,16 @@ export interface Span {
 /** The digit repertoire, spelled once, so a number is recognised whichever set it is written in. */
 const DIGITS = '0-9\u06F0-\u06F9\u0660-\u0669';
 
-/** The letters, split into the two scripts whose coexistence is the whole problem. */
-const PERSIAN_LETTERS = '\u0621-\u063A\u0641-\u064A\u066E-\u06D3\u06D5\u06FA-\u06FF';
-const LATIN_LETTERS = 'A-Za-z';
+/**
+ * The letters, split into the two scripts whose coexistence is the whole problem.
+ *
+ * Exported as *class sources* rather than as ready-made regular expressions, because the callers need
+ * different shapes of the same fact: this file asks "is this one character a letter", while language
+ * detection counts how many of each script a message contains. A second copy of these ranges is how a
+ * detector and a rule eventually disagree about what the Persian alphabet is.
+ */
+export const PERSIAN_LETTERS = '\u0621-\u063A\u0641-\u064A\u066E-\u06D3\u06D5\u06FA-\u06FF';
+export const LATIN_LETTERS = 'A-Za-z';
 
 /** Any letter at all — used to answer "what is this text near?". */
 const LETTER = new RegExp(`[${PERSIAN_LETTERS}${LATIN_LETTERS}]`, 'u');

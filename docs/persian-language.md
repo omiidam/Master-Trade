@@ -452,6 +452,108 @@ is right about 95% of words and silent about which 5% is not something a _knowle
 because a trusted entry whose provenance is "a model thought so" is the one thing this whole layer exists
 to prevent.
 
+## Phase 7.5.3.1 — reading a message, and the switch that outranks the reading
+
+The three phases before this one built knowledge: an orthography, a correction pipeline, a lexicon, a
+grammar. None of them read anything a person wrote. This sub-phase is where the layer starts _looking at
+the message_, and the whole of it is three new modules — `detect.ts` (Task 1), `profile.ts` (Task 2) and
+`preference.ts` (Task 3) — plus the first piece of the Persian line a user can actually touch: the
+Language card in Settings → Appearance. The record below is about the decisions rather than the files.
+
+### Detection is a census, and it says so out loud
+
+There is no model, no classifier and no score pretending to be a probability. `detectLanguage` counts
+letters per script and matches closed lists, and every verdict is re-derivable by hand from the message
+and the tables in the file. That is not a compromise on quality; it is what the rest of the layer
+requires. `LanguageMemory` holds _cited_ knowledge, and the moment a detection is stored or acted on,
+`detected: 'fa'` has to be answerable with "32 of the letters were Persian and none were Latin" — not
+with "a model said so". It is the same test DadmaTools failed above, applied to this product's own code.
+
+Three consequences follow, and each is asserted:
+
+- **Digits are not evidence.** `3345.20` is a price and reads the same in every language, so counting it
+  would move a verdict without carrying information. A message of digits alone is `unknown` with
+  confidence 0 — not Persian because it has Persian digits in it, and not English by convention. `۳۳۴۵`
+  is counted and reported, and changes no verdict.
+- **Confidence is a statement about evidence**, and the formula is two visible factors: the share of
+  letters in the winning script, and how many letters there were. `XAUUSD` scores about 0.7 — real
+  evidence, thin evidence — and a full sentence of one script scores 1. It is rounded to two places, so
+  it can be asserted at all.
+- **`mixed` is a first-class answer.** A Persian sentence full of `XAUUSD` is the normal shape of this
+  product's text, and a detector that called it either language alone would be wrong about the exact case
+  it exists for. Its confidence is the one place the formula changes meaning, and it changes it to
+  something more useful: how _evenly divided_ the message is. A Persian sentence with one English token
+  scores low, because a stray foreign word is not evidence that somebody is mixing languages, and it is
+  already reported as the technical token it is.
+
+Finglish is a closed list of transliterations plus three Latin shapes, with a stated ceiling of 0.85 and
+no pretence of being a transliteration classifier. It also refuses to guess from one word: `salam` alone
+is `en`, because one marker is not a verdict, and a message carrying English stopwords is English however
+Persian one of its words looks. The stopword list is why `salam, the price` is English and `salam, mishe
+gheymat ro begi` is Persian — the distinction is written down rather than tuned.
+
+The register comes from the register table §21 already owns plus two short closed lists of colloquial
+and formal markers; the style is three mechanical predicates; the verbosity is word-count bands and is
+called a band. A tie is `neutral` rather than a coin toss, and a message with no marker reaches for none.
+
+### The profile is a value, and the reply is one rule
+
+Task 2 is one type: detection, plus the person's standing choice, plus the resolution between them, under
+`LANGUAGE_PROFILE_VERSION`. The separation is the design. Detection is about the _message_ and changes
+every time somebody types; the preference is about the _person_ and changes when they say so; and the
+reply is the only thing that combines them. A later stage that conflated them would re-decide precedence
+every time, which is how two stages end up disagreeing about one conversation.
+
+The precedence rule is `resolveLanguage`: **an explicit choice wins, otherwise the message decides.** A
+Persian speaker reading English documentation still wants the answer in Persian, and no amount of
+detection can know that. Finglish resolves to Persian. A message with no letters resolves to the
+product's own language with `source: 'default'`, because nothing was detected. When an explicit choice
+disagrees with the reading, `overridden` is set and the reason says so — a fact a later stage may want to
+act on, and one that would otherwise be invisible.
+
+The honesty rule from Task 2 — _language analysis must never alter the meaning of the user's message_ — is
+enforced structurally rather than promised. The profile holds no copy of the message: it is counts, closed
+vocabulary verdicts and the exact words that were evidence. The suite asserts every reported string is a
+verbatim substring of what was typed, and that the corrected paragraph the normalizer would produce
+appears nowhere in the reading. And `LANGUAGE_PROFILE_FIELDS` is a closed list the suite compares the
+built profile against, so a field that describes _who somebody is_ fails here rather than shipping
+quietly. Detection may notice how a person writes; it may not assemble a picture of the person.
+
+### The switch overrides detection without joining the knowledge store
+
+`auto` is a **value**, not the absence of one. Detection is worth having on its own, so "I have not
+chosen" has to be expressible — otherwise somebody who never opens Settings has silently chosen English,
+and somebody who clears their choice cannot get back to automatic. The phase's "override automatic
+detection when explicitly selected" needs both halves: something explicit to override _with_, and
+something automatic to be overridden.
+
+The preference is deliberately **not** in `LanguageMemory`. The store holds cited knowledge about
+Persian — orthography, terminology, rules a reviewer accepted — and it is shared, versioned and reviewed
+through a provenance path. A person's own setting is none of those: it is not a claim about the language,
+it has no reviewer, and writing it in would put per-user state into a knowledge base whose entire value is
+that every entry can be cited. It lives in `preference.ts`, which owns the key, the validation and the
+storage access, and it is _exposed to_ the language system rather than stored inside it: the interface
+store mirrors it so the control can render its selected state on the first paint, and `storedProfileOptions`
+is the single seam a later agent stage calls to get a profile that honours the choice.
+
+Persistence is `localStorage`, because the architecture has no settings table and no user-settings API yet,
+and both read and write go through one module that swallows a hostile or missing store rather than
+throwing. A write that fails is _reported_ (`languageStorable`), so the caption says the choice lasts until
+the app closes instead of showing a selected state that will be gone at the next launch. When the product
+grows a settings API, `preference.ts` is the only file that changes.
+
+What the running application pays for this is measurable and small: `preference.ts` is in the bundle, and
+`detect.ts` and `profile.ts` are **not** — nothing in the interface imports them, so the built JavaScript
+contains no `finglish` and no `stopwords`. Detection becomes part of the product on the day a stage sends
+it a message; until then it is a library with a suite.
+
+The control itself is three buttons — Automatic, Persian (فارسی), English — placed beside Writing
+direction in Settings → Appearance, which is where the application's existing language controls live. The
+pattern is the one already on that page: pressed state in `aria-pressed`, selection expressed through the
+primary/secondary variant. It is **not** a UI translation, and nothing here activates Persian as the
+user-facing language: the browser suite asserts `document.documentElement.lang` is still `en` after
+Persian has been chosen, because the switch sets the language of the _answer_.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -466,6 +568,29 @@ malformed code is still shown as itself so the mistake stays visible. Regression
 
 The English path is untouched by this: `labels.ts#formatMoney` is a different function with a different
 caller contract, and its behaviour is asserted unchanged by the same suite.
+
+### 7.5.3.1: two defects in the reading, and one in the check on it
+
+1. **The mixed-confidence formula was inverted relative to what it claimed.** It multiplied the
+   dominant-share confidence by a balance bonus, which sounds like it rewards balance and in practice did
+   not: the Persian-heavy mixed message scored **0.554** and the English-heavy one **0.566**, so the more
+   evenly divided message was the less confident one. The bonus was a factor on top of a number that
+   already measured the wrong thing. It is now the balance itself — `2 · min(P, L) / (P + L)` — times the
+   evidence factor, which reads as one sentence and gives 0.65 and 0.55 for the same two messages. The
+   regression is the comparison, not the numbers: the more balanced mix scores higher.
+2. **`styleOf` read the last character and nothing else, so two common Persian shapes were misfiled.**
+   `قیمت رو دیدی؟ الان چیکار کنم` asked a question and was called a statement, because the question mark
+   was not final. Worse, an instruction in Persian closes with its **verb** — `این معامله را خلاصه کن`
+   opens with a noun and was therefore not an instruction at all, in a product whose agent is asked for
+   things in exactly that shape. A question mark is now looked for anywhere in the turn (a chat message is
+   not a paragraph), and the clause-final imperatives `کن`, `کنید`, `بکن`, `بگیر` are in the request
+   vocabulary with a comment saying what closes a Persian instruction.
+3. **The guard on the profile's field names had a false positive.** It tested field names against a
+   substring pattern containing `age`, which matches `language` — so the check as written forbade the
+   profile from having a field for the language it detects. The fix matters more than the bug: field names
+   are now compared **segment by segment** (`nativeLanguage` → `native`, `language`), so a genuinely
+   personal field still fails while `language`, `coverage` and `usage` do not. A check with false
+   positives is a check that gets weakened the first time it fires.
 
 ### 7.5.2.3: six defects that running it on real Persian found
 
@@ -521,6 +646,18 @@ correction-replay reconstruction, determinism and idempotence, the English corpu
 promote → runs path, the deprecate → stops path, `approveForm` and its refusal, the agent-proposal
 parking path, and a snapshot round trip that keeps all three decisions.
 
+Phase 7.5.3.1 adds `tests/language-detection.test.ts` — 23 tests over the reading rather than over the
+knowledge. Detection: Persian, English, the two mixed messages, the technical sentence, the spoken and the
+written register, the three styles and the band that is neither, Finglish including the two cases where
+the honest answer is `en`, the five explicit language requests and the one message _about_ a language that
+must not be read as one, and the four inputs that have no language at all. The profile: its closed field
+list, its version, the precedence rule asserted on its own, the larger-half rule for a mix, determinism,
+a JSON round trip, and the seam that reads the stored choice. The preference: its namespaced key (asserted
+not to be in the knowledge store's namespace), three values with labels, anything unreadable degrading to
+`auto`, a real round trip through a store, and a store that throws on read and on write. The switch: the
+interface store adopting what was stored at creation, writing every later choice, and reporting an
+unwritable choice as unwritable.
+
 Phase 7.5.2.1 adds `tests/persian-normalization.test.ts` — 26 tests whose first case refuses to pass if a
 rule in the catalogue has no regression case of its own. Beyond the per-rule cases: a corpus of English,
 symbols, URLs, paths, identifiers and figures comes out byte-identical with an empty change list; the
@@ -534,8 +671,13 @@ real, glyph-covering fetch the moment one does; and a signed figure painted sign
 right-to-left paragraph, which is the `.num` isolation rule doing its job with Persian actually on the
 page.
 
+The browser suite's `the language switch, in a browser` section adds the two things a source assertion
+cannot make: that choosing Persian **survives a reload** of the running application while the document
+stays English, and that all three options fit 375 px without panning the page.
+
 The four Persian suites are **132 tests** together: 46 for the store and the locale, 26 for the
-correction pipeline, 28 for the lexicon, and 32 for grammar, spelling and the QA pipeline.
+correction pipeline, 28 for the lexicon, and 32 for grammar, spelling and the QA pipeline. The language
+analysis of 7.5.3.1 adds 23 more in a fifth suite, `tests/language-detection.test.ts`.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
@@ -544,6 +686,7 @@ npx vitest run tests/persian-language.test.ts        # 7.5.1: the store, the loc
 npx vitest run tests/persian-normalization.test.ts   # 7.5.2.1: the correction pipeline
 npx vitest run tests/persian-terminology.test.ts     # 7.5.2.2: the lexicon
 npx vitest run tests/persian-qa.test.ts              # 7.5.2.3: grammar, spelling, the pipeline
-npm run test:e2e          # the browser suite, including both measurements above
+npx vitest run tests/language-detection.test.ts      # 7.5.3.1: the reading, the profile, the switch
+npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```

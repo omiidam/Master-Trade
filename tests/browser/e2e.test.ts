@@ -39,7 +39,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { NAV_SECTIONS } from '../../web/src/config/navigation.js';
-import { normalizePersianContent } from '../../web/src/language/index.js';
+import {
+  LANGUAGE_PREFERENCE_KEY,
+  LANGUAGE_PREFERENCE_LABELS,
+  normalizePersianContent,
+} from '../../web/src/language/index.js';
 import {
   ACCESSIBILITY_PROBE,
   CLIPPING_PROBE,
@@ -865,6 +869,148 @@ suite('the Product Foundation in a real browser', () => {
       // The sign is painted to the *left* of the last character: the figure reads sign-first, which is
       // the order a reader of a trading terminal expects regardless of the sentence around it.
       expect(measured.signLeft).toBeLessThan(measured.tailLeft);
+    });
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* H. The language switch (Phase 7.5.3.1)                                  */
+  /* ---------------------------------------------------------------------- */
+
+  describe('the language switch, in a browser', () => {
+    /** The three controls, as the browser holds them: their label and whether each is pressed. */
+    interface SwitchState {
+      labels: string[];
+      pressed: string[];
+      caption: string;
+    }
+
+    const readSwitch = (): Promise<SwitchState> =>
+      session.evaluateJson<SwitchState>(`
+        (() => {
+          const main = document.querySelector('main');
+          const buttons = [...(main?.querySelectorAll('button[aria-pressed]') ?? [])].filter(
+            (button) => ['${LANGUAGE_PREFERENCE_LABELS.auto}', '${LANGUAGE_PREFERENCE_LABELS.fa}', '${LANGUAGE_PREFERENCE_LABELS.en}'].includes(
+              (button.textContent ?? '').trim(),
+            ),
+          );
+          // The nearest container that also holds prose is the switch's own card, which is where the
+          // caption lives — found structurally rather than by matching the copy it happens to have.
+          let card = buttons[0]?.parentElement ?? null;
+          while (card && !card.querySelector('p')) card = card.parentElement;
+          return JSON.stringify({
+            labels: buttons.map((button) => (button.textContent ?? '').trim()),
+            pressed: buttons
+              .filter((button) => button.getAttribute('aria-pressed') === 'true')
+              .map((button) => (button.textContent ?? '').trim()),
+            caption: (card?.querySelector('p')?.textContent ?? '').trim(),
+          });
+        })()
+      `);
+
+    const clickSwitch = (label: string): Promise<boolean> =>
+      session.evaluate<boolean>(`
+        (() => {
+          const button = [...document.querySelectorAll('main button')].find(
+            (item) => (item.textContent ?? '').trim() === ${JSON.stringify(label)},
+          );
+          if (!button) return false;
+          button.click();
+          return true;
+        })()
+      `);
+
+    const openSettings = async (): Promise<void> => {
+      await session.clickNav('Settings');
+      await session.waitFor(
+        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === 'Settings'`,
+        'the Settings page',
+      );
+      await session.waitFor(
+        `[...document.querySelectorAll('main button')].some(
+           (item) => (item.textContent ?? '').trim() === ${JSON.stringify(LANGUAGE_PREFERENCE_LABELS.fa)})`,
+        'the language switch to be rendered',
+      );
+    };
+
+    it('offers one choice with a visible selected state, and remembers it across a reload', async () => {
+      await session.setViewport(1440, 900);
+      await session.goto(`${server.origin}/`);
+      // The suite runs in a throwaway profile, so this is belt-and-braces: the switch is about the
+      // choice being made *now*, not about whatever a previous spec left behind.
+      await session.evaluate(`localStorage.removeItem(${JSON.stringify(LANGUAGE_PREFERENCE_KEY)})`);
+      await session.goto(`${server.origin}/`);
+      await openSettings();
+
+      const initial = await readSwitch();
+      expect(initial.labels).toEqual([
+        LANGUAGE_PREFERENCE_LABELS.auto,
+        LANGUAGE_PREFERENCE_LABELS.fa,
+        LANGUAGE_PREFERENCE_LABELS.en,
+      ]);
+      // Exactly one option is selected, so "unselected" is a state a person can see.
+      expect(initial.pressed).toEqual([LANGUAGE_PREFERENCE_LABELS.auto]);
+
+      expect(await clickSwitch(LANGUAGE_PREFERENCE_LABELS.fa)).toBe(true);
+      const chosen = await readSwitch();
+      expect(chosen.pressed).toEqual([LANGUAGE_PREFERENCE_LABELS.fa]);
+      // The caption says what the choice means, and says nothing about failing to store it.
+      expect(chosen.caption).toContain(`${LANGUAGE_PREFERENCE_LABELS.fa} is chosen`);
+      expect(chosen.caption).not.toContain('no writable setting store');
+
+      // The choice reached storage under its own namespaced key, which is what "exposed to the language
+      // system" means in a build with no settings API.
+      expect(
+        await session.evaluate<string>(
+          `localStorage.getItem(${JSON.stringify(LANGUAGE_PREFERENCE_KEY)}) ?? ''`,
+        ),
+      ).toBe('fa');
+
+      // And it survives a restart of the application, because it is read when the store is created
+      // rather than reset by it.
+      await session.goto(`${server.origin}/`);
+      await openSettings();
+      expect((await readSwitch()).pressed).toEqual([LANGUAGE_PREFERENCE_LABELS.fa]);
+
+      // The switch sets the language of the *answer*: the interface is still English, because Persian
+      // is not this product's user-facing language yet.
+      expect(await session.evaluate<string>('document.documentElement.lang')).toBe('en');
+    });
+
+    it('is reachable and does not overflow at phone width', async () => {
+      await session.setViewport(375, 812);
+      await session.goto(`${server.origin}/`);
+      await openSettings();
+
+      const measured = await session.evaluateJson<{
+        overflow: number;
+        visible: number;
+        width: number;
+      }>(`
+        (() => {
+          const buttons = [...document.querySelectorAll('main button')].filter(
+            (item) => ['${LANGUAGE_PREFERENCE_LABELS.auto}', '${LANGUAGE_PREFERENCE_LABELS.fa}', '${LANGUAGE_PREFERENCE_LABELS.en}'].includes(
+              (item.textContent ?? '').trim(),
+            ),
+          );
+          const visible = buttons.filter((button) => {
+            const box = button.getBoundingClientRect();
+            return box.width > 0 && box.height > 0 && box.right <= window.innerWidth + 0.5;
+          });
+          return JSON.stringify({
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            visible: visible.length,
+            width: Math.max(0, ...buttons.map((button) => button.getBoundingClientRect().width)),
+          });
+        })()
+      `);
+
+      // All three options fit the smallest width the design commits to, and none of them pushes the
+      // page sideways.
+      expect(measured.visible).toBe(3);
+      expect(measured.width).toBeGreaterThan(0);
+      expect(measured.overflow, 'the language switch panned the phone layout').toBeLessThanOrEqual(
+        0,
+      );
     });
   });
 });
