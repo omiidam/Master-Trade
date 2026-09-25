@@ -33,6 +33,7 @@ import {
   parseObservations,
   readCommunicationObservations,
   responseControl,
+  statedPreference,
   storedResponseOptions,
   writeCommunicationObservations,
   type CommunicationObservations,
@@ -292,7 +293,16 @@ describe('the response language (Task 1)', () => {
   });
 
   it('states the precedence once, in the order the phase names', () => {
-    expect(REPLY_SOURCES).toEqual(['requested', 'explicit', 'observed', 'detected', 'default']);
+    // `corrected` joined in Phase 7.5.3.4.3: what a person said outright, between the control they can see
+    // and the habit the product inferred.
+    expect(REPLY_SOURCES).toEqual([
+      'requested',
+      'explicit',
+      'corrected',
+      'observed',
+      'detected',
+      'default',
+    ]);
     // The reply itself is still only ever one of two languages: a mix is a way of *writing*, not a way of
     // answering, and the resolution never returns one.
     for (const text of [PERSIAN, ENGLISH, MIXED_PERSIAN_HEAVY, MIXED_LATIN_HEAVY, '3345.20']) {
@@ -347,13 +357,22 @@ describe('the response language (Task 1)', () => {
     const stored = storedResponseOptions(store);
     expect(stored.preference).toBe('fa');
     expect(stored.observations?.languages.fa).toBe(6);
+    // The third key of the same memory (`learning.ts`, Phase 7.5.3.4.3) is read here too, and a value that
+    // was never written is nothing stated rather than an empty store.
+    expect(stored.corrections).toBeNull();
     expect(responseControl(ENGLISH, stored).reply.source).toBe('explicit');
 
-    // A first run: nothing chosen, nothing learned, and no error on the way in.
+    // A first run: nothing chosen, nothing learned, nothing stated, and no error on the way in.
     const empty = storedResponseOptions(fakeStorage().store);
-    expect(empty).toEqual({ preference: 'auto', observations: null });
+    expect(empty).toEqual({ preference: 'auto', observations: null, corrections: null });
     expect(responseControl(ENGLISH, empty).reply.source).toBe('detected');
-    expect(storedResponseOptions(null)).toEqual({ preference: 'auto', observations: null });
+    expect(storedResponseOptions(null)).toEqual({
+      preference: 'auto',
+      observations: null,
+      corrections: null,
+    });
+    // With nothing stated there is nothing to read, which is what a caller passing no signals gets.
+    expect(statedPreference(empty.corrections, 'language')).toBeNull();
   });
 });
 

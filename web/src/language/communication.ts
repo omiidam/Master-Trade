@@ -9,16 +9,21 @@
  *
  *   1. **an explicit instruction in the message** — `خلاصه بگو`, `رسمی بنویس`, `با معادل فارسی`. It was
  *      asked for, now, in words. It wins. Always.
- *   2. **what previous turns looked like** — the observations below, which are counts and nothing else.
+ *   2. **something this person stated outright** — the statements in `learning.ts`, from Phase 7.5.3.4.3.
+ *      Words somebody used about how they want to be answered, which is not an inference and therefore
+ *      not something a reading or a count may overrule.
+ *   3. **what previous turns looked like** — the observations below, which are counts and nothing else.
  *      A person's own standing preference, counted rather than guessed, and the source of it is named in
  *      the reason so nobody is answered in a register they never asked for without being told why.
- *   3. **what this message looks like** — a four-word turn wants a short answer, and that is evidence
+ *   4. **what this message looks like** — a four-word turn wants a short answer, and that is evidence
  *      about *this* turn rather than about anybody's taste.
- *   4. **the default** — standard detail, neutral register, the product's own terminology.
+ *   5. **the default** — standard detail, neutral register, the product's own terminology.
  *
- * The ordering of 2 and 3 is the design decision in this file, and it was **reversed** in Phase
- * 7.5.3.4.2: 7.5.3.2 consulted the learned counts only where the reading of the message claimed nothing,
- * and the adaptive-response phase's rule is that a learned preference comes before automatic inference.
+ * Steps 2 and 3 in that order are Phase 7.5.3.4.3's rule, and the split between them is the honest one:
+ * a statement is the person's own words and a count is the product's guess, so the guess never gets to
+ * outrank the sentence — and an inference is still better than a reading of one turn, which 7.5.3.4.2
+ * established when it **reversed** the order 7.5.3.2 had, where the counts were consulted only where the
+ * reading of the message claimed nothing.
  * The argument is the one 7.5.3.4.1 made for the language of an answer — an inference is drawn from *one*
  * turn and a learned preference is a count of the person's own — with the same safeguard: an explicit
  * request still outranks both, and where the learned value disagrees with the reading the reason says so,
@@ -59,19 +64,22 @@ import {
 } from './context.js';
 import { GUIDANCE_TERMINOLOGY } from '@shared/language/guidance';
 import { detectLanguage, LANGUAGE_REGISTERS, type LanguageRegister } from './detect.js';
+import { statedPreference, type CorrectionStore } from './learning.js';
+import {
+  resolveLanguage,
+  reversalClause,
+  saidTimes,
+  REPLY_LANGUAGES,
+  type LanguageReply,
+  type LearnedLanguage,
+  type ReplyLanguage,
+} from './profile.js';
 import {
   DEFAULT_LANGUAGE_PREFERENCE,
   preferenceStorage,
   type LanguagePreference,
   type PreferenceStorage,
 } from './preference.js';
-import {
-  resolveLanguage,
-  REPLY_LANGUAGES,
-  type LanguageReply,
-  type LearnedLanguage,
-  type ReplyLanguage,
-} from './profile.js';
 import { standaloneMatches } from './rules.js';
 
 /** Bumped when a resolved value means something different than it did. */
@@ -80,11 +88,20 @@ export const COMMUNICATION_VERSION = 1;
 /**
  * Where a resolved value came from, strongest first — the order `resolveCommunication` consults them in.
  *
- * `observed` moved ahead of `detected` in Phase 7.5.3.4.2, which is the phase's "learned preferences come
- * before automatic inference" written down in the one place that lists the sources; a reader of this array
- * should not have to read the resolver to learn which of the two wins.
+ * Two things are written down in this one line, and neither is visible in the resolver alone. `observed`
+ * moved ahead of `detected` in Phase 7.5.3.4.2, which is the phase's "learned preferences come before
+ * automatic inference": a count of somebody's own turns is evidence about *them*, and the reading of one
+ * message is evidence about one message. `corrected` joined in Phase 7.5.3.4.3, above both, because a
+ * statement is not an inference at all — `explicit` and `corrected` are words the person used, and the
+ * other three are things the product worked out.
  */
-export const PREFERENCE_SOURCES = ['explicit', 'observed', 'detected', 'default'] as const;
+export const PREFERENCE_SOURCES = [
+  'explicit',
+  'corrected',
+  'observed',
+  'detected',
+  'default',
+] as const;
 export type PreferenceSource = (typeof PREFERENCE_SOURCES)[number];
 
 /**
@@ -412,21 +429,23 @@ function explicitTerminologyIn(text: string): TerminologyStyle | null {
  * that the readings deliberately do not fold in: `requestedFormality` says that a style was asked for,
  * and the words that asked for it are needed to say so in the reason.
  *
- * The order is **explicit, learned, detected, default**, and the middle pair was reversed in Phase
- * 7.5.3.4.2. 7.5.3.2 read the message first and fell back on the learned counts only where the reading
- * claimed nothing; the phase rule for the adaptive response is that a learned preference comes before
- * automatic inference, and this is that rule applied to style. The argument for the reversal is the one
- * 7.5.3.4.1 already made for the language of an answer: an inference is drawn from *one* turn, a learned
- * preference is a count of the person's own, and where the two disagree the disagreement is recorded in the
- * reason and named to the person rather than reconciled in silence. An explicit request still outranks both,
- * which is what makes the rule correctable: `رسمی بنویس` is answered as asked.
+ * The order is **explicit, corrected, learned, detected, default**. The middle pair was reversed in Phase
+ * 7.5.3.4.2 — 7.5.3.2 read the message first and fell back on the learned counts only where the reading
+ * claimed nothing — and `corrected` was added above both in Phase 7.5.3.4.3. The arguments are the ones
+ * 7.5.3.4.1 made for the language of an answer, applied to style: an inference is drawn from *one* turn, a
+ * learned preference is a count of the person's own, and a statement is the person's own words — so the
+ * order is statement, then count, then reading. Where any two of them disagree the disagreement is recorded
+ * in the reason and named to the person rather than reconciled in silence, which is what "do not silently
+ * overwrite" means once the value has already been decided. An explicit request still outranks all of them,
+ * which is what makes every rule below it correctable: `رسمی بنویس` is answered as asked.
  */
 export function resolveCommunication(
   context: CommunicationContext,
   language: LanguageReply,
   text: string,
-  observations: CommunicationObservations | null = null,
+  signals: CommunicationSignals = {},
 ): CommunicationProfile {
+  const observations = signals.observations ?? null;
   const samples = observations?.samples ?? 0;
 
   const formality = ((): PreferenceReading<LanguageRegister> => {
@@ -435,6 +454,20 @@ export function resolveCommunication(
         value: context.requestedFormality,
         source: 'explicit',
         reason: `The message asks for ${context.requestedFormality} wording, which outranks how it happens to be phrased.`,
+      };
+    }
+    const stated = statedPreference<LanguageRegister>(signals.corrections, 'formality');
+    if (stated !== null) {
+      const disagrees =
+        context.formality.value !== 'neutral' && context.formality.value !== stated.value;
+      return {
+        value: stated.value,
+        source: 'corrected',
+        reason: `${
+          disagrees
+            ? `This person asked for ${stated.value} wording${saidTimes(stated.confirmations)}, and this message reads ${context.formality.value}; a stated correction outranks the reading of one message.`
+            : `This person asked for ${stated.value} wording${saidTimes(stated.confirmations)}, so that is the register of the reply.`
+        }${reversalClause(stated, (value) => value)}`,
       };
     }
     const learned =
@@ -471,6 +504,19 @@ export function resolveCommunication(
         value: context.requestedDepth,
         source: 'explicit',
         reason: context.depth.reason,
+      };
+    }
+    const stated = statedPreference<ContextDepth>(signals.corrections, 'detail');
+    if (stated !== null) {
+      const disagrees = context.depth.value !== 'standard' && context.depth.value !== stated.value;
+      return {
+        value: stated.value,
+        source: 'corrected',
+        reason: `${
+          disagrees
+            ? `This person asked for ${stated.value} answers${saidTimes(stated.confirmations)}, and this message reads ${context.depth.value}; a stated correction outranks the reading of one message.`
+            : `This person asked for ${stated.value} answers${saidTimes(stated.confirmations)}, so that is the length of the reply.`
+        }${reversalClause(stated, (value) => value)}`,
       };
     }
     const learned =
@@ -546,11 +592,25 @@ export function resolveCommunication(
   };
 }
 
-export interface CommunicationProfileOptions extends CommunicationContextOptions {
-  /** The person's standing choice. Defaults to `auto`, which is what a first run has. */
-  readonly preference?: LanguagePreference;
+/**
+ * The two learned signals a resolution reads, as one value.
+ *
+ * They are passed together rather than as two positional arguments because they are the same kind of
+ * thing — something known about this person from before this turn — and because a caller that has one and
+ * not the other is the ordinary case rather than the exception: a first run has neither, and a run after
+ * a correction but before five turns have been counted has only the second.
+ */
+export interface CommunicationSignals {
   /** What previous turns looked like, from `readCommunicationObservations`. */
   readonly observations?: CommunicationObservations | null;
+  /** What this person stated outright, from `readCorrections`. `null` is "they have said nothing". */
+  readonly corrections?: CorrectionStore | null;
+}
+
+export interface CommunicationProfileOptions
+  extends CommunicationContextOptions, CommunicationSignals {
+  /** The person's standing choice. Defaults to `auto`, which is what a first run has. */
+  readonly preference?: LanguagePreference;
 }
 
 /**
@@ -568,10 +628,15 @@ export function communicationProfile(
 ): CommunicationProfile {
   const detection = options.detection ?? detectLanguage(text, options);
   const context = analyzeCommunication(text, { ...options, detection });
+  const signals: CommunicationSignals = {
+    observations: options.observations ?? null,
+    corrections: options.corrections ?? null,
+  };
   const language = resolveLanguage(
     options.preference ?? DEFAULT_LANGUAGE_PREFERENCE,
     detection,
-    learnedLanguage(options.observations ?? null),
+    learnedLanguage(signals.observations ?? null),
+    statedPreference<ReplyLanguage>(signals.corrections, 'language'),
   );
-  return resolveCommunication(context, language, text, options.observations ?? null);
+  return resolveCommunication(context, language, text, signals);
 }

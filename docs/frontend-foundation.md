@@ -2038,3 +2038,53 @@ the **same objects** rather than equal copies, which is also how `CONTEXT_DEPTHS
   cases, because this phase renders nothing.
 - No new dependency, no new persistence key, no new memory: the style is a projection of a decision the
   language layer already made, and the counts it reads are 7.5.3.2's own.
+
+## 27. Phase 7.5.3.4.3 — what a person says, as the third shape of one memory
+
+Two ways of knowing something about somebody already existed: the setting (`preference.ts`) and the counts
+(`communication.ts`). This sub-phase adds a third — the few things a person says outright — and the design
+question it had to answer first is whether a third _shape_ is a third _store_.
+
+### Three shapes, three lifetimes
+
+| What it is     | Where it lives     | Lifetime                              | Read when                                  |
+| -------------- | ------------------ | ------------------------------------- | ------------------------------------------ |
+| The setting    | `preference.ts`    | until the person changes it           | after a request inside the message         |
+| The counts     | `communication.ts` | decays, halved past the window        | past five samples, never above a statement |
+| The statements | `learning.ts`      | until the same dimension is corrected | as soon as one is confident enough         |
+
+The lifetimes decide the answer, because they are incompatible in one value: a statement inside the counts
+would _decay_ if the person kept using the product, and a statement inside the setting would make `auto` a
+lie — `auto` means "stop deciding from what I said", and a statement outliving the control it was written
+alongside would be a decision nobody could revoke. So it is a third key in the same namespace, read through
+one seam (`storedResponseOptions`), and not a second memory system: the module owns no storage of its own,
+adds nothing to the Agent Memory, and cannot reach the reviewed knowledge store at all.
+
+### The precedence gained one step
+
+`requested → explicit → corrected → observed → detected → default`, and `corrected` sits above the counts and
+the reading and below the setting. A statement is the person's own words, so no inference may outrank it; the
+setting is the control they can see, so where the two disagree the control wins and the reply says the other
+one existed. Both directions are asserted.
+
+### The pieces
+
+| Piece                     | Where                                 | What it does                                                                                         |
+| ------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `recordCorrection`        | `web/src/language/learning.ts`        | Validates, computes the confidence, confirms a repeat, refers a terminology statement                |
+| `recordFeedback`          | same file                             | The closed verdict list, mapped onto a dimension and a value                                         |
+| `statedPreference`        | same file                             | The one call a resolution makes: value, confidence, repetitions, reversal                            |
+| `LANGUAGE_CORRECTION_KEY` | same file                             | `master-trade.language.corrections` — with the setting and the counts, apart from `lang:` and `mem_` |
+| `CommunicationSignals`    | `web/src/language/communication.ts`   | The two learned signals a resolution reads, as one value                                             |
+| `corrected`               | `REPLY_SOURCES`, `PREFERENCE_SOURCES` | The source label, in the one place each precedence list is written down                              |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1612** unit tests across **80** files (1588/79 before), the new ones in `tests/language-learning.test.ts`
+  (24 tests), plus the two precedence lists in `tests/language-detection.test.ts` and
+  `tests/response-language.test.ts` updated to name `corrected` and the third key in the seam.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**; the browser suite is unchanged at **32**
+  cases, because nothing here renders.
+- No new dependency and no new memory: one more shape in the language memory's own namespace, read by the
+  same seam, and the traffic it changes is the two fields the request already carried.

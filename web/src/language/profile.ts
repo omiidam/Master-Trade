@@ -14,7 +14,8 @@
  * which is exactly how two stages end up disagreeing about the same conversation.
  *
  * The precedence rule, in one sentence: **an instruction in the message wins, then an explicit choice, then
- * what previous turns showed, and only then what this reading implies.**
+ * what the person stated outright, then what previous turns showed, and only then what this reading
+ * implies.**
  *
  *   - a message that asks (`به انگلیسی جواب بده`) → what it asked for, `source: 'requested'`. This is the
  *     sharpest case of the phase's rule that an explicit instruction outranks a learned or stored
@@ -23,10 +24,16 @@
  *   - preference `fa` and an English message → Persian. That is the override Phase 7.5.3.1 asks for, and
  *     it is the reason the setting exists: a Persian speaker reading English documentation still wants
  *     the answer in Persian, and no amount of detection can know that.
+ *   - preference `auto` and a statement this person made about the language they want
+ *     (`corrected`, Phase 7.5.3.4.3) → what they asked for. A statement is the same *kind* of claim as
+ *     the setting — a person said it, rather than a rule inferring it — and it is deliberately below the
+ *     setting for that reason and no other: where both speak, the one the person can see and change right
+ *     now wins, and the reply says the other one was passed over.
  *   - preference `auto`, a habit of being answered in Persian, and an English message → Persian,
- *     `source: 'observed'`. This is Phase 7.5.3.4's step, and it is deliberately *above* the reading:
- *     the learned counts describe the person, and the reading describes one message they typed. It sits
- *     *below* the explicit choice for the same reason — a habit may be inferred, a setting may not.
+ *     `source: 'observed'`. These are Phase 7.5.3.4's steps, and they are deliberately *above* the
+ *     reading: the learned counts describe the person, and the reading describes one message they typed.
+ *     They sit *below* the explicit choice and the stated correction for the same reason — a habit may be
+ *     inferred, and neither a setting nor a statement may.
  *   - preference `auto` and a Finglish message → Persian, because Finglish *is* Persian written in Latin
  *     letters and answering it in English would answer a different question.
  *   - preference `auto` and a message with no letters at all → the product's own language, and the
@@ -89,11 +96,24 @@ export type ReplyLanguage = (typeof REPLY_LANGUAGES)[number];
  * Where the reply's language came from.
  *
  * `requested` is the strongest source there is — the message asked — and `default` the weakest: nothing
- * was read, nothing was chosen and nothing was learned. The order of this list is the precedence: the
- * first two are statements the person made, `observed` is what their own previous turns showed, and the
- * last two are what this one message implies.
+ * was read, nothing was chosen, nothing was stated and nothing was learned. The order of this list is the
+ * precedence, and the list is the *only* place it is written down: the first three are statements the
+ * person made (in the request, in the setting, in a correction), `observed` is what their own previous
+ * turns showed, and the last two are what this one message implies.
+ *
+ * `corrected` joined in Phase 7.5.3.4.3, between the setting and the habit, and its *place* is the whole
+ * of the rule: it is a statement, so it outranks an inference (`observed` is a count of turns, and a count
+ * is a guess about a person); and it is one level below the setting because the setting is the one the
+ * person can see and change right now, so where the two disagree the control wins and the reason says so.
  */
-export const REPLY_SOURCES = ['requested', 'explicit', 'observed', 'detected', 'default'] as const;
+export const REPLY_SOURCES = [
+  'requested',
+  'explicit',
+  'corrected',
+  'observed',
+  'detected',
+  'default',
+] as const;
 export type ReplySource = (typeof REPLY_SOURCES)[number];
 
 /**
@@ -107,6 +127,29 @@ export interface LearnedLanguage {
   readonly language: ReplyLanguage;
   readonly count: number;
   readonly samples: number;
+}
+
+/**
+ * Something a person said outright, as a resolution reads it.
+ *
+ * The resolution-side view of a stored statement — `learning.ts` produces it with `statedPreference` —
+ * and the counterpart of `LearnedLanguage` one step up the precedence: that one is a count of turns, this
+ * one is words the person used. It is declared here rather than in the learning module because the two
+ * modules that *read* it (this one and `communication.ts`) must not have to import the store to describe
+ * their own argument, and because the resolution's view of a statement should be small enough to state in
+ * one place: a value, how sure the store is, how often it was said, when it was last said, and the other
+ * value the same person asked for at some point.
+ */
+export interface StatedPreference<T extends string> {
+  readonly value: T;
+  /** How sure the learning layer is, 0–1, from the source of the statement and its repetitions. */
+  readonly confidence: number;
+  /** How many times the statement has been made. The first one is `1`. */
+  readonly confirmations: number;
+  /** When the statement was last made, so a reason can say how recent it is. */
+  readonly recordedAt: string;
+  /** The value of the newest *other* statement about the same dimension, when there is one. */
+  readonly disagreedWith: string | null;
 }
 
 export interface LanguageReply {
@@ -128,6 +171,8 @@ export interface LanguageProfile extends LanguageDetection {
 export interface LanguageProfileOptions extends DetectionOptions {
   /** The person's standing choice. Defaults to `auto`, which is what a first run has. */
   readonly preference?: LanguagePreference;
+  /** What this person stated outright, from `learning.ts`. `null` is "they have said nothing". */
+  readonly corrected?: StatedPreference<ReplyLanguage> | null;
   /** What previous turns showed, when there is enough of them to count. `null` is "nothing learned". */
   readonly learned?: LearnedLanguage | null;
 }
@@ -139,13 +184,14 @@ export interface LanguageProfileOptions extends DetectionOptions {
  * Exported on its own because it is the rule Task 3 names — the explicit selection overrides detection —
  * and a rule worth stating is worth testing without building a whole profile to test it.
  *
- * The learned argument is optional and defaults to nothing, so a caller that has no history calls this
- * exactly as it always did and gets exactly what it always got.
+ * The corrected and learned arguments are optional and default to nothing, so a caller that has no history
+ * and no stated preference calls this exactly as it always did and gets exactly what it always got.
  */
 export function resolveLanguage(
   preference: LanguagePreference,
   detection: LanguageDetection,
   learned: LearnedLanguage | null = null,
+  corrected: StatedPreference<ReplyLanguage> | null = null,
 ): LanguageReply {
   // An instruction inside the message comes first, before the setting: it is the most explicit signal
   // available, it was given for this turn rather than for every turn, and the phase's rule about explicit
@@ -169,13 +215,40 @@ export function resolveLanguage(
 
   if (preference !== 'auto') {
     const overridden = detection.language !== 'unknown' && !matches(preference, detection.language);
+    // A statement the same person made at some point, disagreeing with the control they can see. The
+    // control wins, and the fact that it did is *said* rather than swallowed: the pair of claims is
+    // exactly the case where a resolution that preferred the older sentence would look like a product
+    // ignoring the switch in front of it.
+    const against =
+      corrected !== null && corrected.value !== preference
+        ? ` They had also asked to be answered in ${describe(corrected.value)}, and the choice that is on screen now is the one that stands.`
+        : '';
     return {
       language: preference,
       source: 'explicit',
       overridden,
       reason: overridden
-        ? `This person chose ${describe(preference)}, and the message looks ${describe(detection.language)}; an explicit choice is what wins.`
-        : `This person chose ${describe(preference)}.`,
+        ? `This person chose ${describe(preference)}, and the message looks ${describe(detection.language)}; an explicit choice is what wins.${against}`
+        : `This person chose ${describe(preference)}.${against}`,
+    };
+  }
+
+  // Then the words this person used about it, above what their turns looked like and above what this
+  // message looks like, because a statement is not an inference: the counts are a guess drawn from how
+  // somebody writes, and this is somebody saying what they want. It sits below the setting so that the
+  // product's own control always, and visibly, has the last word.
+  if (corrected !== null) {
+    const overridden =
+      detection.language !== 'unknown' && !matches(corrected.value, detection.language);
+    const said = saidTimes(corrected.confirmations);
+    const conflict = reversalClause(corrected, (value) => describe(value as LanguageKind));
+    return {
+      language: corrected.value,
+      source: 'corrected',
+      overridden,
+      reason: overridden
+        ? `This person asked to be answered in ${describe(corrected.value)}${said}, and this message reads ${describe(detection.language)}; a stated correction outranks the reading of one message.${conflict}`
+        : `This person asked to be answered in ${describe(corrected.value)}${said}, so that is the language of the reply.${conflict}`,
     };
   }
 
@@ -218,6 +291,38 @@ export function resolveLanguage(
 /** Whether an explicit choice agrees with what the message looks like. */
 function matches(preference: LanguagePreference, detected: LanguageKind): boolean {
   return preference === detected || (preference === 'fa' && detected === 'finglish');
+}
+
+/**
+ * How often a statement has been made, said in words.
+ *
+ * A reason is read by a person, and "4 of 4" belongs to a count rather than to a sentence somebody said —
+ * the counts already write themselves that way, and the difference between the two sources should be
+ * audible in the reason as well as visible in the `source`. Exported because `communication.ts` writes the
+ * same kind of sentence about the same kind of signal, and two spellings of "said twice" would be two ways
+ * of describing one store.
+ */
+export function saidTimes(confirmations: number): string {
+  if (confirmations <= 1) return '';
+  if (confirmations === 2) return ' (said twice)';
+  if (confirmations === 3) return ' (said three times)';
+  return ` (said ${confirmations} times)`;
+}
+
+/**
+ * The clause that reports a reversal, or nothing when the person has never changed their mind.
+ *
+ * Exported for the same reason `saidTimes` is: the register and the length are corrected by the same store
+ * as the language, and a person who asked for short answers and then for long ones should be told the same
+ * way whichever of the two dimensions the sentence ends up in.
+ */
+export function reversalClause<T extends string>(
+  stated: StatedPreference<T>,
+  describe: (value: string) => string,
+): string {
+  return stated.disagreedWith === null
+    ? ''
+    : ` They asked for ${describe(stated.disagreedWith)} before this, and the later statement is the one that stands.`;
 }
 
 /**
@@ -293,7 +398,12 @@ export function languageProfile(
     profileVersion: LANGUAGE_PROFILE_VERSION,
     ...detection,
     preference,
-    reply: resolveLanguage(preference, detection, options.learned ?? null),
+    reply: resolveLanguage(
+      preference,
+      detection,
+      options.learned ?? null,
+      options.corrected ?? null,
+    ),
   };
 }
 

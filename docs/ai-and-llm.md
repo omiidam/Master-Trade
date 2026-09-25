@@ -256,6 +256,16 @@ nothing when neither is resolved. The route validates the object strictly and
 echoes it back rather than inventing one: the server does not resolve a style, so
 it cannot tell a client what style it used.
 
+Neither field is inferred here, and Phase 7.5.3.4.3 widened which of the caller's
+signals may decide them without changing this layer at all. The caller reads three
+things a person leaves behind — a setting, a decaying count of their own turns, and
+the few statements they made outright, in `web/src/language/learning.ts` — and the
+_statements_ are the strongest of the three: they are recorded with a confidence
+derived from their source, and a single verdict about an answer is not read until
+it has been repeated. What arrives is still a language and a style; what changed is
+which of three signals was allowed to choose them, and the answer says which one
+did.
+
 ## 4. Deferred
 
 - **Streaming** (`stream()` returning `AsyncIterable<LlmStreamChunk>`) and true

@@ -895,6 +895,102 @@ prompt that is actually sent, and the honest answer to "how will the agent word 
 run-context card gives: no model is connected. When the workspace's send path arrives it has one call to
 make — `responseControl(…)`, whose `.reply` and `.style` are the two things the request carries.
 
+## Phase 7.5.3.4.3 — what a person says, learned without turning into a profile
+
+The layer had two ways of knowing something about somebody: `preference.ts`, the setting they choose in a
+control, and `communication.ts`, the counts of how their turns read. This sub-phase adds the third — the few
+things a person says outright about how they want to be answered — and the interesting part is that it is a
+third _shape_ rather than a third store.
+
+### Three kinds of thing, three lifetimes, one namespace
+
+| What it is     | Where it lives     | How long it lasts                           | Read when                                      |
+| -------------- | ------------------ | ------------------------------------------- | ---------------------------------------------- |
+| The setting    | `preference.ts`    | until the person changes it                 | after a request inside the message             |
+| The counts     | `communication.ts` | decays; halved past the window              | past five samples, and never above a statement |
+| The statements | `learning.ts`      | until the same dimension is corrected again | as soon as one is confident enough             |
+
+The lifetimes are the argument. A statement put in the counts' value would _decay_ — somebody's own words
+halving because they had used the product for fifty turns — and a statement put in the setting would make
+`auto` impossible to get back to, because `auto` means "stop deciding from what I said" and a statement that
+outlived the control would be a decision nobody could revoke. So it is a third key, in the same namespace,
+read through the same kind of seam, and the docs say plainly that it is **not a second memory system**: the
+module owns no store of its own shape, adds nothing to the Agent Memory, and cannot write to the reviewed
+knowledge store at all.
+
+### An interaction cannot learn; a statement can
+
+The phase's flow is _interaction → candidate → validation → confidence → memory → future response_, and the
+first step is deliberately not a path in the new module. A turn already feeds the counts
+(`observeCommunication`), and an interaction is ambiguous by construction — a person typing a one-line
+question has not asked for one-line answers forever, which is why the counts need five samples and a clear
+dominance before a resolution reads them. What an interaction _cannot_ do is produce a statement, and the
+rule the phase states as "a single ambiguous interaction must not become a permanent preference" falls out
+of the shape rather than being enforced: there is no source in `CORRECTION_SOURCES` that a machine can
+write, and the shape has nowhere to put an inference.
+
+```
+correction     0.8   stated          → read at once
+feedback       0.4   recorded        → read on the third repetition (0.4 → 0.5 → 0.6)
+                        +0.1 per repeat, read at 0.6
+```
+
+Confidence is computed from the source and the repetitions and is never declared by a caller — the input
+schema has no `confidence` field, and a caller that sends one is refused. That is what makes "repeated
+confirmed preferences" a number rather than a promise: one verdict on an answer is recorded and _not_ read,
+which is the honest treatment of "that was too long" the first time somebody says it.
+
+### The precedence, with one more statement in it
+
+`requested → explicit → corrected → observed → detected → default`. The new step sits **above** the counts
+and the reading and **below** the setting, and the place is the whole rule: a statement is the person's own
+words, so no inference may outrank it — and the setting is the one the person can see and change right now,
+so where the two disagree the control wins and the reply _says_ the other one existed.
+
+Both halves are asserted, including the one that looks like a bug at first: with the switch on English and a
+correction asking for Persian, the answer is English and the reason reads _"They had also asked to be
+answered in Persian, and the choice that is on screen now is the one that stands."_ Nothing is reconciled in
+silence, which is what "do not silently overwrite" has to mean once a value has already been decided.
+
+### A term is not a preference
+
+`terminology` is a dimension of the correction vocabulary so that proposing one is a _decision_ this layer
+makes rather than a shape it fails to parse — and the decision is to **refer** it:
+
+> a term is reviewed knowledge rather than a preference: propose it through the terminology candidate path,
+> where a reviewer decides, and this store stays out of it.
+
+That is the same judgement 7.5.3.2 made when it removed the terminology dimension from the learned counts
+rather than wiring it up, and it is the stronger version of it: an accepted term is not a per-person
+preference at all, it is a change to shared product knowledge, and it already has a path with provenance,
+versioning and a reviewer (`terminologyUpdates.ts`). A person's own statement cannot rename a concept, and the
+suite asserts that the store is untouched by the attempt.
+
+### A statement may not carry a sentence
+
+The seven stored fields are four closed values the caller supplies, when it was last said, and the two the
+store computes. `CORRECTION_FIELDS` is that list and the suite compares the stored entry against it, so a
+field added to carry a message, an id or a figure fails rather than shipping.
+
+The "context" the phase asks to store is `surface` — _where_ the person said it, from a closed list
+(`workspace`, `settings`, `review`) — and not what surrounded it. That is the same guard the counts store
+keeps with "every leaf is a number": a correction is a statement about wording, and the way to keep it one is
+to give it nowhere to put the wording it was about.
+
+### The one seam, and what a reader should not expect
+
+`statedPreference(store, dimension)` is the whole of it: a value, how sure the store is, how many times it was
+said, when it was last said, and the _other_ value the same person asked for at some point — computed from the
+store as it stands rather than stored on an entry, where it would go stale the moment they changed their mind
+again. `storedResponseOptions()` reads the third key beside the other two, so a response stage still has one
+call and still never touches storage.
+
+As with 7.5.3.4.1 and 7.5.3.4.2, the interface has no path that _records_ a statement yet — that is a control
+in the workspace and a verdict on an answer, both of which are UI this phase did not add. In particular the
+Settings switch is **not** a recorder: the switch is a setting, and a setting can be put back to `auto`, which
+has to mean "stop deciding from what I said". A statement that survived that would make the automatic option
+untrue.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -929,6 +1025,23 @@ caller contract, and its behaviour is asserted unchanged by the same suite.
 
 Both were found before the commit, by reading the new code against the callers it would have, and both are
 now cases in `tests/response-language.test.ts`.
+
+### 7.5.3.4.3: two things the shape refused, and both were right to
+
+1. **The feedback vocabulary named a value the resolution cannot hold.** `too-formal` mapped to
+   `conversational`, which is a _tone_ — a value the guidance derives from a register — rather than a
+   register, and the register vocabulary is `formal`, `informal`, `neutral`. A verdict that mapped to it would
+   have been recorded, never consulted, and permanently invisible: the entry looks well-formed, the resolution
+   silently ignores it, and the person's feedback has no effect at all. Caught by a case that walks the whole
+   verdict list and requires each mapped value to be one the dimension's own vocabulary contains, which is a
+   check worth keeping for exactly this reason — it is the only one that does not need to guess what a future
+   verdict would have been.
+2. **The write path had an eviction branch that could not run.** `recordCorrection` dropped the oldest entry
+   when the store reached `MAX_CORRECTIONS`, which is dead code by construction: appending only happens for a
+   value no entry holds, a repeat confirms instead, and every vocabulary together holds eight values. It was
+   removed rather than documented as defensive — the same call 7.5.3.2 made about the terminology counts — and
+   the bound now lives where it is reachable, in the _reader_, which is the side that meets a value this build
+   did not write.
 
 ### 7.5.3.4.2: four defects, three of them a decision written down twice
 
@@ -1129,6 +1242,23 @@ was sent; every note in the catalogue proved to carry no digit and no placeholde
 could try to author wording — a value outside a vocabulary, an unknown note id, a note list that is not a
 list, a key that is not part of a style, a list longer than the catalogue — each refused with a 400.
 
+Phase 7.5.3.4.3 adds `tests/language-learning.test.ts` — 24 tests, organised around the seven behaviours the
+phase names. The explicit correction: recorded with its source, its surface and a computed confidence, read at
+once, and outranking the reading of the message; and the case where the setting and a statement disagree, in
+both directions. The learned preference: the counts still decide when nothing has been stated, which is what
+this phase must not break, and a statement outranks a nine-turn habit. The repeated preference: one verdict is
+recorded and _not_ read, the third crosses the bar, and saying the same thing twice is one statement made
+twice rather than two entries. The conflicting preferences: both statements kept, the newer consulted, the
+reversal named in the reason, a weaker newer verdict unable to overturn a stronger older statement, and two
+verdicts that cancel out learning nothing. Persistence: a round trip that produces the same control after a
+reload, five unreadable values degrading to "nothing stated", entries from a build this one cannot understand
+dropped while the rest are kept, the reader's cap, and forgetting. Rejection: nine malformed statements refused
+with the store untouched, a terminology statement referred to the reviewed path from every surface, and the
+stored shape compared against its closed field list — no field reads like a message, a person or a credential.
+Reuse: the correction reaching the answer through the same control the response stage already reads, the
+language directive before the style block, the invariants travelling with them, and every verdict in the closed
+feedback list mapping to a value its dimension actually holds.
+
 Phase 7.5.2.2's `tests/persian-terminology.test.ts` gained one case for the same reason: the sidebar's
 Persian label has to _be_ the glossary's preferred form for that concept, not a second translation of it.
 
@@ -1175,11 +1305,12 @@ stays English, and that all three options fit 375 px without panning the page.
 
 The four Persian suites are **132 tests** together: 46 for the store and the locale, 26 for the
 correction pipeline, 28 for the lexicon, and 32 for grammar, spelling and the QA pipeline. The language
-analysis adds 80 more across four suites: 24 in `tests/language-detection.test.ts` for the reading of a
+analysis adds 104 more across five suites: 24 in `tests/language-detection.test.ts` for the reading of a
 message and the switch, 22 in `tests/language-context.test.ts` for the interaction, the preferences and
 the guidance, 22 in `tests/response-language.test.ts` for the language of the answer, its four signals
-and the prompt they reach, and 12 in `tests/adaptive-style.test.ts` for how the answer is worded once the
-language is settled and for the rule that a learned preference outranks a reading.
+and the prompt they reach, 12 in `tests/adaptive-style.test.ts` for how the answer is worded once the
+language is settled, and 24 in `tests/language-learning.test.ts` for what a person says outright, the
+confidence that decides whether it is read, and the two paths that refuse to learn from it.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
@@ -1192,6 +1323,7 @@ npx vitest run tests/language-detection.test.ts      # 7.5.3.1: the reading, the
 npx vitest run tests/language-context.test.ts        # 7.5.3.2: the context, the preferences, the guidance
 npx vitest run tests/response-language.test.ts       # 7.5.3.4.1: the answer's language, and the prompt
 npx vitest run tests/adaptive-style.test.ts          # 7.5.3.4.2: how the answer is worded
+npx vitest run tests/language-learning.test.ts       # 7.5.3.4.3: what a person says, and its confidence
 npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```

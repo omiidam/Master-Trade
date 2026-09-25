@@ -87,6 +87,7 @@ export const GUIDANCE_CLAUSES = {
   conversational: 'The register is conversational.',
   'explicit-choice': 'The language was chosen outright.',
   'requested-language': 'The message asked for the language it is answered in.',
+  'corrected-preference': 'The language follows something this person asked for in words.',
   'observed-language': 'The language follows what this person is habitually answered in.',
   'detected-language': 'The language follows the message.',
   'default-language':
@@ -234,11 +235,13 @@ export function responseGuidance(profile: CommunicationProfile): ResponseGuidanc
       ? 'explicit-choice'
       : language.source === 'requested'
         ? 'requested-language'
-        : language.source === 'observed'
-          ? 'observed-language'
-          : language.source === 'detected'
-            ? 'detected-language'
-            : 'default-language',
+        : language.source === 'corrected'
+          ? 'corrected-preference'
+          : language.source === 'observed'
+            ? 'observed-language'
+            : language.source === 'detected'
+              ? 'detected-language'
+              : 'default-language',
     tone === 'formal' ? 'formal' : tone === 'conversational' ? 'conversational' : 'neutral',
     context.expertise.value,
     SETTING_CLAUSES[context.setting.value],

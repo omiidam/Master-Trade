@@ -28,6 +28,10 @@
  *   - `profile.ts` — the same reading as one value a later stage consumes, plus the precedence rule
  *                   between a person's explicit choice and what their message looks like.
  *   - `preference.ts` — the choice itself, and where it is kept (not in the knowledge store).
+ *   - `learning.ts` — Phase 7.5.3.4.3's statements: what a person said outright about how they want to be
+ *                   answered, with the source, the confidence and the repetitions that make it learned
+ *                   rather than noticed. The third shape of the same language memory — a setting is one
+ *                   slot, counts decay, a statement is permanent — and not a second memory system.
  *   - `context.ts` — Phase 7.5.3.2's reading of an interaction: whether the turn is work or small talk,
  *                   how much of it is the product's vocabulary, how much detail it wants, whether it is
  *                   asking or telling, and how the two scripts are mixed.
@@ -190,7 +194,9 @@ export {
   REPLY_LANGUAGES,
   REPLY_SOURCES,
   languageProfile,
+  reversalClause,
   resolveLanguage,
+  saidTimes,
   storedProfileOptions,
 } from './profile.js';
 export type {
@@ -200,6 +206,7 @@ export type {
   LearnedLanguage,
   ReplyLanguage,
   ReplySource,
+  StatedPreference,
 } from './profile.js';
 
 export {
@@ -272,11 +279,49 @@ export type {
   CommunicationObservations,
   CommunicationProfile,
   CommunicationProfileOptions,
+  CommunicationSignals,
   ObservationReading,
   PreferenceReading,
   PreferenceSource,
   TerminologyStyle,
 } from './communication.js';
+
+export {
+  CONFIRMATION_STEP,
+  CONSULT_CONFIDENCE,
+  CORRECTION_CONFIDENCE,
+  CORRECTION_DIMENSIONS,
+  CORRECTION_FIELDS,
+  CORRECTION_OUTCOMES,
+  CORRECTION_SOURCES,
+  CORRECTION_SURFACES,
+  CORRECTION_VALUES,
+  LANGUAGE_CORRECTION_KEY,
+  MAX_CORRECTIONS,
+  RESPONSE_FEEDBACK,
+  RESPONSE_FEEDBACKS,
+  clearCorrections,
+  consultedCorrection,
+  emptyCorrections,
+  parseCorrections,
+  readCorrections,
+  recordCorrection,
+  recordFeedback,
+  statedPreference,
+  writeCorrections,
+} from './learning.js';
+export type {
+  CorrectionDecision,
+  CorrectionDimension,
+  CorrectionInput,
+  CorrectionOutcome,
+  CorrectionSource,
+  CorrectionStore,
+  CorrectionSurface,
+  CorrectionsReading,
+  LanguageCorrection,
+  ResponseFeedback,
+} from './learning.js';
 
 export {
   GUIDANCE_CLAUSES,

@@ -49,6 +49,7 @@ import {
 } from './communication.js';
 import { detectLanguage } from './detect.js';
 import { responseGuidance, responseStyle, type ResponseGuidance } from './guidance.js';
+import { readCorrections, type CorrectionStore } from './learning.js';
 import {
   preferenceStorage,
   readLanguagePreference,
@@ -92,6 +93,8 @@ export interface ResponseControl {
 export interface ResponseControlOptions extends CommunicationProfileOptions {
   /** What previous turns showed, read by the caller that owns the store. `null` is "nothing learned". */
   readonly observations?: CommunicationObservations | null;
+  /** What this person stated outright, read from the module that owns it. `null` is "nothing stated". */
+  readonly corrections?: CorrectionStore | null;
 }
 
 /**
@@ -106,10 +109,12 @@ export function responseControl(
 ): ResponseControl {
   const detection = options.detection ?? detectLanguage(text, options);
   const observations = options.observations ?? null;
+  const corrections = options.corrections ?? null;
   const profile: CommunicationProfile = communicationProfile(text, {
     ...options,
     detection,
     observations,
+    corrections,
   });
   const guidance = responseGuidance(profile);
   return {
@@ -121,10 +126,11 @@ export function responseControl(
   };
 }
 
-/** The two persisted signals, both read from the modules that own them and from nowhere else. */
+/** The three persisted signals, each read from the module that owns it and from nowhere else. */
 export interface StoredResponseOptions {
   readonly preference: LanguagePreference;
   readonly observations: CommunicationObservations | null;
+  readonly corrections: CorrectionStore | null;
 }
 
 /**
@@ -132,23 +138,27 @@ export interface StoredResponseOptions {
  * used the product for the first time.
  *
  * This is the seam between the running application and this module, and it mirrors `storedProfileOptions`:
- * the switch writes the preference through `preference.ts` and the learned store through
- * `communication.ts`, and a response stage calls this rather than reading storage itself. Neither side
- * knows about the other — a stage that read the keys directly would duplicate them, and a module that read
- * the interface store would make the language layer depend on React.
+ * the switch writes the preference through `preference.ts`, the turn's outcome through `communication.ts`,
+ * and a statement the person made through `learning.ts` — and a response stage calls this rather than
+ * reading storage itself. Neither side knows about the other — a stage that read the keys directly would
+ * duplicate them, and a module that read the interface store would make the language layer depend on
+ * React. The three keys live in three modules for the same reason they are three kinds of thing, and this
+ * is the one place that knows all three exist.
  *
- * An unreadable store is not an error: it produces `auto` and nothing learned, which is what somebody who
- * has chosen nothing and typed nothing has.
+ * An unreadable store is not an error: it produces `auto`, nothing learned and nothing stated, which is
+ * what somebody who has chosen nothing, typed nothing and said nothing has.
  */
 export function storedResponseOptions(
   storage: PreferenceStorage | null = preferenceStorage(),
 ): StoredResponseOptions {
   const learned = readCommunicationObservations(storage);
+  const stated = readCorrections(storage);
   return {
     preference: readLanguagePreference(storage).preference,
     // `stored: false` means a real store answered and held nothing, which is nothing learned — `null`
     // rather than an empty store, so a caller can tell "no history" from "a history that happened to be
     // empty" and record this turn against the right one.
     observations: learned.stored ? learned.observations : null,
+    corrections: stated.stored ? stated.store : null,
   };
 }

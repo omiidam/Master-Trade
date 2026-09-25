@@ -365,8 +365,17 @@ describe('the linguistic profile (Task 2)', () => {
       overridden: false,
     });
     // And the sources are the closed list, in the order of their precedence. `observed` joined it in
-    // Phase 7.5.3.4 — what previous turns showed — between what a person states and what a message reads.
-    expect(REPLY_SOURCES).toEqual(['requested', 'explicit', 'observed', 'detected', 'default']);
+    // Phase 7.5.3.4 — what previous turns showed — between what a person states and what a message reads,
+    // and `corrected` (Phase 7.5.3.4.3) joined above it: words this person used are a statement, and a
+    // count of turns is an inference.
+    expect(REPLY_SOURCES).toEqual([
+      'requested',
+      'explicit',
+      'corrected',
+      'observed',
+      'detected',
+      'default',
+    ]);
   });
 
   it('lets an explicit choice win, and records that it did', () => {
