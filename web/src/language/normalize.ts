@@ -125,8 +125,17 @@ export function authorisedRules(
   memory: LanguageMemory = seededLanguageMemory(),
   options: Pick<NormalizationOptions, 'only' | 'except'> = {},
 ): NormalizationRule[] {
+  return authorisedOfRules(NORMALIZATION_RULES, memory, options);
+}
+
+/** The same question, asked of any rule list — the grammar and spelling catalogues use this one. */
+export function authorisedOfRules(
+  rules: readonly NormalizationRule[],
+  memory: LanguageMemory = seededLanguageMemory(),
+  options: Pick<NormalizationOptions, 'only' | 'except'> = {},
+): NormalizationRule[] {
   const trusted = trustedKeys(memory);
-  return NORMALIZATION_RULES.filter(
+  return rules.filter(
     (rule) =>
       trusted.has(rule.key) &&
       (options.only === undefined || options.only.includes(rule.id)) &&
@@ -168,19 +177,21 @@ function applyEdits(text: string, edits: readonly RuleEdit[]): string {
  * ──────────────────────────────────────────────────────────────────────────── */
 
 /**
- * Correct Persian text, and say exactly what was corrected.
+ * Run a *list* of rules over a string.
  *
- * The text handed in is not modified and nothing is written anywhere: the whole function is a value
- * computation, which is what makes it usable in a test, a build step, a form field and a review
- * tool without any of them agreeing on a storage model first.
+ * This is the engine, and `normalizePersianContent` is one caller of it: Phase 7.5.2.3's grammar and
+ * spelling rules need exactly the same three things the character folds need — the memory gate, the
+ * protected spans, and an exact report of every edit — and a second implementation of those would be a
+ * second pipeline that eventually disagrees with this one about what "protected" means.
  */
-export function normalizePersianContent(
+export function runRules(
   input: string,
+  rules: readonly NormalizationRule[],
   options: NormalizationOptions = {},
 ): NormalizationReport {
   const memory = options.memory ?? seededLanguageMemory();
   const literals = [...protectedLiterals(memory), ...(options.protect ?? [])];
-  const authorised = authorisedRules(memory, options);
+  const authorised = authorisedOfRules(rules, memory, options);
   const authorisedIds = new Set(authorised.map((rule) => rule.id));
 
   const changes: NormalizationChange[] = [];
@@ -188,7 +199,7 @@ export function normalizePersianContent(
   const appliedRules: string[] = [];
   let text = input;
 
-  for (const rule of NORMALIZATION_RULES) {
+  for (const rule of rules) {
     if (!authorisedIds.has(rule.id)) continue;
     // Spans are recomputed for each rule, because an earlier rule's edit moves every offset after
     // it. The rules are pure functions of (text, spans), so this is a re-read, not a rebuild.
@@ -222,11 +233,27 @@ export function normalizePersianContent(
     changes,
     findings,
     appliedRules,
-    skippedRules: NORMALIZATION_RULES.filter((rule) => !authorisedIds.has(rule.id)).map(
-      (rule) => rule.id,
-    ),
+    skippedRules: rules.filter((rule) => !authorisedIds.has(rule.id)).map((rule) => rule.id),
     protectedLiterals: literals,
   };
+}
+
+/**
+ * Correct Persian text, and say exactly what was corrected.
+ *
+ * The Phase 7.5.2.1 rules, in their declared order, and it stays a named function rather than an alias
+ * for `runRules` because it is a *contract* — "is this text written the way Persian is written?" — and a
+ * contract a caller has to assemble from parts is a contract nobody can cite.
+ *
+ * The text handed in is not modified and nothing is written anywhere: the whole function is a value
+ * computation, which is what makes it usable in a test, a build step, a form field and a review
+ * tool without any of them agreeing on a storage model first.
+ */
+export function normalizePersianContent(
+  input: string,
+  options: NormalizationOptions = {},
+): NormalizationReport {
+  return runRules(input, NORMALIZATION_RULES, options);
 }
 
 /** The span predicate, named so the call above reads as one idea. */

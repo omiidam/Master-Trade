@@ -16,6 +16,13 @@
  *   - `terminology.ts` — Phase 7.5.2.2's lexicon: the terms the product writes, their English
  *                   equivalents, the forms it does not write, and the consistency check over them.
  *   - `terminologyUpdates.ts` — the controlled path a new or corrected term arrives through.
+ *   - `grammar.ts` — Phase 7.5.2.3's sentence rules: agreement, ezafe, the object marker, and the
+ *                   mixed Persian + English technical sentence. Mechanical where a fact decides, a
+ *                   report where a person does.
+ *   - `spelling.ts` — the spelling, register and punctuation rules of the same phase.
+ *   - `languageQa.ts` — the pipeline that runs all of the above in order, and the three decisions
+ *                   (`promoteLanguageRule`, `retireLanguageRule`, `approveForm`) that make a
+ *                   suggestion permanent.
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
  *
  * Nothing here renders, and nothing here is imported by the running interface yet: the interface is
@@ -107,11 +114,14 @@ export {
   findSpans,
   isBareNumber,
   isPersianProse,
+  languageRuleProposals,
   normalizationRule,
   normalizationRuleKeys,
   overlapsSpan,
+  standaloneMatches,
 } from './rules.js';
 export type {
+  LanguageRule,
   NormalizationEnforcement,
   NormalizationFinding,
   NormalizationRule,
@@ -123,12 +133,40 @@ export type {
 } from './rules.js';
 
 export {
+  authorisedOfRules,
   authorisedRules,
   isNormalizedPersian,
   normalizePersianContent,
   persianFindings,
   protectedLiterals,
+  runRules,
 } from './normalize.js';
+
+export { GRAMMAR_RULES } from './grammar.js';
+
+export { COMPOUND_PAIRS, REGISTER_FORMS, SPELLING_RULES } from './spelling.js';
+
+export {
+  LANGUAGE_QA_FAMILIES,
+  LANGUAGE_RULES,
+  TERMINOLOGY_QA_RULE,
+  approveForm,
+  authorisedLanguageRules,
+  languageQa,
+  languageRule,
+  languageRuleState,
+  promoteLanguageRule,
+  retireLanguageRule,
+} from './languageQa.js';
+export type {
+  LanguageQaDecision,
+  LanguageQaFamily,
+  LanguageQaOptions,
+  LanguageQaReport,
+  LanguageQaStage,
+  LanguageRuleState,
+  LanguageSuggestion,
+} from './languageQa.js';
 export type {
   NormalizationChange,
   NormalizationOptions,

@@ -380,7 +380,11 @@ describe('knowledge only moves through the controlled path', () => {
     const memory = seededLanguageMemory();
     const snapshot = memory.snapshot();
     expect(snapshot.format).toBe(LANGUAGE_SNAPSHOT_FORMAT);
-    expect(snapshot.entries.length).toBe(SEED_LANGUAGE_KNOWLEDGE.length);
+    // A snapshot carries *current* knowledge, and one seeded proposal is deliberately not that: the
+    // spelling rule that ships as a candidate is parked as `pending`, so the snapshot is one entry
+    // short of the proposals on purpose rather than by omission.
+    expect(snapshot.entries.length).toBe(SEED_LANGUAGE_KNOWLEDGE.length - 1);
+    expect(memory.pending('spelling.compound.hich-kodam')).toBeDefined();
     // Deterministic order, so a stored snapshot is diffable.
     expect(snapshot.entries.map((entry) => entry.key)).toEqual(
       [...snapshot.entries.map((entry) => entry.key)].sort(),
@@ -409,10 +413,15 @@ describe('knowledge only moves through the controlled path', () => {
 });
 
 describe('the seeded knowledge is authority-backed and small on purpose', () => {
-  it('is all trusted, all cited, and only what this phase can source', () => {
+  it('is trusted or deliberately pending, all cited, and only what this phase can source', () => {
     const memory = seededLanguageMemory();
-    expect(memory.list().length).toBe(SEED_LANGUAGE_KNOWLEDGE.length);
-    expect(memory.trusted().length).toBe(SEED_LANGUAGE_KNOWLEDGE.length);
+    expect(memory.list().length).toBe(SEED_LANGUAGE_KNOWLEDGE.length - 1);
+    expect(memory.trusted().length).toBe(memory.list().length);
+    // Nothing seeded is lost: every proposal is either current knowledge or waiting on a review, which
+    // is the ladder doing its job rather than a proposal that fell on the floor.
+    for (const proposal of SEED_LANGUAGE_KNOWLEDGE) {
+      expect(memory.get(proposal.key) ?? memory.pending(proposal.key), proposal.key).toBeDefined();
+    }
     for (const entry of memory.list()) {
       expect(entry.provenance.reference.length).toBeGreaterThan(0);
       expect(entry.version).toBe(1);

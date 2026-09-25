@@ -320,6 +320,138 @@ word-level `from → to` pair in the schema; today's `mapping` is deliberately o
 point or nothing out, and widening it would break the invariant Phase 7.5.1 asserts (`normalizePersianText(mapping.from) === mapping.to`).
 The trigger is a reviewed entry per pattern, and the schema change lands with it, not before.
 
+## Phase 7.5.2.3 — grammar, spelling, and one engine instead of four
+
+Task 1 is `web/src/language/grammar.ts`, Task 2 is `web/src/language/spelling.ts`, and Task 3 is
+`web/src/language/languageQa.ts`. Between them, **17 rules** — 7 grammar, 10 spelling — and one pipeline
+that runs the four families in order and says which family saw what.
+
+### Grammar, scoped to what this product actually gets wrong
+
+Seven rules, and the split between them is the file's whole argument. Two are **mechanical**
+(`enforcement: 'correct'`) because the answer is a fact about characters; five are **pattern** rules
+(`enforcement: 'report'`) because the shape is usually wrong and never certainly wrong.
+
+- **mixed scripts** (`grammar.mixed-script-boundary`, correct) — a Latin technical token and a Persian
+  word are separated by a space, or by a half-space when the Persian part is one of the four suffixes
+  that bind to it: `ها`, `های`, `تر`, `ترین`. It runs first, so everything after it sees words rather
+  than a run of characters. Digits are never touched: `3345R` is a figure, not two words.
+- **the ezafe** (`grammar.ezafe-yeh`, correct) — a `ی` written as a separate word after a vowel-final
+  word is attached with a half-space. Narrow on purpose: `حرف ی` is left alone, because nothing there
+  says the `ی` is an ezafe, and the conjunction `و` is excluded, because gluing `و ی` into `وی` would
+  rewrite a sentence rather than a spelling.
+- **a numeral takes a singular** (`grammar.plural-after-numeral`, report) — `۳ معامله`, not
+  `۳ معاملات`. The `ها`/`های` ending is derivable, so the suggestion is the word with the ending
+  removed, half-space spelling included; a broken plural (`معاملات`, `نکات`, `سوالات`) is a table in the
+  file, and a plural it has never seen would need one it does not have.
+- **a plural subject takes a plural verb** (`grammar.verb-number-agreement`, report) — with the subject
+  recognised by the `ها`/`های` ending and by nothing else. `ان` and `ات` are deliberately absent:
+  `تهران` ends in `ان` and is singular, and reporting a correct sentence as wrong is worse than missing
+  a wrong one. One word may sit between the subject and its verb, because `پوزیشن ها بسته شد` is the
+  ordinary sentence and a rule that could only see subject-then-verb would miss it.
+- **a pronoun conjugates its own verb** (`grammar.pronoun-agreement`, report) — closed lists on both
+  sides, so it has no false positives by construction. Both spellings of `آنها` are keys, because a
+  closed-up spelling is common enough that knowing only the half-space form would do nothing about half
+  the text the rule was written for.
+- **the object marker has a verb after it** (`grammar.object-marker-before-verb`, report) — the one
+  shape that needs no parse: `را` with nothing but a mark or a line end after it. The marker is required
+  to be a word, so `چرا؟` is not reported, and the check sees a line end as well as the end of the text.
+- **adjectives do not pluralise** (`grammar.adjective-invariant`, report) — with confidence 0.75 and the
+  reason in the rule's own example: `خوبها` is also a legitimate noun, so the ending is not by itself a
+  mistake.
+
+### Spelling, register and punctuation — a decision, not a spellchecker
+
+Ten rules in three families, and the family decides the enforcement.
+
+- **Eight compounds written as one word** — `بجای`, `بطور`, `درصورت`, `بمرور`, `بندرت`, `هیچکس`,
+  `آنها`, `هیچ کدام`. Each pair is its own rule with its own store key, so one can be accepted or
+  retired without turning the others off. That is what the phase's "learnable" requirement actually
+  costs: a fixed string can be corrected, and it can be corrected one string at a time.
+- **Register** (`spelling.register`, report) — nine spoken forms and the written form each stands for.
+  Reported because a spoken form is a register choice rather than a spelling mistake, and because a
+  register check with no corpus behind it should not claim to know every colloquialism.
+- **Repeated marks** (`spelling.repeated-mark`, correct) — a doubled mark collapses to one, and the
+  class mixes the two scripts on purpose, because the mistake is usually a copy-paste that leaves an
+  ASCII mark beside a Persian one. An ellipsis is deliberately _not_ in it: `...` is a pause, not a slip.
+
+### One pipeline, driving the layers instead of re-deriving them
+
+`languageQa(text)` is Text → normalize → grammar → spelling → terminology, and its two properties worth
+having are negative ones. There is **no second implementation** of "is this text Persian", "what may a
+rule touch" or "which key authorises this": `normalize.ts` grew a `runRules` engine and an
+`authorisedOfRules` gate, and `normalizePersianContent` is now one caller of them rather than the only
+one. And **no offset is silently re-based** — every stage carries the text it received and the text it
+produced, because re-basing offsets across four transformations is arithmetic that looks tidy and is
+eventually wrong.
+
+The pipeline departs from the flow the phase lists in exactly one place, and the reason is stated rather
+than hidden: terminology is checked **last**, on the text the deterministic rules produced. Checking it
+before them would report a form the pipeline was about to change, against a text no caller holds. The
+stage report makes the order visible, so the deviation is inspectable rather than implied.
+
+Two things the report is careful about:
+
+- **`deterministic` is per suggestion, not per run.** `true` means a mechanical rule already applied the
+  fix and the exact characters it replaced are in the report; `false` means a pattern a person decides
+  about. There is no score, no model and no probability anywhere in the type.
+- **The report is complete.** Replaying the corrections it lists — in the order the rules ran, right to
+  left within each rule — reproduces `report.text` exactly, and the suite asserts it. Nothing was changed
+  that the report does not name.
+
+Phase 7.5.2.1's _findings_ are carried into the normalization stage as well as its changes. They are half
+of what that layer knows — a missing half-space, a figure wearing Persian digits beside a technical
+token — and a caller holding only `languageQa` would otherwise lose them, because no other stage looks
+for a half-space.
+
+### Validate, and store the decision
+
+The phase's last two steps are three small functions, because the store from 7.5.1 already _is_ the
+versioned knowledge update.
+
+- `promoteLanguageRule(id, memory, review)` — how the rule that ships as a candidate starts working. It
+  is accepted through the ordinary `review` path, so the provenance on the entry is the **reviewer's**,
+  not the model's, and the entry keeps its reason, its version and its `trusted` status.
+- `retireLanguageRule(id, memory, deprecation)` — the honest version of "turn this check off": a
+  versioned decision with a reference, visible in the store's history, rather than a flag in a config
+  file. The code stays; the rule stops running.
+- `approveForm(form, memory, decision)` — the suggestion-acceptance path, and it writes an `exception`
+  entry: the mechanism 7.5.2.1 built for the string a normalizer is right about in general and wrong
+  about here, reused for the third time rather than reinvented. An unreviewed proposal parks and approves
+  nothing.
+
+Nothing writes to the store on its own. A suggestion is a _reading_ of the text; a decision is what makes
+it knowledge, and every decision is a value — accepted, pending or rejected — for the same reason a
+rejection is a value in 7.5.2.2.
+
+### The two resource questions, re-checked rather than cited again
+
+**DadmaTools — rejected for the frontend, deferred behind a real need.** It is a Python NLP pipeline
+(lemmatiser, part-of-speech tagger, dependency parser, spell checker) with a trained model behind it, and
+there is no JavaScript path to any of it. Two things follow. The mechanical one: adopting it would put a
+Python runtime, a model download and a service beside a frontend that currently ships one 60 kB font. The
+principled one, and the one that decides it: **its output is statistical.** A dependency parse and a
+spell-check suggestion are probabilities, not rules. The phase says not to pretend probabilistic NLP is
+deterministic, and a grammar layer whose report prints `deterministic: true` beside a model's guess would
+be exactly that pretence. The deferral has a trigger: a real backend that needs Persian NLP for something
+this layer cannot do mechanically — and that is a backend decision, not this phase's.
+
+**`@persian-tools/persian-tools` — not adopted, for the third phase running, and now for a demonstrated
+reason.** Its `fixHalfSpace` was rejected in 7.5.1 on provenance (a third party's private placement table
+would become our orthography) and 7.5.2.1 re-checked the question. This phase is where the alternative
+became concrete: `grammar.ezafe-yeh` and the compound rules fix the cases whose answer is a _fixed
+string_, and report the ones whose answer is a _placement decision_ — so the pipeline says which is
+which rather than delegating both to one table. Its other overlap is character folding: three mappings
+here, each cited to a Unicode code point and each already stored as knowledge. Neither is worth a
+dependency.
+
+**A statistical spellchecker was not added, in any form.** The phase asks for common spelling mistakes
+and it gets them as eight reviewed compound pairs and one closed register list — every one of which can
+be named, versioned, accepted or retired. The failure mode this avoids is specific: a spellchecker that
+is right about 95% of words and silent about which 5% is not something a _knowledge_ store can hold,
+because a trusted entry whose provenance is "a model thought so" is the one thing this whole layer exists
+to prevent.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -335,11 +467,59 @@ malformed code is still shown as itself so the mistake stays visible. Regression
 The English path is untouched by this: `labels.ts#formatMoney` is a different function with a different
 caller contract, and its behaviour is asserted unchanged by the same suite.
 
+### 7.5.2.3: six defects that running it on real Persian found
+
+Writing the pipeline and then running it turned up six things that reading the source would not have, and
+they are recorded because three of them are the same mistake wearing different clothes.
+
+1. **A compound rule ignored protected spans.** `replacePair` replaced every whole-word match without
+   asking whether the span was one a rule must not write. The `exception` mechanism therefore _worked_ and
+   then had no effect: `approveForm` recorded the decision, `protectedLiterals` returned it, and the
+   spelling rule rewrote the approved form anyway. The suite's "protects a span a rule must not touch"
+   case caught it; the guard now lives in the one function every compound pair goes through.
+2. **Two compound pairs were silent no-ops, and the register column was a misspelling.** `هیچکس` and
+   `آنها` were stored with the _same_ string on both sides — the half-space had been lost when the file
+   was written, so the "correction" was identical to the form it was meant to correct. The register
+   table's written column had lost the same character, so the product's own suggestion for `میشه` was
+   itself misspelled. Every half-space-bearing form in the two new modules is now written as `${ZWNJ}` or
+   derived from the catalogue, and the suite asserts that no rule offers a correction equal to the form it
+   is correcting.
+3. **The numeral rule could never fire.** It asked whether the _numeral's_ offset was inside a protected
+   span, and the numeral is exactly what `findSpans` marks as `numeric` — so the rule that exists to catch
+   `۳ معاملات` skipped every case of it. It now asks about the noun, which is the thing the rule is
+   actually about.
+4. **The object-marker rule could only see the end of the text**, not the end of a line, because a `$`
+   without the `m` flag matches once. A rule about clause-final verbs that only inspected the last line of
+   a paragraph was a rule that mostly did nothing.
+5. **The ezafe rule glued the conjunction `و`.** `و` is one letter that happens to be a vowel, so `و ی`
+   became `وی`. A preceding word of one letter is now excluded, and the case is in the suite.
+6. **Phase 7.5.2.1's findings were being dropped.** The pipeline mapped the normalization stage's
+   _changes_ and not its _findings_, so the missing-half-space report — the one thing that layer
+   deliberately refuses to fix — was invisible to a caller holding only `languageQa`. Found by printing a
+   realistic paragraph and reading it, which is why the phase asks for that step.
+
+Three of the six are one lesson: Persian's invisible characters do not survive being retyped, and a rule
+whose data lost one is a rule that silently does nothing rather than one that fails loudly.
+
 ## Verification
 
 The contract suite is `tests/persian-language.test.ts` — 46 tests over the store's separation and its
 update path, the locale's agreement with CLDR, normalization idempotence, bidi isolation, the sealed
 font, and the English formatters producing exactly what they produced.
+
+Phase 7.5.2.2 adds `tests/persian-terminology.test.ts` — 28 tests over the lexicon's agreement with the
+store, lookup in both languages, the consistency check, the candidate path in nine kinds of bad shape,
+and a snapshot round trip.
+
+Phase 7.5.2.3 adds `tests/persian-qa.test.ts` — 32 tests. Its first case refuses to pass if a rule in
+either new catalogue has no regression case of its own, its second refuses a case for a rule that is not
+there, and its third puts every case through the 7.5.2.1 normalizer and requires it to come out
+unchanged, which is what makes the readable Persian in the suite safe to write as characters. Beyond
+that: one case per rule family, the mixed Persian + English paragraph, the stage chain and the
+one-engine check that the grammar stage _is_ `runRules` over the grammar catalogue, the
+correction-replay reconstruction, determinism and idempotence, the English corpus, the pending →
+promote → runs path, the deprecate → stops path, `approveForm` and its refusal, the agent-proposal
+parking path, and a snapshot round trip that keeps all three decisions.
 
 Phase 7.5.2.1 adds `tests/persian-normalization.test.ts` — 26 tests whose first case refuses to pass if a
 rule in the catalogue has no regression case of its own. Beyond the per-rule cases: a corpus of English,
@@ -354,11 +534,16 @@ real, glyph-covering fetch the moment one does; and a signed figure painted sign
 right-to-left paragraph, which is the `.num` isolation rule doing its job with Persian actually on the
 page.
 
+The four Persian suites are **132 tests** together: 46 for the store and the locale, 26 for the
+correction pipeline, 28 for the lexicon, and 32 for grammar, spelling and the QA pipeline.
+
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
 npm run fonts:check       # re-hash what is vendored, write nothing
 npx vitest run tests/persian-language.test.ts        # 7.5.1: the store, the locale, the font
 npx vitest run tests/persian-normalization.test.ts   # 7.5.2.1: the correction pipeline
+npx vitest run tests/persian-terminology.test.ts     # 7.5.2.2: the lexicon
+npx vitest run tests/persian-qa.test.ts              # 7.5.2.3: grammar, spelling, the pipeline
 npm run test:e2e          # the browser suite, including both measurements above
 npm run validate          # the full gate
 ```

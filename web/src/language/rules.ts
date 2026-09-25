@@ -38,6 +38,8 @@
  * that are a product decision rather than a standard name themselves as such in `seed.ts`.
  */
 
+import type { LanguageOrigin, LanguageProposal } from './model.js';
+
 /* ────────────────────────────────────────────────────────────────────────────
  * Spans: the parts of a string a rule is not allowed to touch
  * ──────────────────────────────────────────────────────────────────────────── */
@@ -105,6 +107,35 @@ export const FIGURE_PATTERN = new RegExp(
 /** True when the token is a bare run of digits, with no separator to make it a technical figure. */
 export function isBareNumber(token: string): boolean {
   return new RegExp(`^[${DIGITS}]+$`, 'u').test(token);
+}
+
+/**
+ * Where a fixed form appears as a *word* rather than as part of a longer one.
+ *
+ * A space is a boundary and a letter is not: `تایم فریم` is two words and must still be found, while
+ * `حد سود` inside `حد سوددهی` and `درس` inside `درسی` must not be. Two details carry the weight. The
+ * half-space is *part of a word* rather than a boundary, because that is what it is for — it joins
+ * letters into one. And a Latin letter counts as one too, so `نماد` inside `ETFنماد` is not a match: two
+ * scripts written without a boundary are one token, and separating them is the grammar layer's job, in
+ * an earlier stage of the pipeline that this one runs after.
+ *
+ * Shared rather than written twice: the terminology check and the spelling pairs ask exactly this
+ * question, and two implementations of "is this a whole word" would eventually answer differently.
+ */
+export function standaloneMatches(text: string, form: string, from = 0): number[] {
+  if (form === '') return [];
+  const wordCharacter = new RegExp(`[${PERSIAN_LETTERS}${LATIN_LETTERS}\u200C]`, 'u');
+  const found: number[] = [];
+  let index = text.indexOf(form, from);
+  while (index !== -1) {
+    const before = index === 0 ? '' : (text[index - 1] as string);
+    const after = text[index + form.length];
+    const startsClean = before === '' || !wordCharacter.test(before);
+    const endsClean = after === undefined || !wordCharacter.test(after);
+    if (startsClean && endsClean) found.push(index);
+    index = text.indexOf(form, index + 1);
+  }
+  return found;
 }
 
 /**
@@ -225,12 +256,23 @@ export function isPersianProse(text: string, start: number, end: number): boolea
  * The rule shape
  * ──────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * The kinds a rule can be, in the order the pipeline runs them.
+ *
+ * The first five are Phase 7.5.2.1's — how Persian is *written*. The last two are 7.5.2.3's: how a
+ * Persian *sentence* is put together, and how its words are spelled. They share the machinery on
+ * purpose: a grammar rule and a character fold need the same three things (a stable id, an
+ * authorising key, a refusal to touch a technical span), and giving the grammar half its own engine
+ * would be a second pipeline that eventually disagrees with the first.
+ */
 export const NORMALIZATION_RULE_KINDS = [
   'character',
   'digit',
   'spacing',
   'zwnj',
   'punctuation',
+  'grammar',
+  'spelling',
 ] as const;
 export type NormalizationRuleKind = (typeof NORMALIZATION_RULE_KINDS)[number];
 
@@ -292,6 +334,56 @@ export interface NormalizationRule {
   readonly protectedKinds: readonly SpanKind[];
   readonly correct?: (input: RuleInput) => RuleEdit[];
   readonly detect?: (input: RuleInput) => NormalizationFinding[];
+}
+
+/**
+ * A rule that also carries the knowledge it stands for.
+ *
+ * Phase 7.5.2.3's grammar and spelling rules are each a *decision* about the language, and a decision
+ * has to be able to say what it is, how it was reached, and what it does not cover — so the extra four
+ * fields are the sentence stored in the language store, the reasoning a reviewer reads, the examples
+ * that make it checkable, and how sure the project is. The runner ignores all of them; only the seed
+ * and the report read them.
+ *
+ * `origin` is on the rule rather than in the seed so a rule can be *shipped as a candidate*: an
+ * `agent-proposal` entry is parked as `pending`, which means the rule exists, is visible, and does
+ * nothing until a reviewer accepts it. That is the learnable path of this phase, and it needs no
+ * schema of its own — the store already has one.
+ */
+export interface LanguageRule extends NormalizationRule {
+  /** The sentence stored as the entry's value. */
+  readonly value: string;
+  /** How the decision was reached, and what it deliberately does not cover. */
+  readonly notes: string;
+  readonly examples: readonly string[];
+  readonly confidence: number;
+  readonly origin: LanguageOrigin;
+}
+
+/**
+ * A rule list as proposals for the language store — one entry per rule.
+ *
+ * Derived rather than written twice, for the same reason the lexicon's entries are: a decision lives in
+ * one place, the store owns its trust and its versions, and the two cannot drift.
+ */
+export function languageRuleProposals(
+  rules: readonly LanguageRule[],
+  recordedAt: string,
+  reference: string,
+): readonly LanguageProposal[] {
+  return rules.map((rule) => ({
+    key: rule.key,
+    kind: rule.kind === 'spelling' ? ('orthography' as const) : ('rule' as const),
+    value: rule.value,
+    origin: rule.origin,
+    reference,
+    recordedAt,
+    baseVersion: 0,
+    confidence: rule.confidence,
+    examples: [...rule.examples],
+    mapping: null,
+    notes: rule.notes,
+  }));
 }
 
 /* ────────────────────────────────────────────────────────────────────────────

@@ -6,19 +6,28 @@
  * Persian yeh is, which block the Persian digits live in, that ZWNJ is a layout control rather than
  * a space) or a decision made and recorded in `docs/persian-language.md` during this phase.
  *
- * What is *not* here is as deliberate: there is no terminology and there is no Persian UI copy. A
- * glossary of trading terms in Persian is a translation decision with a named reviewer, and Phase
- * 7.5.1 is the layer those entries will be written into, not the phase that invents them. Seeding
- * an unreviewed glossary would be exactly the failure this store exists to prevent — knowledge
- * whose provenance is a guess, carrying a `trusted` badge.
+ * What is *not* here is as deliberate: there is no Persian UI copy. A glossary of trading terms in
+ * Persian is a translation decision with a named reviewer, so the terminology of Phase 7.5.2.2 is
+ * *derived* from the lexicon's catalogue and its entries arrive through this same proposal path, which
+ * is the layer those entries get written into — not a phase that invents them. Seeding an unreviewed
+ * glossary would be exactly the failure this store exists to prevent — knowledge whose provenance is a
+ * guess, carrying a `trusted` badge.
  *
  * The orthographic entries carry a `mapping` where the rule is character-level, and
  * `tests/persian-language.test.ts` checks the normalizer in `fa.ts` against every one of them. So
  * the store's prose and the code's behaviour are one fact stated twice, not two facts that drift.
+ *
+ * Phase 7.5.2.3's grammar and spelling rules are seeded the same way, through `languageRuleProposals`,
+ * so a rule's own `value`, `notes`, `examples`, `confidence` and `origin` are what the store holds. One
+ * of them ships as `agent-proposal`: it lands as `pending`, which means the rule exists, shows up in
+ * every report as a skipped rule, and changes nothing until a reviewer accepts it.
  */
 
 import { LanguageMemory } from './memory.js';
 import type { LanguageProposal } from './model.js';
+import { languageRuleProposals } from './rules.js';
+import { GRAMMAR_RULES } from './grammar.js';
+import { SPELLING_RULES } from './spelling.js';
 import {
   TERMINOLOGY_RECORDED_AT,
   TERMINOLOGY_REFERENCE,
@@ -281,8 +290,20 @@ export const SEED_LANGUAGE_KNOWLEDGE: readonly LanguageProposal[] = [
     notes:
       'Stated as a report, with the reason it is not a correction: the same letters are also words of their own \u2014 \u0645\u06CC is *wine*, \u062A\u0631 is *wetter* \u2014 and telling a prefix from a noun needs a lexicon this phase does not have and would not want to guess at. So the rule finds the shape of the problem and a reviewer decides. Confidence 0.7 is that uncertainty, recorded rather than hidden. Making it automatic is a schema extension to the entry (a word-level `from \u2192 to` pair) and a reviewed entry per pattern, both of which are named in `docs/persian-language.md` as the next step rather than done here.',
   },
+  ...grammarAndSpellingProposals(),
   ...terminologyProposals(TERMINOLOGY_RECORDED_AT, TERMINOLOGY_REFERENCE),
 ];
+
+/**
+ * The Phase 7.5.2.3 rules as store entries.
+ *
+ * A function rather than an inline spread so the two catalogues are named once: the pipeline in
+ * `languageQa.ts` reads `[...GRAMMAR_RULES, ...SPELLING_RULES]` and this reads the same two lists, so a
+ * rule that is added to a catalogue is seeded by construction and cannot be forgotten here.
+ */
+function grammarAndSpellingProposals(): readonly LanguageProposal[] {
+  return languageRuleProposals([...GRAMMAR_RULES, ...SPELLING_RULES], RECORDED_AT, PHASE_RECORD);
+}
 
 /** A memory holding the seeded knowledge, applied through the ordinary proposal path. */
 export function seededLanguageMemory(): LanguageMemory {

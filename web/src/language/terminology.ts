@@ -41,7 +41,7 @@
 
 import type { LanguageKnowledgeEntry, LanguageProposal } from './model.js';
 import { LanguageMemory } from './memory.js';
-import { findSpans, overlapsSpan } from './rules.js';
+import { findSpans, overlapsSpan, standaloneMatches } from './rules.js';
 import {
   normalizePersianContent,
   protectedLiterals,
@@ -960,54 +960,28 @@ export function terminologyFindings(
     if (ignored.has(term.id)) continue;
     for (const alternative of allAlternatives(term)) {
       if (approved.has(alternative)) continue;
-      const start = indexOfStandalone(text, alternative);
-      let from = start;
-      while (from !== -1) {
-        if (!overlapsSpan(spans, from, from + alternative.length, ['technical', 'numeric'])) {
-          findings.push({
-            id: term.id,
-            key: term.key,
-            domain: term.domain,
-            english: term.english,
-            preferredFa: term.preferredFa,
-            foundFa: alternative,
-            index: from,
-            // Two reasons, because they are two different facts: a form the store retired has a
-            // version that retired it, and a form it never wrote has no such story. The distinction
-            // comes from the store's history and is the reason a correction is worth recording at all.
-            reason: term.supersededFa.includes(alternative)
-              ? `This product used to write \`${alternative}\` for ${term.english}, and version ${term.version} replaced it with \`${term.preferredFa}\`.`
-              : `This product writes \`${term.preferredFa}\` for ${term.english}; \`${alternative}\` is understood and is not the preferred form.`,
-          });
-        }
-        from = indexOfStandalone(text, alternative, from + 1);
+      for (const at of standaloneMatches(text, alternative)) {
+        if (overlapsSpan(spans, at, at + alternative.length, ['technical', 'numeric'])) continue;
+        findings.push({
+          id: term.id,
+          key: term.key,
+          domain: term.domain,
+          english: term.english,
+          preferredFa: term.preferredFa,
+          foundFa: alternative,
+          index: at,
+          // Two reasons, because they are two different facts: a form the store retired has a
+          // version that retired it, and a form it never wrote has no such story. The distinction
+          // comes from the store's history and is the reason a correction is worth recording at all.
+          reason: term.supersededFa.includes(alternative)
+            ? `This product used to write \`${alternative}\` for ${term.english}, and version ${term.version} replaced it with \`${term.preferredFa}\`.`
+            : `This product writes \`${term.preferredFa}\` for ${term.english}; \`${alternative}\` is understood and is not the preferred form.`,
+        });
       }
     }
   }
 
   return findings.sort((left, right) => left.index - right.index);
-}
-
-/**
- * Where a form appears as a *word* rather than as part of a longer one.
- *
- * The boundary is the Persian alphabet and the ZWNJ, and the reason is that both matter: `تایم فریم`
- * is two words and must still be found, while `حد سود` inside `حد سوددهی` and `درس` inside `درسی` must
- * not be. A space is a boundary; a letter is not; the half-space is not either, because it exists to
- * join letters into one word.
- */
-function indexOfStandalone(text: string, form: string, from = 0): number {
-  const letters = /[\u0621-\u063A\u0641-\u064A\u066E-\u06D3\u06D5\u06FA-\u06FF\u200C]/u;
-  let index = text.indexOf(form, from);
-  while (index !== -1) {
-    const before = index === 0 ? '' : (text[index - 1] as string);
-    const after = text[index + form.length];
-    const startsClean = before === '' || !letters.test(before);
-    const endsClean = after === undefined || !letters.test(after);
-    if (startsClean && endsClean) return index;
-    index = text.indexOf(form, index + 1);
-  }
-  return -1;
 }
 
 /**

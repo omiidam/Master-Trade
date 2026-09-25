@@ -1566,3 +1566,90 @@ round trip that preserves the term, the correction and the rejection.
 - The store grew from 15 entries to **72** (15 rules + 57 terms), and the one 7.5.1 assertion that
   required the `terminology` kind to be _empty_ was replaced by what is still true — no `translation`
   entries exist, because naming the vocabulary is not writing the copy.
+
+## 21. Phase 7.5.2.3 — grammar, spelling, and one engine instead of four
+
+Three new modules — `web/src/language/grammar.ts` (7 rules), `web/src/language/spelling.ts` (10 rules)
+and `web/src/language/languageQa.ts` (the pipeline and the three decisions that make a suggestion
+permanent) — plus the shared vocabulary they needed, which is the part worth reading first. Nothing
+renders them: no component imports the QA pipeline, the interface is still English, and the phase costs
+the running application zero bytes. The suite is `tests/persian-qa.test.ts` (32 tests); the full record,
+including the two resource re-checks and the six defects verification found, is `docs/persian-language.md`.
+
+### One runner, one gate, one meaning of _protected_
+
+The phase could have grown a second pipeline next to §19's. It does not, and the way it avoids that is the
+change with the longest reach: `normalize.ts` gained a **`runRules(input, rules, options)`** engine and an
+**`authorisedOfRules(rules, memory, options)`** gate, and `normalizePersianContent` became one _caller_ of
+them rather than the only implementation. The grammar half now gets the same three things the character
+folds get — the memory gate that refuses an untrusted rule, the protected-span predicate, and an exact
+report of every edit — for free, and cannot disagree with them, because there is nothing to disagree with.
+
+`rules.ts` grew the vocabulary the new families needed: a `LanguageRule` (a `NormalizationRule` that also
+carries the knowledge it stands for — its `value`, `notes`, `examples`, `confidence` and `origin`), a
+`languageRuleProposals` list so a rule's own prose _is_ its store entry, `standaloneMatches` for the
+whole-word boundary three separate rules were about to write for themselves, and two new rule kinds,
+`grammar` and `spelling`. `terminology.ts` was refactored onto `standaloneMatches` rather than keeping its
+private copy.
+
+### 17 rules, and the enforcement is the honesty
+
+Seven grammar rules and ten spelling rules, each one either **mechanical** (`enforcement: 'correct'`: the
+answer is a fact about characters, so the fix is applied and the exact characters it replaced are in the
+report) or a **pattern** (`enforcement: 'report'`: the shape is usually wrong and never certainly wrong,
+so a person decides). Two of the seven grammar rules and nine of the ten spelling rules are mechanical;
+the rest report. The split is the design, not a staging post — `۳ معاملات` needs a table of broken
+plurals that does not exist, `خوبها` may be a legitimate noun, and `میشه` is a register choice rather than
+a mistake. Each reported rule carries a confidence below 1 and says in its own `notes` what it does not
+cover, and there is no score, no model and no probability anywhere in the types.
+
+The grammar families are the five the phase asks for and nothing more: sentence structure (the object
+marker and the verb that must follow it), verb forms and agreement, singular/plural usage, the ezafe,
+adjective agreement, and the mixed Persian + English technical sentence this product is full of — where a
+Latin token takes a space and the four suffixes that bind to it take a half-space.
+
+### The pipeline is a pipeline, and it exposes its frames
+
+`languageQa(text)` runs Text → normalize → grammar → spelling → terminology, and its two properties worth
+having are negative ones. It **reuses** the layers rather than re-deriving them, and it **never re-bases
+an offset**: every stage carries the text it received and the text it produced, because re-basing offsets
+across four transformations is arithmetic that looks tidy and is eventually wrong. Nothing is written to
+any store — a suggestion is a _reading_ of the text, and the knowledge that would make it permanent goes
+through `promoteLanguageRule`, `retireLanguageRule` or `approveForm`, each of which is a decision with a
+provenance.
+
+The suite asserts the report is **complete**: replaying the corrections it lists, in the order the rules
+ran and right-to-left within each rule, reproduces `report.text` exactly. That is a stronger claim than it
+looks — nothing was changed that the report does not name — and it is the reason a per-suggestion slice
+against the stage input is _not_ asserted instead: an offset belongs to the text its rule received, and an
+earlier rule in the same pass has already moved every offset after it.
+
+One deliberate departure from the flow the phase lists: terminology is checked **last**, on the text the
+deterministic rules produced, rather than second. Checking it before them would report a form the pipeline
+was about to change, against a text no caller holds. The stage report makes the order visible, so the
+deviation is inspectable rather than implied.
+
+### The suggestion-acceptance path is the store's, reused for the third time
+
+`approveForm` writes an `exception` entry — the mechanism §19 built for the string a normalizer is right
+about in general and wrong about here, which §20 reused for a context where a non-preferred term is
+intended. A language QA suggestion is the third case, and it needs no new mechanism: the entry names the
+form in its `examples`, `protectedLiterals` reads it, and the rule that found the form stops reporting it
+while every other rule stops writing it. `promoteLanguageRule` goes through the ordinary `review` path, so
+the provenance on an accepted candidate is the **reviewer's**, not the model's; `retireLanguageRule` is a
+versioned decision with a reference rather than a flag in a config file.
+
+### Verified
+
+- Both typechecks clean; `format:check` clean; `npm run build` and `npm run build:web` clean.
+- **1491** unit tests across **74** files (1459/73 before), including the new 32-test QA suite. The four
+  Persian suites are 132 tests together: 46, 26, 28, 32.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks** (unchanged).
+- Browser end-to-end unchanged at **30** cases: no component, stylesheet or bundle input changed, so the
+  seven-viewport sweep, the touch-target sweep and the RTL mirror check pass on the same bundle — the
+  phase has no rendering to measure, and says so rather than adding a case that measures nothing.
+- The store grew from 72 current entries to **88** (of 89 proposals — one rule ships as an
+  `agent-proposal` candidate and is parked as `pending`, which is the learnable path demonstrated with
+  the machinery §18 already built). The 7.5.1 assertion that required all seeded knowledge to be current
+  was replaced by what is still true: everything seeded is either current or deliberately waiting on a
+  review, and nothing is lost.
