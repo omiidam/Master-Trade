@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { APP_PAGE_IDS, NAV_SECTIONS, PREVIEW_NOTICE } from '../web/src/config/navigation.js';
+import { APP_PAGE_IDS, NAV_SECTIONS, previewNotice } from '../web/src/config/navigation.js';
 import { DURATION, EASE, FADE_UP, STAGGER } from '../web/src/design/motion.js';
 import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 
@@ -103,9 +103,9 @@ describe('preview prototype', () => {
   });
 
   it('keeps the preview labelled and free of any execution affordance', () => {
-    expect(PREVIEW_NOTICE).toMatch(/preview/i);
+    expect(previewNotice()).toMatch(/preview/i);
     const topbar = source('app/Topbar.tsx');
-    expect(topbar).toContain('PREVIEW_NOTICE');
+    expect(topbar).toContain('previewNotice');
 
     // Every page's user-visible strings still pass the execution-control guard.
     for (const page of PRODUCT_PAGES) {
@@ -121,9 +121,9 @@ describe('preview prototype', () => {
 
   it('shows its data as clearly labelled mock data, and says which surface is live', () => {
     const mock = source('mock/realtime.ts');
-    expect(mock).toContain('ACTIVITY_PREVIEW_NOTICE');
-    expect(mock).toContain('REALTIME_PREVIEW_NOTICE');
-    expect(mock).toContain('JOB_PREVIEW_NOTICE');
+    expect(mock).toContain('realtime.activityPreviewNotice');
+    expect(mock).toContain('realtime.previewNotice');
+    expect(mock).toContain('realtime.jobPreviewNotice');
     // A fixture can never be a trading outcome: the backtest fixture carries no result.
     expect(mock).not.toMatch(/win rate\s*[:=]\s*\d/i);
 

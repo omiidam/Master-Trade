@@ -21,6 +21,7 @@ import type { ProfileData, ProfileWriteData } from '@shared/api/contracts';
 import type { TradingContext } from '@shared/profile/model';
 import { ApiClient, ApiError } from '../api/client.js';
 import { useRealtimeStore } from '../realtime/store.js';
+import { msg } from '../i18n/index.js';
 
 /** What the caller sends: the document, without the fields the server owns. */
 export type ProfileContextInput = Omit<TradingContext, 'version' | 'createdAt'>;
@@ -69,7 +70,7 @@ export async function clientForProfile(): Promise<ApiClient | { reason: string }
   const resolution = useRealtimeStore.getState().resolution;
 
   if (resolution === null) {
-    return { reason: 'The session has not been resolved yet.' };
+    return { reason: msg('profile.theSessionHasNotBeenResolvedYet') };
   }
   if (resolution.status === 'unavailable') {
     return { reason: `${resolution.detail} ${resolution.action}` };

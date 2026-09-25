@@ -11,6 +11,7 @@ import {
 } from '../Table';
 import { RMultipleIndicator } from './RMultipleIndicator';
 import type { JournalTrade } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 function price(value: number | null | undefined): string {
   if (value === null || value === undefined) return '—';
@@ -37,43 +38,43 @@ export function RiskSummary({ trade, className }: { trade: JournalTrade; classNa
   const actual = trade.actual;
   const rows: Row[] = [
     {
-      label: 'Entry',
+      label: msg('evaluationPanels.entry'),
       planned: price(trade.plan.entry),
       actual: price(actual?.entry),
       differs: actual?.entry != null && actual.entry !== trade.plan.entry,
     },
     {
-      label: 'Exit',
+      label: msg('evaluationPanels.exit'),
       planned: price(trade.plan.takeProfit),
       actual: price(actual?.exit),
       differs: actual?.exit != null && actual.exit !== trade.plan.takeProfit,
     },
     {
-      label: 'Invalidation',
+      label: msg('riskSummary.invalidation'),
       planned: price(trade.plan.stopLoss),
       actual: price(actual?.stopLoss),
       differs: actual?.stopLoss != null && actual.stopLoss !== trade.plan.stopLoss,
     },
     {
-      label: 'Risk amount',
+      label: msg('riskSummary.riskAmount'),
       planned: trade.plan.riskAmount.toLocaleString('en-US'),
       actual: actual?.riskAmount == null ? '—' : actual.riskAmount.toLocaleString('en-US'),
       differs: actual?.riskAmount != null && actual.riskAmount !== trade.plan.riskAmount,
     },
     {
-      label: 'Position size',
+      label: msg('riskSummary.positionSize'),
       planned: `${trade.plan.positionSize}`,
       actual: '—',
       differs: false,
     },
     {
-      label: 'Reward-to-risk',
+      label: msg('riskSummary.rewardToRisk'),
       planned: `${trade.plan.plannedRr.toFixed(1)} : 1`,
       actual: actual?.actualR == null ? '—' : `${actual.actualR.toFixed(2)}R realised`,
       differs: actual?.actualR != null && Math.abs(actual.actualR - trade.plan.plannedRr) > 0.05,
     },
     {
-      label: 'Fees',
+      label: msg('riskSummary.fees'),
       planned: '—',
       actual: actual == null ? '—' : actual.fees.toFixed(2),
       differs: false,
@@ -83,7 +84,7 @@ export function RiskSummary({ trade, className }: { trade: JournalTrade; classNa
   const divergences = rows.filter((row) => row.differs).length;
 
   return (
-    <Card as="section" aria-label="Planned versus actual" className={className}>
+    <Card as="section" aria-label={msg('journal.plannedVersusActual')} className={className}>
       <CardHeader
         divider
         actions={
@@ -95,19 +96,20 @@ export function RiskSummary({ trade, className }: { trade: JournalTrade; classNa
         }
       >
         <div className="min-w-0">
-          <CardTitle>Planned versus actual</CardTitle>
-          <CardDescription>
-            The plan is what was written before entry; the actual column is what the record shows.
-          </CardDescription>
+          <CardTitle>{msg('journal.plannedVersusActual')}</CardTitle>
+          <CardDescription>{msg('journal.thePlanIsWhatWasWritten')}</CardDescription>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <Table className="text-caption" label="Planned and actual values for each measure">
+        <Table
+          className="text-caption"
+          label={msg('riskSummary.plannedAndActualValuesForEachMeasure')}
+        >
           <TableHead>
-            <TableHeaderCell>Measure</TableHeaderCell>
-            <TableHeaderCell numeric>Planned</TableHeaderCell>
-            <TableHeaderCell numeric>Actual</TableHeaderCell>
+            <TableHeaderCell>{msg('journal.measure')}</TableHeaderCell>
+            <TableHeaderCell numeric>{msg('journal.planned')}</TableHeaderCell>
+            <TableHeaderCell numeric>{msg('decisions.actual')}</TableHeaderCell>
           </TableHead>
           <TableBody>
             {rows.map((row) => (
@@ -125,11 +127,11 @@ export function RiskSummary({ trade, className }: { trade: JournalTrade; classNa
         </Table>
 
         <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
-          <span className="text-caption text-text-muted">Realised result</span>
+          <span className="text-caption text-text-muted">{msg('journal.realisedResult')}</span>
           <RMultipleIndicator value={actual?.actualR ?? null} planned={trade.plan.plannedRr} />
           {actual?.actualR == null ? (
             <span className="text-caption text-text-faint">
-              Unscored: the record has no exit, so there is no realised multiple to show.
+              {msg('journal.unscoredTheRecordHasNoExit')}
             </span>
           ) : null}
         </div>

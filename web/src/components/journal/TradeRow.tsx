@@ -21,6 +21,7 @@ import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
 import { MARKET_LABEL, RESULT_LABEL, SESSION_LABEL, STATUS_LABEL } from '../../mock/journal';
 import type { JournalTrade, TradeResult, TradeSortKey, TradeStatus } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 export type TradeColumnId =
   | 'ref'
@@ -55,24 +56,144 @@ export interface TradeColumn {
 }
 
 export const TRADE_COLUMNS: readonly TradeColumn[] = [
-  { id: 'ref', label: 'Trade', sortable: 'openedAt', required: true },
-  { id: 'datetime', label: 'Date / time', sortable: 'openedAt' },
-  { id: 'symbol', label: 'Symbol', sortable: 'symbol', required: true },
-  { id: 'market', label: 'Market', optional: true },
-  { id: 'direction', label: 'Direction', required: true },
-  { id: 'setup', label: 'Setup', sortable: 'setupId' },
-  { id: 'session', label: 'Session', sortable: 'session', optional: true },
-  { id: 'entry', label: 'Entry', align: 'end' },
-  { id: 'exit', label: 'Exit', align: 'end', optional: true },
-  { id: 'stop', label: 'Stop', align: 'end', optional: true },
-  { id: 'target', label: 'Target', align: 'end', optional: true },
-  { id: 'risk', label: 'Risk', align: 'end' },
-  { id: 'plannedRr', label: 'Plan R:R', sortable: 'plannedRr', align: 'end', optional: true },
-  { id: 'actualR', label: 'Actual R', sortable: 'actualR', align: 'end', required: true },
-  { id: 'result', label: 'Result', sortable: 'result', required: true },
-  { id: 'compliance', label: 'Rule compliance', sortable: 'compliance', required: true },
-  { id: 'status', label: 'Status' },
-  { id: 'actions', label: 'Actions', align: 'end', required: true },
+  {
+    id: 'ref',
+    get label(): string {
+      return msg('tradeRow.trade');
+    },
+    sortable: 'openedAt',
+    required: true,
+  },
+  {
+    id: 'datetime',
+    get label(): string {
+      return msg('tradeRow.dateTime');
+    },
+    sortable: 'openedAt',
+  },
+  {
+    id: 'symbol',
+    get label(): string {
+      return msg('tradeForm.symbol');
+    },
+    sortable: 'symbol',
+    required: true,
+  },
+  {
+    id: 'market',
+    get label(): string {
+      return msg('tradeFilters.market');
+    },
+    optional: true,
+  },
+  {
+    id: 'direction',
+    get label(): string {
+      return msg('tradeFilters.direction');
+    },
+    required: true,
+  },
+  {
+    id: 'setup',
+    get label(): string {
+      return msg('tradeFilters.setup');
+    },
+    sortable: 'setupId',
+  },
+  {
+    id: 'session',
+    get label(): string {
+      return msg('activity.session');
+    },
+    sortable: 'session',
+    optional: true,
+  },
+  {
+    id: 'entry',
+    get label(): string {
+      return msg('evaluationPanels.entry');
+    },
+    align: 'end',
+  },
+  {
+    id: 'exit',
+    get label(): string {
+      return msg('evaluationPanels.exit');
+    },
+    align: 'end',
+    optional: true,
+  },
+  {
+    id: 'stop',
+    get label(): string {
+      return msg('tradeRow.stop');
+    },
+    align: 'end',
+    optional: true,
+  },
+  {
+    id: 'target',
+    get label(): string {
+      return msg('tradeRow.target');
+    },
+    align: 'end',
+    optional: true,
+  },
+  {
+    id: 'risk',
+    get label(): string {
+      return msg('tradeRow.risk');
+    },
+    align: 'end',
+  },
+  {
+    id: 'plannedRr',
+    get label(): string {
+      return msg('tradeRow.planRR');
+    },
+    sortable: 'plannedRr',
+    align: 'end',
+    optional: true,
+  },
+  {
+    id: 'actualR',
+    get label(): string {
+      return msg('tradeRow.actualR');
+    },
+    sortable: 'actualR',
+    align: 'end',
+    required: true,
+  },
+  {
+    id: 'result',
+    get label(): string {
+      return msg('tradeFilters.result');
+    },
+    sortable: 'result',
+    required: true,
+  },
+  {
+    id: 'compliance',
+    get label(): string {
+      return msg('journal.ruleCompliance');
+    },
+    sortable: 'compliance',
+    required: true,
+  },
+  {
+    id: 'status',
+    get label(): string {
+      return msg('tradeFilters.status');
+    },
+  },
+  {
+    id: 'actions',
+    get label(): string {
+      return msg('tradeRow.actions');
+    },
+    align: 'end',
+    required: true,
+  },
 ];
 
 export const DEFAULT_VISIBLE_COLUMNS: readonly TradeColumnId[] = [
@@ -240,7 +361,7 @@ export function TradeRow({
           <>
             <button
               type="button"
-              aria-label="Close actions menu"
+              aria-label={msg('journal.closeActionsMenu')}
               className="fixed inset-0 z-[var(--z-overlay)] cursor-default"
               onClick={() => setMenuOpen(false)}
             />
@@ -253,7 +374,7 @@ export function TradeRow({
             >
               <MenuItem
                 icon={<Eye size={13} aria-hidden />}
-                label="View details"
+                label={msg('tradeRow.viewDetails')}
                 onSelect={() => {
                   setMenuOpen(false);
                   onView(trade);
@@ -261,7 +382,7 @@ export function TradeRow({
               />
               <MenuItem
                 icon={<Pencil size={13} aria-hidden />}
-                label="Edit record"
+                label={msg('tradeRow.editRecord')}
                 onSelect={() => {
                   setMenuOpen(false);
                   onEdit(trade);
@@ -269,7 +390,7 @@ export function TradeRow({
               />
               <MenuItem
                 icon={<Copy size={13} aria-hidden />}
-                label="Duplicate as template"
+                label={msg('tradeRow.duplicateAsTemplate')}
                 onSelect={() => {
                   setMenuOpen(false);
                   onDuplicate(trade);
@@ -277,7 +398,7 @@ export function TradeRow({
               />
               <MenuItem
                 icon={<MessageSquarePlus size={13} aria-hidden />}
-                label="Add review"
+                label={msg('tradeRow.addReview')}
                 onSelect={() => {
                   setMenuOpen(false);
                   onAddReview(trade);
@@ -303,7 +424,7 @@ export function TradeRow({
               />
               <MenuItem
                 icon={<Trash2 size={13} aria-hidden />}
-                label="Delete record"
+                label={msg('tradeRow.deleteRecord')}
                 tone="danger"
                 onSelect={() => {
                   setMenuOpen(false);
@@ -372,5 +493,9 @@ function MenuItem({
       {label}
     </button>
   );
-  return disabled ? <Tooltip content="This record is already archived.">{button}</Tooltip> : button;
+  return disabled ? (
+    <Tooltip content={msg('tradeRow.thisRecordIsAlreadyArchived')}>{button}</Tooltip>
+  ) : (
+    button
+  );
 }

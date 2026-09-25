@@ -2,6 +2,7 @@ import type { ContextField, FieldKey, Holding } from '@shared/profile/model';
 import { FIELD_LABELS } from '@shared/profile/model';
 import { cn } from '../../lib/cn';
 import { ContextStatusBadge, FactSourceBadge } from './ContextStatusBadge';
+import { msg, liveLabels } from '../../i18n/index.js';
 
 /**
  * One declared field, rendered with everything needed to judge it.
@@ -12,36 +13,36 @@ import { ContextStatusBadge, FactSourceBadge } from './ContextStatusBadge';
  * phase exists to prevent.
  */
 
-const ARRAY_LABELS: Record<string, string> = {
-  equity: 'Equities',
-  fx: 'Foreign exchange',
-  crypto: 'Crypto',
-  commodity: 'Commodities',
-  index: 'Indices',
-  'risk-management': 'Risk management',
-  'chart-reading': 'Chart reading',
-  'strategy-development': 'Strategy development',
-  'psychology-discipline': 'Psychology and discipline',
-  'journaling-review': 'Journaling and review',
-  'market-structure': 'Market structure',
-  scalping: 'Scalping',
-  'day-trading': 'Day trading',
-  swing: 'Swing trading',
-  position: 'Position trading',
-  'capital-preservation': 'Capital preservation',
-  balanced: 'Balanced',
-  'growth-oriented': 'Growth oriented',
-  unspecified: 'Prefer not to say',
-  'prefer-not-to-say': 'Prefer not to say',
-  'under-1k': 'Under 1,000',
-  '1k-10k': '1,000 – 10,000',
-  '10k-50k': '10,000 – 50,000',
-  '50k-250k': '50,000 – 250,000',
-  'over-250k': 'Over 250,000',
-  beginner: 'Beginner',
-  intermediate: 'Intermediate',
-  advanced: 'Advanced',
-};
+const ARRAY_LABELS: Record<string, string> = liveLabels({
+  equity: 'profile.array.equity',
+  fx: 'profile.array.fx',
+  crypto: 'profile.array.crypto',
+  commodity: 'profile.array.commodity',
+  index: 'profile.array.index',
+  'risk-management': 'profile.array.risk-management',
+  'chart-reading': 'profile.array.chart-reading',
+  'strategy-development': 'profile.array.strategy-development',
+  'psychology-discipline': 'profile.array.psychology-discipline',
+  'journaling-review': 'profile.array.journaling-review',
+  'market-structure': 'profile.array.market-structure',
+  scalping: 'profile.array.scalping',
+  'day-trading': 'profile.array.day-trading',
+  swing: 'profile.array.swing',
+  position: 'profile.array.position',
+  'capital-preservation': 'profile.array.capital-preservation',
+  balanced: 'profile.array.balanced',
+  'growth-oriented': 'profile.array.growth-oriented',
+  unspecified: 'profile.array.unspecified',
+  'prefer-not-to-say': 'profile.array.prefer-not-to-say',
+  'under-1k': 'profile.array.under-1k',
+  '1k-10k': 'profile.array.1k-10k',
+  '10k-50k': 'profile.array.10k-50k',
+  '50k-250k': 'profile.array.50k-250k',
+  'over-250k': 'profile.array.over-250k',
+  beginner: 'profile.array.beginner',
+  intermediate: 'profile.array.intermediate',
+  advanced: 'profile.array.advanced',
+});
 
 /** A readable value. Unknown vocabulary falls back to the raw token, never to a guess. */
 export function formatFieldValue(value: unknown): string {
@@ -80,7 +81,9 @@ export function FactRow({ fieldKey, field, status, ageDays, required }: FactRowP
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2">
           <span className="text-body font-medium text-text">{FIELD_LABELS[fieldKey]}</span>
-          {!required ? <span className="text-caption text-text-faint">optional</span> : null}
+          {!required ? (
+            <span className="text-caption text-text-faint">{msg('profile.optional')}</span>
+          ) : null}
         </div>
         <p
           className={cn(
@@ -90,10 +93,14 @@ export function FactRow({ fieldKey, field, status, ageDays, required }: FactRowP
         >
           {formatFieldValue(field.value)}
         </p>
-        {field.note ? <p className="text-caption text-text-faint">Note: {field.note}</p> : null}
+        {field.note ? (
+          <p className="text-caption text-text-faint">
+            {msg('profile.note')} {field.note}
+          </p>
+        ) : null}
         {ageDays !== null && !missing ? (
           <p className="text-caption text-text-faint">
-            Observed {ageDays === 0 ? 'today' : `${ageDays} day(s) ago`}
+            {msg('profile.observed')} {ageDays === 0 ? 'today' : `${ageDays} day(s) ago`}
           </p>
         ) : null}
       </div>

@@ -4,6 +4,7 @@ import { Badge } from '../Badge';
 import { DataQualityBadge } from './DataQualityBadge';
 import { dimensionLabel } from './labels';
 import { CardTile } from '../Card';
+import { msg } from '../../i18n/index.js';
 
 /**
  * How good the declared inputs are, with no particular analysis in mind.
@@ -20,13 +21,48 @@ import { CardTile } from '../Card';
  */
 
 const COUNT_ROWS: readonly { key: keyof QualityReport['counts']; label: string }[] = [
-  { key: 'fields', label: 'Inputs assessed' },
-  { key: 'usable', label: 'Required and usable' },
-  { key: 'missing', label: 'Missing' },
-  { key: 'assumed', label: 'Assumed' },
-  { key: 'stale', label: 'Out of date' },
-  { key: 'invalid', label: 'Invalid' },
-  { key: 'conflicting', label: 'Conflicting' },
+  {
+    key: 'fields',
+    get label(): string {
+      return msg('inputQualitySummary.inputsAssessed');
+    },
+  },
+  {
+    key: 'usable',
+    get label(): string {
+      return msg('inputQualitySummary.requiredAndUsable');
+    },
+  },
+  {
+    key: 'missing',
+    get label(): string {
+      return msg('decisions.confidence.missing');
+    },
+  },
+  {
+    key: 'assumed',
+    get label(): string {
+      return msg('decisions.confidence.assumed');
+    },
+  },
+  {
+    key: 'stale',
+    get label(): string {
+      return msg('analysisReadinessPanel.outOfDate');
+    },
+  },
+  {
+    key: 'invalid',
+    get label(): string {
+      return msg('analysisReadinessPanel.invalid');
+    },
+  },
+  {
+    key: 'conflicting',
+    get label(): string {
+      return msg('analysisReadinessPanel.conflicting');
+    },
+  },
 ];
 
 /** The eight dimensions, as a grid of verdicts. Shared with the readiness panel. */
@@ -39,7 +75,7 @@ export function DimensionGrid({
 }) {
   return (
     <div className={className ?? 'space-y-2'}>
-      <h4 className="text-body font-medium text-text">Dimensions</h4>
+      <h4 className="text-body font-medium text-text">{msg('quality.dimensions')}</h4>
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="list">
         {dimensions.map((dimension) => (
           <CardTile key={dimension.dimension} className="space-y-1">
@@ -80,26 +116,25 @@ export function InputQualitySummary({
   className,
 }: InputQualitySummaryProps) {
   return (
-    <section className={className ?? 'space-y-4'} aria-label="Input quality summary">
+    <section className={className ?? 'space-y-4'} aria-label={msg('quality.inputQualitySummary')}>
       <header className="flex flex-wrap items-center gap-1.5">
         <Info size={16} aria-hidden className="text-text-muted" />
-        <h3 className="text-body font-medium text-text">How good are the declared inputs?</h3>
+        <h3 className="text-body font-medium text-text">
+          {msg('quality.howGoodAreTheDeclaredInputs')}
+        </h3>
         <Badge tone={contextSet ? 'neutral' : 'outline'}>
           {contextSet ? `Context version ${contextVersion ?? '—'}` : 'Nothing declared yet'}
         </Badge>
         {asOf === undefined ? null : (
           <span className="text-caption text-text-faint">
-            assessed {new Date(asOf).toLocaleString()}
+            {msg('quality.assessed')} {new Date(asOf).toLocaleString()}
           </span>
         )}
-        <Badge tone="outline">No score — verdicts and named counts only</Badge>
+        <Badge tone="outline">{msg('quality.noScoreVerdictsAndNamedCounts')}</Badge>
       </header>
 
       {contextSet ? null : (
-        <p className="text-body text-text-muted">
-          You have not declared a trading context yet, so every input below is legitimately absent.
-          This report describes that empty context rather than a shortlist of things you did wrong.
-        </p>
+        <p className="text-body text-text-muted">{msg('quality.youHaveNotDeclaredATrading')}</p>
       )}
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

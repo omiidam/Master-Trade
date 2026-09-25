@@ -3,6 +3,7 @@ import { Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '../Button';
 import { cn } from '../../lib/cn';
 import { CardTile } from '../Card';
+import { msg } from '../../i18n/index.js';
 
 export type ChartTone = 'primary' | 'danger' | 'info' | 'warning' | 'ai' | 'muted';
 
@@ -66,7 +67,7 @@ export function ChartToolbar({
           <CardTile
             space="none"
             role="group"
-            aria-label="Chart timeframe"
+            aria-label={msg('journal.chartTimeframe')}
             className="inline-flex items-center gap-0.5 p-0.5"
           >
             {ranges.map((option) => {

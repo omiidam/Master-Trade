@@ -32,14 +32,10 @@ import { InterfaceStatesPanel } from '../components/InterfaceStates';
 import { ReadOnlyValue } from '../components/Input';
 import { Reveal } from '../components/Reveal';
 import { Workspace } from '../app/Workspace';
-import {
-  EPISTEMIC_LABEL,
-  MOCK_DATA_NOTICE,
-  mockConversation,
-  mockSystemStatus,
-} from '../mock/data';
+import { EPISTEMIC_LABEL, mockDataNotice, mockConversation, mockSystemStatus } from '../mock/data';
 import { formatTimestamp } from '../lib/format';
 import { useUiStore } from '../store/ui';
+import { msg } from '../i18n/index.js';
 
 /**
  * The composer's tools, stated as data so each one carries why it is not available.
@@ -50,20 +46,31 @@ import { useUiStore } from '../store/ui';
  */
 const COMPOSER_TOOLS: readonly ComposerTool[] = [
   {
-    label: 'Attach a file',
+    get label(): string {
+      return msg('agentWorkspacePage.attachAFile');
+    },
     icon: <Paperclip size={15} aria-hidden />,
-    blockedReason: 'Attachments are not part of this build.',
+    get blockedReason(): string {
+      return msg('agentWorkspacePage.attachmentsAreNotPartOfThisBuild');
+    },
   },
   {
-    label: 'Add an integration',
+    get label(): string {
+      return msg('agentWorkspacePage.addAnIntegration');
+    },
     icon: <Grid2x2Plus size={15} aria-hidden />,
-    blockedReason:
-      'The tool registry is declared in the backend. Nothing on this screen can widen it.',
+    get blockedReason(): string {
+      return msg('agentWorkspacePage.theToolRegistryIsDeclaredInTheBackend');
+    },
   },
   {
-    label: 'Fetch from the web',
+    get label(): string {
+      return msg('agentWorkspacePage.fetchFromTheWeb');
+    },
     icon: <Globe size={15} aria-hidden />,
-    blockedReason: 'The agent calls deterministic local tools only. It has no network access.',
+    get blockedReason(): string {
+      return msg('agentWorkspacePage.theAgentCallsDeterministicLocalToolsOnlyIt');
+    },
   },
 ];
 
@@ -80,8 +87,8 @@ export function AgentWorkspacePage() {
 
   return (
     <Workspace
-      title="AI workspace"
-      description="Conversation with the training agent. Answers separate fact from analysis, hypothesis and uncertainty, and every number comes from a deterministic tool."
+      title={msg('agent.aIWorkspace')}
+      description={msg('agentWorkspacePage.conversationWithTheTrainingAgentAnswersSeparateFact')}
       actions={
         <>
           <Badge tone="ai" icon={<Sparkles size={12} aria-hidden />}>
@@ -100,8 +107,10 @@ export function AgentWorkspacePage() {
         <div className="space-y-4">
           <ErrorState
             severity="warning"
-            title="No model provider is configured"
-            description="The orchestrator, permission checks and tool registry are built, but no hosted provider is registered in this phase, so the conversation below is a static example."
+            title={msg('agent.noModelProviderIsConfigured')}
+            description={msg(
+              'agentWorkspacePage.theOrchestratorPermissionChecksAndToolRegistryAre',
+            )}
             code="PROVIDER_UNAVAILABLE"
             action={
               <Button size="sm" variant="secondary" onClick={() => setPage('settings')}>
@@ -113,13 +122,11 @@ export function AgentWorkspacePage() {
           <Card surface="data">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Conversation</CardTitle>
-                <CardDescription>
-                  Each message shows its epistemic label and its sources
-                </CardDescription>
+                <CardTitle className="text-body">{msg('agent.conversation')}</CardTitle>
+                <CardDescription>{msg('agent.eachMessageShowsItsEpistemicLabel')}</CardDescription>
               </div>
               <Badge tone="warning" dot>
-                mock transcript
+                {msg('agent.mockTranscript')}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -156,7 +163,9 @@ export function AgentWorkspacePage() {
                       <p className="mt-2 text-body leading-relaxed text-text">{message.text}</p>
                       {message.sources.length > 0 ? (
                         <footer className="mt-2 flex flex-wrap items-center gap-1.5">
-                          <span className="text-caption text-text-faint">Sources</span>
+                          <span className="text-caption text-text-faint">
+                            {msg('agent.sources')}
+                          </span>
                           {message.sources.map((source) => (
                             <Badge key={source} tone="outline">
                               {source}
@@ -173,24 +182,24 @@ export function AgentWorkspacePage() {
 
           <InterfaceStatesPanel
             states={['loading', 'empty']}
-            title="States a turn goes through"
-            description="A turn is a round trip with a provider that may be slow, and a conversation can simply be new. Both are shown here as the real components the wired version will use."
-            loadingTitle="Waiting for a structured answer"
-            loadingDescription="While a turn is in flight the answer area holds its shape; no partial sentence is rendered, because a half-arrived claim can read as a finished one."
-            emptyTitle="This conversation has no turns yet"
-            emptyDescription="A new conversation says so, and what it will show: statements labelled fact, analysis, hypothesis or uncertainty, each with its sources."
-            hint="Chain-of-thought is never displayed, requested or stored — the answer is a structured summary or a failed turn."
+            title={msg('agent.statesATurnGoesThrough')}
+            description={msg('agentWorkspacePage.aTurnIsARoundTripWithA')}
+            loadingTitle={msg('agentWorkspacePage.waitingForAStructuredAnswer')}
+            loadingDescription={msg('agentWorkspacePage.whileATurnIsInFlightTheAnswer')}
+            emptyTitle={msg('agentWorkspacePage.thisConversationHasNoTurnsYet')}
+            emptyDescription={msg('agentWorkspacePage.aNewConversationSaysSoAndWhatIt')}
+            hint={msg('agentWorkspacePage.chainOfThoughtIsNeverDisplayedRequestedOrStored')}
           />
 
           <Card>
             <CardContent>
               <MessageComposer
-                label="Message to the training agent"
+                label={msg('agentWorkspacePage.messageToTheTrainingAgent')}
                 value={draft}
                 onValueChange={setDraft}
                 tools={COMPOSER_TOOLS}
                 examples={COMPOSER_EXAMPLES}
-                blockedReason="Sending is disabled: no provider is registered, and the interface must not imply a working model. The agent may request tools, but only the orchestrator runs them, after a permission check, and every result is recorded with provenance."
+                blockedReason={msg('agentWorkspacePage.sendingIsDisabledNoProviderIsRegisteredAnd')}
               />
             </CardContent>
           </Card>
@@ -198,32 +207,39 @@ export function AgentWorkspacePage() {
 
         <aside className="space-y-4">
           <AgentCard
-            title="Run context"
-            description="What the orchestrator would assemble"
+            title={msg('agent.runContext')}
+            description={msg('agentWorkspacePage.whatTheOrchestratorWouldAssemble')}
             icon={<Cpu size={15} aria-hidden />}
           >
             <div className="flex flex-col gap-3">
-              <ReadOnlyValue label="Agent lifecycle state" value={mockSystemStatus.agentState} />
               <ReadOnlyValue
-                label="Provider"
-                value="none registered"
-                hint="Scripted offline adapter remains the deterministic default."
+                label={msg('agentWorkspacePage.agentLifecycleState')}
+                value={mockSystemStatus.agentState}
               />
               <ReadOnlyValue
-                label="Budget used"
+                label={msg('agentWorkspacePage.provider')}
+                value="none registered"
+                hint={msg(
+                  'agentWorkspacePage.scriptedOfflineAdapterRemainsTheDeterministicDefault',
+                )}
+              />
+              <ReadOnlyValue
+                label={msg('agentWorkspacePage.budgetUsed')}
                 value={`$${mockSystemStatus.llmBudgetUsedUsd.toFixed(2)} of $25.00`}
-                hint="Requests are refused once the monthly budget is spent."
+                hint={msg('agentWorkspacePage.requestsAreRefusedOnceTheMonthlyBudgetIs')}
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <p className="text-caption font-medium text-text-muted">Context sections</p>
+              <p className="text-caption font-medium text-text-muted">
+                {msg('agent.contextSections')}
+              </p>
               <AgentCardList>
                 {[
-                  'Instructions — versioned, never dropped',
-                  'Memory — provenance required, unverified labelled uncertainty',
-                  'History — recent turns under a token budget',
-                  'Data — market data with a mandatory provenance label',
+                  msg('agentWorkspacePage.instructionsVersionedNeverDropped'),
+                  msg('agentWorkspacePage.memoryProvenanceRequiredUnverifiedLabelledUncertaint'),
+                  msg('agentWorkspacePage.historyRecentTurnsUnderATokenBudget'),
+                  msg('agentWorkspacePage.dataMarketDataWithAMandatoryProvenance'),
                 ].map((section) => (
                   <AgentCardItem key={section} badge={<AgentCheck />}>
                     {section}
@@ -234,8 +250,8 @@ export function AgentWorkspacePage() {
           </AgentCard>
 
           <AgentCard
-            title="Tool request path"
-            description="Model output never becomes action directly"
+            title={msg('agent.toolRequestPath')}
+            description={msg('agentWorkspacePage.modelOutputNeverBecomesActionDirectly')}
             icon={<Wrench size={15} aria-hidden />}
           >
             <div className="flex flex-col gap-3">
@@ -244,10 +260,10 @@ export function AgentWorkspacePage() {
                   together without pretending a pipeline is a list of results. */}
               <AgentCardList ordered>
                 {[
-                  'Model returns a tool-call request (arguments only).',
-                  'Orchestrator checks the operation against the permission table.',
-                  'Allowed: the deterministic tool runs and its result is recorded with provenance.',
-                  'Denied: the run is blocked with a reason, and the attempt stays visible in the audit trail.',
+                  msg('agentWorkspacePage.modelReturnsAToolCallRequestArgumentsOnly'),
+                  msg('agentWorkspacePage.orchestratorChecksTheOperationAgainstThePermissionTa'),
+                  msg('agentWorkspacePage.allowedTheDeterministicToolRunsAndItsResult'),
+                  msg('agentWorkspacePage.deniedTheRunIsBlockedWithAReason'),
                 ].map((step, index) => (
                   <AgentCardItem
                     key={step}
@@ -263,7 +279,7 @@ export function AgentWorkspacePage() {
               </AgentCardList>
 
               <p className="text-caption text-text-faint">
-                The gateway holds no tool registry and exposes no execution method.
+                {msg('agent.theGatewayHoldsNoToolRegistry')}
               </p>
             </div>
           </AgentCard>
@@ -272,8 +288,8 @@ export function AgentWorkspacePage() {
               a sweeping light is how a screen says "here" without a second badge. */}
           <AgentCard
             ring="active"
-            title="Rule proposals"
-            description="Idea → evaluation → human approval"
+            title={msg('agent.ruleProposals')}
+            description={msg('agentWorkspacePage.ideaEvaluationHumanApproval')}
             icon={<Gavel size={15} aria-hidden />}
             action={
               <Button
@@ -296,7 +312,7 @@ export function AgentWorkspacePage() {
                     </AgentBadge>
                   }
                 >
-                  Proposed rule
+                  {msg('agent.proposedRule')}
                 </AgentCardItem>
                 <AgentCardItem
                   badge={
@@ -305,7 +321,7 @@ export function AgentWorkspacePage() {
                     </AgentBadge>
                   }
                 >
-                  Deterministic evaluation attached
+                  {msg('agent.deterministicEvaluationAttached')}
                 </AgentCardItem>
                 <AgentCardItem
                   badge={
@@ -314,28 +330,27 @@ export function AgentWorkspacePage() {
                     </AgentBadge>
                   }
                 >
-                  Awaiting your approval — self-approval is rejected
+                  {msg('agent.awaitingYourApprovalSelfApprovalIs')}
                 </AgentCardItem>
               </AgentCardList>
 
               <p className="text-caption text-text-faint">
-                Activation is impossible without a recorded human approval; automation cannot
-                self-authorize.
+                {msg('agent.activationIsImpossibleWithoutARecorded')}
               </p>
             </div>
           </AgentCard>
 
           <AgentCard
-            title="Unchanged guarantees"
-            description="What the agent cannot do, whatever it says"
+            title={msg('agent.unchangedGuarantees')}
+            description={msg('agentWorkspacePage.whatTheAgentCannotDoWhateverItSays')}
             icon={<ShieldCheck size={15} aria-hidden />}
           >
             <div className="flex flex-col gap-3">
               <AgentCardList>
                 {[
-                  'Live trading: disabled',
-                  'Broker execution: disabled',
-                  'Model-authored memory can never become trusted knowledge',
+                  msg('agentWorkspacePage.liveTradingDisabled'),
+                  msg('agentWorkspacePage.brokerExecutionDisabled'),
+                  msg('agentWorkspacePage.modelAuthoredMemoryCanNeverBecomeTrustedKnowledge'),
                 ].map((guarantee) => (
                   <AgentCardItem key={guarantee} badge={<AgentCheck />}>
                     <span className="inline-flex items-center gap-1.5">
@@ -346,13 +361,13 @@ export function AgentWorkspacePage() {
                 ))}
               </AgentCardList>
 
-              <p className="text-caption text-text-faint">{MOCK_DATA_NOTICE}</p>
+              <p className="text-caption text-text-faint">{mockDataNotice()}</p>
             </div>
           </AgentCard>
 
           <p className="flex items-start gap-1.5 text-caption text-text-faint">
             <Info size={13} aria-hidden className="mt-0.5 shrink-0" />
-            Epistemic labels: {EPISTEMIC_LABEL.fact}, {EPISTEMIC_LABEL.analysis},{' '}
+            {msg('agent.epistemicLabels')} {EPISTEMIC_LABEL.fact}, {EPISTEMIC_LABEL.analysis},{' '}
             {EPISTEMIC_LABEL.hypothesis}, {EPISTEMIC_LABEL.uncertainty}.
           </p>
         </aside>

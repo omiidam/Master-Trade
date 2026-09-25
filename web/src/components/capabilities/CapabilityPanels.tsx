@@ -44,6 +44,7 @@ import {
   Section,
 } from '../Card';
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 /**
  * How a capability state is presented.
@@ -109,38 +110,40 @@ export function CapabilityCard({ capability }: { capability: CapabilityView }) {
         </CardTile>
 
         <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Fact label="Availability">
+          <Fact label={msg('capabilityPanels.availability')}>
             {capability.availability.replaceAll('-', ' ')}
             {capability.producesFigures ? ' · produces figures' : ' · produces no figures'}
           </Fact>
-          <Fact label="Weight">
+          <Fact label={msg('portfolio.weight')}>
             {capability.riskLevel} — {capability.riskMeaning}
           </Fact>
-          <Fact label="Deterministic engine">
+          <Fact label={msg('capabilityPanels.deterministicEngine')}>
             {capability.engineCapability ?? 'none: nothing here is computed'}
           </Fact>
-          <Fact label="Operation the role table decides">
+          <Fact label={msg('capabilityPanels.operationTheRoleTableDecides')}>
             {capability.operation ?? 'none declared'}
           </Fact>
-          <Fact label="Metered as">{capability.feature ?? 'not metered'}</Fact>
-          <Fact label="Who may ask">
+          <Fact label={msg('capabilityPanels.meteredAs')}>
+            {capability.feature ?? 'not metered'}
+          </Fact>
+          <Fact label={msg('capabilityPanels.whoMayAsk')}>
             {capability.humanOnly
               ? 'a person only'
               : capability.modelMayRequest
                 ? 'a person, or the model on your behalf'
                 : 'not requestable by the model'}
           </Fact>
-          <Fact label="Memory it may cite">
+          <Fact label={msg('capabilityPanels.memoryItMayCite')}>
             {capability.memoryPolicy === 'cite-verified-only'
               ? 'verified records only'
               : 'any record, with its verification state attached'}
           </Fact>
-          <Fact label="Outputs">{capability.outputs.join(', ')}</Fact>
+          <Fact label={msg('capabilityPanels.outputs')}>{capability.outputs.join(', ')}</Fact>
         </dl>
 
         <div className="space-y-1.5">
           <p className="text-caption font-medium text-text">
-            What this claims, and what it does not
+            {msg('capabilities.whatThisClaimsAndWhatIt')}
           </p>
           <ul className="list-disc space-y-1 pl-5">
             {capability.claims.map((claim) => (
@@ -152,10 +155,12 @@ export function CapabilityCard({ capability }: { capability: CapabilityView }) {
         </div>
 
         <div className="space-y-1.5">
-          <p className="text-caption font-medium text-text">Provenance requirement</p>
+          <p className="text-caption font-medium text-text">
+            {msg('capabilities.provenanceRequirement')}
+          </p>
           <p className="text-caption text-text-muted">{capability.provenance.statement}</p>
           {capability.provenance.requiresProvenance ? (
-            <Badge tone="info">Required before a figure exists</Badge>
+            <Badge tone="info">{msg('capabilities.requiredBeforeAFigureExists')}</Badge>
           ) : null}
         </div>
 
@@ -180,8 +185,8 @@ export function CapabilityCard({ capability }: { capability: CapabilityView }) {
 export function ModuleMap({ modules }: { modules: readonly CapabilityModuleView[] }) {
   return (
     <Section
-      title="Modules"
-      description="What each module contributes, and which capabilities compose it. The registry refuses a module that no capability uses."
+      title={msg('capabilities.modules')}
+      description={msg('capabilityPanels.whatEachModuleContributesAndWhichCapabilitiesCompose')}
     >
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {modules.map((module) => (
@@ -215,8 +220,8 @@ export function ModuleMap({ modules }: { modules: readonly CapabilityModuleView[
 export function CapabilityPipeline({ stages }: { stages: readonly CapabilityStageView[] }) {
   return (
     <Section
-      title="How a request is handled"
-      description="The order the server applies, and what stops a request at each stage. It is declared once and served, so the description and the behaviour cannot drift."
+      title={msg('capabilities.howARequestIsHandled')}
+      description={msg('capabilityPanels.theOrderTheServerAppliesAndWhatStops')}
     >
       <ol className="space-y-2">
         {stages.map((stage, index) => (
@@ -236,7 +241,9 @@ export function CapabilityPipeline({ stages }: { stages: readonly CapabilityStag
                   <CardTitle className="text-body">{stage.label}</CardTitle>
                   <p className="text-caption text-text-muted">{stage.meaning}</p>
                   <p className="text-caption text-text-muted">
-                    <span className="font-medium text-text">If it does not pass: </span>
+                    <span className="font-medium text-text">
+                      {msg('capabilities.ifItDoesNotPass')}{' '}
+                    </span>
                     {stage.blocks}
                   </p>
                 </div>

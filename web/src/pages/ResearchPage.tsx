@@ -34,22 +34,53 @@ import { Tooltip } from '../components/Tooltip';
 import { Grid, Workspace } from '../app/Workspace';
 import { formatRelative } from '../lib/format';
 import {
-  CONFIDENCE_CAVEAT,
+  confidenceCaveat,
   EXPERIMENT_STATUS_LABEL,
-  RESEARCH_METHOD_NOTE,
-  RESEARCH_PREVIEW_NOTICE,
+  methodNote,
+  previewNotice,
   mockExperimentTimeline,
   mockExperiments,
   mockReports,
   summariseResearch,
 } from '../mock/research';
+import { msg } from '../i18n/index.js';
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: <Layers size={14} aria-hidden /> },
-  { id: 'experiments', label: 'Experiments', icon: <FlaskConical size={14} aria-hidden /> },
-  { id: 'metrics', label: 'Metrics', icon: <Sigma size={14} aria-hidden /> },
-  { id: 'report', label: 'Report', icon: <ClipboardCheck size={14} aria-hidden /> },
-  { id: 'timeline', label: 'Timeline', icon: <GitBranch size={14} aria-hidden /> },
+  {
+    id: 'overview',
+    get label(): string {
+      return msg('dashboardPage.overview');
+    },
+    icon: <Layers size={14} aria-hidden />,
+  },
+  {
+    id: 'experiments',
+    get label(): string {
+      return msg('researchPage.experiments');
+    },
+    icon: <FlaskConical size={14} aria-hidden />,
+  },
+  {
+    id: 'metrics',
+    get label(): string {
+      return msg('research.metrics');
+    },
+    icon: <Sigma size={14} aria-hidden />,
+  },
+  {
+    id: 'report',
+    get label(): string {
+      return msg('research.report');
+    },
+    icon: <ClipboardCheck size={14} aria-hidden />,
+  },
+  {
+    id: 'timeline',
+    get label(): string {
+      return msg('researchPage.timeline');
+    },
+    icon: <GitBranch size={14} aria-hidden />,
+  },
 ] as const;
 
 export function ResearchPage() {
@@ -67,14 +98,14 @@ export function ResearchPage() {
 
   return (
     <Workspace
-      title="Research"
-      description="Experiments that test a proposed rule against evidence. Metrics come from deterministic code over a fixed data set; a rule cannot become active without a recorded human approval."
+      title={msg('research.research')}
+      description={msg('researchPage.experimentsThatTestAProposedRuleAgainstEvidence')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>
             approval-gated
           </Badge>
-          <Tooltip content={RESEARCH_PREVIEW_NOTICE}>
+          <Tooltip content={previewNotice()}>
             <Badge tone="warning">preview data</Badge>
           </Tooltip>
         </>
@@ -84,10 +115,10 @@ export function ResearchPage() {
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Research progress</CardTitle>
+              <CardTitle className="text-body">{msg('dashboard.researchProgress')}</CardTitle>
               <CardDescription>
-                {progress.complete} complete · {progress.active} running · {progress.planned}{' '}
-                planned
+                {progress.complete} {msg('dashboard.complete')} {progress.active}{' '}
+                {msg('realtime.running')} {progress.planned} {msg('research.planned')}
               </CardDescription>
             </div>
           </CardHeader>
@@ -95,52 +126,50 @@ export function ResearchPage() {
             <ProgressIndicator
               value={progress.complete}
               max={mockExperiments.length}
-              label="Experiments evaluated"
-              hint="A completed experiment is a finished measurement, not an adopted rule."
+              label={msg('researchPage.experimentsEvaluated')}
+              hint={msg('researchPage.aCompletedExperimentIsAFinishedMeasurementNot')}
             />
           </CardContent>
         </Card>
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Evaluated trades</CardTitle>
-              <CardDescription>Total across evaluations with metrics</CardDescription>
+              <CardTitle className="text-body">{msg('research.evaluatedTrades')}</CardTitle>
+              <CardDescription>{msg('research.totalAcrossEvaluationsWithMetrics')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <span className="num text-metric text-text">{progress.evaluatedTrades}</span>
             <p className="mt-2 text-caption text-text-faint">
-              Sample size is reported before any rate, because a rate without it is a rumour.
+              {msg('research.sampleSizeIsReportedBeforeAny')}
             </p>
           </CardContent>
         </Card>
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Pending decisions</CardTitle>
-              <CardDescription>Awaiting a recorded human approval</CardDescription>
+              <CardTitle className="text-body">{msg('research.pendingDecisions')}</CardTitle>
+              <CardDescription>{msg('research.awaitingARecordedHumanApproval')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <span className="num text-metric text-warning">{progress.pendingDecisions}</span>
             <p className="mt-2 text-caption text-text-faint">
-              A promising result stays inactive until a person decides. The system cannot adopt its
-              own proposal.
+              {msg('research.aPromisingResultStaysInactiveUntil')}
             </p>
           </CardContent>
         </Card>
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Abandoned</CardTitle>
-              <CardDescription>Stopped with the reason recorded</CardDescription>
+              <CardTitle className="text-body">{msg('research.abandoned')}</CardTitle>
+              <CardDescription>{msg('research.stoppedWithTheReasonRecorded')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <span className="num text-metric text-text-muted">{progress.abandoned}</span>
             <p className="mt-2 text-caption text-text-faint">
-              Rejections are kept. An experiment tuned until it looks good is a worse outcome than
-              one that was dropped.
+              {msg('research.rejectionsAreKeptAnExperimentTuned')}
             </p>
           </CardContent>
         </Card>
@@ -150,28 +179,32 @@ export function ResearchPage() {
         items={TABS.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
         value={tab}
         onValueChange={setTab}
-        aria-label="Research sections"
+        aria-label={msg('research.researchSections')}
       >
         <TabPanel value="overview" className="space-y-4">
           <Grid columns={2}>
             <Card surface="featured">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Active experiments</CardTitle>
-                  <CardDescription>Running, plus anything waiting on a decision</CardDescription>
+                  <CardTitle className="text-body">{msg('research.activeExperiments')}</CardTitle>
+                  <CardDescription>{msg('research.runningPlusAnythingWaitingOnA')}</CardDescription>
                 </div>
-                <Badge tone="info">{progress.active + progress.awaitingApproval} open</Badge>
+                <Badge tone="info">
+                  {progress.active + progress.awaitingApproval} {msg('research.open')}
+                </Badge>
               </CardHeader>
               <CardContent className="space-y-2 text-caption text-text-muted">
-                <p>{RESEARCH_METHOD_NOTE}</p>
-                <p>{CONFIDENCE_CAVEAT}</p>
+                <p>{methodNote()}</p>
+                <p>{confidenceCaveat()}</p>
               </CardContent>
             </Card>
             <Card surface="data">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Findings summary</CardTitle>
-                  <CardDescription>The one line each experiment currently supports</CardDescription>
+                  <CardTitle className="text-body">{msg('research.findingsSummary')}</CardTitle>
+                  <CardDescription>
+                    {msg('research.theOneLineEachExperimentCurrently')}
+                  </CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -193,8 +226,8 @@ export function ResearchPage() {
           </Grid>
 
           <Section
-            title="Experiments in flight"
-            description="Each card states its hypothesis before its numbers."
+            title={msg('research.experimentsInFlight')}
+            description={msg('researchPage.eachCardStatesItsHypothesisBeforeItsNumbers')}
           >
             <Grid columns={2}>
               {mockExperiments
@@ -217,8 +250,8 @@ export function ResearchPage() {
 
           <ErrorState
             severity="info"
-            title="No backtest engine in this phase"
-            description={RESEARCH_PREVIEW_NOTICE}
+            title={msg('research.noBacktestEngineInThisPhase')}
+            description={previewNotice()}
             code="PROVIDER_UNAVAILABLE"
             action={
               <span className="text-caption">
@@ -260,9 +293,9 @@ export function ResearchPage() {
                 <Card surface="data">
                   <CardHeader divider>
                     <div>
-                      <CardTitle className="text-body">Findings</CardTitle>
+                      <CardTitle className="text-body">{msg('portfolio.findings')}</CardTitle>
                       <CardDescription>
-                        What this experiment currently supports, and what it does not
+                        {msg('research.whatThisExperimentCurrentlySupportsAnd')}
                       </CardDescription>
                     </div>
                     <Badge tone="neutral">{selected.findings.length}</Badge>
@@ -290,7 +323,9 @@ export function ResearchPage() {
                         ? 'No approval request attached'
                         : `Approval ${selected.approvalRef} pending`}
                     </span>
-                    <span>updated {formatRelative(selected.updatedAt)}</span>
+                    <span>
+                      {msg('memory.updated')} {formatRelative(selected.updatedAt)}
+                    </span>
                   </CardFooter>
                 </Card>
               </Grid>
@@ -299,8 +334,8 @@ export function ResearchPage() {
 
           <EmptyState
             icon={<Beaker size={22} aria-hidden />}
-            title="Select an experiment to inspect it"
-            description="Choosing a card shows its evaluation metrics, findings and provenance. The preview ships five experiments, including one abandoned on purpose."
+            title={msg('research.selectAnExperimentToInspectIt')}
+            description={msg('researchPage.choosingACardShowsItsEvaluationMetricsFindings')}
           />
         </TabPanel>
 
@@ -323,7 +358,7 @@ export function ResearchPage() {
               provenance="synthetic"
               sourceRef="synthetic-generator"
               updatedAt="2026-09-18T07:30:00Z"
-              caveat={`${CONFIDENCE_CAVEAT} This experiment is still running, so the interval around average R still contains zero.`}
+              caveat={`${confidenceCaveat()} This experiment is still running, so the interval around average R still contains zero.`}
             />
             <MetricsPanel
               metrics={
@@ -335,29 +370,26 @@ export function ResearchPage() {
           <Grid columns={3}>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Reported first</CardTitle>
+                <CardTitle className="text-body">{msg('research.reportedFirst')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Sample size comes before any rate on every surface, because a rate without its
-                sample is a claim without its limits.
+                {msg('research.sampleSizeComesBeforeAnyRate')}
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Win rate is not edge</CardTitle>
+                <CardTitle className="text-body">{msg('research.winRateIsNotEdge')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                A 58% win rate with negative average R is the textbook shape of hidden tail risk.
-                Expectancy is what the evaluation is about.
+                {msg('research.a58WinRateWithNegative')}
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Missing means missing</CardTitle>
+                <CardTitle className="text-body">{msg('research.missingMeansMissing')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                An unevaluated experiment shows no metrics at all — never zeroes, which would read
-                as a measured flat result.
+                {msg('research.anUnevaluatedExperimentShowsNoMetrics')}
               </CardContent>
             </Card>
           </Grid>
@@ -368,29 +400,26 @@ export function ResearchPage() {
           <Grid columns={3}>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">No model text</CardTitle>
+                <CardTitle className="text-body">{msg('research.noModelText')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Reports are assembled from stored evaluation rows and rubric references. The model
-                may explain a report, but it does not write the numbers into it.
+                {msg('research.reportsAreAssembledFromStoredEvaluation')}
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Same visual weight</CardTitle>
+                <CardTitle className="text-body">{msg('research.sameVisualWeight')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Limitations are rendered alongside the findings, not in a footnote, so a report is
-                not read as a green light.
+                {msg('research.limitationsAreRenderedAlongsideTheFindings')}
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Decision, not activation</CardTitle>
+                <CardTitle className="text-body">{msg('research.decisionNotActivation')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                A report can recommend continuing or stopping the study. Adopting a rule is a
-                separate, human-approved action.
+                {msg('research.aReportCanRecommendContinuingOr')}
               </CardContent>
             </Card>
           </Grid>
@@ -405,49 +434,47 @@ export function ResearchPage() {
             <Card>
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Evidence is appended</CardTitle>
-                  <CardDescription>Never edited in place</CardDescription>
+                  <CardTitle className="text-body">{msg('research.evidenceIsAppended')}</CardTitle>
+                  <CardDescription>{msg('research.neverEditedInPlace')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                A re-run adds a new evaluation with its own sample size, so an earlier verdict stays
-                readable in the context it was reached in.
+                {msg('research.aReRunAddsANew')}
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Approval is explicit</CardTitle>
-                  <CardDescription>Recorded with a rationale</CardDescription>
+                  <CardTitle className="text-body">{msg('research.approvalIsExplicit')}</CardTitle>
+                  <CardDescription>{msg('research.recordedWithARationale')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Requesting approval writes a pending record; the decision names a decider and cannot
-                be made by the requester.
+                {msg('research.requestingApprovalWritesAPendingRecord')}
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Loading and empty</CardTitle>
-                  <CardDescription>Stated, not hidden</CardDescription>
+                  <CardTitle className="text-body">{msg('research.loadingAndEmpty')}</CardTitle>
+                  <CardDescription>{msg('research.statedNotHidden')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <SkeletonCard rows={2} />
                 <p className="text-caption text-text-faint">
                   <span className="inline-flex items-center gap-1.5">
-                    <Hourglass size={12} aria-hidden />A running experiment with no evaluation yet
-                    shows an empty metrics panel.
+                    <Hourglass size={12} aria-hidden />
+                    {msg('research.aRunningExperimentWithNoEvaluation')}
                   </span>
                 </p>
               </CardContent>
             </Card>
           </Grid>
           <p className="text-caption text-text-faint">
-            {mockExperiments.length} experiments · {progress.evaluatedTrades} trades across every
-            evaluation that produced metrics · {progress.awaitingApproval} awaiting a human
-            decision.
+            {mockExperiments.length} {msg('research.experiments')} {progress.evaluatedTrades}{' '}
+            {msg('research.tradesAcrossEveryEvaluationThatProduced')} {progress.awaitingApproval}{' '}
+            {msg('research.awaitingAHumanDecision')}
           </p>
         </TabPanel>
       </Tabs>

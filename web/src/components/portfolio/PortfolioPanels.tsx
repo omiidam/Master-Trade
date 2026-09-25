@@ -28,6 +28,7 @@ import {
   scopeMeaning,
   snapshotReasonLabel,
 } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * The panels a portfolio surface needs beyond its figures.
@@ -73,12 +74,11 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
     return (
       <Card className={className}>
         <CardHeader divider>
-          <CardTitle className="text-body">Portfolio readiness</CardTitle>
+          <CardTitle className="text-body">{msg('portfolio.portfolioReadiness')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-body text-text-muted">
-            No readiness verdict was produced, so nothing is claimed about whether an analysis may
-            run.
+            {msg('portfolio.noReadinessVerdictWasProducedSo')}
           </p>
         </CardContent>
       </Card>
@@ -90,8 +90,8 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
       <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <ShieldCheck size={16} aria-hidden className="text-text-muted" />
-          <CardTitle className="text-body">Portfolio readiness</CardTitle>
-          <Badge tone="outline">the worse of two readings decides</Badge>
+          <CardTitle className="text-body">{msg('portfolio.portfolioReadiness')}</CardTitle>
+          <Badge tone="outline">{msg('portfolio.theWorseOfTwoReadingsDecides')}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -106,18 +106,24 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
             <div className="flex flex-wrap items-center gap-1.5">
               <h4 className="text-body font-medium text-text">{scopeLabel(decision.scope)}</h4>
               <Badge tone={READINESS_TONE[decision.readiness]}>{decision.readiness}</Badge>
-              <Badge tone="outline">{decision.base.readiness} from declared inputs</Badge>
-              {decision.capability === 'planned' ? <Badge tone="info">not built yet</Badge> : null}
+              <Badge tone="outline">
+                {decision.base.readiness} {msg('portfolio.fromDeclaredInputs')}
+              </Badge>
+              {decision.capability === 'planned' ? (
+                <Badge tone="info">{msg('portfolio.notBuiltYet')}</Badge>
+              ) : null}
             </div>
 
             <p className="text-body text-text-muted">{scopeMeaning(decision.scope)}</p>
             <p className="text-caption font-mono text-text-faint">
-              decided by {decision.decidedBy}
+              {msg('portfolio.decidedBy')} {decision.decidedBy}
             </p>
 
             {decision.limitations.length > 0 ? (
               <div className="space-y-1">
-                <p className="text-caption text-text-muted">Limitations this answer carries</p>
+                <p className="text-caption text-text-muted">
+                  {msg('portfolio.limitationsThisAnswerCarries')}
+                </p>
                 <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
                   {decision.limitations.map((limitation, index) => (
                     <li key={index}>{limitation}</li>
@@ -130,7 +136,7 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
               <div className="space-y-1.5">
                 <p className="inline-flex items-center gap-1.5 text-caption text-text-muted">
                   <HelpCircle size={13} aria-hidden />
-                  What would unblock it
+                  {msg('portfolio.whatWouldUnblockIt')}
                 </p>
                 <ul className="space-y-1.5" role="list">
                   {decision.clarifications.map((question) => (
@@ -198,12 +204,12 @@ export function PortfolioQualitySummary({
       <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <ClipboardList size={16} aria-hidden className="text-text-muted" />
-          <CardTitle className="text-body">Data quality</CardTitle>
+          <CardTitle className="text-body">{msg('portfolio.dataQuality')}</CardTitle>
           {assessment.worst === null ? (
-            <Badge tone="success">no findings</Badge>
+            <Badge tone="success">{msg('portfolio.noFindings')}</Badge>
           ) : (
             <Badge tone={assessment.worst === 'blocking' ? 'danger' : 'warning'}>
-              worst: {assessment.worst}
+              {msg('portfolio.worst')} {assessment.worst}
             </Badge>
           )}
           <Badge tone={assessment.described ? 'neutral' : 'info'}>
@@ -215,15 +221,35 @@ export function PortfolioQualitySummary({
         <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {(
             [
-              ['Positions read', formatNumber(coverage.positions, 0), 'After the bound is applied'],
-              ['Usable', formatNumber(assessment.usable, 0), 'Not malformed'],
-              ['Priced', formatNumber(coverage.priced, 0), 'Quantity and price both usable'],
-              ['Weighted', formatNumber(coverage.weighted, 0), 'A declared share exists'],
-              ['Costed', formatNumber(coverage.costed, 0), 'Quantity and entry price both usable'],
               [
-                'Declared weight sum',
+                msg('portfolioPanels.positionsRead'),
+                formatNumber(coverage.positions, 0),
+                msg('portfolioPanels.afterTheBoundIsApplied'),
+              ],
+              [
+                msg('portfolioOverview.usable'),
+                formatNumber(assessment.usable, 0),
+                msg('portfolioPanels.notMalformed'),
+              ],
+              [
+                msg('portfolioOverview.priced'),
+                formatNumber(coverage.priced, 0),
+                msg('portfolioPanels.quantityAndPriceBothUsable'),
+              ],
+              [
+                msg('portfolioPanels.weighted'),
+                formatNumber(coverage.weighted, 0),
+                msg('portfolioPanels.aDeclaredShareExists'),
+              ],
+              [
+                msg('portfolioPanels.costed'),
+                formatNumber(coverage.costed, 0),
+                msg('portfolioPanels.quantityAndEntryPriceBothUsable'),
+              ],
+              [
+                msg('portfolioPanels.declaredWeightSum'),
                 formatPercent(assessment.declaredWeightSumPercent),
-                'Shares are meant to add up to a whole portfolio',
+                msg('portfolioPanels.sharesAreMeantToAddUpToA'),
               ],
             ] as const
           ).map(([label, value, hint]) => (
@@ -238,7 +264,7 @@ export function PortfolioQualitySummary({
         <div className="space-y-1.5">
           <p className="inline-flex items-center gap-1.5 text-caption text-text-muted">
             <CalendarClock size={13} aria-hidden />
-            Price freshness
+            {msg('portfolio.priceFreshness')}
           </p>
           <p className="text-body text-text-muted">
             {assessment.newestPriceAt === null
@@ -264,10 +290,10 @@ export function PortfolioQualitySummary({
         </div>
 
         <div className="space-y-1.5">
-          <h4 className="text-body font-medium text-text">Findings</h4>
+          <h4 className="text-body font-medium text-text">{msg('portfolio.findings')}</h4>
           {assessment.findings.length === 0 ? (
             <p className="text-body text-text-muted">
-              Every position declared carries what a calculation needs.
+              {msg('portfolio.everyPositionDeclaredCarriesWhatA')}
             </p>
           ) : (
             <ul className="space-y-1.5" role="list">
@@ -310,12 +336,11 @@ export function MissingHoldingData({ gaps, className }: MissingHoldingDataProps)
     return (
       <Card className={className}>
         <CardHeader divider>
-          <CardTitle className="text-body">Missing holding data</CardTitle>
+          <CardTitle className="text-body">{msg('portfolio.missingHoldingData')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
           <p className="text-body text-text-muted">
-            Nothing is missing: every figure these scopes ask for could be produced from what is
-            declared.
+            {msg('portfolio.nothingIsMissingEveryFigureThese')}
           </p>
         </CardContent>
       </Card>
@@ -327,8 +352,10 @@ export function MissingHoldingData({ gaps, className }: MissingHoldingDataProps)
       <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <TriangleAlert size={16} aria-hidden className="text-warning" />
-          <CardTitle className="text-body">Missing holding data</CardTitle>
-          <Badge tone="warning">{gaps.length} figure(s) not produced</Badge>
+          <CardTitle className="text-body">{msg('portfolio.missingHoldingData')}</CardTitle>
+          <Badge tone="warning">
+            {gaps.length} {msg('portfolio.figureSNotProduced')}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -382,11 +409,11 @@ export function PortfolioSnapshotTimeline({
     return (
       <Card className={className}>
         <CardHeader divider>
-          <CardTitle className="text-body">Version history</CardTitle>
+          <CardTitle className="text-body">{msg('portfolio.versionHistory')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
           <p className="text-body text-text-muted">
-            No version has been written, because no composition has been declared for this account.
+            {msg('portfolio.noVersionHasBeenWrittenBecause')}
           </p>
         </CardContent>
       </Card>
@@ -398,9 +425,11 @@ export function PortfolioSnapshotTimeline({
       <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <History size={16} aria-hidden className="text-text-muted" />
-          <CardTitle className="text-body">Version history</CardTitle>
-          <Badge tone="outline">newest first</Badge>
-          <Badge tone="neutral">{snapshots.length} version(s) shown</Badge>
+          <CardTitle className="text-body">{msg('portfolio.versionHistory')}</CardTitle>
+          <Badge tone="outline">{msg('portfolio.newestFirst')}</Badge>
+          <Badge tone="neutral">
+            {snapshots.length} {msg('portfolio.versionSShown')}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -412,7 +441,7 @@ export function PortfolioSnapshotTimeline({
             >
               <div className="flex flex-wrap items-center gap-1.5">
                 <Badge tone={snapshot.version === currentVersion ? 'primary' : 'outline'}>
-                  version {snapshot.version}
+                  {msg('portfolio.version')} {snapshot.version}
                 </Badge>
                 <span className="text-body text-text-muted">
                   {snapshotReasonLabel(snapshot.reason)}
@@ -421,7 +450,8 @@ export function PortfolioSnapshotTimeline({
               <div className="text-right">
                 <p className="text-caption text-text-muted">{snapshot.createdAt}</p>
                 <p className="text-caption text-text-faint">
-                  changed by <span className="font-mono">{snapshot.changedBy}</span>
+                  {msg('portfolio.changedBy')}{' '}
+                  <span className="font-mono">{snapshot.changedBy}</span>
                 </p>
               </div>
             </CardTile>
@@ -429,8 +459,7 @@ export function PortfolioSnapshotTimeline({
         </ol>
 
         <p className="text-caption text-text-faint">
-          A version is never rewritten. An analysis can therefore still be traced back to the exact
-          composition it was computed from.
+          {msg('portfolio.aVersionIsNeverRewrittenAn')}
         </p>
       </CardContent>
     </Card>
@@ -467,26 +496,27 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
       <CardHeader divider>
         <div className="flex flex-wrap items-center gap-1.5">
           <Layers size={16} aria-hidden className="text-text-muted" />
-          <CardTitle className="text-body">Exposure</CardTitle>
-          <Badge tone="outline">measured, not scored</Badge>
+          <CardTitle className="text-body">{msg('portfolio.exposure')}</CardTitle>
+          <Badge tone="outline">{msg('portfolio.measuredNotScored')}</Badge>
           {metrics.valuationComplete ? (
-            <Badge tone="neutral">every position valued</Badge>
+            <Badge tone="neutral">{msg('portfolio.everyPositionValued')}</Badge>
           ) : (
-            <Badge tone="warning">partial valuation</Badge>
+            <Badge tone="warning">{msg('portfolio.partialValuation')}</Badge>
           )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {classes.length === 0 && currencies.length === 0 ? (
           <p className="text-body text-text-muted">
-            No exposure can be described, because no position could be valued. Nothing is shown in
-            place of it: a share of a total that does not exist is not a share.
+            {msg('portfolio.noExposureCanBeDescribedBecause')}
           </p>
         ) : null}
 
         {classes.length > 0 ? (
           <div className="space-y-1.5">
-            <p className="text-caption text-text-muted">By asset class, from market values</p>
+            <p className="text-caption text-text-muted">
+              {msg('portfolio.byAssetClassFromMarketValues')}
+            </p>
             <ul className="flex flex-wrap gap-1.5" role="list">
               {classes.map((bucket) => (
                 <li key={bucket.key}>
@@ -503,13 +533,13 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
         {currencies.length > 0 ? (
           <div className="space-y-1.5">
             <p className="text-caption text-text-muted">
-              By currency, summed only within each currency
+              {msg('portfolio.byCurrencySummedOnlyWithinEach')}
             </p>
             <ul className="grid gap-2 sm:grid-cols-2" role="list">
               {currencies.map((group) => (
                 <CardTile key={group.currency} className="flex items-center justify-between gap-2">
                   <span className="text-body text-text-muted">
-                    {group.currency} · {group.positions} position
+                    {group.currency} · {group.positions} {msg('portfolio.position')}
                     {group.positions === 1 ? '' : 's'}
                   </span>
                   <span className="text-body num text-text">{formatNumber(group.marketValue)}</span>
@@ -518,8 +548,7 @@ export function RiskExposurePanel({ metrics, className }: RiskExposurePanelProps
             </ul>
             {currencies.length > 1 ? (
               <p className="text-caption text-text-faint">
-                More than one currency and no rate source: the groups are reported separately rather
-                than converted into one figure.
+                {msg('portfolio.moreThanOneCurrencyAndNo2')}
               </p>
             ) : null}
           </div>

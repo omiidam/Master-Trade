@@ -11,8 +11,9 @@ import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
-import { AI_REVIEW_NOTICE, AI_REVIEW_STATE_LABEL, AI_REVIEW_STATE_ORDER } from '../../mock/journal';
+import { aiReviewNotice, AI_REVIEW_STATE_LABEL, AI_REVIEW_STATE_ORDER } from '../../mock/journal';
 import type { AiReviewState } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 const ICONS: Record<AiReviewState, ReactNode> = {
   'not-available': <CircleSlash size={15} aria-hidden />,
@@ -31,30 +32,47 @@ const TONE: Record<AiReviewState, 'outline' | 'info' | 'ai' | 'success' | 'dange
 };
 
 const EXPLANATION: Record<AiReviewState, string> = {
-  'not-available':
-    'No review provider is connected to the journal. The panel exists so the surface is designed before the capability arrives.',
-  pending:
-    'The review request is queued and has not been sent to a provider. Nothing is in flight yet.',
-  processing:
-    'A provider is generating a review. Progress is reported by the job queue, and is never animated here to look busier than it is.',
-  completed:
-    'The layout a completed review will take. Every field is empty by construction — no model output exists in this phase.',
-  failed:
-    'The request failed. The panel reports the typed reason and offers a retry, because a failed review must not look like an empty one.',
+  get ['not-available'](): string {
+    return msg('aIReviewPanel.noReviewProviderIsConnectedToTheJournal');
+  },
+  get pending(): string {
+    return msg('aIReviewPanel.theReviewRequestIsQueuedAndHasNot');
+  },
+  get processing(): string {
+    return msg('aIReviewPanel.aProviderIsGeneratingAReviewProgressIs');
+  },
+  get completed(): string {
+    return msg('aIReviewPanel.theLayoutACompletedReviewWillTakeEvery');
+  },
+  get failed(): string {
+    return msg('aIReviewPanel.theRequestFailedThePanelReportsTheTyped');
+  },
 };
 
 const COMPLETED_SECTIONS = [
   {
-    heading: 'Process adherence',
-    body: 'Where the record shows the plan was followed, and where it does not. Fields are filled from the checklist and the record, not from the review.',
+    get heading(): string {
+      return msg('aIReviewPanel.processAdherence');
+    },
+    get body(): string {
+      return msg('aIReviewPanel.whereTheRecordShowsThePlanWasFollowed');
+    },
   },
   {
-    heading: 'Risk and sizing',
-    body: 'Planned versus committed risk, with the divergence flagged. The numbers come from the record; a review may explain them but never produces them.',
+    get heading(): string {
+      return msg('aIReviewPanel.riskAndSizing');
+    },
+    get body(): string {
+      return msg('aIReviewPanel.plannedVersusCommittedRiskWithTheDivergenceFlagged');
+    },
   },
   {
-    heading: 'What to examine next',
-    body: 'Open questions for the trader, each tied to a specific record. A review proposes study, never a rule change and never a live decision.',
+    get heading(): string {
+      return msg('aIReviewPanel.whatToExamineNext');
+    },
+    get body(): string {
+      return msg('aIReviewPanel.openQuestionsForTheTraderEachTiedTo');
+    },
   },
 ];
 
@@ -81,7 +99,7 @@ export interface AIReviewPanelProps {
  */
 export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewPanelProps) {
   return (
-    <Card as="section" aria-label="Review assistance" className={className}>
+    <Card as="section" aria-label={msg('journal.reviewAssistance')} className={className}>
       <CardHeader
         divider
         actions={
@@ -98,7 +116,7 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
             {ICONS[state]}
           </span>
           <div className="min-w-0">
-            <CardTitle>Review assistance</CardTitle>
+            <CardTitle>{msg('journal.reviewAssistance')}</CardTitle>
             <CardDescription>
               {tradeRef ? `${tradeRef} · ` : ''}
               {EXPLANATION[state]}
@@ -110,29 +128,24 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
       <CardContent>
         {state === 'not-available' ? (
           <CardTile as="p" space="roomy" className="border-dashed text-caption text-text-muted">
-            {AI_REVIEW_NOTICE}
+            {aiReviewNotice()}
           </CardTile>
         ) : state === 'pending' ? (
-          <p className="text-caption text-text-muted">
-            Queued. A pending review is the absence of a review, and it is labelled that way rather
-            than shown as an empty result.
-          </p>
+          <p className="text-caption text-text-muted">{msg('journal.queuedAPendingReviewIsThe')}</p>
         ) : state === 'processing' ? (
           <div className="space-y-2">
             <div className="h-1.5 w-full overflow-hidden rounded-[var(--radius-pill)] bg-surface-sunken">
               <span className="block h-full w-1/3 animate-pulse rounded-[var(--radius-pill)] bg-ai/60" />
             </div>
             <p className="text-caption text-text-faint">
-              The bar is indeterminate on purpose: there is no progress to report until a job
-              reports one.
+              {msg('journal.theBarIsIndeterminateOnPurpose')}
             </p>
           </div>
         ) : state === 'completed' ? (
           <div className="space-y-3">
             <p className="flex items-start gap-2 rounded-[var(--radius-control)] border border-warning-border bg-warning-soft px-3 py-2 text-caption text-warning">
               <TriangleAlert size={13} aria-hidden className="mt-0.5 shrink-0" />
-              Layout example. No model provider is connected in this phase, so every field below is
-              empty by construction — this is the shape a review will take, not a review.
+              {msg('journal.layoutExampleNoModelProviderIs')}
             </p>
             <ul className="space-y-3">
               {COMPLETED_SECTIONS.map((section) => (
@@ -141,15 +154,14 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
                     <p className="text-body font-medium text-text">{section.heading}</p>
                     <p className="mt-0.5 text-caption text-text-muted">{section.body}</p>
                     <p className="mt-2 text-caption text-text-faint italic">
-                      awaiting a connected provider — no generated text is stored
+                      {msg('journal.awaitingAConnectedProviderNoGenerated')}
                     </p>
                   </CardTile>
                 </li>
               ))}
             </ul>
             <p className="text-caption text-text-faint">
-              Structured summaries only: a review explains the record. It cannot execute a tool,
-              change a rule or place anything.
+              {msg('journal.structuredSummariesOnlyAReviewExplains')}
             </p>
           </div>
         ) : (
@@ -158,18 +170,17 @@ export function AIReviewPanel({ state, tradeRef, onRetry, className }: AIReviewP
               JOURNAL_REVIEW_PROVIDER_UNAVAILABLE
             </p>
             <p className="text-caption text-text-muted">
-              The typed reason is shown instead of a raw provider payload. Retrying is offered only
-              because a provider outage is the kind of failure that can resolve.
+              {msg('journal.theTypedReasonIsShownInstead')}
             </p>
             {onRetry ? (
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={onRetry}
-                label="Retry the review request"
+                label={msg('aIReviewPanel.retryTheReviewRequest')}
                 leadingIcon={<RefreshCw size={13} aria-hidden />}
               >
-                Retry review
+                {msg('journal.retryReview')}
               </Button>
             ) : null}
           </div>
@@ -196,13 +207,15 @@ export function AIReviewStateGallery({
   className?: string;
 }) {
   return (
-    <section className={cn('space-y-3', className)} aria-label="Review states">
+    <section className={cn('space-y-3', className)} aria-label={msg('journal.reviewStates')}>
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-caption font-semibold text-text-muted uppercase">Review states</p>
+        <p className="text-caption font-semibold text-text-muted uppercase">
+          {msg('journal.reviewStates')}
+        </p>
         <CardTile
           space="none"
           role="group"
-          aria-label="Review state to preview"
+          aria-label={msg('journal.reviewStateToPreview')}
           className="inline-flex flex-wrap items-center gap-0.5 p-0.5"
         >
           {AI_REVIEW_STATE_ORDER.map((state) => (

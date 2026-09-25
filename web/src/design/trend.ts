@@ -1,4 +1,4 @@
-/**
+import { msg } from '../i18n/index.js'; /**
  * The polarity of a figure, as a vocabulary rather than as a colour.
  *
  * Direction was the most-copied decision in the product and the least consistent one. `text-success`
@@ -21,7 +21,9 @@ export const TREND_WORD: Record<TrendDirection, string> = {
   up: 'up',
   down: 'down',
   flat: 'flat',
-  unavailable: 'not available',
+  get unavailable(): string {
+    return msg('trend.notAvailable');
+  },
 };
 
 /**

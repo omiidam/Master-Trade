@@ -34,6 +34,7 @@ import {
   type EvaluationReadiness,
 } from '@shared/decisions/readiness';
 import { READINESS_LABEL, type Readiness } from '@shared/quality/readiness';
+import { liveLabels } from '../../i18n/index.js';
 
 export {
   DECISION_EVALUATION_REASON_LABEL,
@@ -150,12 +151,12 @@ export function figureMark(value: string | null): TrendDirection {
 }
 
 /** Confidence in an observation, in the contract's own vocabulary. */
-export const CONFIDENCE_LABEL: Readonly<Record<string, string>> = {
-  confirmed: 'Confirmed',
-  derived: 'Derived',
-  assumed: 'Assumed',
-  missing: 'Missing',
-};
+export const CONFIDENCE_LABEL: Readonly<Record<string, string>> = liveLabels({
+  confirmed: 'decisions.confidence.confirmed',
+  derived: 'decisions.confidence.derived',
+  assumed: 'decisions.confidence.assumed',
+  missing: 'decisions.confidence.missing',
+});
 
 export const CONFIDENCE_TONE: Readonly<Record<string, BadgeTone>> = {
   confirmed: 'success',

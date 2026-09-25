@@ -23,6 +23,7 @@ import type {
   SystemStatusView,
 } from '@shared/frontend/viewModels';
 import type { EpistemicKind } from '@shared/types';
+import { liveLabels, msg } from '../i18n/index.js';
 
 /**
  * The assessment rows live with the Exams module (`./exams.js`) so the Academy
@@ -30,8 +31,9 @@ import type { EpistemicKind } from '@shared/types';
  */
 export { mockExamViews as mockExams } from './exams.js';
 
-export const MOCK_DATA_NOTICE =
-  'Illustrative data for layout review. Nothing on this screen is connected to a backend, a model or a market feed.';
+export function mockDataNotice(): string {
+  return msg('data.mockDataNotice');
+}
 
 export const MOCK_GENERATED_AT = '2026-09-19T09:00:00Z';
 
@@ -59,85 +61,145 @@ export interface CurriculumModule {
 export const mockCurriculum: readonly CurriculumModule[] = [
   {
     id: 'm1',
-    title: 'Market Mechanics & Vocabulary',
+    get title(): string {
+      return msg('data.marketMechanicsVocabulary');
+    },
     month: 1,
-    summary: 'Orders, spreads, sessions and the language of price.',
+    get summary(): string {
+      return msg('data.ordersSpreadsSessionsAndTheLanguageOfPrice');
+    },
     lessons: 8,
     status: 'complete',
-    focus: ['Market structure', 'Sessions', 'Order types (theory only)'],
+    get focus(): string[] {
+      return [
+        msg('profile.array.market-structure'),
+        msg('data.sessions'),
+        msg('data.orderTypesTheoryOnly'),
+      ];
+    },
   },
   {
     id: 'm2',
-    title: 'Risk First',
+    get title(): string {
+      return msg('data.riskFirst');
+    },
     month: 2,
-    summary: 'Position sizing, R-multiples and survivable loss.',
+    get summary(): string {
+      return msg('data.positionSizingRMultiplesAndSurvivableLoss');
+    },
     lessons: 9,
     status: 'in-progress',
-    focus: ['Fixed-fractional sizing', 'R-multiples', 'Drawdown control'],
+    get focus(): string[] {
+      return [
+        msg('data.fixedFractionalSizing'),
+        msg('data.rMultiples'),
+        msg('data.drawdownControl'),
+      ];
+    },
   },
   {
     id: 'm3',
-    title: 'Chart Reading',
+    get title(): string {
+      return msg('data.chartReading');
+    },
     month: 3,
-    summary: 'Structure, levels and context before pattern names.',
+    get summary(): string {
+      return msg('data.structureLevelsAndContextBeforePatternNames');
+    },
     lessons: 8,
     status: 'available',
-    focus: ['Support & resistance', 'Trend structure', 'Volume context'],
+    get focus(): string[] {
+      return [msg('data.supportResistance'), msg('data.trendStructure'), msg('data.volumeContext')];
+    },
   },
   {
     id: 'm4',
-    title: 'Execution Discipline',
+    get title(): string {
+      return msg('data.executionDiscipline');
+    },
     month: 4,
-    summary: 'Process, journaling and review instead of prediction.',
+    get summary(): string {
+      return msg('data.processJournalingAndReviewInsteadOfPrediction');
+    },
     lessons: 8,
     status: 'locked',
-    focus: ['Pre-trade checklist', 'Journaling', 'Post-trade review'],
+    get focus(): string[] {
+      return [msg('data.preTradeChecklist'), msg('data.journaling'), msg('data.postTradeReview')];
+    },
   },
   {
     id: 'm5',
-    title: 'Statistics of Outcomes',
+    get title(): string {
+      return msg('data.statisticsOfOutcomes');
+    },
     month: 5,
-    summary: 'Expectancy, sample size and why small samples lie.',
+    get summary(): string {
+      return msg('data.expectancySampleSizeAndWhySmallSamplesLie');
+    },
     lessons: 8,
     status: 'locked',
-    focus: ['Expectancy', 'Sample size', 'Out-of-sample caution'],
+    get focus(): string[] {
+      return [
+        msg('data.expectancy'),
+        msg('metricsPanel.sampleSize'),
+        msg('data.outOfSampleCaution'),
+      ];
+    },
   },
   {
     id: 'm6',
-    title: 'Independent Operator',
+    get title(): string {
+      return msg('data.independentOperator');
+    },
     month: 6,
-    summary: 'A written, evidence-backed process of your own.',
+    get summary(): string {
+      return msg('data.aWrittenEvidenceBackedProcessOfYourOwn');
+    },
     lessons: 7,
     status: 'locked',
-    focus: ['Written plan', 'Rule proposals', 'Human-approved changes'],
+    get focus(): string[] {
+      return [
+        msg('data.writtenPlan'),
+        msg('agent.ruleProposals'),
+        msg('data.humanApprovedChanges'),
+      ];
+    },
   },
 ];
 
 export const mockLessons: readonly LessonView[] = [
   {
     id: 'l-risk-01',
-    title: 'Risk per trade before reward per trade',
+    get title(): string {
+      return msg('exams.riskPerTradeBeforeRewardPer');
+    },
     difficulty: 2,
     status: 'complete',
     prerequisites: [],
   },
   {
     id: 'l-risk-02',
-    title: 'Fixed-fractional position sizing',
+    get title(): string {
+      return msg('exams.fixedFractionalPositionSizing');
+    },
     difficulty: 2,
     status: 'in-progress',
     prerequisites: ['l-risk-01'],
   },
   {
     id: 'l-risk-03',
-    title: 'Thinking in R instead of currency',
+    get title(): string {
+      return msg('data.thinkingInRInsteadOfCurrency');
+    },
     difficulty: 3,
     status: 'available',
     prerequisites: ['l-risk-02'],
   },
   {
     id: 'l-risk-04',
-    title: 'Drawdown you can actually survive',
+    get title(): string {
+      return msg('data.drawdownYouCanActuallySurvive');
+    },
     difficulty: 3,
     status: 'locked',
     prerequisites: ['l-risk-03'],
@@ -162,13 +224,17 @@ export const mockConversation: readonly ConversationMessageView[] = [
     role: 'agent',
     text: 'Sizing is a deterministic calculation, so it will run as a tool rather than as reasoning. With your inputs the per-unit risk is 2.30 and the 1% budget is $250, which gives 108 units after rounding down. In this preview no tool is wired yet, so treat this as a worked example of the layout, not a result.',
     epistemicKind: 'analysis',
-    sources: ['risk.positionSize (not yet connected)'],
+    get sources(): string[] {
+      return [msg('data.riskPositionSizeNotYetConnected')];
+    },
     createdAt: '2026-09-19T08:41:06Z',
   },
   {
     id: 'msg-3',
     role: 'agent',
-    text: 'Hypothesis: traders who fix risk first tend to reduce decision fatigue later. That is a testable claim about your process, not a market prediction, and it should be checked against your own journal before you trust it.',
+    get text(): string {
+      return msg('data.hypothesisTradersWhoFixRiskFirstTendTo');
+    },
     epistemicKind: 'hypothesis',
     sources: ['academy.m2.risk-first'],
     createdAt: '2026-09-19T08:41:11Z',
@@ -176,19 +242,21 @@ export const mockConversation: readonly ConversationMessageView[] = [
   {
     id: 'msg-4',
     role: 'agent',
-    text: 'Uncertainty: nothing here tells you whether this setup will work. Sample size is one, and a single outcome carries no statistical weight.',
+    get text(): string {
+      return msg('data.uncertaintyNothingHereTellsYouWhetherThisSetup');
+    },
     epistemicKind: 'uncertainty',
     sources: [],
     createdAt: '2026-09-19T08:41:14Z',
   },
 ];
 
-export const EPISTEMIC_LABEL: Record<EpistemicKind, string> = {
-  fact: 'Fact',
-  analysis: 'Analysis',
-  hypothesis: 'Hypothesis',
-  uncertainty: 'Uncertainty',
-};
+export const EPISTEMIC_LABEL: Record<EpistemicKind, string> = liveLabels({
+  fact: 'data.epistemic.fact',
+  analysis: 'data.epistemic.analysis',
+  hypothesis: 'data.epistemic.hypothesis',
+  uncertainty: 'data.epistemic.uncertainty',
+});
 
 /* ------------------------------------------------------------------ */
 /* Dashboard, lab and system surfaces                                  */
@@ -200,7 +268,13 @@ export const mockDashboard: DashboardView = {
   timeframe: '1D',
   dataProvenance: 'synthetic',
   lastUpdated: MOCK_GENERATED_AT,
-  headings: ['Training equity curve', 'Streaks and consistency', 'Risk-tool usage'],
+  get headings(): string[] {
+    return [
+      msg('dashboard.trainingEquityCurve'),
+      msg('data.streaksAndConsistency'),
+      msg('data.riskToolUsage'),
+    ];
+  },
 };
 
 export interface StudyMetric {
@@ -215,35 +289,51 @@ export interface StudyMetric {
 export const mockStudyMetrics: readonly StudyMetric[] = [
   {
     id: 'streak',
-    label: 'Review streak',
+    get label(): string {
+      return msg('data.reviewStreak');
+    },
     value: '11 days',
     delta: '+3',
     trend: 'up',
-    hint: 'Consecutive days with a completed review session',
+    get hint(): string {
+      return msg('data.consecutiveDaysWithACompletedReviewSession');
+    },
   },
   {
     id: 'exams',
-    label: 'Exam average',
+    get label(): string {
+      return msg('academy.examAverage');
+    },
     value: '82.5%',
     delta: '+4.0',
     trend: 'up',
-    hint: 'Mean of your best score per examination',
+    get hint(): string {
+      return msg('data.meanOfYourBestScorePerExamination');
+    },
   },
   {
     id: 'completed',
-    label: 'Lessons complete',
+    get label(): string {
+      return msg('academy.lessonsComplete2');
+    },
     value: '7 / 48',
     delta: '+2',
     trend: 'up',
-    hint: 'Across the six-month curriculum',
+    get hint(): string {
+      return msg('data.acrossTheSixMonthCurriculum');
+    },
   },
   {
     id: 'journal',
-    label: 'Journal entries',
+    get label(): string {
+      return msg('data.journalEntries');
+    },
     value: '26',
     delta: '-1',
     trend: 'down',
-    hint: 'Written reviews, not predictions',
+    get hint(): string {
+      return msg('data.writtenReviewsNotPredictions');
+    },
   },
 ];
 
@@ -259,38 +349,95 @@ export interface LabSetup {
 export const mockLabSetups: readonly LabSetup[] = [
   {
     id: 'setup-1',
-    title: 'Pullback to prior support, risk defined',
+    get title(): string {
+      return msg('data.pullbackToPriorSupportRiskDefined');
+    },
     status: 'reviewed',
     tags: ['structure', 'risk-first'],
-    note: 'Reviewed against the month 2 checklist. Process notes only — no outcome claimed.',
+    get note(): string {
+      return msg('data.reviewedAgainstTheMonth2ChecklistProcessNotes');
+    },
     checklist: [
-      { label: 'Risk defined before entry', done: true },
-      { label: 'Invalidation level written down', done: true },
-      { label: 'Position size from deterministic tool', done: false },
+      {
+        get label(): string {
+          return msg('data.riskDefinedBeforeEntry');
+        },
+        done: true,
+      },
+      {
+        get label(): string {
+          return msg('data.invalidationLevelWrittenDown');
+        },
+        done: true,
+      },
+      {
+        get label(): string {
+          return msg('data.positionSizeFromDeterministicTool');
+        },
+        done: false,
+      },
     ],
   },
   {
     id: 'setup-2',
-    title: 'Range edge, low conviction',
+    get title(): string {
+      return msg('data.rangeEdgeLowConviction');
+    },
     status: 'draft',
     tags: ['range', 'patience'],
-    note: 'Draft. Kept as a counter-example: the reason to skip a trade is also a record.',
+    get note(): string {
+      return msg('data.draftKeptAsACounterExampleTheReasonTo');
+    },
     checklist: [
-      { label: 'Risk defined before entry', done: true },
-      { label: 'Invalidation level written down', done: false },
-      { label: 'Position size from deterministic tool', done: false },
+      {
+        get label(): string {
+          return msg('data.riskDefinedBeforeEntry');
+        },
+        done: true,
+      },
+      {
+        get label(): string {
+          return msg('data.invalidationLevelWrittenDown');
+        },
+        done: false,
+      },
+      {
+        get label(): string {
+          return msg('data.positionSizeFromDeterministicTool');
+        },
+        done: false,
+      },
     ],
   },
   {
     id: 'setup-3',
-    title: 'Post-earnings gap continuation',
+    get title(): string {
+      return msg('data.postEarningsGapContinuation');
+    },
     status: 'awaiting-review',
     tags: ['gap', 'volatility'],
-    note: 'Waiting for review. Elevated volatility means wider stops and smaller size.',
+    get note(): string {
+      return msg('data.waitingForReviewElevatedVolatilityMeansWiderStops');
+    },
     checklist: [
-      { label: 'Risk defined before entry', done: true },
-      { label: 'Invalidation level written down', done: true },
-      { label: 'Position size from deterministic tool', done: true },
+      {
+        get label(): string {
+          return msg('data.riskDefinedBeforeEntry');
+        },
+        done: true,
+      },
+      {
+        get label(): string {
+          return msg('data.invalidationLevelWrittenDown');
+        },
+        done: true,
+      },
+      {
+        get label(): string {
+          return msg('data.positionSizeFromDeterministicTool');
+        },
+        done: true,
+      },
     ],
   },
 ];
@@ -299,13 +446,17 @@ export const mockNotifications: readonly NotificationView[] = [
   {
     id: 'n-1',
     severity: 'info',
-    message: 'Module 2 unlocked: Risk First.',
+    get message(): string {
+      return msg('data.module2UnlockedRiskFirst');
+    },
     createdAt: '2026-09-18T18:20:00Z',
   },
   {
     id: 'n-2',
     severity: 'warning',
-    message: 'Exam average dipped below 80% in the last attempt.',
+    get message(): string {
+      return msg('data.examAverageDippedBelow80InTheLast');
+    },
     createdAt: '2026-09-18T09:05:00Z',
   },
 ];
@@ -325,7 +476,9 @@ export const mockActivity: readonly ActivityEntry[] = [
     at: '2026-09-19T08:41:14Z',
     actor: 'agent',
     event: 'answer.composed',
-    detail: 'Response labelled with fact / analysis / hypothesis / uncertainty',
+    get detail(): string {
+      return msg('data.responseLabelledWithFactAnalysisHypothesis');
+    },
     correlationId: 'corr_preview_01',
   },
   {
@@ -333,7 +486,9 @@ export const mockActivity: readonly ActivityEntry[] = [
     at: '2026-09-19T08:41:06Z',
     actor: 'system',
     event: 'tool.requested',
-    detail: 'risk.positionSize requested — permission check and execution are orchestrator-owned',
+    get detail(): string {
+      return msg('data.riskPositionSizeRequestedPermissionCheckAndExecution');
+    },
     correlationId: 'corr_preview_01',
   },
   {
@@ -341,7 +496,9 @@ export const mockActivity: readonly ActivityEntry[] = [
     at: '2026-09-18T18:20:00Z',
     actor: 'system',
     event: 'curriculum.unlocked',
-    detail: 'Module 2 available after module 1 completion',
+    get detail(): string {
+      return msg('data.module2AvailableAfterModule1Completion');
+    },
     correlationId: 'corr_preview_02',
   },
 ];
@@ -374,24 +531,36 @@ export interface ProviderRow {
 export const mockProviders: readonly ProviderRow[] = [
   {
     id: 'openai',
-    label: 'OpenAI',
+    get label(): string {
+      return msg('data.openAI');
+    },
     state: 'missing',
     secretRef: 'keychain:llm.openai',
-    note: 'Keys are stored in the OS keychain; configuration only ever holds a reference.',
+    get note(): string {
+      return msg('data.keysAreStoredInTheOSKeychainConfiguration');
+    },
   },
   {
     id: 'anthropic',
-    label: 'Anthropic',
+    get label(): string {
+      return msg('data.anthropic');
+    },
     state: 'missing',
     secretRef: 'keychain:llm.anthropic',
-    note: 'Second provider exists to prove the gateway is provider-independent.',
+    get note(): string {
+      return msg('data.secondProviderExistsToProveTheGatewayIs');
+    },
   },
   {
     id: 'scripted',
-    label: 'Scripted (offline)',
+    get label(): string {
+      return msg('data.scriptedOffline');
+    },
     state: 'offline-default',
     secretRef: 'none',
-    note: 'Deterministic default used when no hosted provider is configured.',
+    get note(): string {
+      return msg('data.deterministicDefaultUsedWhenNoHostedProviderIs');
+    },
   },
 ];
 
@@ -404,9 +573,33 @@ export interface BudgetRow {
 }
 
 export const mockBudget: readonly BudgetRow[] = [
-  { id: 'month', label: 'This month', spent: '$3.42', budget: '$25.00', share: 0.14 },
-  { id: 'context', label: 'Context assembly', spent: '$1.10', budget: '—', share: 0.32 },
-  { id: 'grading', label: 'Exam grading', spent: '$0.86', budget: '—', share: 0.25 },
+  {
+    id: 'month',
+    get label(): string {
+      return msg('journal.tradeRange.this-month');
+    },
+    spent: '$3.42',
+    budget: '$25.00',
+    share: 0.14,
+  },
+  {
+    id: 'context',
+    get label(): string {
+      return msg('data.contextAssembly');
+    },
+    spent: '$1.10',
+    budget: '—',
+    share: 0.32,
+  },
+  {
+    id: 'grading',
+    get label(): string {
+      return msg('data.examGrading');
+    },
+    spent: '$0.86',
+    budget: '—',
+    share: 0.25,
+  },
 ];
 
 /** Deterministic pseudo-series for the illustrative chart (no randomness). */

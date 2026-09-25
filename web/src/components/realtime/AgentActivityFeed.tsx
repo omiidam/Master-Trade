@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
 import { cn } from '../../lib/cn';
 import { formatRelative } from '../../lib/format';
+import { msg } from '../../i18n/index.js';
 
 /** The shape the feed renders. Both the live store and the fixtures satisfy it. */
 export interface ActivityEntryInput {
@@ -62,7 +63,12 @@ export function AgentActivityFeed({
   className,
 }: AgentActivityFeedProps): ReactNode {
   return (
-    <Card surface="data" as="section" aria-label="Agent activity" className={className}>
+    <Card
+      surface="data"
+      as="section"
+      aria-label={msg('realtime.agentActivity')}
+      className={className}
+    >
       {/*
         The card's name and its rule come from the shared header instead of a hand-rolled header
         element carrying a `border-b`. The whole row is one child so the icon, the title, the
@@ -75,15 +81,17 @@ export function AgentActivityFeed({
             <span aria-hidden className="text-text-faint">
               <Activity size={14} />
             </span>
-            <CardTitle>Activity</CardTitle>
+            <CardTitle>{msg('realtime.activity')}</CardTitle>
             <Badge tone={live ? 'success' : 'neutral'} icon={<Radio size={11} aria-hidden />}>
               {live ? 'live' : 'not live'}
             </Badge>
-            <span className="text-caption text-text-faint">{entries.length} entries</span>
+            <span className="text-caption text-text-faint">
+              {entries.length} {msg('realtime.entries')}
+            </span>
           </div>
           {onClear && entries.length > 0 ? (
             <Button size="sm" variant="ghost" onClick={onClear}>
-              Clear this list
+              {msg('realtime.clearThisList')}
             </Button>
           ) : null}
         </div>
@@ -112,10 +120,12 @@ export function AgentActivityFeed({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={SOURCE_TONE[entry.source] ?? 'neutral'}>{entry.type}</Badge>
-                    <span className="text-caption text-text-faint">from {entry.source}</span>
+                    <span className="text-caption text-text-faint">
+                      {msg('realtime.from')} {entry.source}
+                    </span>
                     {entry.provenance ? (
                       <span className="text-caption text-warning">
-                        provenance: {entry.provenance}
+                        {msg('realtime.provenance')} {entry.provenance}
                       </span>
                     ) : null}
                     {entry.seq !== undefined ? (
@@ -129,7 +139,7 @@ export function AgentActivityFeed({
                   ) : null}
                   {entry.correlationId ? (
                     <p className="num mt-0.5 text-caption text-text-faint">
-                      correlation {entry.correlationId}
+                      {msg('realtime.correlation')} {entry.correlationId}
                     </p>
                   ) : null}
                 </div>

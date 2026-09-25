@@ -13,6 +13,7 @@ import { TOAST_DURATIONS } from '../design/components';
 import { DURATION, EASE } from '../design/motion';
 import { cn } from '../lib/cn';
 import { Alert, type AlertTone } from './Alert';
+import { msg } from '../i18n/index.js';
 
 export interface ToastOptions {
   /** Re-using an id replaces the existing toast rather than stacking a second copy of it. */
@@ -125,7 +126,7 @@ export function ToastViewport({
   return (
     <div
       role="region"
-      aria-label="Notifications"
+      aria-label={msg('ui.notifications')}
       className={cn(
         'pointer-events-none fixed bottom-3 start-3 end-3 z-[var(--z-toast)]',
         'flex flex-col items-stretch gap-2',
@@ -191,7 +192,7 @@ function ToastItem({
         {...(record.description === undefined ? {} : { description: record.description })}
         {...(record.actions === undefined ? {} : { actions: record.actions })}
         onDismiss={() => onDismiss(record.id)}
-        dismissLabel="Dismiss this notification"
+        dismissLabel={msg('toast.dismissThisNotification')}
         floating
       />
     </motion.div>

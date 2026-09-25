@@ -2,6 +2,7 @@ import type { ContextAssessment } from '@shared/profile/model';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
 import { ContextStatusBadge, STATUS_LABEL } from './ContextStatusBadge';
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 /**
  * Completeness, shown as a proportion **and** its named gaps.
@@ -21,11 +22,8 @@ export function CompletenessMeter({ assessment }: { assessment: ContextAssessmen
   return (
     <Card>
       <CardHeader divider>
-        <CardTitle>Context completeness</CardTitle>
-        <CardDescription>
-          Share of the fields the analysis capabilities require that carry a value you have actually
-          given us. Missing fields are asked about, never filled in.
-        </CardDescription>
+        <CardTitle>{msg('profile.contextCompleteness')}</CardTitle>
+        <CardDescription>{msg('profile.shareOfTheFieldsTheAnalysis')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -37,7 +35,8 @@ export function CompletenessMeter({ assessment }: { assessment: ContextAssessmen
               {completionPercent}%
             </span>
             <span className="text-caption text-text-muted">
-              {required.length - gaps.length - stale.length} of {required.length} required fields
+              {required.length - gaps.length - stale.length} {msg('exams.of')} {required.length}{' '}
+              {msg('profile.requiredFields')}
             </span>
           </div>
           <div
@@ -46,7 +45,7 @@ export function CompletenessMeter({ assessment }: { assessment: ContextAssessmen
             aria-valuenow={completionPercent}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Context completeness"
+            aria-label={msg('profile.contextCompleteness')}
           >
             <div
               className={cn(
@@ -60,31 +59,29 @@ export function CompletenessMeter({ assessment }: { assessment: ContextAssessmen
 
         <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="space-y-1">
-            <dt className="text-caption text-text-muted">Weakest required field</dt>
+            <dt className="text-caption text-text-muted">{msg('profile.weakestRequiredField')}</dt>
             <dd className="flex items-center gap-2">
               <ContextStatusBadge status={weakest} />
               <span className="text-body text-text">{STATUS_LABEL[weakest]}</span>
             </dd>
           </div>
           <div className="space-y-1">
-            <dt className="text-caption text-text-muted">Missing</dt>
+            <dt className="text-caption text-text-muted">{msg('profile.missing')}</dt>
             <dd className="text-body text-text">{gaps.length}</dd>
           </div>
           <div className="space-y-1">
-            <dt className="text-caption text-text-muted">May be outdated</dt>
+            <dt className="text-caption text-text-muted">{msg('profile.mayBeOutdated')}</dt>
             <dd className="text-body text-text">{stale.length}</dd>
           </div>
         </dl>
 
         {complete ? (
           <p className="text-body text-text-muted">
-            Every required field is current. The analysis capabilities can answer the questions
-            these inputs support.
+            {msg('profile.everyRequiredFieldIsCurrentThe')}
           </p>
         ) : (
           <p className="text-body text-text-muted">
-            Until these are answered, capabilities that require them produce limited analysis or
-            decline to be precise rather than substituting a default.
+            {msg('profile.untilTheseAreAnsweredCapabilitiesThat')}
           </p>
         )}
       </CardContent>

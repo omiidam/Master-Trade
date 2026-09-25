@@ -200,7 +200,7 @@ describe('a figure stays a figure in every direction', () => {
     const app = code('web/src/App.tsx');
     expect(app).toMatch(/document\.documentElement\.dir = direction/);
     const topbar = code('web/src/app/Topbar.tsx');
-    expect(topbar).toMatch(/label="Toggle writing direction"/);
+    expect(topbar).toMatch(/label=\{msg\('topbar\.toggleWritingDirection'\)\}/);
     expect(topbar).toMatch(/aria-pressed=\{direction === 'rtl'\}/);
   });
 });

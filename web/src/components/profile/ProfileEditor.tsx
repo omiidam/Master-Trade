@@ -29,6 +29,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Ca
 import { Field, Input, Select } from '../Input';
 import { formatFieldValue } from './FactRow';
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 /**
  * The editable form for the declared context.
@@ -201,16 +202,13 @@ export function ProfileEditor({
     <div className="space-y-4">
       <Card>
         <CardHeader divider>
-          <CardTitle>Trading preferences</CardTitle>
-          <CardDescription>
-            Only what you tell us is stored as a fact. Anything left blank stays missing and is
-            asked about instead of guessed.
-          </CardDescription>
+          <CardTitle>{msg('profile.tradingPreferences')}</CardTitle>
+          <CardDescription>{msg('profile.onlyWhatYouTellUsIs')}</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field
-            label="Experience level"
-            hint="How much trading experience you would say you have."
+            label={msg('profileEditor.experienceLevel')}
+            hint={msg('profileEditor.howMuchTradingExperienceYouWouldSayYou')}
           >
             {(props) => (
               <Select
@@ -220,7 +218,7 @@ export function ProfileEditor({
                   setExperienceLevel((event.target.value || null) as ExperienceLevelish)
                 }
               >
-                <option value="">Not provided</option>
+                <option value="">{msg('profile.notProvided')}</option>
                 {EXPERIENCE_LEVELS.map((level) => (
                   <option key={level} value={level}>
                     {formatFieldValue(level)}
@@ -230,7 +228,7 @@ export function ProfileEditor({
             )}
           </Field>
 
-          <Field label="Trading style">
+          <Field label={msg('profileEditor.tradingStyle')}>
             {(props) => (
               <Select
                 {...props}
@@ -239,7 +237,7 @@ export function ProfileEditor({
                   setTradingStyle((event.target.value || null) as TradingStyle | null)
                 }
               >
-                <option value="">Not provided</option>
+                <option value="">{msg('profile.notProvided')}</option>
                 {TRADING_STYLES.map((style) => (
                   <option key={style} value={style}>
                     {formatFieldValue(style)}
@@ -249,7 +247,7 @@ export function ProfileEditor({
             )}
           </Field>
 
-          <Field label="Primary timeframe">
+          <Field label={msg('profileEditor.primaryTimeframe')}>
             {(props) => (
               <Select
                 {...props}
@@ -258,7 +256,7 @@ export function ProfileEditor({
                   setTimeframe((event.target.value || null) as ProfileTimeframe | null)
                 }
               >
-                <option value="">Not provided</option>
+                <option value="">{msg('profile.notProvided')}</option>
                 {TIMEFRAMES.map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -268,14 +266,17 @@ export function ProfileEditor({
             )}
           </Field>
 
-          <Field label="Horizon" hint="Over what horizon you usually hold a position.">
+          <Field
+            label={msg('profileEditor.horizon')}
+            hint={msg('profileEditor.overWhatHorizonYouUsuallyHoldAPosition')}
+          >
             {(props) => (
               <Select
                 {...props}
                 value={horizon ?? ''}
                 onChange={(event) => setHorizon((event.target.value || null) as HorizonBand | null)}
               >
-                <option value="">Not provided</option>
+                <option value="">{msg('profile.notProvided')}</option>
                 {HORIZON_BANDS.map((band) => (
                   <option key={band} value={band}>
                     {band}
@@ -286,8 +287,8 @@ export function ProfileEditor({
           </Field>
 
           <Field
-            label="Risk tolerance"
-            hint="Declared by you. The system never assigns one, and “prefer not to say” is a valid answer."
+            label={msg('profileEditor.riskTolerance')}
+            hint={msg('profileEditor.declaredByYouTheSystemNeverAssignsOne')}
           >
             {(props) => (
               <Select
@@ -297,7 +298,7 @@ export function ProfileEditor({
                   setRiskTolerance((event.target.value || null) as RiskToleranceBand | null)
                 }
               >
-                <option value="">Not provided</option>
+                <option value="">{msg('profile.notProvided')}</option>
                 {RISK_TOLERANCE_BANDS.map((band) => (
                   <option key={band} value={band}>
                     {formatFieldValue(band)}
@@ -308,8 +309,8 @@ export function ProfileEditor({
           </Field>
 
           <Field
-            label="Capital range"
-            hint="A band, never an amount: there is no field here for a balance."
+            label={msg('profileEditor.capitalRange')}
+            hint={msg('profileEditor.aBandNeverAnAmountThereIsNo')}
           >
             {(props) => (
               <Select
@@ -319,7 +320,7 @@ export function ProfileEditor({
                   setCapitalRange((event.target.value || null) as CapitalRange | null)
                 }
               >
-                <option value="">Not provided</option>
+                <option value="">{msg('profile.notProvided')}</option>
                 {CAPITAL_RANGES.map((range) => (
                   <option key={range} value={range}>
                     {formatFieldValue(range)}
@@ -330,22 +331,24 @@ export function ProfileEditor({
           </Field>
 
           <Field
-            label="Preferred instruments"
-            hint="Comma separated. Optional — leave blank if you would rather not list them."
+            label={msg('profileEditor.preferredInstruments')}
+            hint={msg('profileEditor.commaSeparatedOptionalLeaveBlankIfYou')}
             className="md:col-span-2"
           >
             {(props) => (
               <Input
                 {...props}
                 value={instruments}
-                placeholder="EURUSD, AAPL, BTCUSD"
+                placeholder={msg('profile.eURUSDAAPLBTCUSD')}
                 onChange={(event) => setInstruments(event.target.value)}
               />
             )}
           </Field>
 
           <fieldset className="space-y-2 md:col-span-2">
-            <legend className="text-caption font-medium text-text-muted">Preferred markets</legend>
+            <legend className="text-caption font-medium text-text-muted">
+              {msg('profile.preferredMarkets')}
+            </legend>
             <div className="flex flex-wrap gap-2">
               {ASSET_CLASSES.map((assetClass) => {
                 const active = markets.includes(assetClass);
@@ -370,7 +373,9 @@ export function ProfileEditor({
           </fieldset>
 
           <fieldset className="space-y-2 md:col-span-2">
-            <legend className="text-caption font-medium text-text-muted">Learning goals</legend>
+            <legend className="text-caption font-medium text-text-muted">
+              {msg('profile.learningGoals')}
+            </legend>
             <div className="flex flex-wrap gap-2">
               {LEARNING_GOALS.map((goal) => {
                 const active = learningGoals.includes(goal);
@@ -398,16 +403,13 @@ export function ProfileEditor({
 
       <Card>
         <CardHeader divider>
-          <CardTitle>Existing holdings</CardTitle>
-          <CardDescription>
-            Optional, and by percentage only. There is no field for a quantity, a price or a cost
-            basis — a description of an allocation does not need to be a financial record.
-          </CardDescription>
+          <CardTitle>{msg('profile.existingHoldings')}</CardTitle>
+          <CardDescription>{msg('profile.optionalAndByPercentageOnlyThere')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {holdings.length === 0 ? (
             <p className="text-body text-text-faint italic">
-              No holdings described. Analysis that depends on them will say so.
+              {msg('profile.noHoldingsDescribedAnalysisThatDepends')}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -496,7 +498,7 @@ export function ProfileEditor({
                 ])
               }
             >
-              <Plus size={14} aria-hidden /> Add holding
+              <Plus size={14} aria-hidden /> {msg('profile.addHolding')}
             </Button>
             {holdings.length > 0 ? (
               <span
@@ -505,7 +507,7 @@ export function ProfileEditor({
                   weightTotal > MAX_WEIGHT_PERCENT ? 'text-danger' : 'text-text-muted',
                 )}
               >
-                Total {weightTotal}%
+                {msg('profile.total')} {weightTotal}%
               </span>
             ) : null}
           </div>
@@ -519,11 +521,8 @@ export function ProfileEditor({
 
       <Card>
         <CardHeader divider>
-          <CardTitle>Constraints and preferences</CardTitle>
-          <CardDescription>
-            Boundaries you want respected, in your own words. A preference, not an instruction to
-            trade — anything that reads like an order is refused on save.
-          </CardDescription>
+          <CardTitle>{msg('profile.constraintsAndPreferences')}</CardTitle>
+          <CardDescription>{msg('profile.boundariesYouWantRespectedInYour')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {constraints.map((statement, index) => (
@@ -531,7 +530,7 @@ export function ProfileEditor({
               <Input
                 aria-label={`Constraint ${index + 1}`}
                 value={statement}
-                placeholder="No single position above 10% of the portfolio"
+                placeholder={msg('profile.noSinglePositionAbove10Of')}
                 aria-invalid={constraintsError ? true : undefined}
                 aria-describedby={constraintsError ? constraintsErrorId : undefined}
                 onChange={(event) =>
@@ -559,7 +558,7 @@ export function ProfileEditor({
             size="sm"
             onClick={() => setConstraints((list) => [...list, ''])}
           >
-            <Plus size={14} aria-hidden /> Add constraint
+            <Plus size={14} aria-hidden /> {msg('profile.addConstraint')}
           </Button>
           {constraintsError ? (
             <p id={constraintsErrorId} className="text-caption text-danger" role="alert">
@@ -572,7 +571,7 @@ export function ProfileEditor({
       <div className="flex items-center justify-end gap-2">
         {onCancel ? (
           <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
-            Cancel
+            {msg('journal.cancel')}
           </Button>
         ) : null}
         <Button type="button" onClick={submit} disabled={saving} aria-busy={saving}>

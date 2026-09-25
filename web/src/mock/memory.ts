@@ -18,6 +18,7 @@
  */
 
 import { contextKindForTrust, type Provenance, type TrustLevel } from '@shared/core/provenance';
+import { liveLabels, msg } from '../i18n/index.js';
 
 export type MemoryCategoryId =
   'trading-concepts' | 'market-rules' | 'personal-mistakes' | 'research-notes' | 'agent-learnings';
@@ -32,32 +33,52 @@ export interface MemoryCategory {
 export const mockMemoryCategories: readonly MemoryCategory[] = [
   {
     id: 'trading-concepts',
-    label: 'Trading Concepts',
-    description: 'Mechanics and definitions the curriculum teaches',
+    get label(): string {
+      return msg('memory.tradingConcepts');
+    },
+    get description(): string {
+      return msg('memory.mechanicsAndDefinitionsTheCurriculumTeaches');
+    },
     count: 34,
   },
   {
     id: 'market-rules',
-    label: 'Market Rules',
-    description: 'Session, cost and microstructure constraints',
+    get label(): string {
+      return msg('memory.marketRules');
+    },
+    get description(): string {
+      return msg('memory.sessionCostAndMicrostructureConstraints');
+    },
     count: 21,
   },
   {
     id: 'personal-mistakes',
-    label: 'Personal Mistakes',
-    description: 'Errors this user actually made, with the lesson they point back to',
+    get label(): string {
+      return msg('memory.personalMistakes');
+    },
+    get description(): string {
+      return msg('memory.errorsThisUserActuallyMadeWithTheLesson');
+    },
     count: 12,
   },
   {
     id: 'research-notes',
-    label: 'Research Notes',
-    description: 'Findings from experiments, always with a sample size',
+    get label(): string {
+      return msg('memory.researchNotes');
+    },
+    get description(): string {
+      return msg('memory.findingsFromExperimentsAlwaysWithASampleSize');
+    },
     count: 9,
   },
   {
     id: 'agent-learnings',
-    label: 'Agent Learnings',
-    description: 'What the agent concluded — unverified until a human or tool checks it',
+    get label(): string {
+      return msg('memory.agentLearnings');
+    },
+    get description(): string {
+      return msg('memory.whatTheAgentConcludedUnverifiedUntilA');
+    },
     count: 17,
   },
 ];
@@ -72,19 +93,19 @@ export type MemoryLifecycle = 'active' | 'pending-review' | 'archived';
 /** The four states the interface must render. */
 export type MemoryStatus = 'verified' | 'pending-review' | 'archived' | 'unverified';
 
-export const MEMORY_STATUS_LABEL: Record<MemoryStatus, string> = {
-  verified: 'Verified',
-  'pending-review': 'Pending review',
-  archived: 'Archived',
-  unverified: 'Unverified',
-};
+export const MEMORY_STATUS_LABEL: Record<MemoryStatus, string> = liveLabels({
+  verified: 'memory.memoryStatus.verified',
+  'pending-review': 'memory.memoryStatus.pending-review',
+  archived: 'memory.memoryStatus.archived',
+  unverified: 'memory.memoryStatus.unverified',
+});
 
-export const MEMORY_STATUS_EXPLANATION: Record<MemoryStatus, string> = {
-  verified: 'A human or a deterministic tool checked this against its source.',
-  'pending-review': 'Written, sourced, and waiting for a non-model verifier to check it.',
-  archived: 'Tombstoned. Kept as evidence: history is never silently removed.',
-  unverified: 'Not yet checked. It may be retrieved, but it is never presented as fact.',
-};
+export const MEMORY_STATUS_EXPLANATION: Record<MemoryStatus, string> = liveLabels({
+  verified: 'memory.memoryStatus2.verified',
+  'pending-review': 'memory.memoryStatus2.pending-review',
+  archived: 'memory.memoryStatus2.archived',
+  unverified: 'memory.memoryStatus2.unverified',
+});
 
 /**
  * Trust + lifecycle collapse into the four states the UI shows. This is a
@@ -135,9 +156,12 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
   {
     id: 'mem_01',
     categoryId: 'trading-concepts',
-    title: 'Fixed-fractional sizing bounds ruin risk before it bounds return',
-    summary:
-      'Risk per unit comes from the stop distance, so the size follows from the budget. The order matters: budget, stop, size — never size first.',
+    get title(): string {
+      return msg('memory.fixedFractionalSizingBoundsRuinRiskBeforeItBounds');
+    },
+    get summary(): string {
+      return msg('memory.riskPerUnitComesFromTheStopDistance');
+    },
     trust: 'verified',
     lifecycle: 'active',
     confidence: 0.94,
@@ -146,11 +170,25 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
       ref: 'risk.positionSize',
       trust: 'verified',
       recordedAt: iso('2026-09-14T09:20:00Z'),
-      note: 'Deterministic tool output, re-checked by the user against the lesson worked example.',
+      get note(): string {
+        return msg('memory.deterministicToolOutputReCheckedByTheUserAgainst');
+      },
     },
     sources: [
-      { ref: 'risk.positionSize', kind: 'tool', label: 'Deterministic sizing tool' },
-      { ref: 'academy.m2.lesson-risk-02', kind: 'document', label: 'Academy lesson 2.2' },
+      {
+        ref: 'risk.positionSize',
+        kind: 'tool',
+        get label(): string {
+          return msg('memory.deterministicSizingTool');
+        },
+      },
+      {
+        ref: 'academy.m2.lesson-risk-02',
+        kind: 'document',
+        get label(): string {
+          return msg('memory.academyLesson22');
+        },
+      },
     ],
     tags: ['sizing', 'risk-first'],
     version: 3,
@@ -160,9 +198,12 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
   {
     id: 'mem_02',
     categoryId: 'personal-mistakes',
-    title: 'Rounding the unit count up instead of down',
-    summary:
-      'Recorded from three consecutive sizing attempts. Rounding up exceeds the stated budget, so the stated risk becomes a wish rather than a limit.',
+    get title(): string {
+      return msg('memory.roundingTheUnitCountUpInsteadOfDown');
+    },
+    get summary(): string {
+      return msg('memory.recordedFromThreeConsecutiveSizingAttemptsRoundingUp');
+    },
     trust: 'unverified',
     lifecycle: 'active',
     confidence: 0.71,
@@ -171,9 +212,19 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
       ref: 'journal.2026-09-15',
       trust: 'unverified',
       recordedAt: iso('2026-09-15T20:05:00Z'),
-      note: 'The user wrote it; no verifier has checked the pattern yet.',
+      get note(): string {
+        return msg('memory.theUserWroteItNoVerifierHasChecked');
+      },
     },
-    sources: [{ ref: 'journal.2026-09-15', kind: 'human', label: 'Journal entry' }],
+    sources: [
+      {
+        ref: 'journal.2026-09-15',
+        kind: 'human',
+        get label(): string {
+          return msg('memory.journalEntry');
+        },
+      },
+    ],
     tags: ['sizing', 'self-review'],
     version: 1,
     createdAt: iso('2026-09-15T20:05:00Z'),
@@ -182,9 +233,12 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
   {
     id: 'mem_03',
     categoryId: 'agent-learnings',
-    title: 'Proposed a rule change without citing an evaluation',
-    summary:
-      'The agent suggested tightening the session filter and referenced no evaluation record. It is kept unverified and cannot become trusted knowledge on its own.',
+    get title(): string {
+      return msg('memory.proposedARuleChangeWithoutCitingAnEvaluation');
+    },
+    get summary(): string {
+      return msg('memory.theAgentSuggestedTighteningTheSessionFilterAnd');
+    },
     trust: 'unverified',
     lifecycle: 'pending-review',
     confidence: 0.42,
@@ -193,9 +247,19 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
       ref: 'model.scripted-local',
       trust: 'unverified',
       recordedAt: iso('2026-09-18T11:02:00Z'),
-      note: 'Model-authored; only a human or a tool may raise its trust.',
+      get note(): string {
+        return msg('memory.modelAuthoredOnlyAHumanOrAToolMay');
+      },
     },
-    sources: [{ ref: 'conversation.2026-09-18', kind: 'model', label: 'Agent conversation' }],
+    sources: [
+      {
+        ref: 'conversation.2026-09-18',
+        kind: 'model',
+        get label(): string {
+          return msg('memory.agentConversation');
+        },
+      },
+    ],
     tags: ['rule-proposal', 'needs-evidence'],
     version: 2,
     createdAt: iso('2026-09-18T11:02:00Z'),
@@ -204,9 +268,12 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
   {
     id: 'mem_04',
     categoryId: 'market-rules',
-    title: 'Session overlap changes the realised spread',
-    summary:
-      'The cost of entering during the overlap differs from the thin session either side of it, so a simulated fill must carry the session it was taken in.',
+    get title(): string {
+      return msg('memory.sessionOverlapChangesTheRealisedSpread');
+    },
+    get summary(): string {
+      return msg('memory.theCostOfEnteringDuringTheOverlapDiffers');
+    },
     trust: 'verified',
     lifecycle: 'active',
     confidence: 0.86,
@@ -215,11 +282,25 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
       ref: 'synthetic-generator',
       trust: 'verified',
       recordedAt: iso('2026-09-12T10:00:00Z'),
-      note: 'synthetic — not real market data',
+      get note(): string {
+        return msg('memory.syntheticNotRealMarketData');
+      },
     },
     sources: [
-      { ref: 'synthetic-generator', kind: 'synthetic', label: 'Synthetic series' },
-      { ref: 'academy.m1.lesson-sessions', kind: 'document', label: 'Academy lesson 1.3' },
+      {
+        ref: 'synthetic-generator',
+        kind: 'synthetic',
+        get label(): string {
+          return msg('memory.syntheticSeries');
+        },
+      },
+      {
+        ref: 'academy.m1.lesson-sessions',
+        kind: 'document',
+        get label(): string {
+          return msg('memory.academyLesson13');
+        },
+      },
     ],
     tags: ['sessions', 'cost'],
     version: 1,
@@ -229,9 +310,12 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
   {
     id: 'mem_05',
     categoryId: 'research-notes',
-    title: 'A ten-trade sample cannot distinguish skill from noise',
-    summary:
-      'Confirmed as authoritative after review: the claim is a statement about inference, not about markets, and it constrains how every other finding may be read.',
+    get title(): string {
+      return msg('memory.aTenTradeSampleCannotDistinguishSkillFromNoise');
+    },
+    get summary(): string {
+      return msg('memory.confirmedAsAuthoritativeAfterReviewTheClaimIs');
+    },
     trust: 'authoritative',
     lifecycle: 'active',
     confidence: 0.97,
@@ -240,11 +324,25 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
       ref: 'user.omiid',
       trust: 'authoritative',
       recordedAt: iso('2026-09-17T19:45:00Z'),
-      note: 'Verified by a human reviewer; only a human may grant authoritative trust.',
+      get note(): string {
+        return msg('memory.verifiedByAHumanReviewerOnlyAHuman');
+      },
     },
     sources: [
-      { ref: 'academy.m5.rubric.sample-size', kind: 'document', label: 'Academy rubric 5.1' },
-      { ref: 'user.omiid', kind: 'human', label: 'Human verification' },
+      {
+        ref: 'academy.m5.rubric.sample-size',
+        kind: 'document',
+        get label(): string {
+          return msg('memory.academyRubric51');
+        },
+      },
+      {
+        ref: 'user.omiid',
+        kind: 'human',
+        get label(): string {
+          return msg('memory.humanVerification');
+        },
+      },
     ],
     tags: ['statistics', 'sample-size'],
     version: 4,
@@ -254,9 +352,12 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
   {
     id: 'mem_06',
     categoryId: 'trading-concepts',
-    title: 'R-multiples make two different symbols comparable',
-    summary:
-      'Expressing an outcome in risk units removes position size from the comparison, which is what lets a review across instruments mean anything.',
+    get title(): string {
+      return msg('memory.rMultiplesMakeTwoDifferentSymbolsComparable');
+    },
+    get summary(): string {
+      return msg('memory.expressingAnOutcomeInRiskUnitsRemovesPosition');
+    },
     trust: 'verified',
     lifecycle: 'active',
     confidence: 0.9,
@@ -267,8 +368,20 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
       recordedAt: iso('2026-09-13T18:30:00Z'),
     },
     sources: [
-      { ref: 'risk.rMultiple', kind: 'tool', label: 'Deterministic R tool' },
-      { ref: 'academy.m2.lesson-r', kind: 'document', label: 'Academy lesson 2.3' },
+      {
+        ref: 'risk.rMultiple',
+        kind: 'tool',
+        get label(): string {
+          return msg('memory.deterministicRTool');
+        },
+      },
+      {
+        ref: 'academy.m2.lesson-r',
+        kind: 'document',
+        get label(): string {
+          return msg('memory.academyLesson23');
+        },
+      },
     ],
     tags: ['r-multiples'],
     version: 2,
@@ -278,9 +391,12 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
   {
     id: 'mem_07',
     categoryId: 'agent-learnings',
-    title: 'Retrieval surfaced a superseded explanation',
-    summary:
-      'An older explanation of rule activation was returned after the workflow changed. Tombstoned rather than edited, so the mistake stays visible.',
+    get title(): string {
+      return msg('memory.retrievalSurfacedASupersededExplanation');
+    },
+    get summary(): string {
+      return msg('memory.anOlderExplanationOfRuleActivationWasReturned');
+    },
     trust: 'unverified',
     lifecycle: 'archived',
     confidence: 0.28,
@@ -289,9 +405,19 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
       ref: 'model.scripted-local',
       trust: 'unverified',
       recordedAt: iso('2026-09-10T12:15:00Z'),
-      note: 'Archived: tombstoned, never deleted; the history is kept as evidence.',
+      get note(): string {
+        return msg('memory.archivedTombstonedNeverDeletedTheHistoryIsKept');
+      },
     },
-    sources: [{ ref: 'conversation.2026-09-10', kind: 'model', label: 'Agent conversation' }],
+    sources: [
+      {
+        ref: 'conversation.2026-09-10',
+        kind: 'model',
+        get label(): string {
+          return msg('memory.agentConversation');
+        },
+      },
+    ],
     tags: ['stale', 'retrieval-quality'],
     version: 5,
     createdAt: iso('2026-09-10T12:15:00Z'),
@@ -300,9 +426,12 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
   {
     id: 'mem_08',
     categoryId: 'personal-mistakes',
-    title: 'Journal entry missing an explicit invalidation level',
-    summary:
-      'The written review described the setup but not the level that would have made it wrong, so the trade could not be reviewed honestly afterwards.',
+    get title(): string {
+      return msg('memory.journalEntryMissingAnExplicitInvalidationLevel');
+    },
+    get summary(): string {
+      return msg('memory.theWrittenReviewDescribedTheSetupButNot');
+    },
     trust: 'unverified',
     lifecycle: 'pending-review',
     confidence: 0.66,
@@ -312,7 +441,15 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
       trust: 'unverified',
       recordedAt: iso('2026-09-11T19:10:00Z'),
     },
-    sources: [{ ref: 'journal.2026-09-11', kind: 'human', label: 'Journal entry' }],
+    sources: [
+      {
+        ref: 'journal.2026-09-11',
+        kind: 'human',
+        get label(): string {
+          return msg('memory.journalEntry');
+        },
+      },
+    ],
     tags: ['process', 'checklist'],
     version: 1,
     createdAt: iso('2026-09-11T19:10:00Z'),
@@ -321,9 +458,12 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
   {
     id: 'mem_09',
     categoryId: 'research-notes',
-    title: 'Stated drawdown tolerance did not match behaviour',
-    summary:
-      'Abandoned experiment note: the claim came from a sample of eleven trades, which is too small to support it. Kept archived so it is not re-derived.',
+    get title(): string {
+      return msg('memory.statedDrawdownToleranceDidNotMatchBehaviour');
+    },
+    get summary(): string {
+      return msg('memory.abandonedExperimentNoteTheClaimCameFromA');
+    },
     trust: 'unverified',
     lifecycle: 'archived',
     confidence: 0.31,
@@ -332,9 +472,19 @@ export const mockKnowledge: readonly KnowledgeRecord[] = [
       ref: 'model.scripted-local',
       trust: 'unverified',
       recordedAt: iso('2026-09-07T21:00:00Z'),
-      note: 'Archived with the reason, not deleted.',
+      get note(): string {
+        return msg('memory.archivedWithTheReasonNotDeleted');
+      },
     },
-    sources: [{ ref: 'experiment.exp-05', kind: 'tool', label: 'Abandoned experiment' }],
+    sources: [
+      {
+        ref: 'experiment.exp-05',
+        kind: 'tool',
+        get label(): string {
+          return msg('memory.abandonedExperiment');
+        },
+      },
+    ],
     tags: ['drawdown', 'insufficient-sample'],
     version: 3,
     createdAt: iso('2026-09-07T21:00:00Z'),
@@ -363,7 +513,9 @@ export const mockMemoryTimeline: readonly MemoryTimelineEntry[] = [
     kind: 'created',
     at: '2026-09-09T08:00:00Z',
     actor: 'user.omiid',
-    detail: 'Written from the month 5 reading notes.',
+    get detail(): string {
+      return msg('memory.writtenFromTheMonth5ReadingNotes');
+    },
     version: 1,
   },
   {
@@ -372,7 +524,9 @@ export const mockMemoryTimeline: readonly MemoryTimelineEntry[] = [
     kind: 'revision',
     at: '2026-09-12T09:30:00Z',
     actor: 'user.omiid',
-    detail: 'Reworded to separate "small sample" from "no edge".',
+    get detail(): string {
+      return msg('memory.rewordedToSeparateSmallSampleFromNoEdge');
+    },
     version: 2,
   },
   {
@@ -381,7 +535,9 @@ export const mockMemoryTimeline: readonly MemoryTimelineEntry[] = [
     kind: 'verification-requested',
     at: '2026-09-17T18:00:00Z',
     actor: 'agent.scripted-local',
-    detail: 'Agent asked for a human check; it cannot promote the record itself.',
+    get detail(): string {
+      return msg('memory.agentAskedForAHumanCheckItCannot');
+    },
     version: 3,
   },
   {
@@ -390,7 +546,9 @@ export const mockMemoryTimeline: readonly MemoryTimelineEntry[] = [
     kind: 'trust-promoted',
     at: '2026-09-17T19:45:00Z',
     actor: 'user.omiid',
-    detail: 'Promoted to authoritative by a human verifier.',
+    get detail(): string {
+      return msg('memory.promotedToAuthoritativeByAHumanVerifier');
+    },
     version: 4,
   },
   {
@@ -399,7 +557,9 @@ export const mockMemoryTimeline: readonly MemoryTimelineEntry[] = [
     kind: 'tombstoned',
     at: '2026-09-16T08:00:00Z',
     actor: 'user.omiid',
-    detail: 'Superseded explanation archived; the entry stays as evidence.',
+    get detail(): string {
+      return msg('memory.supersededExplanationArchivedTheEntryStaysAsEvidence');
+    },
     version: 5,
   },
   {
@@ -408,7 +568,9 @@ export const mockMemoryTimeline: readonly MemoryTimelineEntry[] = [
     kind: 'verification-requested',
     at: '2026-09-18T11:40:00Z',
     actor: 'agent.scripted-local',
-    detail: 'Awaiting review: no evaluation record was cited.',
+    get detail(): string {
+      return msg('memory.awaitingReviewNoEvaluationRecordWasCited');
+    },
     version: 2,
   },
   {
@@ -417,7 +579,9 @@ export const mockMemoryTimeline: readonly MemoryTimelineEntry[] = [
     kind: 'created',
     at: '2026-09-11T19:10:00Z',
     actor: 'user.omiid',
-    detail: 'Captured from the journal entry.',
+    get detail(): string {
+      return msg('memory.capturedFromTheJournalEntry');
+    },
     version: 1,
   },
   {
@@ -426,7 +590,9 @@ export const mockMemoryTimeline: readonly MemoryTimelineEntry[] = [
     kind: 'revision',
     at: '2026-09-14T09:20:00Z',
     actor: 'user.omiid',
-    detail: 'Ordering corrected to budget → stop → size.',
+    get detail(): string {
+      return msg('memory.orderingCorrectedToBudgetStopSize');
+    },
     version: 3,
   },
 ];
@@ -440,12 +606,54 @@ export interface KnowledgeGrowthPoint {
 
 /** Illustrative monthly growth of the knowledge base, six months of study. */
 export const mockKnowledgeGrowth: readonly KnowledgeGrowthPoint[] = [
-  { month: 'Apr', verified: 4, pending: 1, unverified: 9 },
-  { month: 'May', verified: 9, pending: 2, unverified: 14 },
-  { month: 'Jun', verified: 15, pending: 3, unverified: 19 },
-  { month: 'Jul', verified: 22, pending: 4, unverified: 26 },
-  { month: 'Aug', verified: 28, pending: 5, unverified: 33 },
-  { month: 'Sep', verified: 37, pending: 6, unverified: 50 },
+  {
+    get month(): string {
+      return msg('memory.apr');
+    },
+    verified: 4,
+    pending: 1,
+    unverified: 9,
+  },
+  {
+    get month(): string {
+      return msg('memory.may');
+    },
+    verified: 9,
+    pending: 2,
+    unverified: 14,
+  },
+  {
+    get month(): string {
+      return msg('memory.jun');
+    },
+    verified: 15,
+    pending: 3,
+    unverified: 19,
+  },
+  {
+    get month(): string {
+      return msg('memory.jul');
+    },
+    verified: 22,
+    pending: 4,
+    unverified: 26,
+  },
+  {
+    get month(): string {
+      return msg('memory.aug');
+    },
+    verified: 28,
+    pending: 5,
+    unverified: 33,
+  },
+  {
+    get month(): string {
+      return msg('memory.sep');
+    },
+    verified: 37,
+    pending: 6,
+    unverified: 50,
+  },
 ];
 
 export interface KnowledgeSearchFacet {
@@ -456,22 +664,78 @@ export interface KnowledgeSearchFacet {
 }
 
 export const mockTrustFacets: readonly KnowledgeSearchFacet[] = [
-  { id: 'verified', label: 'Verified', matches: 3 },
-  { id: 'pending-review', label: 'Pending review', matches: 2 },
-  { id: 'unverified', label: 'Unverified', matches: 2 },
-  { id: 'archived', label: 'Archived', matches: 2 },
+  {
+    id: 'verified',
+    get label(): string {
+      return msg('memory.memoryStatus.verified');
+    },
+    matches: 3,
+  },
+  {
+    id: 'pending-review',
+    get label(): string {
+      return msg('memory.memoryStatus.pending-review');
+    },
+    matches: 2,
+  },
+  {
+    id: 'unverified',
+    get label(): string {
+      return msg('memory.memoryStatus.unverified');
+    },
+    matches: 2,
+  },
+  {
+    id: 'archived',
+    get label(): string {
+      return msg('journal.status.archived');
+    },
+    matches: 2,
+  },
 ];
 
 export const mockSourceFacets: readonly KnowledgeSearchFacet[] = [
-  { id: 'tool', label: 'Tool output', matches: 2 },
-  { id: 'human', label: 'Human note or verification', matches: 4 },
-  { id: 'model', label: 'Model-authored', matches: 3 },
-  { id: 'document', label: 'Curriculum document', matches: 5 },
-  { id: 'synthetic', label: 'Synthetic data', matches: 1 },
+  {
+    id: 'tool',
+    get label(): string {
+      return msg('memory.toolOutput');
+    },
+    matches: 2,
+  },
+  {
+    id: 'human',
+    get label(): string {
+      return msg('memory.humanNoteOrVerification');
+    },
+    matches: 4,
+  },
+  {
+    id: 'model',
+    get label(): string {
+      return msg('memory.kind.model');
+    },
+    matches: 3,
+  },
+  {
+    id: 'document',
+    get label(): string {
+      return msg('memory.curriculumDocument');
+    },
+    matches: 5,
+  },
+  {
+    id: 'synthetic',
+    get label(): string {
+      return msg('memory.syntheticData');
+    },
+    matches: 1,
+  },
 ];
 
-export const MEMORY_PREVIEW_NOTICE =
-  'Illustrative knowledge base. Retrieval, embeddings and persistence are implemented in the backend but are not connected to this preview: nothing here was retrieved or ranked.';
+export function previewNotice(): string {
+  return msg('memory.previewNotice');
+}
 
-export const MEMORY_TRUST_POLICY =
-  'A model write starts unverified and stays unverified until a human or a deterministic tool verifies it. Verification is recorded, never inferred.';
+export function trustPolicy(): string {
+  return msg('memory.trustPolicy');
+}

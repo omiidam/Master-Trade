@@ -22,6 +22,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { NAV_GROUPS, NAV_SECTIONS } from '../web/src/config/navigation.js';
+import { translate } from '../web/src/i18n/index.js';
 import {
   LanguageMemory,
   TERMINOLOGY,
@@ -140,20 +141,37 @@ describe('the lexicon is the product’s vocabulary, held as knowledge', () => {
     for (const section of NAV_SECTIONS) {
       const id = SHELL_CONCEPTS[section.id];
       expect(id, `${section.id} has no concept`).toBeDefined();
-      expect(
-        preferredTerm(id ?? ''),
-        `${section.label} has no preferred Persian form`,
-      ).toBeDefined();
+      expect(preferredTerm(id ?? ''), `${section.id} has no preferred Persian form`).toBeDefined();
     }
     for (const group of NAV_GROUPS) {
       const id = SHELL_CONCEPTS[group.id];
-      expect(preferredTerm(id ?? ''), `${group.label} has no preferred Persian form`).toBeDefined();
+      expect(preferredTerm(id ?? ''), `${group.id} has no preferred Persian form`).toBeDefined();
     }
     // And the mapping is complete in the other direction: no concept here is unused.
     const mapped = new Set(Object.values(SHELL_CONCEPTS));
     expect(mapped.size).toBe(NAV_SECTIONS.length + NAV_GROUPS.length);
     for (const id of mapped)
       expect(terminologyTerm(id), `${id} is not in the catalogue`).toBeDefined();
+  });
+
+  it('uses that preferred form as the sidebar wording, rather than a second translation', () => {
+    // Phase 7.5.3.3 wrote the interface into a catalogue, which is where a glossary starts disagreeing with
+    // itself: the sidebar could have called `academy` «آکادمی» while the terminology record called it
+    // something else. It does not — the Persian label *is* the record's preferred form, for every entry.
+    for (const section of NAV_SECTIONS) {
+      const concept = SHELL_CONCEPTS[section.id];
+      expect(concept, `${section.id} has no concept`).toBeDefined();
+      expect(
+        translate('fa', section.labelKey),
+        `${section.id} is named differently in the sidebar`,
+      ).toBe(preferredTerm(concept ?? ''));
+    }
+    for (const group of NAV_GROUPS) {
+      expect(
+        translate('fa', group.labelKey),
+        `${group.id} is named differently in the sidebar`,
+      ).toBe(preferredTerm(SHELL_CONCEPTS[group.id] ?? ''));
+    }
   });
 
   it('names its six domains, and every domain carries terms', () => {

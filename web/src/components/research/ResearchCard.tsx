@@ -19,6 +19,7 @@ import {
   type ExperimentStatus,
   type ExperimentVerdict,
 } from '../../mock/research';
+import { msg } from '../../i18n/index.js';
 
 const STATUS_TONE: Record<ExperimentStatus, BadgeTone> = {
   planned: 'outline',
@@ -82,7 +83,7 @@ export function ResearchCard({ experiment, onOpen, className }: ResearchCardProp
           </div>
           <CardTitle className="mt-2 text-body">{experiment.title}</CardTitle>
           <CardDescription>
-            <span className="num">{experiment.ruleRef}</span> · updated{' '}
+            <span className="num">{experiment.ruleRef}</span> {msg('research.updated')}{' '}
             {formatRelative(experiment.updatedAt)}
           </CardDescription>
         </div>
@@ -92,7 +93,7 @@ export function ResearchCard({ experiment, onOpen, className }: ResearchCardProp
         <CardTile>
           <p className="flex items-center gap-1.5 text-caption font-medium text-text-muted">
             <Lightbulb size={12} aria-hidden />
-            Hypothesis
+            {msg('research.hypothesis')}
           </p>
           <p className="mt-1 text-caption text-text">{experiment.hypothesis}</p>
         </CardTile>
@@ -106,12 +107,12 @@ export function ResearchCard({ experiment, onOpen, className }: ResearchCardProp
             <div className="rounded-[var(--radius-control)] border border-border px-2.5 py-2">
               <dt className="flex items-center gap-1 text-text-faint">
                 <Sigma size={12} aria-hidden />
-                Sample
+                {msg('journal.sample')}
               </dt>
               <dd className="num mt-0.5 text-text">{experiment.metrics.sampleSize}</dd>
             </div>
             <div className="rounded-[var(--radius-control)] border border-border px-2.5 py-2">
-              <dt className="text-text-faint">Avg R</dt>
+              <dt className="text-text-faint">{msg('research.avgR')}</dt>
               <dd
                 className={cn(
                   'num mt-0.5',
@@ -123,7 +124,7 @@ export function ResearchCard({ experiment, onOpen, className }: ResearchCardProp
               </dd>
             </div>
             <div className="rounded-[var(--radius-control)] border border-border px-2.5 py-2">
-              <dt className="text-text-faint">Confidence</dt>
+              <dt className="text-text-faint">{msg('research.confidence')}</dt>
               <dd className="num mt-0.5 text-text">
                 {formatPercent(experiment.metrics.confidencePct, 0)}
               </dd>
@@ -131,18 +132,18 @@ export function ResearchCard({ experiment, onOpen, className }: ResearchCardProp
           </dl>
         ) : (
           <p className="text-caption text-text-faint">
-            No evaluation attached yet, so no metrics are shown.
+            {msg('research.noEvaluationAttachedYetSoNo')}
           </p>
         )}
 
         {awaiting ? (
           <p className="flex items-start gap-1.5 text-caption text-warning">
             <ShieldCheck size={13} aria-hidden className="mt-0.5 shrink-0" />
-            Waiting on a recorded human decision
+            {msg('research.waitingOnARecordedHumanDecision')}
             {experiment.approvalRef ? (
               <span className="num text-text-muted">({experiment.approvalRef})</span>
             ) : null}
-            . The rule stays inactive until then.
+            {msg('research.theRuleStaysInactiveUntilThen')}
           </p>
         ) : null}
       </CardContent>
@@ -154,16 +155,16 @@ export function ResearchCard({ experiment, onOpen, className }: ResearchCardProp
             : `Verdict: ${EXPERIMENT_VERDICT_LABEL[experiment.verdict]}`}
         </span>
         {onOpen === undefined ? (
-          <Tooltip content="No research service is connected in this phase, so this action is inert.">
+          <Tooltip content={msg('researchCard.noResearchServiceIsConnectedInThisPhase')}>
             <span>
               <Button size="sm" variant="ghost" disabled>
-                Open experiment
+                {msg('research.openExperiment')}
               </Button>
             </span>
           </Tooltip>
         ) : (
           <Button size="sm" variant="ghost" onClick={() => onOpen(experiment.id)}>
-            Open experiment
+            {msg('research.openExperiment')}
           </Button>
         )}
       </CardFooter>

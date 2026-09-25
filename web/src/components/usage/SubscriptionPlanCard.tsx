@@ -21,6 +21,7 @@ import {
   TableRowHeaderCell,
 } from '../Table';
 import { usageCategoryLabel } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * One plan, described by the catalogue the server serves rather than by a copy in the UI.
@@ -57,13 +58,15 @@ export function SubscriptionPlanCard({
         <div className="space-y-1">
           <CardTitle className="flex flex-wrap items-center gap-2">
             {plan.displayName}
-            {current ? <Badge tone="primary">Your plan</Badge> : null}
-            {plan.active ? null : <Badge tone="neutral">Retired</Badge>}
+            {current ? <Badge tone="primary">{msg('usage.yourPlan')}</Badge> : null}
+            {plan.active ? null : <Badge tone="neutral">{msg('usage.retired')}</Badge>}
           </CardTitle>
           <CardDescription>{plan.tagline}</CardDescription>
         </div>
         <div className="text-right">
-          <p className="text-body font-medium num text-text">{plan.periodCredits} credits</p>
+          <p className="text-body font-medium num text-text">
+            {plan.periodCredits} {msg('usage.credits')}
+          </p>
           <p className="text-caption text-text-faint">
             {plan.resetCadence === 'none' ? 'granted once' : `per ${plan.resetCadence} period`}
           </p>
@@ -94,14 +97,14 @@ export function SubscriptionPlanCard({
                 <Minus size={13} aria-hidden />
                 {entry.feature}
               </span>
-              <span className="text-caption text-text-faint">not included</span>
+              <span className="text-caption text-text-faint">{msg('usage.notIncluded')}</span>
             </div>
           ))}
         </div>
 
         <div className="space-y-1">
           <h4 className="text-caption font-semibold text-text-muted uppercase">
-            What this plan may not do
+            {msg('usage.whatThisPlanMayNotDo')}
           </h4>
           <ul className="list-disc space-y-1 pl-5" role="list">
             {plan.mayNot.map((line, index) => (
@@ -122,10 +125,7 @@ export function SubscriptionPlanCard({
 
         <CardTile className="inline-flex items-start gap-1.5 text-caption text-text-muted">
           <ShieldAlert size={13} aria-hidden className="mt-0.5 shrink-0 text-warning" />
-          <span>
-            Price: not offered. This build has no payment integration, so this plan is not
-            purchasable and no amount is displayed.
-          </span>
+          <span>{msg('usage.priceNotOfferedThisBuildHas')}</span>
         </CardTile>
       </CardContent>
     </Card>
@@ -165,8 +165,8 @@ export function PlanComparison({
 
   return (
     <Section
-      title="Plans"
-      description="Allowances are declared in code and served as data. Nothing here can be bought: there is no payment integration in this build."
+      title={msg('usage.plans')}
+      description={msg('subscriptionPlanCard.allowancesAreDeclaredInCodeAndServedAs')}
       className={className}
     >
       {/* The frame keeps its own outline: this is a matrix rather than a record list, so it is a
@@ -174,31 +174,33 @@ export function PlanComparison({
       <div className="rounded-[var(--radius-panel)] border border-border">
         <Table
           minWidth={640}
-          label="Every declared capability, by plan, with its per-period limit and cost"
+          label={msg('subscriptionPlanCard.everyDeclaredCapabilityByPlanWithItsPerPeriod')}
         >
           <TableHead>
-            <TableHeaderCell>Capability</TableHeaderCell>
+            <TableHeaderCell>{msg('usage.capability')}</TableHeaderCell>
             {plans.map((plan) => (
               // A `heading`: a plan's name is a proper noun and the most important column in the
               // table, so it is not rendered as an uppercase micro-label.
               <TableHeaderCell key={plan.id} variant="heading">
                 <span className="flex items-center gap-1.5">
                   {plan.displayName}
-                  {plan.id === currentPlanId ? <Badge tone="primary">Current</Badge> : null}
+                  {plan.id === currentPlanId ? (
+                    <Badge tone="primary">{msg('usage.current')}</Badge>
+                  ) : null}
                 </span>
               </TableHeaderCell>
             ))}
-            <TableHeaderCell>Category</TableHeaderCell>
+            <TableHeaderCell>{msg('usage.category')}</TableHeaderCell>
           </TableHead>
           <TableBody>
             <TableRow>
-              <TableRowHeaderCell>Credits per period</TableRowHeaderCell>
+              <TableRowHeaderCell>{msg('usage.creditsPerPeriod')}</TableRowHeaderCell>
               {plans.map((plan) => (
                 <TableCell key={plan.id} numeric>
                   {plan.periodCredits}
                 </TableCell>
               ))}
-              <TableCell tone="faint">allowance</TableCell>
+              <TableCell tone="faint">{msg('usage.allowance')}</TableCell>
             </TableRow>
             {features.map((feature) => {
               const category = categories[feature];
@@ -214,12 +216,16 @@ export function PlanComparison({
                         {entry === undefined || !entry.included ? (
                           <span className="inline-flex items-center gap-1 text-text-faint">
                             <Lock size={12} aria-hidden />
-                            not included
+                            {msg('usage.notIncluded')}
                           </span>
                         ) : entry.periodLimit === null ? (
-                          <span className="text-text-muted">included, no separate cap</span>
+                          <span className="text-text-muted">
+                            {msg('usage.includedNoSeparateCap')}
+                          </span>
                         ) : (
-                          <span className="num text-text">{entry.periodLimit} per period</span>
+                          <span className="num text-text">
+                            {entry.periodLimit} {msg('usage.perPeriod')}
+                          </span>
                         )}
                       </TableCell>
                     );

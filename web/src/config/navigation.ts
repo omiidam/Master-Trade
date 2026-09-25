@@ -1,3 +1,4 @@
+import { msg, type MessageKey } from '../i18n/index.js';
 /**
  * Application shell navigation.
  *
@@ -60,16 +61,17 @@ export type NavGroupId = 'workspace' | 'learning' | 'system';
 
 export interface NavSection {
   id: AppPageId;
-  label: string;
-  description: string;
+  /** The key its name is read from — the interface language decides the words, not this file. */
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
   icon: NavIconName;
   group: NavGroupId;
 }
 
-export const NAV_GROUPS: ReadonlyArray<{ id: NavGroupId; label: string }> = [
-  { id: 'workspace', label: 'Workspace' },
-  { id: 'learning', label: 'Learning' },
-  { id: 'system', label: 'System' },
+export const NAV_GROUPS: ReadonlyArray<{ id: NavGroupId; labelKey: MessageKey }> = [
+  { id: 'workspace', labelKey: 'shell.group.workspace' },
+  { id: 'learning', labelKey: 'shell.group.learning' },
+  { id: 'system', labelKey: 'shell.group.system' },
 ];
 
 /**
@@ -79,105 +81,99 @@ export const NAV_GROUPS: ReadonlyArray<{ id: NavGroupId; label: string }> = [
 export const NAV_SECTIONS: readonly NavSection[] = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
-    description: 'Training progress, study metrics and read-only charts',
+    labelKey: 'shell.nav.dashboard.label',
+    descriptionKey: 'shell.nav.dashboard.description',
     icon: 'gauge',
     group: 'workspace',
   },
   {
     id: 'agent',
-    label: 'AI Workspace',
-    description: 'Ask questions; every answer carries its evidence and uncertainty label',
+    labelKey: 'shell.nav.agent.label',
+    descriptionKey: 'shell.nav.agent.description',
     icon: 'sparkles',
     group: 'workspace',
   },
   {
     id: 'memory',
-    label: 'Memory',
-    description: 'What the agent may use, with a source and a trust state for every claim',
+    labelKey: 'shell.nav.memory.label',
+    descriptionKey: 'shell.nav.memory.description',
     icon: 'brain',
     group: 'workspace',
   },
   {
     id: 'research',
-    label: 'Research',
-    description: 'Experiments that test a proposed rule against evidence; adoption needs approval',
+    labelKey: 'shell.nav.research.label',
+    descriptionKey: 'shell.nav.research.description',
     icon: 'microscope',
     group: 'workspace',
   },
   {
     id: 'journal',
-    label: 'Journal',
-    description:
-      'Record what you actually did: setups, risk, rule compliance, mistakes and the lesson taken from each trade',
+    labelKey: 'shell.nav.journal.label',
+    descriptionKey: 'shell.nav.journal.description',
     icon: 'journal',
     group: 'workspace',
   },
   {
     id: 'portfolio',
-    label: 'Portfolio',
-    description:
-      'Declare what you hold and read the deterministic valuation: allocation, cost basis, concentration and exposure, with every gap named rather than filled',
+    labelKey: 'shell.nav.portfolio.label',
+    descriptionKey: 'shell.nav.portfolio.description',
     icon: 'pie-chart',
     group: 'workspace',
   },
   {
     id: 'evaluation',
-    label: 'Evaluation',
-    description:
-      'Record what you decided and read what the recorded prices say happened — with what could not be measured named rather than filled — and the capability catalogue behind it',
+    labelKey: 'shell.nav.evaluation.label',
+    descriptionKey: 'shell.nav.evaluation.description',
     icon: 'blocks',
     group: 'workspace',
   },
   {
     id: 'academy',
-    label: 'Academy',
-    description: 'Curriculum and lessons across six months',
+    labelKey: 'shell.nav.academy.label',
+    descriptionKey: 'shell.nav.academy.description',
     icon: 'graduation',
     group: 'learning',
   },
   {
     id: 'exams',
-    label: 'Exams',
-    description: 'Assessments, rubric scoring and mistake review',
+    labelKey: 'shell.nav.exams.label',
+    descriptionKey: 'shell.nav.exams.description',
     icon: 'clipboard',
     group: 'learning',
   },
   {
     id: 'lab',
-    label: 'Trading Lab',
-    description: 'Review practice setups and deterministic risk math (read-only)',
+    labelKey: 'shell.nav.lab.label',
+    descriptionKey: 'shell.nav.lab.description',
     icon: 'flask',
     group: 'workspace',
   },
   {
     id: 'activity',
-    label: 'Activity',
-    description:
-      'The live event stream and the background-task queue, with their provenance and their failures',
+    labelKey: 'shell.nav.activity.label',
+    descriptionKey: 'shell.nav.activity.description',
     icon: 'activity',
     group: 'system',
   },
   {
     id: 'usage',
-    label: 'Usage',
-    description:
-      'Your plan, credit allowance and what each capability costs — with the refusals stated rather than hidden',
+    labelKey: 'shell.nav.usage.label',
+    descriptionKey: 'shell.nav.usage.description',
     icon: 'coins',
     group: 'system',
   },
   {
     id: 'profile',
-    label: 'Profile',
-    description:
-      'What you have declared about your trading, with a source and a freshness state for every field',
+    labelKey: 'shell.nav.profile.label',
+    descriptionKey: 'shell.nav.profile.description',
     icon: 'user',
     group: 'system',
   },
   {
     id: 'settings',
-    label: 'Settings',
-    description: 'Appearance, direction, providers and safety status',
+    labelKey: 'shell.nav.settings.label',
+    descriptionKey: 'shell.nav.settings.description',
     icon: 'settings',
     group: 'system',
   },
@@ -190,6 +186,11 @@ export function findNavSection(id: AppPageId): NavSection {
 }
 
 /** Shown in the topbar: the user must never mistake preview data for real data. */
-export const PREVIEW_NOTICE = 'Interface preview — mock data only, no backend or AI connected.';
+export function previewNotice(): string {
+  return msg('shell.previewNotice');
+}
 
-export const NAV_ARIA_LABEL = 'Primary';
+/** The name of the primary navigation landmark, in the interface language. */
+export function navAriaLabel(): string {
+  return msg('shell.navPrimary');
+}

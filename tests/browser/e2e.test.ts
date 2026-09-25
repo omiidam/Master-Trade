@@ -39,11 +39,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { NAV_SECTIONS } from '../../web/src/config/navigation.js';
-import {
-  LANGUAGE_PREFERENCE_KEY,
-  LANGUAGE_PREFERENCE_LABELS,
-  normalizePersianContent,
-} from '../../web/src/language/index.js';
+import { translate, type MessageKey, type UiLocale } from '../../web/src/i18n/index.js';
+import { LANGUAGE_PREFERENCE_KEY, normalizePersianContent } from '../../web/src/language/index.js';
 import {
   ACCESSIBILITY_PROBE,
   CLIPPING_PROBE,
@@ -195,10 +192,10 @@ suite('the Product Foundation in a real browser', () => {
     const expected = EXPECTED_HEADINGS[id];
     if (!expected) throw new Error(`no expected heading recorded for ${id}`);
 
-    await session.clickNav(section.label);
+    await session.clickNav(translate('en', section.labelKey));
     await session.waitFor(
       `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(expected)}`,
-      `the ${section.label} page (heading "${expected}") to be rendered`,
+      `the ${translate('en', section.labelKey)} page (heading "${expected}") to be rendered`,
     );
   }
 
@@ -291,7 +288,8 @@ suite('the Product Foundation in a real browser', () => {
 
       expect(shell.main).toBe(1);
       expect(shell.nav).toBe(1);
-      expect(shell.navLabel).toBe('Primary');
+      // Named in the interface's language, which is English until the switch in Settings is used.
+      expect(shell.navLabel).toBe(translate('en', 'shell.navPrimary'));
       // A skip link that points nowhere is worse than none: it reads as a way past the
       // navigation and then silently does nothing.
       expect(shell.skipHref).toBe('#workspace-main');
@@ -325,7 +323,7 @@ suite('the Product Foundation in a real browser', () => {
 
     it('has a sidebar entry for every page and a page for every entry', async () => {
       const entries = await session.evaluateJson<string[]>(
-        `JSON.stringify([...document.querySelectorAll('nav[aria-label="Primary"] button')].map(
+        `JSON.stringify([...document.querySelectorAll('nav')[0].querySelectorAll('button')].map(
            (button) => (button.getAttribute('aria-label') ?? button.textContent ?? '').trim()
          ))`,
       );
@@ -334,18 +332,24 @@ suite('the Product Foundation in a real browser', () => {
       // product's page order so the two stay independent, and the assertion has to
       // respect that rather than quietly requiring the file to be sorted for display.
       const grouped = (['workspace', 'learning', 'system'] as const).flatMap((group) =>
-        NAV_SECTIONS.filter((section) => section.group === group).map((section) => section.label),
+        NAV_SECTIONS.filter((section) => section.group === group).map((section) =>
+          translate('en', section.labelKey),
+        ),
       );
       expect(entries).toEqual(grouped);
     });
 
     it('groups the navigation as the product intends', async () => {
       const groups = await session.evaluateJson<string[]>(
-        `JSON.stringify([...document.querySelectorAll('nav[aria-label="Primary"] p')].map(
+        `JSON.stringify([...document.querySelectorAll('nav')[0].querySelectorAll('p')].map(
            (node) => (node.textContent ?? '').trim()
          ))`,
       );
-      expect(groups).toEqual(['Workspace', 'Learning', 'System']);
+      expect(groups).toEqual(
+        (['workspace', 'learning', 'system'] as const).map((group) =>
+          translate('en', `shell.group.${group}` as MessageKey),
+        ),
+      );
     });
   });
 
@@ -884,14 +888,49 @@ suite('the Product Foundation in a real browser', () => {
       caption: string;
     }
 
-    const readSwitch = (): Promise<SwitchState> =>
+    /**
+     * The switch's own labels, read from the catalogue the interface reads them from.
+     *
+     * This is the one control whose wording has to survive its own effect: once Persian is chosen the three
+     * buttons are Persian too, so a case has to ask for the labels of the language it expects to be looking at.
+     */
+    const OPTION_KEYS = {
+      auto: 'settings.languageAutomatic',
+      fa: 'settings.languagePersian',
+      en: 'settings.languageEnglish',
+    } as const satisfies Record<string, MessageKey>;
+    const inLanguage = (locale: UiLocale): readonly string[] => [
+      translate(locale, OPTION_KEYS.auto),
+      translate(locale, OPTION_KEYS.fa),
+      translate(locale, OPTION_KEYS.en),
+    ];
+    const english = inLanguage('en');
+    const persian = inLanguage('fa');
+
+    /**
+     * Start a case from a known stored choice, so it reads the chrome it means to read.
+     *
+     * The app is loaded first, because `localStorage` belongs to the page's origin and a document that has
+     * not loaded the app yet has none — writing the choice into an opaque document is a `SecurityError`, not
+     * a preference. The second load is what reads it back.
+     */
+    const startIn = async (preference: string | null): Promise<void> => {
+      await session.goto(`${server.origin}/`);
+      await session.evaluate(
+        preference === null
+          ? `localStorage.removeItem(${JSON.stringify(LANGUAGE_PREFERENCE_KEY)})`
+          : `localStorage.setItem(${JSON.stringify(LANGUAGE_PREFERENCE_KEY)}, ${JSON.stringify(preference)})`,
+      );
+      await session.goto(`${server.origin}/`);
+    };
+
+    const readSwitch = (labels: readonly string[]): Promise<SwitchState> =>
       session.evaluateJson<SwitchState>(`
         (() => {
           const main = document.querySelector('main');
+          const known = ${JSON.stringify(labels)};
           const buttons = [...(main?.querySelectorAll('button[aria-pressed]') ?? [])].filter(
-            (button) => ['${LANGUAGE_PREFERENCE_LABELS.auto}', '${LANGUAGE_PREFERENCE_LABELS.fa}', '${LANGUAGE_PREFERENCE_LABELS.en}'].includes(
-              (button.textContent ?? '').trim(),
-            ),
+            (button) => known.includes((button.textContent ?? '').trim()),
           );
           // The nearest container that also holds prose is the switch's own card, which is where the
           // caption lives — found structurally rather than by matching the copy it happens to have.
@@ -919,43 +958,38 @@ suite('the Product Foundation in a real browser', () => {
         })()
       `);
 
-    const openSettings = async (): Promise<void> => {
-      await session.clickNav('Settings');
+    const openSettings = async (locale: UiLocale): Promise<void> => {
+      await session.clickNav(translate(locale, 'shell.nav.settings.label'));
       await session.waitFor(
-        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === 'Settings'`,
+        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(translate(locale, 'shell.nav.settings.label'))}`,
         'the Settings page',
       );
       await session.waitFor(
         `[...document.querySelectorAll('main button')].some(
-           (item) => (item.textContent ?? '').trim() === ${JSON.stringify(LANGUAGE_PREFERENCE_LABELS.fa)})`,
+           (item) => ${JSON.stringify(inLanguage(locale))}.includes((item.textContent ?? '').trim()))`,
         'the language switch to be rendered',
       );
     };
 
     it('offers one choice with a visible selected state, and remembers it across a reload', async () => {
       await session.setViewport(1440, 900);
-      await session.goto(`${server.origin}/`);
       // The suite runs in a throwaway profile, so this is belt-and-braces: the switch is about the
       // choice being made *now*, not about whatever a previous spec left behind.
-      await session.evaluate(`localStorage.removeItem(${JSON.stringify(LANGUAGE_PREFERENCE_KEY)})`);
-      await session.goto(`${server.origin}/`);
-      await openSettings();
+      await startIn(null);
+      await openSettings('en');
 
-      const initial = await readSwitch();
-      expect(initial.labels).toEqual([
-        LANGUAGE_PREFERENCE_LABELS.auto,
-        LANGUAGE_PREFERENCE_LABELS.fa,
-        LANGUAGE_PREFERENCE_LABELS.en,
-      ]);
+      const initial = await readSwitch(english);
+      expect(initial.labels).toEqual([...english]);
       // Exactly one option is selected, so "unselected" is a state a person can see.
-      expect(initial.pressed).toEqual([LANGUAGE_PREFERENCE_LABELS.auto]);
+      expect(initial.pressed).toEqual([english[0]]);
 
-      expect(await clickSwitch(LANGUAGE_PREFERENCE_LABELS.fa)).toBe(true);
-      const chosen = await readSwitch();
-      expect(chosen.pressed).toEqual([LANGUAGE_PREFERENCE_LABELS.fa]);
-      // The caption says what the choice means, and says nothing about failing to store it.
-      expect(chosen.caption).toContain(`${LANGUAGE_PREFERENCE_LABELS.fa} is chosen`);
-      expect(chosen.caption).not.toContain('no writable setting store');
+      expect(await clickSwitch(english[1] ?? '')).toBe(true);
+      // Choosing Persian is choosing the *interface* language: the same three controls come back in
+      // Persian, the selected state moved, and the page around them changed with it.
+      const chosen = await readSwitch(persian);
+      expect(chosen.pressed).toEqual([persian[1]]);
+      expect(chosen.caption).not.toBe(initial.caption);
+      expect(chosen.caption).toContain(persian[1] ?? '');
 
       // The choice reached storage under its own namespaced key, which is what "exposed to the language
       // system" means in a build with no settings API.
@@ -965,52 +999,85 @@ suite('the Product Foundation in a real browser', () => {
         ),
       ).toBe('fa');
 
+      // The document language and the visible chrome followed, across the shell rather than in one card.
+      expect(await session.evaluate<string>('document.documentElement.lang')).toBe('fa-IR');
+      expect(await session.evaluate<string>("document.body.textContent ?? ''")).toContain(
+        translate('fa', 'shell.nav.settings.label'),
+      );
+      // Including the navigation landmark's own name, which is what a screen reader announces before the
+      // entries it holds — the shell's structure is as translatable as its words.
+      expect(
+        await session.evaluate<string>(
+          "document.querySelector('nav')?.getAttribute('aria-label') ?? ''",
+        ),
+      ).toBe(translate('fa', 'shell.navPrimary'));
+
       // And it survives a restart of the application, because it is read when the store is created
       // rather than reset by it.
       await session.goto(`${server.origin}/`);
-      await openSettings();
-      expect((await readSwitch()).pressed).toEqual([LANGUAGE_PREFERENCE_LABELS.fa]);
+      await openSettings('fa');
+      expect((await readSwitch(persian)).pressed).toEqual([persian[1]]);
+      expect(await session.evaluate<string>('document.documentElement.lang')).toBe('fa-IR');
 
-      // The switch sets the language of the *answer*: the interface is still English, because Persian
-      // is not this product's user-facing language yet.
+      // The switch is a choice, not a one-way door: going back to automatic returns the whole interface
+      // to English in the same session, without a reload.
+      expect(await clickSwitch(persian[0] ?? '')).toBe(true);
+      expect((await readSwitch(english)).pressed).toEqual([english[0]]);
       expect(await session.evaluate<string>('document.documentElement.lang')).toBe('en');
     });
 
-    it('is reachable and does not overflow at phone width', async () => {
+    it('is reachable and does not overflow at phone width, in either language', async () => {
       await session.setViewport(375, 812);
-      await session.goto(`${server.origin}/`);
-      await openSettings();
 
-      const measured = await session.evaluateJson<{
-        overflow: number;
-        visible: number;
-        width: number;
-      }>(`
-        (() => {
-          const buttons = [...document.querySelectorAll('main button')].filter(
-            (item) => ['${LANGUAGE_PREFERENCE_LABELS.auto}', '${LANGUAGE_PREFERENCE_LABELS.fa}', '${LANGUAGE_PREFERENCE_LABELS.en}'].includes(
-              (item.textContent ?? '').trim(),
-            ),
-          );
-          const visible = buttons.filter((button) => {
-            const box = button.getBoundingClientRect();
-            return box.width > 0 && box.height > 0 && box.right <= window.innerWidth + 0.5;
-          });
-          return JSON.stringify({
-            overflow: document.documentElement.scrollWidth - window.innerWidth,
-            visible: visible.length,
-            width: Math.max(0, ...buttons.map((button) => button.getBoundingClientRect().width)),
-          });
-        })()
-      `);
+      const measure = async (
+        labels: readonly string[],
+      ): Promise<{ overflow: number; visible: number; width: number }> =>
+        session.evaluateJson<{
+          overflow: number;
+          visible: number;
+          width: number;
+        }>(`
+          (() => {
+            const known = ${JSON.stringify(labels)};
+            const buttons = [...document.querySelectorAll('main button')].filter(
+              (item) => known.includes((item.textContent ?? '').trim()),
+            );
+            const visible = buttons.filter((button) => {
+              const box = button.getBoundingClientRect();
+              return box.width > 0 && box.height > 0 && box.right <= window.innerWidth + 0.5;
+            });
+            return JSON.stringify({
+              overflow: document.documentElement.scrollWidth - window.innerWidth,
+              visible: visible.length,
+              width: Math.max(0, ...buttons.map((button) => button.getBoundingClientRect().width)),
+            });
+          })()
+        `);
 
-      // All three options fit the smallest width the design commits to, and none of them pushes the
-      // page sideways.
-      expect(measured.visible).toBe(3);
-      expect(measured.width).toBeGreaterThan(0);
-      expect(measured.overflow, 'the language switch panned the phone layout').toBeLessThanOrEqual(
-        0,
-      );
+      await startIn('en');
+      await openSettings('en');
+      const englishLayout = await measure(english);
+
+      // The same three controls in Persian, because a translation that fits only in the language it was
+      // written in is not a translated interface.
+      await startIn('fa');
+      await openSettings('fa');
+      const persianLayout = await measure(persian);
+
+      // All three options fit the smallest width the design commits to, in both languages, and neither
+      // pushes the page sideways.
+      expect(englishLayout.visible).toBe(3);
+      expect(persianLayout.visible).toBe(3);
+      expect(englishLayout.width).toBeGreaterThan(0);
+      expect(persianLayout.width).toBeGreaterThan(0);
+      expect(
+        englishLayout.overflow,
+        'the language switch panned the phone layout',
+      ).toBeLessThanOrEqual(0);
+      expect(
+        persianLayout.overflow,
+        'the Persian switch panned the phone layout',
+      ).toBeLessThanOrEqual(0);
     });
   });
 });

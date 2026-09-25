@@ -6,6 +6,7 @@ import { CreditBalance, UsageProgressBar } from './CreditBalance';
 import { FeatureEntitlementBadge } from './FeatureEntitlementBadge';
 import { UsageLimitNotice } from './UpgradePrompt';
 import { denialGroup, usageCategoryLabel } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * The whole allowance in one card: the balance, what each capability costs and where each
@@ -53,12 +54,9 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2">
             <Gauge size={16} aria-hidden className="text-primary" />
-            Usage credits
+            {msg('usage.usageCredits')}
           </CardTitle>
-          <CardDescription>
-            One credit is one agent turn. Every number below is computed on the server from your
-            stored plan and your own ledger.
-          </CardDescription>
+          <CardDescription>{msg('usage.oneCreditIsOneAgentTurn')}</CardDescription>
         </div>
         <Badge tone="outline">{usage.plan.displayName}</Badge>
       </CardHeader>
@@ -88,7 +86,7 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
                 </p>
               ) : (
                 <UsageProgressBar
-                  label="This period"
+                  label={msg('usageCreditsCard.thisPeriod')}
                   used={feature.usedThisPeriod}
                   limit={feature.periodLimit}
                   unit="uses"
@@ -101,7 +99,7 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
         {metered.length === 0 ? null : (
           <div className="space-y-1">
             <h4 className="text-caption font-semibold text-text-muted uppercase">
-              What each cost means
+              {msg('usage.whatEachCostMeans')}
             </h4>
             <ul className="space-y-1" role="list">
               {metered.map((feature) => (
@@ -125,7 +123,7 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
         {grouped.permission.length > 0 ? (
           <div className="space-y-1">
             <h4 className="text-caption font-semibold text-text-muted uppercase">
-              Not permitted for your role
+              {msg('usage.notPermittedForYourRole')}
             </h4>
             <ul className="space-y-1" role="list">
               {grouped.permission.map((feature) => (
@@ -136,8 +134,7 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
               ))}
             </ul>
             <p className="text-caption text-text-faint">
-              A plan never grants an operation your role denies, so this cannot be resolved by
-              upgrading.
+              {msg('usage.aPlanNeverGrantsAnOperation')}
             </p>
           </div>
         ) : null}
@@ -145,7 +142,7 @@ export function UsageCreditsCard({ usage, className }: UsageCreditsCardProps) {
         {grouped.entitlement.length > 0 ? (
           <div className="space-y-1">
             <h4 className="text-caption font-semibold text-text-muted uppercase">
-              Not in this plan
+              {msg('usage.notInThisPlan')}
             </h4>
             <ul className="space-y-1" role="list">
               {grouped.entitlement.map((feature) => (

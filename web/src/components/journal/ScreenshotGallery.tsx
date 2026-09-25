@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } f
 import { FullscreenChartViewer } from './FullscreenChartViewer';
 import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
-import { ATTACHMENT_KIND_LABEL, JOURNAL_ATTACHMENT_NOTE } from '../../mock/journal';
+import { ATTACHMENT_KIND_LABEL, attachmentNote } from '../../mock/journal';
 import type { AttachmentKind, TradeAttachment } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 const KIND_TONE = {
   entry: 'info',
@@ -80,7 +81,7 @@ function AttachmentPreview({
           strokeDasharray="3 5"
         />
         <text x="14" y="24" fill="var(--color-text-faint)" fontSize="11">
-          placeholder · no image file stored
+          {msg('journal.placeholderNoImageFileStored')}
         </text>
       </svg>
       <Badge tone={tone} className="absolute end-2 top-2">
@@ -113,11 +114,11 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
     return (
       <EmptyState
         icon={<ImageOff size={22} aria-hidden />}
-        title="No attachments on this record"
+        title={msg('journal.noAttachmentsOnThisRecord')}
         description={`${
           tradeRef ? `${tradeRef} has` : 'This trade has'
         } no entry or exit screenshot attached. A record without attachments is reviewed from its numbers alone.`}
-        hint={JOURNAL_ATTACHMENT_NOTE}
+        hint={attachmentNote()}
         className={className}
       />
     );
@@ -131,7 +132,7 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
     setIndex((value) => (value + delta + attachments.length) % attachments.length);
 
   return (
-    <Card as="section" aria-label="Screenshots and attachments" className={className}>
+    <Card as="section" aria-label={msg('journal.screenshotsAndAttachments')} className={className}>
       <CardHeader
         divider
         actions={
@@ -141,8 +142,8 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
         }
       >
         <div className="min-w-0">
-          <CardTitle>Screenshots and attachments</CardTitle>
-          <CardDescription>{JOURNAL_ATTACHMENT_NOTE}</CardDescription>
+          <CardTitle>{msg('journal.screenshotsAndAttachments')}</CardTitle>
+          <CardDescription>{attachmentNote()}</CardDescription>
         </div>
       </CardHeader>
 
@@ -152,7 +153,8 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
           <div>
             <p className="text-body text-text">{current.label}</p>
             <p className="num text-caption text-text-faint">
-              captured {formatTimestamp(current.capturedAt)} · {ATTACHMENT_KIND_LABEL[current.kind]}
+              {msg('journal.captured')} {formatTimestamp(current.capturedAt)} ·{' '}
+              {ATTACHMENT_KIND_LABEL[current.kind]}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -160,10 +162,10 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
               variant="secondary"
               size="sm"
               onClick={() => step(-1)}
-              label="Previous attachment"
+              label={msg('screenshotGallery.previousAttachment')}
               leadingIcon={<ChevronLeft size={14} aria-hidden />}
             >
-              Previous
+              {msg('exams.previous')}
             </Button>
             <span className="num text-caption text-text-muted">
               {clamped + 1} / {attachments.length}
@@ -172,10 +174,10 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
               variant="secondary"
               size="sm"
               onClick={() => step(1)}
-              label="Next attachment"
+              label={msg('screenshotGallery.nextAttachment')}
               trailingIcon={<ChevronRight size={14} aria-hidden />}
             >
-              Next
+              {msg('journal.next')}
             </Button>
           </div>
         </div>
@@ -209,24 +211,24 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
           variant="subtle"
           size="sm"
           onClick={() => setOpen(true)}
-          label="Open attachment fullscreen"
+          label={msg('screenshotGallery.openAttachmentFullscreen')}
           leadingIcon={<Eye size={14} aria-hidden />}
         >
-          View fullscreen
+          {msg('journal.viewFullscreen')}
         </Button>
 
         <FullscreenChartViewer
           open={open}
           onOpenChange={setOpen}
           title={`${current.label}`}
-          description={JOURNAL_ATTACHMENT_NOTE}
+          description={attachmentNote()}
           toolbar={
             <div className="flex items-center gap-1">
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => step(-1)}
-                label="Previous attachment"
+                label={msg('screenshotGallery.previousAttachment')}
                 leadingIcon={<ChevronLeft size={14} aria-hidden />}
               >
                 Previous
@@ -235,15 +237,15 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
                 variant="secondary"
                 size="sm"
                 onClick={() => step(1)}
-                label="Next attachment"
+                label={msg('screenshotGallery.nextAttachment')}
                 trailingIcon={<ChevronRight size={14} aria-hidden />}
               >
                 Next
               </Button>
             </div>
           }
-          closeLabel="Close fullscreen attachment"
-          footnote="Press Escape or use Close to return to the gallery. Arrow controls move between attachments."
+          closeLabel={msg('screenshotGallery.closeFullscreenAttachment')}
+          footnote={msg('screenshotGallery.pressEscapeOrUseCloseToReturnTo')}
         >
           <AttachmentPreview attachment={current} height={520} />
         </FullscreenChartViewer>

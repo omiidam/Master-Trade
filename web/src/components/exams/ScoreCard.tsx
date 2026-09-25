@@ -3,6 +3,7 @@ import { formatPercent, formatTimestamp } from '../../lib/format';
 import { Badge } from '../Badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTile, CardTitle } from '../Card';
 import { Sparkline } from '../charts/Sparkline';
+import { msg } from '../../i18n/index.js';
 
 export interface ScorePointInput {
   at: string;
@@ -53,7 +54,7 @@ export function ScoreCard({
         <div>
           <CardTitle className="text-body">{title}</CardTitle>
           <p className="mt-1 text-caption text-text-muted">
-            {attempts} {attempts === 1 ? 'attempt' : 'attempts'} · pass at{' '}
+            {attempts} {attempts === 1 ? 'attempt' : 'attempts'} {msg('exams.passAt2')}{' '}
             {formatPercent(passScore, 0)}
           </p>
         </div>
@@ -68,13 +69,13 @@ export function ScoreCard({
             <span className="num text-display text-text">
               {bestScore === null ? '—' : formatPercent(bestScore, 0)}
             </span>
-            <p className="mt-1 text-caption text-text-faint">best score</p>
+            <p className="mt-1 text-caption text-text-faint">{msg('exams.bestScore')}</p>
           </div>
           <div className="text-end">
             <span className="num text-body text-text-muted">
               {meanScore === null || meanScore === undefined ? '—' : formatPercent(meanScore, 1)}
             </span>
-            <p className="text-caption text-text-faint">mean of graded attempts</p>
+            <p className="text-caption text-text-faint">{msg('exams.meanOfGradedAttempts')}</p>
           </div>
         </div>
 
@@ -92,7 +93,7 @@ export function ScoreCard({
               )}
               <span>
                 {delta !== null && delta >= 0 ? '+' : ''}
-                {delta === null ? '—' : formatPercent(delta, 0)} across attempts
+                {delta === null ? '—' : formatPercent(delta, 0)} {msg('exams.acrossAttempts')}
               </span>
             </div>
             <Sparkline values={values} width={96} height={22} tone={passed ? 'primary' : 'info'} />

@@ -3,6 +3,7 @@ import { Badge } from '../Badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatPercent } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * One population of shares, drawn.
@@ -46,11 +47,7 @@ export function AssetAllocationChart({
           <CardTitle className="text-body">{title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-body text-text-muted">
-            No shares of this kind could be formed, so nothing is drawn here. That is the honest
-            answer rather than a chart of zeroes: every bar would imply a measurement that does not
-            exist.
-          </p>
+          <p className="text-body text-text-muted">{msg('portfolio.noSharesOfThisKindCould')}</p>
         </CardContent>
       </Card>
     );
@@ -69,23 +66,23 @@ export function AssetAllocationChart({
               : 'share of declared weight'}
           </Badge>
           <Badge tone={weights.positions === 0 ? 'warning' : 'neutral'}>
-            {weights.positions} position{weights.positions === 1 ? '' : 's'}
+            {weights.positions} {msg('portfolio.position')}
+            {weights.positions === 1 ? '' : 's'}
           </Badge>
           <Badge tone={Math.abs(weights.totalPercent - 100) <= 0.5 ? 'neutral' : 'warning'}>
-            total {formatPercent(weights.totalPercent)}
+            {msg('portfolio.total')} {formatPercent(weights.totalPercent)}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-caption text-text-faint">
-          Coverage: {formatPercent(weights.coveragePercent)} of the declared document. A share here
-          is a share of this population only — never of a mixture of declared weights and market
-          values.
+          {msg('portfolio.coverage')} {formatPercent(weights.coveragePercent)}{' '}
+          {msg('portfolio.ofTheDeclaredDocumentAShare')}
         </p>
 
         {buckets.length === 0 ? (
           <p className="text-body text-text-muted">
-            Nothing in this population could be grouped, so there is no breakdown to show.
+            {msg('portfolio.nothingInThisPopulationCouldBe')}
           </p>
         ) : (
           <ul className="space-y-2" role="list">
@@ -94,7 +91,8 @@ export function AssetAllocationChart({
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-body text-text">{bucket.label}</span>
                   <span className="text-caption num text-text-muted">
-                    {formatPercent(bucket.weightPercent)} · {bucket.positions} position
+                    {formatPercent(bucket.weightPercent)} · {bucket.positions}{' '}
+                    {msg('portfolio.position')}
                     {bucket.positions === 1 ? '' : 's'}
                   </span>
                 </div>
@@ -115,7 +113,7 @@ export function AssetAllocationChart({
 
         {weights.largest.length > 0 ? (
           <div className="space-y-2">
-            <h4 className="text-body font-medium text-text">Largest shares</h4>
+            <h4 className="text-body font-medium text-text">{msg('portfolio.largestShares')}</h4>
             <ul className="flex flex-wrap gap-1.5" role="list">
               {weights.largest.map((share) => (
                 <li key={share.id}>
@@ -159,19 +157,18 @@ export function AllocationPair({
     <div className={cn('space-y-3', className)}>
       {both ? (
         <p className="text-caption text-text-faint">
-          Two populations are shown because both can be formed. Where they disagree, the difference
-          is between what you declared and what the prices say — not an error in either.
+          {msg('portfolio.twoPopulationsAreShownBecauseBoth')}
         </p>
       ) : null}
       <div className={cn('grid gap-3', both ? 'lg:grid-cols-2' : '')}>
         <AssetAllocationChart
           weights={byMarketValue}
-          title="By market value"
+          title={msg('portfolio.byMarketValue')}
           dimension={dimension}
         />
         <AssetAllocationChart
           weights={byDeclaredWeight}
-          title="By declared weight"
+          title={msg('portfolio.byDeclaredWeight')}
           dimension={dimension}
         />
       </div>

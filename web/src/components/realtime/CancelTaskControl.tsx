@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Ban, ShieldAlert } from 'lucide-react';
 import { Button } from '../Button';
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 export interface CancelTaskControlProps {
   jobId: string;
@@ -47,7 +48,7 @@ export function CancelTaskControl({
         className={cn('inline-flex items-center gap-1.5 text-caption text-text-faint', className)}
       >
         <Ban size={12} aria-hidden />
-        This task can no longer be stopped
+        {msg('realtime.thisTaskCanNoLongerBe')}
       </span>
     );
   }
@@ -73,7 +74,7 @@ export function CancelTaskControl({
         onClick={() => setConfirming(true)}
         className={className}
       >
-        Stop this task
+        {msg('realtime.stopThisTask')}
       </Button>
     );
   }
@@ -82,7 +83,7 @@ export function CancelTaskControl({
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
       {collectReason ? (
         <label className="flex items-center gap-2 text-caption text-text-muted">
-          <span>Reason (optional)</span>
+          <span>{msg('realtime.reasonOptional')}</span>
           <input
             value={reason}
             onChange={(event) => setReason(event.target.value)}
@@ -106,7 +107,7 @@ export function CancelTaskControl({
         {pending ? 'Stopping…' : 'Confirm stop'}
       </Button>
       <Button size="sm" variant="ghost" onClick={() => setConfirming(false)} disabled={pending}>
-        Keep it running
+        {msg('realtime.keepItRunning')}
       </Button>
     </div>
   );

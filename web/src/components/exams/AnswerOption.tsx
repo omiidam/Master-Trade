@@ -1,6 +1,7 @@
 import { Check, Minus, X } from 'lucide-react';
 import { useId } from 'react';
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 export type AnswerInputKind = 'single-choice' | 'multi-choice' | 'numeric' | 'written';
 
@@ -43,9 +44,15 @@ const REVIEW_TONE = {
 } as const;
 
 const REVIEW_LABEL = {
-  correct: 'Correct',
-  incorrect: 'Incorrect',
-  partial: 'Partially correct',
+  get correct(): string {
+    return msg('answerOption.correct');
+  },
+  get incorrect(): string {
+    return msg('answerOption.incorrect');
+  },
+  get partial(): string {
+    return msg('answerOption.partiallyCorrect');
+  },
 } as const;
 
 /**

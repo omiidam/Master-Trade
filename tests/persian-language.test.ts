@@ -733,9 +733,10 @@ describe('English behaviour is untouched', () => {
     expect(read(join('web', 'index.html'))).toMatch(/<html lang="en" dir="ltr"/);
   });
 
-  it('translates nothing yet: the Persian face reaches no English element', () => {
-    // The rule is `:lang(fa)`, and nothing in the interface sets it, so the face is declared and
-    // unspent — which is why it costs the existing product nothing.
+  it('says Persian only from the catalogue, never from a component', () => {
+    // Phase 7.5.3.3 gave the interface a Persian catalogue, so the rule is no longer "nothing is Persian"
+    // but "Persian lives in exactly one place". A `.tsx` file with a Persian character in it is copy that
+    // was pasted instead of addressed, and it would ignore the switch that is supposed to choose it.
     const sources = readdirSync(join('web', 'src'), { recursive: true }).map((entry) =>
       String(entry).split('\\').join('/'),
     );
@@ -744,8 +745,18 @@ describe('English behaviour is untouched', () => {
         (name.endsWith('.ts') || name.endsWith('.tsx')) &&
         /[\u0600-\u06FF]/.test(read(join('web', 'src', name))),
     );
-    // The language layer itself carries Persian sample data and rules; nothing else does.
-    expect(persianLiterals.filter((name) => !name.startsWith('language/'))).toEqual([]);
+    // The agent's language layer carries Persian knowledge; the interface carries Persian messages and the
+    // endonyms a switcher shows. Nothing else may.
+    // `messages.en.ts` is in the list because the English switch names the Persian option with its own
+    // script — `Persian (فارسی)` — which is how a language is named to somebody who may not read it.
+    const allowed = (name: string): boolean =>
+      name.startsWith('language/') ||
+      name === 'i18n/messages.fa.ts' ||
+      name === 'i18n/messages.en.ts' ||
+      name === 'i18n/locales.ts';
+    expect(persianLiterals.filter((name) => !allowed(name))).toEqual([]);
+    // And the catalogue is not a token translation: the interface is genuinely translated.
+    expect(read(join('web', 'src', 'i18n', 'messages.fa.ts'))).toMatch(/[\u0600-\u06FF]/);
   });
 });
 

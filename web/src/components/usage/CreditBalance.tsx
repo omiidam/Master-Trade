@@ -1,5 +1,6 @@
 import { Coins } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 /**
  * What is left, and what that means.
@@ -45,11 +46,11 @@ export function CreditBalance({
         {balance}
       </span>
       <span className={cn('text-text-muted', compact ? 'text-caption' : 'text-body')}>
-        of {allowance} this period
+        {msg('exams.of')} {allowance} {msg('usage.thisPeriod')}
       </span>
       {lifetimeConsumed === undefined ? null : (
         <span className="text-caption text-text-faint">
-          {lifetimeConsumed} used since the account was created
+          {lifetimeConsumed} {msg('usage.usedSinceTheAccountWasCreated')}
         </span>
       )}
     </div>
@@ -111,7 +112,7 @@ export function UsageProgressBar({ label, used, limit, unit, className }: UsageP
       </div>
       {limit === null ? (
         <p className="text-caption text-text-faint">
-          Not limited separately by this plan; the balance is the only cap.
+          {msg('usage.notLimitedSeparatelyByThisPlan')}
         </p>
       ) : (
         <div

@@ -31,6 +31,7 @@ import {
   type SocketFactory,
 } from './client.js';
 import { resolveRealtimeSession, SESSION_TOKEN_KEY, type SessionResolution } from './session.js';
+import { msg } from '../i18n/index.js';
 
 export type { JobView } from '@shared/jobs/service';
 
@@ -152,7 +153,7 @@ export function describeEvent(event: RealtimeEvent): { text: string; detail?: st
     case 'backtest.progress':
       return {
         text: `Experiment ${String(payload.experimentId)} → ${String(payload.status)}`,
-        detail: 'A backtest verdict is never a rule activation.',
+        detail: msg('store.aBacktestVerdictIsNeverARuleActivation'),
       };
     case 'research.update':
       return {
@@ -262,7 +263,9 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
           {
             id: `client_unavailable_${Date.now()}`,
             level: 'warning',
-            title: 'No live event stream',
+            get title(): string {
+              return msg('store.noLiveEventStream');
+            },
             body: `${resolution.detail} ${resolution.action}`,
             at: new Date().toISOString(),
             origin: 'client',
@@ -335,7 +338,9 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
             {
               id: `client_notice_${notice.at}_${notice.message.slice(0, 24)}`,
               level: notice.level,
-              title: 'Event stream',
+              get title(): string {
+                return msg('activityPage.eventStream');
+              },
               body: notice.message,
               at: notice.at,
               origin: 'client',
@@ -350,7 +355,9 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
             {
               id: `client_error_${error.code}_${error.correlationId ?? ''}`,
               level: 'warning',
-              title: 'The server refused an action',
+              get title(): string {
+                return msg('store.theServerRefusedAnAction');
+              },
               body: `${error.code}: ${error.message}`,
               at: new Date().toISOString(),
               origin: 'client',
@@ -401,7 +408,9 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
         jobs: {
           ...get().jobs,
           loading: false,
-          error: 'No local API session, so the queue cannot be read.',
+          get error(): string {
+            return msg('store.noLocalAPISessionSoTheQueueCannot');
+          },
           errorCode: 'UNAUTHENTICATED',
         },
       });
@@ -424,7 +433,12 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
       const described =
         error instanceof ApiError
           ? { message: error.describe(), code: error.code as string }
-          : { message: 'The job list could not be read.', code: 'INTERNAL' };
+          : {
+              get message(): string {
+                return msg('store.theJobListCouldNotBeRead');
+              },
+              code: 'INTERNAL',
+            };
       set({
         jobs: {
           ...get().jobs,
@@ -457,7 +471,12 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
       const described =
         error instanceof ApiError
           ? { message: error.describe(), code: error.code as string }
-          : { message: 'The job could not be cancelled.', code: 'INTERNAL' };
+          : {
+              get message(): string {
+                return msg('store.theJobCouldNotBeCancelled');
+              },
+              code: 'INTERNAL',
+            };
       set({
         jobs: {
           ...get().jobs,

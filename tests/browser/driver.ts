@@ -434,17 +434,22 @@ export async function openSession(executablePath: string): Promise<PageSession> 
     },
 
     async clickNav(label) {
+      // Found by shape rather than by the landmark's own name: since the interface is translatable, that name
+      // is in whichever language is chosen, and a driver that matched the English one would stop being able
+      // to navigate the moment the switch worked.
       const clicked = await evaluate<boolean>(`
         (() => {
-          const nav = document.querySelector('nav[aria-label="Primary"]');
-          if (!nav) return false;
           const wanted = ${JSON.stringify(label)};
-          const button = [...nav.querySelectorAll('button')].find(
-            (item) => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim() === wanted,
-          );
-          if (!button) return false;
-          button.click();
-          return true;
+          for (const nav of document.querySelectorAll('nav')) {
+            const button = [...nav.querySelectorAll('button')].find(
+              (item) => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim() === wanted,
+            );
+            if (button) {
+              button.click();
+              return true;
+            }
+          }
+          return false;
         })()
       `);
       if (!clicked) throw new Error(`no navigation button is named ${JSON.stringify(label)}`);

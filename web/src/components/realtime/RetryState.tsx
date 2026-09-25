@@ -3,6 +3,7 @@ import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { Card } from '../Card';
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 export type RetryKind = 'retrying' | 'exhausted' | 'permission-denied' | 'offline';
 
@@ -21,10 +22,30 @@ export interface RetryStateProps {
 }
 
 const PRESENTATION: Record<RetryKind, { label: string; tone: 'warning' | 'danger' | 'neutral' }> = {
-  retrying: { label: 'Retrying', tone: 'warning' },
-  exhausted: { label: 'Gave up', tone: 'danger' },
-  'permission-denied': { label: 'Not permitted', tone: 'danger' },
-  offline: { label: 'Offline', tone: 'neutral' },
+  retrying: {
+    get label(): string {
+      return msg('retryState.retrying');
+    },
+    tone: 'warning',
+  },
+  exhausted: {
+    get label(): string {
+      return msg('retryState.gaveUp');
+    },
+    tone: 'danger',
+  },
+  'permission-denied': {
+    get label(): string {
+      return msg('connectionStatus.notPermitted');
+    },
+    tone: 'danger',
+  },
+  offline: {
+    get label(): string {
+      return msg('connectionStatus.offline');
+    },
+    tone: 'neutral',
+  },
 };
 
 /**
@@ -80,7 +101,9 @@ export function RetryState({
           <p className="mt-0.5 text-caption opacity-90">{message}</p>
           {nextAttemptInMs !== undefined && kind === 'retrying' ? (
             <p className="mt-0.5 text-caption text-text-faint">
-              Next attempt in about {Math.max(0, Math.round(nextAttemptInMs / 100) / 10)}s.
+              {msg('realtime.nextAttemptInAbout')}{' '}
+              {Math.max(0, Math.round(nextAttemptInMs / 100) / 10)}
+              {msg('realtime.s')}
             </p>
           ) : null}
         </div>

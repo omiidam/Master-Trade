@@ -5,6 +5,7 @@ import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
+import { msg } from '../../i18n/index.js';
 
 export interface MistakePatternInput {
   id: string;
@@ -43,7 +44,7 @@ export function MistakeAnalysisCard({
     <Card surface="data" className={className}>
       <CardHeader divider>
         <div>
-          <CardTitle className="text-body">Mistake analysis</CardTitle>
+          <CardTitle className="text-body">{msg('exams.mistakeAnalysis')}</CardTitle>
           <CardDescription>
             {patterns.length === 0
               ? 'No incorrect answers recorded'
@@ -55,16 +56,16 @@ export function MistakeAnalysisCard({
           </CardDescription>
         </div>
         <Badge tone="warning" icon={<AlertTriangle size={12} aria-hidden />}>
-          review
+          {msg('exams.review')}
         </Badge>
       </CardHeader>
 
       <CardContent>
         {patterns.length === 0 ? (
           <EmptyState
-            title="Nothing missed yet"
-            description="Mistake patterns appear once a graded attempt has incorrect answers. An ungraded attempt produces no analysis."
-            hint="Empty is stated, not hidden."
+            title={msg('exams.nothingMissedYet')}
+            description={msg('mistakeAnalysisCard.mistakePatternsAppearOnceAGradedAttemptHas')}
+            hint={msg('mistakeAnalysisCard.emptyIsStatedNotHidden')}
           />
         ) : (
           <ul className="space-y-3">
@@ -73,7 +74,8 @@ export function MistakeAnalysisCard({
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-body text-text">{pattern.topic}</p>
                   <span className="num text-caption text-text-muted">
-                    {pattern.occurrences} misses · {formatPercent(pattern.share * 100, 0)} of misses
+                    {pattern.occurrences} {msg('exams.misses')}{' '}
+                    {formatPercent(pattern.share * 100, 0)} {msg('exams.ofMisses')}
                   </span>
                 </div>
                 <div
@@ -91,8 +93,8 @@ export function MistakeAnalysisCard({
                 </div>
                 <p className="text-caption text-text-muted">{pattern.note}</p>
                 <p className="text-caption text-text-faint">
-                  Points back to <span className="num">{pattern.lessonId}</span> · last seen{' '}
-                  {formatTimestamp(pattern.lastSeenAt)}
+                  {msg('exams.pointsBackTo')} <span className="num">{pattern.lessonId}</span>{' '}
+                  {msg('exams.lastSeen')} {formatTimestamp(pattern.lastSeenAt)}
                 </p>
               </li>
             ))}
@@ -101,14 +103,14 @@ export function MistakeAnalysisCard({
       </CardContent>
 
       <CardFooter className="text-caption text-text-faint">
-        <span>Patterns come from stored attempt results, never from a model summary.</span>
+        <span>{msg('exams.patternsComeFromStoredAttemptResults')}</span>
         <Button
           size="sm"
           variant="ghost"
           disabled
           trailingIcon={<ArrowUpRight size={13} aria-hidden />}
         >
-          Open review plan
+          {msg('exams.openReviewPlan')}
         </Button>
       </CardFooter>
     </Card>

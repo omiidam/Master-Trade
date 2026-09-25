@@ -8,6 +8,7 @@ import { ClarificationQuestionCard } from './ClarificationQuestionCard';
 import { DimensionGrid } from './InputQualitySummary';
 import { ValidationIssueList } from './ValidationIssueList';
 import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
+import { msg } from '../../i18n/index.js';
 
 /**
  * Whether one requested analysis may run, and in what form.
@@ -31,14 +32,54 @@ import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
  */
 
 const COUNT_ROWS: readonly { key: keyof ReadinessCounts; label: string }[] = [
-  { key: 'inputsConsidered', label: 'Inputs considered' },
-  { key: 'required', label: 'Required' },
-  { key: 'satisfied', label: 'Satisfied' },
-  { key: 'missing', label: 'Missing' },
-  { key: 'stale', label: 'Out of date' },
-  { key: 'invalid', label: 'Invalid' },
-  { key: 'conflicting', label: 'Conflicting' },
-  { key: 'assumed', label: 'Assumed' },
+  {
+    key: 'inputsConsidered',
+    get label(): string {
+      return msg('analysisReadinessPanel.inputsConsidered');
+    },
+  },
+  {
+    key: 'required',
+    get label(): string {
+      return msg('analysisReadinessPanel.required');
+    },
+  },
+  {
+    key: 'satisfied',
+    get label(): string {
+      return msg('analysisReadinessPanel.satisfied');
+    },
+  },
+  {
+    key: 'missing',
+    get label(): string {
+      return msg('decisions.confidence.missing');
+    },
+  },
+  {
+    key: 'stale',
+    get label(): string {
+      return msg('analysisReadinessPanel.outOfDate');
+    },
+  },
+  {
+    key: 'invalid',
+    get label(): string {
+      return msg('analysisReadinessPanel.invalid');
+    },
+  },
+  {
+    key: 'conflicting',
+    get label(): string {
+      return msg('analysisReadinessPanel.conflicting');
+    },
+  },
+  {
+    key: 'assumed',
+    get label(): string {
+      return msg('decisions.confidence.assumed');
+    },
+  },
 ];
 
 export interface AnalysisReadinessPanelProps {
@@ -87,17 +128,13 @@ export function AnalysisReadinessPanel({
 
       <CardContent className="space-y-3">
         <p className="text-body text-text-muted">
-          <span className="text-text">Why: </span>
+          <span className="text-text">{msg('quality.why')} </span>
           {describeDecisionCode(decision.decidedBy)}
         </p>
         <p className="text-caption text-text-faint font-mono">{decision.decidedBy}</p>
 
         {planned ? (
-          <p className="text-body text-warning">
-            The inputs were assessed and the verdict stands. This capability has not been built yet,
-            so no analysis is produced — that is a gap in the product, not a problem with your
-            inputs.
-          </p>
+          <p className="text-body text-warning">{msg('quality.theInputsWereAssessedAndThe')}</p>
         ) : null}
 
         {decision.capabilityNote === null ? null : (
@@ -120,7 +157,7 @@ export function AnalysisReadinessPanel({
             <div className="flex items-center gap-1.5">
               <TriangleAlert size={14} aria-hidden className="text-warning" />
               <h4 className="text-caption font-semibold text-text-muted uppercase">
-                Limitations this answer would carry
+                {msg('quality.limitationsThisAnswerWouldCarry')}
               </h4>
             </div>
             <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
@@ -134,7 +171,7 @@ export function AnalysisReadinessPanel({
         {decision.assumptions.length > 0 ? (
           <div className="space-y-2">
             <h4 className="text-caption font-semibold text-text-muted uppercase">
-              Substitutions and premises
+              {msg('quality.substitutionsAndPremises')}
             </h4>
             {decision.assumptions.map((notice) => (
               <AssumptionNotice key={`${notice.field}:${notice.origin}`} notice={notice} />
@@ -168,7 +205,7 @@ export function AnalysisReadinessPanel({
             <div className="flex items-center gap-1.5">
               <ShieldCheck size={14} aria-hidden className="text-success" />
               <h4 className="text-caption font-semibold text-text-muted uppercase">
-                What can still be analysed
+                {msg('quality.whatCanStillBeAnalysed')}
               </h4>
             </div>
             <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
@@ -181,11 +218,11 @@ export function AnalysisReadinessPanel({
 
         <div className="space-y-2">
           <h4 className="text-caption font-semibold text-text-muted uppercase">
-            Findings behind this verdict
+            {msg('quality.findingsBehindThisVerdict')}
           </h4>
           <ValidationIssueList
             issues={decision.issues}
-            emptyMessage="No findings: every input this analysis consumes is present, well-formed and current."
+            emptyMessage={msg('analysisReadinessPanel.noFindingsEveryInputThisAnalysisConsumesIs')}
           />
         </div>
 

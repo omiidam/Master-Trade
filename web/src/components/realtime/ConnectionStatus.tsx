@@ -1,6 +1,7 @@
 import { Card, type CardEmphasis } from '../Card';
 import { cn } from '../../lib/cn';
 import type { ConnectionState } from '../../realtime/client.js';
+import { msg } from '../../i18n/index.js';
 
 export type ConnectionTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 
@@ -34,37 +35,68 @@ interface Presentation {
 export const CONNECTION_PRESENTATION: Record<ConnectionState | 'initialising', Presentation> = {
   initialising: {
     tone: 'neutral',
-    label: 'Preparing',
+    get label(): string {
+      return msg('connectionStatus.preparing');
+    },
     dotClass: 'bg-text-faint',
     willRetry: false,
   },
-  idle: { tone: 'neutral', label: 'Not connected', dotClass: 'bg-text-faint', willRetry: false },
+  idle: {
+    tone: 'neutral',
+    get label(): string {
+      return msg('connectionStatus.notConnected');
+    },
+    dotClass: 'bg-text-faint',
+    willRetry: false,
+  },
   connecting: {
     tone: 'info',
-    label: 'Connecting',
+    get label(): string {
+      return msg('connectionStatus.connecting');
+    },
     dotClass: 'bg-info animate-pulse',
     willRetry: true,
   },
   authenticating: {
     tone: 'info',
-    label: 'Authenticating',
+    get label(): string {
+      return msg('connectionStatus.authenticating');
+    },
     dotClass: 'bg-info animate-pulse',
     willRetry: true,
   },
   online: {
     tone: 'success',
-    label: 'Live',
+    get label(): string {
+      return msg('connectionStatus.live');
+    },
     dotClass: 'bg-success animate-pulse',
     willRetry: false,
   },
   reconnecting: {
     tone: 'warning',
-    label: 'Reconnecting',
+    get label(): string {
+      return msg('connectionStatus.reconnecting');
+    },
     dotClass: 'bg-warning animate-pulse',
     willRetry: true,
   },
-  offline: { tone: 'neutral', label: 'Offline', dotClass: 'bg-text-faint', willRetry: false },
-  denied: { tone: 'danger', label: 'Not permitted', dotClass: 'bg-danger', willRetry: false },
+  offline: {
+    tone: 'neutral',
+    get label(): string {
+      return msg('connectionStatus.offline');
+    },
+    dotClass: 'bg-text-faint',
+    willRetry: false,
+  },
+  denied: {
+    tone: 'danger',
+    get label(): string {
+      return msg('connectionStatus.notPermitted');
+    },
+    dotClass: 'bg-danger',
+    willRetry: false,
+  },
 };
 
 /** The compact pill's own classes. A pill is a control-sized mark, not a card, so it keeps them. */
@@ -159,16 +191,18 @@ export function ConnectionStatus({
         <p className="text-body font-medium">{presentation.label}</p>
         {attempts !== undefined && attempts > 0 ? (
           <span className="text-caption opacity-80">
-            attempt {attempts}
+            {msg('realtime.attempt')} {attempts}
             {maxAttempts === undefined ? '' : ` of ${maxAttempts}`}
           </span>
         ) : null}
         {reconnects !== undefined && reconnects > 0 ? (
-          <span className="text-caption opacity-80">{reconnects} reconnect(s)</span>
+          <span className="text-caption opacity-80">
+            {reconnects} {msg('realtime.reconnectS')}
+          </span>
         ) : null}
         {!presentation.willRetry && state === 'denied' ? (
           <span className="text-caption opacity-80">
-            Retrying will not help until this changes.
+            {msg('realtime.retryingWillNotHelpUntilThis')}
           </span>
         ) : null}
       </div>
@@ -178,15 +212,15 @@ export function ConnectionStatus({
       {delivered !== undefined || invalidDropped !== undefined || staleDropped !== undefined ? (
         <dl className="mt-3 grid grid-cols-1 gap-2 text-caption opacity-90 sm:grid-cols-3">
           <div>
-            <dt className="text-text-faint">Events delivered</dt>
+            <dt className="text-text-faint">{msg('realtime.eventsDelivered')}</dt>
             <dd className="num">{delivered ?? 0}</dd>
           </div>
           <div>
-            <dt className="text-text-faint">Stale, dropped</dt>
+            <dt className="text-text-faint">{msg('realtime.staleDropped')}</dt>
             <dd className="num">{staleDropped ?? 0}</dd>
           </div>
           <div>
-            <dt className="text-text-faint">Unreadable, dropped</dt>
+            <dt className="text-text-faint">{msg('realtime.unreadableDropped')}</dt>
             <dd className="num">{invalidDropped ?? 0}</dd>
           </div>
         </dl>

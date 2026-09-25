@@ -47,12 +47,14 @@ export const DEFAULT_LANGUAGE_PREFERENCE: LanguagePreference = 'auto';
  */
 export const LANGUAGE_PREFERENCE_KEY = 'master-trade.language.preference';
 
-/** How each option is written in the interface, in one place so a control and its test agree. */
-export const LANGUAGE_PREFERENCE_LABELS: Readonly<Record<LanguagePreference, string>> = {
-  auto: 'Automatic',
-  fa: 'Persian (فارسی)',
-  en: 'English',
-};
+/**
+ * How each option is written in the interface is now a message key, not a string here.
+ *
+ * Phase 7.5.3.1 kept the three labels beside the setting because the setting and its labels were the same
+ * thing. Phase 7.5.3.3 made the choice decide the *interface* language as well, and the switch's own wording
+ * has to change as a result of being used — so the labels belong to the catalogue the interface reads, in
+ * `settings.languageAutomatic` and its neighbours, and this file went back to owning only the setting.
+ */
 
 /**
  * The slice of storage this module needs, and nothing more.

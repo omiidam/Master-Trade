@@ -4,6 +4,7 @@ import { provenanceLabel } from '@shared/frontend/viewModels';
 import { formatTimestamp } from '../lib/format';
 import { cn } from '../lib/cn';
 import { ProvenanceBadge } from './Badge';
+import { msg } from '../i18n/index.js';
 
 export interface ProvenanceBannerProps {
   provenance: DataProvenance;
@@ -46,7 +47,7 @@ export function ProvenanceBanner({
         <span className="num">{formatTimestamp(updatedAt)}</span>
         <span className="inline-flex items-center gap-1">
           <Lock size={12} aria-hidden />
-          Read-only
+          {msg('ui.readOnly')}
         </span>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { Badge } from '../Badge';
 import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatPercent, insightSeverityLabel, insightSeverityTone } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * How concentrated the composition is, in the engine's own units and at the engine's own
@@ -50,13 +51,29 @@ function Panel({ set, title }: { set: WeightSet; title: string }) {
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {(
           [
-            ['Largest single', formatPercent(set.top1Percent), 'Top position'],
-            ['Top three', formatPercent(set.top3Percent), 'Three largest combined'],
-            ['Top five', formatPercent(set.top5Percent), 'Five largest combined'],
-            ['Effective positions', set.effectivePositions.toFixed(2), '1 / HHI'],
-            ['HHI', set.hhi.toFixed(3), 'Herfindahl–Hirschman index, 0–1'],
             [
-              'Positions in set',
+              msg('concentrationRiskCard.largestSingle'),
+              formatPercent(set.top1Percent),
+              msg('concentrationRiskCard.topPosition'),
+            ],
+            [
+              msg('concentrationRiskCard.topThree'),
+              formatPercent(set.top3Percent),
+              msg('concentrationRiskCard.threeLargestCombined'),
+            ],
+            [
+              msg('concentrationRiskCard.topFive'),
+              formatPercent(set.top5Percent),
+              msg('concentrationRiskCard.fiveLargestCombined'),
+            ],
+            [
+              msg('concentrationRiskCard.effectivePositions'),
+              set.effectivePositions.toFixed(2),
+              '1 / HHI',
+            ],
+            ['HHI', set.hhi.toFixed(3), msg('concentrationRiskCard.herfindahlHirschmanIndex01')],
+            [
+              msg('concentrationRiskCard.positionsInSet'),
               String(set.positions),
               `Covering ${formatPercent(set.coveragePercent)}`,
             ],
@@ -92,12 +109,12 @@ export function ConcentrationRiskCard({
       <CardHeader divider>
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <Gauge size={16} aria-hidden className="text-text-muted" />
-          <CardTitle>Concentration</CardTitle>
+          <CardTitle>{msg('portfolio.concentration')}</CardTitle>
           {insight === null ? (
-            <Badge tone="outline">no concentration observation was made</Badge>
+            <Badge tone="outline">{msg('portfolio.noConcentrationObservationWasMade')}</Badge>
           ) : (
             <Badge tone={insightSeverityTone(insight.severity)}>
-              engine verdict: {insightSeverityLabel(insight.severity)}
+              {msg('portfolio.engineVerdict')} {insightSeverityLabel(insight.severity)}
             </Badge>
           )}
         </div>
@@ -106,13 +123,12 @@ export function ConcentrationRiskCard({
       <CardContent className="space-y-4">
         {sets.length === 0 ? (
           <p className="text-body text-text-muted">
-            No population of shares could be formed, so no concentration figure exists. The gaps
-            panel says what is missing, rather than this card showing a concentration of zero.
+            {msg('portfolio.noPopulationOfSharesCouldBe')}
           </p>
         ) : (
           <div className={cn('grid gap-3', sets.length > 1 ? 'lg:grid-cols-2' : '')}>
             {sets.map((set) => (
-              <Panel key={set.basis} set={set} title="Concentration" />
+              <Panel key={set.basis} set={set} title={msg('portfolio.concentration')} />
             ))}
           </div>
         )}
@@ -133,11 +149,7 @@ export function ConcentrationRiskCard({
 
         <p className="inline-flex items-start gap-1.5 text-caption text-text-muted">
           <AlertTriangle size={13} aria-hidden className="mt-0.5 shrink-0 text-warning" />
-          <span>
-            A concentration figure states how much of the composition sits in one place. It is an
-            observation about what you declared, not a recommendation to change it, and it says
-            nothing about whether that position is a good one.
-          </span>
+          <span>{msg('portfolio.aConcentrationFigureStatesHowMuch')}</span>
         </p>
       </CardContent>
     </Card>

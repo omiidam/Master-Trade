@@ -23,6 +23,7 @@ import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 import { NAV_SECTIONS } from '../web/src/config/navigation.js';
+import { copyOf } from './helpers/source-copy.js';
 import { PLAN_CATALOGUE } from '../packages/shared/src/usage/plans.js';
 
 const root = process.cwd();
@@ -161,7 +162,7 @@ describe('the usage surface', () => {
     }
 
     const plan = read('components/usage/SubscriptionPlanCard.tsx');
-    expect(plan).toMatch(/no payment integration/i);
+    expect(copyOf(plan)).toMatch(/no payment integration/i);
     expect(plan).not.toMatch(/\$\d|price:\s*\d/);
 
     const upgrade = read('components/usage/UpgradePrompt.tsx');
@@ -183,7 +184,7 @@ describe('the usage surface', () => {
     // purchase.
     expect(upgrade).toMatch(/feature-disabled/);
     expect(upgrade).toMatch(/feature-coming-soon/);
-    expect(upgrade).toMatch(/That is a gap in the product, not in your entitlement/);
+    expect(copyOf(upgrade)).toMatch(/That is a gap in the product, not in your entitlement/);
 
     const card = read('components/usage/UsageCreditsCard.tsx');
     // A capability the account cannot use is listed with the same prominence as one it can.
@@ -191,13 +192,13 @@ describe('the usage surface', () => {
     expect(card).toMatch(/grouped\.entitlement/);
     expect(card).toMatch(/denialGroup/);
     // The balance is not presented as a budget that can be spent on anything.
-    expect(card).toMatch(/One credit is one agent turn/);
+    expect(copyOf(card)).toMatch(/One credit is one agent turn/);
   });
 
   it('shows the release of a returned charge rather than hiding it', () => {
     const history = read('components/usage/UsageHistory.tsx');
     expect(history).toMatch(/released/);
-    expect(history).toMatch(/Returned/);
+    expect(copyOf(history)).toMatch(/Returned/);
     // The balance comes off the row the server stamped, not from replaying the history.
     expect(history).toMatch(/balanceAfter/);
     expect(history).toMatch(/movement\.balanceAfter/);
@@ -218,13 +219,14 @@ describe('the usage surface', () => {
     expect(page).toMatch(/\bUsageEmptyState\b/);
 
     // With no session there is no balance, and the page says so with the resolver's reason.
-    expect(page).toMatch(/No usage to show/);
+    expect(copyOf(page)).toMatch(/No usage to show/);
     expect(page).toMatch(
       /a stand-in figure would be worse than an empty page|Nothing is displayed/,
     );
 
     const upgrade = read('components/usage/UpgradePrompt.tsx');
-    expect(upgrade).toMatch(/Not enough credits/);
+    expect(copyOf(upgrade)).toMatch(/Not enough credits/);
+    // Still a sentence built around a figure, so it is still read from the source.
     expect(upgrade).toMatch(/Nothing was consumed/);
 
     const store = read(STORE);
@@ -238,7 +240,7 @@ describe('the usage surface', () => {
     expect(card).toMatch(/usage\.durable/);
     // Whitespace-tolerant: the sentence wraps in the JSX, and the assertion is about the
     // claim rather than about the line breaks.
-    expect(card).toMatch(/not\s+durable here/);
+    expect(copyOf(card)).toMatch(/not\s+durable here/);
     const page = read(PAGE);
     expect(page).toMatch(/Durable ledger/);
   });

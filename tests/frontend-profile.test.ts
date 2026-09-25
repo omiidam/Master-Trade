@@ -13,6 +13,7 @@ import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 import { NAV_SECTIONS } from '../web/src/config/navigation.js';
+import { translate } from '../web/src/i18n/index.js';
 
 const root = process.cwd();
 const web = join(root, 'web');
@@ -87,7 +88,7 @@ describe('profile surface', () => {
   it('is one navigation entry, not a group of subsections', () => {
     const entries = NAV_SECTIONS.filter((section) => section.id === 'profile');
     expect(entries).toHaveLength(1);
-    expect(entries[0]?.label).toBe('Profile');
+    expect(entries[0] && translate('en', entries[0].labelKey)).toBe('Profile');
 
     // The page's own sections are in-page tabs, so none of them is a navigation id.
     const ids = NAV_SECTIONS.map((section) => section.id);

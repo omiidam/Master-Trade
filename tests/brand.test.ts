@@ -20,6 +20,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { copyOf } from './helpers/source-copy.js';
 import {
   BRAND_BACKGROUND,
   ICON_SET,
@@ -286,7 +287,7 @@ describe('the mark in the interface', () => {
     // word "Master Trade" is how a screen reader ends up saying it twice.
     expect(mark).toContain("{ alt: '', 'aria-hidden': true }");
     expect(mark).toContain('alt: label');
-    expect(mark).toContain("label: 'Master Trade'");
+    expect(copyOf(mark)).toContain('Master Trade');
   });
 
   it('uses the generated assets rather than a second drawing of the mark', () => {
@@ -311,7 +312,7 @@ describe('the mark in the interface', () => {
   });
 
   it('keeps the honesty notices beside the brand, never replaced by it', () => {
-    expect(about).toContain('Smarter trading. Bigger possibilities.');
-    expect(shell).toContain('live trading and broker execution are disabled by');
+    expect(copyOf(about)).toContain('Smarter trading. Bigger possibilities.');
+    expect(copyOf(shell)).toContain('live trading and broker execution are disabled by');
   });
 });

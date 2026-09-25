@@ -36,10 +36,10 @@ import { Grid, Workspace } from '../app/Workspace';
 import { formatPercent, formatRelative } from '../lib/format';
 import { cn } from '../lib/cn';
 import {
-  MEMORY_PREVIEW_NOTICE,
+  previewNotice,
   MEMORY_STATUS_EXPLANATION,
   MEMORY_STATUS_LABEL,
-  MEMORY_TRUST_POLICY,
+  trustPolicy,
   memoryStatus,
   mockKnowledge,
   mockKnowledgeGrowth,
@@ -49,12 +49,37 @@ import {
   mockTrustFacets,
   type MemoryStatus,
 } from '../mock/memory';
+import { msg } from '../i18n/index.js';
 
 const TABS = [
-  { id: 'board', label: 'Knowledge board', icon: <Network size={14} aria-hidden /> },
-  { id: 'search', label: 'Search', icon: <Database size={14} aria-hidden /> },
-  { id: 'timeline', label: 'History', icon: <GitBranch size={14} aria-hidden /> },
-  { id: 'states', label: 'Trust states', icon: <ShieldCheck size={14} aria-hidden /> },
+  {
+    id: 'board',
+    get label(): string {
+      return msg('memoryPage.knowledgeBoard');
+    },
+    icon: <Network size={14} aria-hidden />,
+  },
+  {
+    id: 'search',
+    get label(): string {
+      return msg('shell.search');
+    },
+    icon: <Database size={14} aria-hidden />,
+  },
+  {
+    id: 'timeline',
+    get label(): string {
+      return msg('examsPage.history');
+    },
+    icon: <GitBranch size={14} aria-hidden />,
+  },
+  {
+    id: 'states',
+    get label(): string {
+      return msg('memory.trustStates');
+    },
+    icon: <ShieldCheck size={14} aria-hidden />,
+  },
 ] as const;
 
 const STATUS_ICON = {
@@ -119,14 +144,14 @@ export function MemoryPage() {
 
   return (
     <Workspace
-      title="Knowledge memory"
-      description="What the agent may use, where each claim came from and how much it may be trusted. Retrieval never turns unverified text into fact."
+      title={msg('memory.knowledgeMemory')}
+      description={msg('memoryPage.whatTheAgentMayUseWhereEachClaim')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>
             provenance required
           </Badge>
-          <Tooltip content={MEMORY_PREVIEW_NOTICE}>
+          <Tooltip content={previewNotice()}>
             <Badge tone="warning">preview data</Badge>
           </Tooltip>
         </>
@@ -136,8 +161,8 @@ export function MemoryPage() {
         <Card surface="data">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Knowledge base</CardTitle>
-              <CardDescription>Records across five categories</CardDescription>
+              <CardTitle className="text-body">{msg('memory.knowledgeBase')}</CardTitle>
+              <CardDescription>{msg('memory.recordsAcrossFiveCategories')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="flex items-end justify-between gap-3">
@@ -149,15 +174,15 @@ export function MemoryPage() {
           <CardFooter className="text-caption text-text-faint">
             <span className="inline-flex items-center gap-1.5">
               <TrendingUp size={12} aria-hidden />
-              {growthTotal} verified records at the end of the series
+              {growthTotal} {msg('memory.verifiedRecordsAtTheEndOf')}
             </span>
           </CardFooter>
         </Card>
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Trust mix</CardTitle>
-              <CardDescription>Illustrative sample of nine records</CardDescription>
+              <CardTitle className="text-body">{msg('memory.trustMix')}</CardTitle>
+              <CardDescription>{msg('memory.illustrativeSampleOfNineRecords')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -172,8 +197,8 @@ export function MemoryPage() {
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Verified share</CardTitle>
-              <CardDescription>Of the records in the illustrative sample</CardDescription>
+              <CardTitle className="text-body">{msg('memory.verifiedShare')}</CardTitle>
+              <CardDescription>{msg('memory.ofTheRecordsInTheIllustrative')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -181,20 +206,20 @@ export function MemoryPage() {
               {formatPercent((counts.verified / mockKnowledge.length) * 100, 0)}
             </span>
             <p className="mt-2 text-caption text-text-faint">
-              The rest is unverified or awaiting a non-model verifier. Nothing is promoted by usage.
+              {msg('memory.theRestIsUnverifiedOrAwaiting')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Trust policy</CardTitle>
-              <CardDescription>What keeps the knowledge base honest</CardDescription>
+              <CardTitle className="text-body">{msg('memory.trustPolicy')}</CardTitle>
+              <CardDescription>{msg('memory.whatKeepsTheKnowledgeBaseHonest')}</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="text-caption text-text-muted">{MEMORY_TRUST_POLICY}</CardContent>
+          <CardContent className="text-caption text-text-muted">{trustPolicy()}</CardContent>
           <CardFooter className="text-caption text-text-faint">
-            <span className="num">contextKindForTrust()</span>
+            <span className="num">{msg('memory.contextKindForTrust')}</span>
           </CardFooter>
         </Card>
       </Grid>
@@ -203,16 +228,16 @@ export function MemoryPage() {
         items={TABS.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
         value={tab}
         onValueChange={setTab}
-        aria-label="Memory sections"
+        aria-label={msg('memory.memorySections')}
       >
         <TabPanel value="board" className="space-y-4">
           <Card surface="featured">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Knowledge growth</CardTitle>
-                <CardDescription>Records per month by trust, six months of study</CardDescription>
+                <CardTitle className="text-body">{msg('memory.knowledgeGrowth')}</CardTitle>
+                <CardDescription>{msg('memory.recordsPerMonthByTrustSix')}</CardDescription>
               </div>
-              <Badge tone="neutral">illustrative</Badge>
+              <Badge tone="neutral">{msg('memory.illustrative')}</Badge>
             </CardHeader>
             <CardContent>
               <div className="flex items-end gap-3">
@@ -247,23 +272,23 @@ export function MemoryPage() {
               <div className="mt-3 flex flex-wrap items-center gap-3 text-caption text-text-faint">
                 <span className="inline-flex items-center gap-1.5">
                   <span aria-hidden className="h-2 w-2 rounded-full bg-primary" />
-                  verified
+                  {msg('memory.verified')}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span aria-hidden className="h-2 w-2 rounded-full bg-warning/70" />
-                  pending review
+                  {msg('memory.pendingReview')}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span aria-hidden className="h-2 w-2 rounded-full bg-ai/70" />
-                  unverified
+                  {msg('memory.unverified')}
                 </span>
               </div>
             </CardContent>
           </Card>
 
           <Section
-            title="Categories"
-            description="Knowledge is filed by what it is for, not by when it was learned."
+            title={msg('memory.categories')}
+            description={msg('memoryPage.knowledgeIsFiledByWhatItIsFor')}
           >
             <Grid columns={3}>
               {mockMemoryCategories.map((category) => (
@@ -278,7 +303,7 @@ export function MemoryPage() {
                   <CardContent className="flex items-center justify-between gap-2 text-caption text-text-faint">
                     <span>
                       {mockKnowledge.filter((record) => record.categoryId === category.id).length}{' '}
-                      in the sample
+                      {msg('memory.inTheSample')}
                     </span>
                     <span className="num">{category.id}</span>
                   </CardContent>
@@ -288,8 +313,8 @@ export function MemoryPage() {
           </Section>
 
           <Section
-            title="Recent knowledge"
-            description="Live records only; archived items are kept and shown under History."
+            title={msg('memory.recentKnowledge')}
+            description={msg('memoryPage.liveRecordsOnlyArchivedItemsAreKeptAnd')}
           >
             <Grid columns={2}>
               {activeRecords.map((record) => (
@@ -304,8 +329,8 @@ export function MemoryPage() {
 
           <ErrorState
             severity="info"
-            title="Not a connected knowledge base"
-            description={MEMORY_PREVIEW_NOTICE}
+            title={msg('memory.notAConnectedKnowledgeBase')}
+            description={previewNotice()}
             code="PREVIEW_FIXTURE"
             action={
               <span className="text-caption">
@@ -319,9 +344,9 @@ export function MemoryPage() {
         <TabPanel value="search" className="space-y-4">
           <KnowledgeSearch
             facets={mockTrustFacets}
-            facetLabel="Trust state"
-            title="Search the knowledge base"
-            description="Literal text matching over the illustrative set, plus trust filters"
+            facetLabel={msg('memoryPage.trustState')}
+            title={msg('memory.searchTheKnowledgeBase')}
+            description={msg('memoryPage.literalTextMatchingOverTheIllustrativeSetPlus')}
             value={query}
             onValueChange={setQuery}
             activeFacets={statusFilters}
@@ -330,9 +355,9 @@ export function MemoryPage() {
           />
           <KnowledgeSearch
             facets={mockSourceFacets}
-            facetLabel="Source kind"
-            title="Filter by source"
-            description="Where the record came from — an independent question from how much it is trusted"
+            facetLabel={msg('memoryPage.sourceKind')}
+            title={msg('memory.filterBySource')}
+            description={msg('memoryPage.whereTheRecordCameFromAnIndependent')}
             showInput={false}
             value={query}
             onValueChange={setQuery}
@@ -343,7 +368,7 @@ export function MemoryPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-caption text-text-faint">
-              Filters are independent: trust and source are separate questions about a record.
+              {msg('memory.filtersAreIndependentTrustAndSource')}
             </p>
             <ClearFiltersButton
               onClear={() => {
@@ -358,9 +383,9 @@ export function MemoryPage() {
           {results.length === 0 ? (
             <EmptyState
               icon={<BrainCircuit size={22} aria-hidden />}
-              title="No records match this filter"
-              description="The preview filter matches literal text only. Semantic retrieval — embeddings, ranking and trust-filtered recall — is not connected, so an empty result here does not mean the knowledge base is empty."
-              hint="An empty result states which filter produced it."
+              title={msg('memory.noRecordsMatchThisFilter')}
+              description={msg('memoryPage.thePreviewFilterMatchesLiteralTextOnlySemantic')}
+              hint={msg('memoryPage.anEmptyResultStatesWhichFilterProducedIt')}
             />
           ) : (
             <Grid columns={2}>
@@ -381,7 +406,7 @@ export function MemoryPage() {
           <Grid columns={3}>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Append-only</CardTitle>
+                <CardTitle className="text-body">{msg('memory.appendOnly')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
                 `memory_versions` is append-only in the database: every revision, trust change and
@@ -390,20 +415,18 @@ export function MemoryPage() {
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Verification is recorded</CardTitle>
+                <CardTitle className="text-body">{msg('memory.verificationIsRecorded')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                A promotion to verified or authoritative names the human or tool that granted it.
-                The model is never accepted as a verifier.
+                {msg('memory.aPromotionToVerifiedOrAuthoritative')}
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Deletion is a tombstone</CardTitle>
+                <CardTitle className="text-body">{msg('memory.deletionIsATombstone')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Removing knowledge marks it archived and keeps the history, so a claim that was once
-                trusted remains auditable.
+                {msg('memory.removingKnowledgeMarksItArchivedAnd')}
               </CardContent>
             </Card>
           </Grid>
@@ -411,8 +434,8 @@ export function MemoryPage() {
 
         <TabPanel value="states" className="space-y-4">
           <Section
-            title="Trust states"
-            description="Four states, each with what it means for a reader."
+            title={msg('memory.trustStates')}
+            description={msg('memoryPage.fourStatesEachWithWhatItMeansFor')}
           >
             <Grid columns={2}>
               {(['verified', 'pending-review', 'unverified', 'archived'] as const).map((status) => (
@@ -430,7 +453,7 @@ export function MemoryPage() {
                     <p>{MEMORY_STATUS_EXPLANATION[status]}</p>
                     <p className="text-text-faint">
                       {mockKnowledge.filter((record) => memoryStatus(record) === status).length}{' '}
-                      example records in this state.
+                      {msg('memory.exampleRecordsInThisState')}
                     </p>
                   </CardContent>
                 </Card>
@@ -441,7 +464,7 @@ export function MemoryPage() {
           <Grid columns={3}>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Loading</CardTitle>
+                <CardTitle className="text-body">{msg('exams.loading')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <SkeletonCard rows={4} />
@@ -449,25 +472,25 @@ export function MemoryPage() {
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Empty</CardTitle>
+                <CardTitle className="text-body">{msg('exams.empty')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <EmptyState
                   icon={<Database size={22} aria-hidden />}
-                  title="No knowledge recorded"
-                  description="A freshly started profile has no records. That is stated, not disguised with placeholder rows."
+                  title={msg('memory.noKnowledgeRecorded')}
+                  description={msg('memoryPage.aFreshlyStartedProfileHasNoRecordsThat')}
                 />
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Unverified warning</CardTitle>
+                <CardTitle className="text-body">{msg('memory.unverifiedWarning')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ErrorState
                   severity="warning"
-                  title="Retrieved but not trusted"
-                  description="Unverified records may be used as context, but they are labelled uncertainty and can never be presented as fact."
+                  title={msg('memory.retrievedButNotTrusted')}
+                  description={msg('memoryPage.unverifiedRecordsMayBeUsedAsContextBut')}
                   code="POLICY_VIOLATION"
                 />
               </CardContent>
@@ -477,11 +500,11 @@ export function MemoryPage() {
           <Card surface="data">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Archived records</CardTitle>
-                <CardDescription>Tombstoned, retained as evidence</CardDescription>
+                <CardTitle className="text-body">{msg('memory.archivedRecords')}</CardTitle>
+                <CardDescription>{msg('memory.tombstonedRetainedAsEvidence')}</CardDescription>
               </div>
               <Badge tone="outline" icon={<Archive size={12} aria-hidden />}>
-                {counts.archived} archived
+                {counts.archived} {msg('journal.archived')}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -495,7 +518,8 @@ export function MemoryPage() {
                     </div>
                     <p className="mt-1 text-caption text-text-muted">{record.summary}</p>
                     <p className="mt-1 text-caption text-text-faint">
-                      updated {formatRelative(record.updatedAt)} · v{record.version}
+                      {msg('memory.updated')} {formatRelative(record.updatedAt)} {msg('memory.v')}
+                      {record.version}
                     </p>
                   </CardTile>
                 ))}

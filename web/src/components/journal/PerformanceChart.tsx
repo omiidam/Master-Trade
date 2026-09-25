@@ -20,6 +20,7 @@ import {
 import { FullscreenChartViewer } from './FullscreenChartViewer';
 import { JOURNAL_REPORT_DATE } from '../../mock/journal';
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 export interface ChartSeriesInput {
   id: string;
@@ -285,9 +286,9 @@ export function PerformanceChart({
         ) : (
           <EmptyState
             icon={<LineChart size={22} aria-hidden />}
-            title="Nothing to plot yet"
+            title={msg('journal.nothingToPlotYet')}
             description={emptyMessage}
-            hint="An empty chart is left empty rather than filled with a placeholder series."
+            hint={msg('performanceChart.anEmptyChartIsLeftEmptyRatherThan')}
           />
         )}
 

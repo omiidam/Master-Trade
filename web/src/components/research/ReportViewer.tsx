@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardDivider, CardHeader, CardTitle 
 import { EmptyState } from '../EmptyState';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { Tooltip } from '../Tooltip';
+import { msg } from '../../i18n/index.js';
 
 export interface ReportSectionInput {
   heading: string;
@@ -42,13 +43,13 @@ export function ReportViewer({ report, provenance, sourceRef, className }: Repor
     return (
       <Card surface="data" className={className}>
         <CardHeader divider>
-          <CardTitle className="text-body">Report</CardTitle>
+          <CardTitle className="text-body">{msg('research.report')}</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
             icon={<FileText size={22} aria-hidden />}
-            title="No report for this experiment"
-            description="Reports are assembled from stored evaluation rows once an evaluation exists."
+            title={msg('research.noReportForThisExperiment')}
+            description={msg('reportViewer.reportsAreAssembledFromStoredEvaluationRowsOnce')}
           />
         </CardContent>
       </Card>
@@ -61,11 +62,11 @@ export function ReportViewer({ report, provenance, sourceRef, className }: Repor
         <div>
           <CardTitle className="text-body">{report.title}</CardTitle>
           <CardDescription>
-            <span className="num">{report.id}</span> · generated{' '}
+            <span className="num">{report.id}</span> {msg('research.generated')}{' '}
             {formatTimestamp(report.generatedAt)}
           </CardDescription>
         </div>
-        <Badge tone="info">assembled from evidence</Badge>
+        <Badge tone="info">{msg('research.assembledFromEvidence')}</Badge>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -94,20 +95,19 @@ export function ReportViewer({ report, provenance, sourceRef, className }: Repor
         >
           <AlertTriangle size={14} aria-hidden className="mt-0.5 shrink-0" />
           <div>
-            <p className="text-caption font-medium">Limitation</p>
+            <p className="text-caption font-medium">{msg('research.limitation')}</p>
             <p className="mt-0.5 text-caption opacity-90">{report.limitation}</p>
           </div>
         </div>
 
         <p className="text-caption text-text-faint">
-          No model-authored text is included in a report. Sections are assembled from evaluation
-          rows and rubric references.
+          {msg('research.noModelAuthoredTextIsIncluded')}
         </p>
       </CardContent>
 
       <CardDivider />
       <CardContent className="pt-4">
-        <Tooltip content="No research service is connected in this phase, so export is inert.">
+        <Tooltip content={msg('reportViewer.noResearchServiceIsConnectedInThisPhase')}>
           <span>
             <Button
               size="sm"
@@ -115,7 +115,7 @@ export function ReportViewer({ report, provenance, sourceRef, className }: Repor
               disabled
               leadingIcon={<Download size={13} aria-hidden />}
             >
-              Export report
+              {msg('research.exportReport')}
             </Button>
           </span>
         </Tooltip>

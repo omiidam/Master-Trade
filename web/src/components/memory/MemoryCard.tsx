@@ -14,6 +14,7 @@ import {
   type KnowledgeRecord,
   type MemoryCategoryId,
 } from '../../mock/memory';
+import { msg } from '../../i18n/index.js';
 
 export interface MemoryCardProps {
   record: KnowledgeRecord;
@@ -55,12 +56,15 @@ export function MemoryCard({
           <div className="flex flex-wrap items-center gap-2">
             <TrustBadge status={status} />
             <EpistemicBadge kind={epistemic} />
-            <span className="text-caption text-text-faint">v{record.version}</span>
+            <span className="text-caption text-text-faint">
+              {msg('decisions.v')}
+              {record.version}
+            </span>
           </div>
           <CardTitle className="mt-2 text-body">{record.title}</CardTitle>
           <CardDescription>
             {categoryLabel ? `${categoryLabel} · ` : ''}
-            updated {formatRelative(record.updatedAt)}
+            {msg('memory.updated')} {formatRelative(record.updatedAt)}
           </CardDescription>
         </div>
       </CardHeader>
@@ -74,7 +78,9 @@ export function MemoryCard({
           <>
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-caption text-text-muted">Record confidence</span>
+                <span className="text-caption text-text-muted">
+                  {msg('memory.recordConfidence')}
+                </span>
                 <span className="num text-caption text-text">
                   {formatPercent(record.confidence * 100, 0)}
                 </span>
@@ -97,7 +103,7 @@ export function MemoryCard({
                 />
               </div>
               <p className="text-caption text-text-faint">
-                Confidence is a property of the source, not a probability about markets.
+                {msg('memory.confidenceIsAPropertyOfThe')}
               </p>
             </div>
 
@@ -127,19 +133,19 @@ export function MemoryCard({
       <CardFooter className="text-caption text-text-faint">
         <span className="inline-flex items-center gap-1.5">
           <History size={12} aria-hidden />
-          created {formatTimestamp(record.createdAt)}
+          {msg('memory.created')} {formatTimestamp(record.createdAt)}
         </span>
         {onOpen === undefined ? (
-          <Tooltip content="No memory service is connected in this phase, so this action is inert.">
+          <Tooltip content={msg('memoryCard.noMemoryServiceIsConnectedInThisPhase')}>
             <span>
               <Button size="sm" variant="ghost" disabled>
-                Open record
+                {msg('memory.openRecord')}
               </Button>
             </span>
           </Tooltip>
         ) : (
           <Button size="sm" variant="ghost" onClick={() => onOpen(record.id)}>
-            Open record
+            {msg('memory.openRecord')}
           </Button>
         )}
       </CardFooter>

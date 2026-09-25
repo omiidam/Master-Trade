@@ -37,6 +37,7 @@ import {
 import { Grid, Workspace } from '../app/Workspace';
 import { useProfileStore, type ProfileContextInput } from '../store/profile';
 import { useQualityStore } from '../store/quality';
+import { msg } from '../i18n/index.js';
 
 /**
  * Profile: what the user has declared, and what is still unanswered.
@@ -55,11 +56,41 @@ import { useQualityStore } from '../store/quality';
  */
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: <UserRound size={14} aria-hidden /> },
-  { id: 'context', label: 'Declared context', icon: <ShieldCheck size={14} aria-hidden /> },
-  { id: 'quality', label: 'Data quality', icon: <GaugeCircle size={14} aria-hidden /> },
-  { id: 'edit', label: 'Preferences', icon: <PencilLine size={14} aria-hidden /> },
-  { id: 'history', label: 'History', icon: <History size={14} aria-hidden /> },
+  {
+    id: 'overview',
+    get label(): string {
+      return msg('dashboardPage.overview');
+    },
+    icon: <UserRound size={14} aria-hidden />,
+  },
+  {
+    id: 'context',
+    get label(): string {
+      return msg('profile.declaredContext');
+    },
+    icon: <ShieldCheck size={14} aria-hidden />,
+  },
+  {
+    id: 'quality',
+    get label(): string {
+      return msg('portfolio.dataQuality');
+    },
+    icon: <GaugeCircle size={14} aria-hidden />,
+  },
+  {
+    id: 'edit',
+    get label(): string {
+      return msg('profilePage.preferences');
+    },
+    icon: <PencilLine size={14} aria-hidden />,
+  },
+  {
+    id: 'history',
+    get label(): string {
+      return msg('examsPage.history');
+    },
+    icon: <History size={14} aria-hidden />,
+  },
 ] as const;
 
 export function ProfilePage() {
@@ -122,8 +153,8 @@ export function ProfilePage() {
   if (status === 'idle' || status === 'loading') {
     return (
       <Workspace
-        title="Profile"
-        description="Your declared trading context: what you have told Master Trade, and what is still open."
+        title={msg('profile.profile')}
+        description={msg('profilePage.yourDeclaredTradingContextWhatYouHaveTold')}
       >
         <Grid columns={3}>
           {[0, 1, 2].map((index) => (
@@ -143,12 +174,12 @@ export function ProfilePage() {
   if (status === 'unavailable') {
     return (
       <Workspace
-        title="Profile"
-        description="Your declared trading context: what you have told Master Trade, and what is still open."
+        title={msg('profile.profile')}
+        description={msg('profilePage.yourDeclaredTradingContextWhatYouHaveTold')}
       >
         <ErrorState
           severity="info"
-          title="No profile to show yet"
+          title={msg('profile.noProfileToShowYet')}
           description={`${unavailableReason ?? 'The profile could not be reached.'} Nothing is displayed in its place: a profile is personal data, so a fixture would be worse than an empty page.`}
         />
       </Workspace>
@@ -158,11 +189,11 @@ export function ProfilePage() {
   if (status === 'error' || profile === null || assessment === null) {
     return (
       <Workspace
-        title="Profile"
-        description="Your declared trading context: what you have told Master Trade, and what is still open."
+        title={msg('profile.profile')}
+        description={msg('profilePage.yourDeclaredTradingContextWhatYouHaveTold')}
       >
         <ErrorState
-          title="Could not read the profile"
+          title={msg('profile.couldNotReadTheProfile')}
           description={error?.message ?? 'The request failed without a reason.'}
           code={error?.code}
           action={
@@ -182,8 +213,8 @@ export function ProfilePage() {
 
   return (
     <Workspace
-      title="Profile"
-      description="Your declared trading context: what you have told Master Trade, and what is still open."
+      title={msg('profile.profile')}
+      description={msg('profilePage.yourDeclaredTradingContextWhatYouHaveTold')}
     >
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="outline" dot>
@@ -192,14 +223,14 @@ export function ProfilePage() {
         <Badge tone="neutral">{profile.displayName}</Badge>
         <Badge tone="neutral">{profile.timezone}</Badge>
         {assessment.complete ? (
-          <Badge tone="success">Every required field is current</Badge>
+          <Badge tone="success">{msg('profile.everyRequiredFieldIsCurrent')}</Badge>
         ) : (
           <Badge tone="warning">
-            {assessment.gaps.length + assessment.stale.length} field(s) open
+            {assessment.gaps.length + assessment.stale.length} {msg('profile.fieldSOpen')}
           </Badge>
         )}
-        <Tooltip content="The agent may only use your declared context as input. It never writes to it, and it never fills a blank with a default.">
-          <Badge tone="info">Declared by you</Badge>
+        <Tooltip content={msg('profilePage.theAgentMayOnlyUseYourDeclaredContext')}>
+          <Badge tone="info">{msg('profile.declaredByYou')}</Badge>
         </Tooltip>
       </div>
 
@@ -218,38 +249,42 @@ export function ProfilePage() {
         />
       ) : null}
 
-      <Tabs items={TABS} value={tab} onValueChange={setTab} aria-label="Profile sections">
+      <Tabs
+        items={TABS}
+        value={tab}
+        onValueChange={setTab}
+        aria-label={msg('profile.profileSections')}
+      >
         <TabPanel value="overview" className="space-y-4">
           <Grid columns={2}>
             <CompletenessMeter assessment={assessment} />
             <Card>
               <CardHeader divider>
-                <CardTitle>How to read this page</CardTitle>
-                <CardDescription>
-                  Every value is labelled with where it came from and whether it is still current.
-                </CardDescription>
+                <CardTitle>{msg('profile.howToReadThisPage')}</CardTitle>
+                <CardDescription>{msg('profile.everyValueIsLabelledWithWhere')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-body text-text-muted">
                 <p>
-                  <span className="text-text">Confirmed</span> — you told us this, inside its
-                  freshness window.
+                  <span className="text-text">{msg('profile.confirmed')}</span>{' '}
+                  {msg('profile.youToldUsThisInsideIts')}
                 </p>
                 <p>
-                  <span className="text-text">May be outdated</span> — you told us this, but it has
-                  aged past the window for this kind of input.
+                  <span className="text-text">{msg('profile.mayBeOutdated')}</span>{' '}
+                  {msg('profile.youToldUsThisButIt')}
                 </p>
                 <p>
-                  <span className="text-text">Assumed</span> — not provided. It is never treated as
-                  a fact, and it never appears pre-filled in the editor.
+                  <span className="text-text">{msg('profile.assumed')}</span>{' '}
+                  {msg('profile.notProvidedItIsNeverTreated')}
                 </p>
                 <p>
-                  <span className="text-text">Missing</span> — nothing is stored. Capabilities that
-                  need it ask, or stay limited and say why.
+                  <span className="text-text">{msg('profile.missing')}</span>{' '}
+                  {msg('profile.nothingIsStoredCapabilitiesThatNeed')}
                 </p>
                 <p className="text-caption text-text-faint">
-                  {statements.confirmed ?? 0} confirmed · {statements.derived ?? 0} derived ·{' '}
-                  {statements.stale ?? 0} may be outdated · {statements.assumed ?? 0} assumed ·{' '}
-                  {statements.missing ?? 0} missing
+                  {statements.confirmed ?? 0} {msg('profile.confirmed2')} {statements.derived ?? 0}{' '}
+                  {msg('profile.derived')} {statements.stale ?? 0} {msg('profile.mayBeOutdated2')}{' '}
+                  {statements.assumed ?? 0} {msg('profile.assumed2')} {statements.missing ?? 0}{' '}
+                  {msg('profile.missing2')}
                 </p>
               </CardContent>
             </Card>
@@ -265,10 +300,9 @@ export function ProfilePage() {
         <TabPanel value="context" className="space-y-4">
           <Card>
             <CardHeader divider>
-              <CardTitle>Declared context</CardTitle>
+              <CardTitle>{msg('profile.declaredContext')}</CardTitle>
               <CardDescription>
-                {FIELD_KEYS.length} fields. The value, its source and its age are shown together,
-                because a value without its source is a value you cannot weigh.
+                {FIELD_KEYS.length} {msg('profile.fieldsTheValueItsSourceAnd')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -295,10 +329,9 @@ export function ProfilePage() {
           {qualityStatus === 'idle' || qualityStatus === 'loading' ? (
             <Card>
               <CardHeader divider>
-                <CardTitle>Assessing the declared inputs</CardTitle>
+                <CardTitle>{msg('profile.assessingTheDeclaredInputs')}</CardTitle>
                 <CardDescription>
-                  Deterministic checks over what you have declared and what each capability declares
-                  it needs. No language model is consulted.
+                  {msg('profile.deterministicChecksOverWhatYouHave')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -312,14 +345,14 @@ export function ProfilePage() {
           {qualityStatus === 'unavailable' ? (
             <ErrorState
               severity="info"
-              title="Could not assess the declared inputs"
+              title={msg('profile.couldNotAssessTheDeclaredInputs')}
               description={`${qualityUnavailable ?? 'The assessment could not be reached.'} No sample assessment is shown in its place: a quality verdict that was not computed would be an invented claim about your own inputs.`}
             />
           ) : null}
 
           {qualityStatus === 'error' ? (
             <ErrorState
-              title="The assessment failed"
+              title={msg('profile.theAssessmentFailed')}
               description={qualityError?.message ?? 'The request failed without a reason.'}
               code={qualityError?.code}
               action={
@@ -347,18 +380,16 @@ export function ProfilePage() {
                 onAnswer={() => setTab('edit')}
               />
 
-              <section className="space-y-3" aria-label="Analysis readiness">
+              <section className="space-y-3" aria-label={msg('profile.analysisReadiness')}>
                 <div className="space-y-1">
                   <h3 className="text-body font-medium text-text">
-                    May each analysis run, and in what form?
+                    {msg('profile.mayEachAnalysisRunAndIn')}
                   </h3>
                   <p className="text-body text-text-muted">
-                    The same gate the agent consults before a model is asked to reason. It is
-                    evaluated here from the stored context, on the server, so the answer you read
-                    and the answer the agent acts on are one and the same.
+                    {msg('profile.theSameGateTheAgentConsults')}
                   </p>
                   <p className="text-caption text-text-faint">
-                    Market data for this deployment:{' '}
+                    {msg('profile.marketDataForThisDeployment')}{' '}
                     {qualityAssessment.marketData.available
                       ? `${qualityAssessment.marketData.barCount} bar(s), source ${
                           qualityAssessment.marketData.source ?? 'unrecorded'
@@ -384,7 +415,7 @@ export function ProfilePage() {
         <TabPanel value="edit" className="space-y-4">
           {saveError ? (
             <ErrorState
-              title="The context was not saved"
+              title={msg('profile.theContextWasNotSaved')}
               description={saveError.message}
               code={saveError.code}
               severity={saveError.retryable ? 'warning' : 'error'}
@@ -402,18 +433,15 @@ export function ProfilePage() {
         <TabPanel value="history" className="space-y-4">
           <Card>
             <CardHeader divider>
-              <CardTitle>Context history</CardTitle>
-              <CardDescription>
-                Versions are append-only. A save adds a version; nothing is rewritten, so the
-                context an answer was given from stays recoverable.
-              </CardDescription>
+              <CardTitle>{msg('profile.contextHistory')}</CardTitle>
+              <CardDescription>{msg('profile.versionsAreAppendOnlyASave')}</CardDescription>
             </CardHeader>
             <CardContent>
               {profile.history.length === 0 ? (
                 <EmptyState
                   icon={<History size={18} aria-hidden />}
-                  title="No versions yet"
-                  description="Saving preferences creates the first version of your context."
+                  title={msg('profile.noVersionsYet')}
+                  description={msg('profilePage.savingPreferencesCreatesTheFirstVersionOfYour')}
                 />
               ) : (
                 <ul className="space-y-2">
@@ -422,7 +450,9 @@ export function ProfilePage() {
                       key={entry.version}
                       className="flex items-center justify-between gap-3"
                     >
-                      <span className="text-body text-text">Version {entry.version}</span>
+                      <span className="text-body text-text">
+                        {msg('decisions.version')} {entry.version}
+                      </span>
                       <span className="text-caption text-text-muted">
                         {new Date(entry.createdAt).toLocaleString()}
                       </span>
@@ -439,8 +469,8 @@ export function ProfilePage() {
           {profile.prompts.length > 0 ? (
             <ErrorState
               severity="warning"
-              title="Some context is still missing"
-              description="Nothing is inferred to fill the gap: the fields stay empty and the affected analysis stays limited."
+              title={msg('profile.someContextIsStillMissing')}
+              description={msg('profilePage.nothingIsInferredToFillTheGapThe')}
               action={
                 <Button size="sm" variant="secondary" onClick={() => setTab('edit')}>
                   <AlertTriangle size={14} aria-hidden /> Answer what is open
@@ -452,8 +482,9 @@ export function ProfilePage() {
       </Tabs>
 
       <p className="text-caption text-text-faint">
-        {profile.note} Field labels: {FIELD_LABELS.experienceLevel}, {FIELD_LABELS.riskTolerance}{' '}
-        and {FIELD_LABELS.horizon} are the examples used in this description.
+        {profile.note} {msg('profile.fieldLabels')} {FIELD_LABELS.experienceLevel},{' '}
+        {FIELD_LABELS.riskTolerance} {msg('academy.and')} {FIELD_LABELS.horizon}{' '}
+        {msg('profile.areTheExamplesUsedInThis')}
       </p>
     </Workspace>
   );

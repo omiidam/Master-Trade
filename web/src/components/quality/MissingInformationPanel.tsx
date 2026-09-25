@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { ClarificationQuestionCard } from './ClarificationQuestionCard';
 import { inputLabel } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * What is not known, and what would close the gap.
@@ -48,18 +49,21 @@ export function MissingInformationPanel({
 }: MissingInformationPanelProps) {
   if (gaps.length === 0 && clarifications.length === 0) {
     return (
-      <Card as="section" emphasis="success" className={className} aria-label="Missing information">
+      <Card
+        as="section"
+        emphasis="success"
+        className={className}
+        aria-label={msg('quality.missingInformation')}
+      >
         <CardHeader divider>
           <div className="flex min-w-0 items-center gap-2">
             <CheckCircle2 size={16} aria-hidden className="text-success" />
-            <CardTitle className="text-body">Nothing required is missing</CardTitle>
+            <CardTitle className="text-body">{msg('quality.nothingRequiredIsMissing')}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <p className="text-body text-text-muted">
-            Every input the system can currently ask about is present and usable. This is not a
-            statement that the answer will be complete — only that it will not be missing a declared
-            requirement.
+            {msg('quality.everyInputTheSystemCanCurrently')}
           </p>
         </CardContent>
       </Card>
@@ -67,18 +71,28 @@ export function MissingInformationPanel({
   }
 
   return (
-    <section className={cn('space-y-3', className)} aria-label="Missing information">
+    <section className={cn('space-y-3', className)} aria-label={msg('quality.missingInformation')}>
       <div className="flex flex-wrap items-center gap-2">
         <CircleHelp size={16} aria-hidden className="text-text-muted" />
-        <h3 className="text-body font-medium text-text">What is not known yet</h3>
-        {gaps.length > 0 ? <Badge tone="warning">{gaps.length} input(s) missing</Badge> : null}
+        <h3 className="text-body font-medium text-text">{msg('quality.whatIsNotKnownYet')}</h3>
+        {gaps.length > 0 ? (
+          <Badge tone="warning">
+            {gaps.length} {msg('quality.inputSMissing')}
+          </Badge>
+        ) : null}
         {clarifications.length > 0 ? (
-          <Badge tone="outline">{clarifications.length} question(s)</Badge>
+          <Badge tone="outline">
+            {clarifications.length} {msg('quality.questionS')}
+          </Badge>
         ) : null}
       </div>
 
       {gaps.length > 0 ? (
-        <ul className="flex flex-wrap gap-1.5" role="list" aria-label="Inputs that are missing">
+        <ul
+          className="flex flex-wrap gap-1.5"
+          role="list"
+          aria-label={msg('quality.inputsThatAreMissing')}
+        >
           {gaps.map((gap) => (
             <li key={gap}>
               <Badge tone="warning">{inputLabel(gap)}</Badge>

@@ -2,6 +2,7 @@ import { SEVERITY_ORDER, type QualityIssue } from '@shared/quality/model';
 import { DataQualityBadge } from './DataQualityBadge';
 import { dimensionLabel, inputLabel, issueCodeLabel } from './labels';
 import { CardTile } from '../Card';
+import { msg } from '../../i18n/index.js';
 
 /**
  * Every finding, in the order that matters, with its evidence.
@@ -47,7 +48,11 @@ export function ValidationIssueList({ issues, emptyMessage, className }: Validat
   }
 
   return (
-    <ul className={className ?? 'space-y-2'} aria-label="Validation findings" role="list">
+    <ul
+      className={className ?? 'space-y-2'}
+      aria-label={msg('quality.validationFindings')}
+      role="list"
+    >
       {orderIssues(issues).map((issue, index) => (
         <CardTile key={`${issue.field}:${issue.code}:${index}`} className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-1.5">

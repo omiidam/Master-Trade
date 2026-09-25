@@ -22,6 +22,7 @@
 
 import { SESSION_TOKEN_CREDENTIAL } from '@shared/desktop/secrets';
 import { websocketUrlFor } from './client.js';
+import { msg } from '../i18n/index.js';
 
 export type SessionSource = 'shell' | 'dev-override';
 
@@ -78,7 +79,7 @@ function fromDevOverride(env: SessionEnv): SessionResolution | null {
     return {
       status: 'unavailable',
       reason: 'no-session',
-      detail: 'VITE_MT_API_URL is set but VITE_MT_SESSION_TOKEN is not.',
+      detail: msg('session.vITEMTAPIURLIsSetButVITEMTSESSIONTOKENIsNot'),
       action: 'Set both, or unset the URL.',
     };
   }
@@ -100,8 +101,7 @@ export async function resolveRealtimeSession(env: SessionEnv): Promise<SessionRe
     return {
       status: 'unavailable',
       reason: 'not-in-shell',
-      detail:
-        'This page is running in a browser, so there is no local sidecar to stream from and no keychain to hold a session.',
+      detail: msg('session.thisPageIsRunningInABrowserSo'),
       action: 'Open the desktop shell to stream live events.',
     };
   }
@@ -116,8 +116,7 @@ export async function resolveRealtimeSession(env: SessionEnv): Promise<SessionRe
     return {
       status: 'unavailable',
       reason: 'shell-error',
-      detail:
-        'The desktop shell did not answer with an API endpoint. The local service may still be starting.',
+      detail: msg('session.theDesktopShellDidNotAnswerWithAn'),
       action: 'Wait for the local service, then retry.',
     };
   }

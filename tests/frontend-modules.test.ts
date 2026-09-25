@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { contextKindForTrust, TRUST_ORDER } from '../packages/shared/src/core/provenance.js';
 import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 import { NAV_SECTIONS } from '../web/src/config/navigation.js';
+import { translate } from '../web/src/i18n/index.js';
 import {
   EXAM_STATE_LABEL,
   mockExamAttempts,
@@ -137,7 +138,12 @@ describe('frontend product modules', () => {
       expect(ids).toContain(id);
     }
     for (const section of NAV_SECTIONS) {
-      expect(() => assertNoExecutionControls([section.label, section.description])).not.toThrow();
+      expect(() =>
+        assertNoExecutionControls([
+          translate('en', section.labelKey),
+          translate('en', section.descriptionKey),
+        ]),
+      ).not.toThrow();
     }
   });
 
@@ -165,9 +171,9 @@ describe('frontend product modules', () => {
 
   it('renders the shared notice on every new page rather than a local rewording', () => {
     for (const [page, noticeConstant] of [
-      ['ExamsPage.tsx', 'EXAM_PREVIEW_NOTICE'],
-      ['MemoryPage.tsx', 'MEMORY_PREVIEW_NOTICE'],
-      ['ResearchPage.tsx', 'RESEARCH_PREVIEW_NOTICE'],
+      ['ExamsPage.tsx', 'examPreviewNotice'],
+      ['MemoryPage.tsx', 'previewNotice'],
+      ['ResearchPage.tsx', 'previewNotice'],
     ] as const) {
       const source = readPage(page);
       expect(source, `${page} does not use ${noticeConstant}`).toMatch(

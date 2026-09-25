@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } f
 import { EmptyState } from '../EmptyState';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { Tooltip } from '../Tooltip';
+import { msg } from '../../i18n/index.js';
 
 export interface ResearchMetrics {
   sampleSize: number;
@@ -52,17 +53,17 @@ export function MetricsPanel({
       <Card surface="metric" className={className}>
         <CardHeader divider>
           <div>
-            <CardTitle className="text-body">Performance metrics</CardTitle>
-            <CardDescription>Nothing measured yet</CardDescription>
+            <CardTitle className="text-body">{msg('research.performanceMetrics')}</CardTitle>
+            <CardDescription>{msg('research.nothingMeasuredYet')}</CardDescription>
           </div>
-          <Badge tone="outline">no evaluation</Badge>
+          <Badge tone="outline">{msg('research.noEvaluation')}</Badge>
         </CardHeader>
         <CardContent>
           <EmptyState
             icon={<BarChart3 size={22} aria-hidden />}
-            title="No evaluation attached"
-            description="Metrics appear once a deterministic evaluation has run over a fixed data set. This experiment has not been evaluated, so there are no numbers to show."
-            hint="Zeroes are never shown in place of a missing measurement."
+            title={msg('research.noEvaluationAttached')}
+            description={msg('metricsPanel.metricsAppearOnceADeterministicEvaluationHasRun')}
+            hint={msg('metricsPanel.zeroesAreNeverShownInPlaceOfA')}
           />
         </CardContent>
       </Card>
@@ -72,58 +73,58 @@ export function MetricsPanel({
   const tiles: readonly { id: string; label: string; value: string; hint: ReactNode }[] = [
     {
       id: 'sample',
-      label: 'Sample size',
+      label: msg('metricsPanel.sampleSize'),
       value: String(metrics.sampleSize),
       hint: (
         <span className="inline-flex items-center gap-1.5">
           <Users size={12} aria-hidden />
-          trades in the evaluation set
+          {msg('research.tradesInTheEvaluationSet')}
         </span>
       ),
     },
     {
       id: 'win-rate',
-      label: 'Win rate',
+      label: msg('journal.winRate'),
       value: formatPercent(metrics.winRatePct, 1),
       hint: (
         <span className="inline-flex items-center gap-1.5">
           <Percent size={12} aria-hidden />
-          <Tooltip content="A high win rate with negative average R still loses money. Expectancy is the number that matters.">
-            <span>misleading on its own</span>
+          <Tooltip content={msg('metricsPanel.aHighWinRateWithNegativeAverageR')}>
+            <span>{msg('research.misleadingOnItsOwn')}</span>
           </Tooltip>
         </span>
       ),
     },
     {
       id: 'average-r',
-      label: 'Average R',
+      label: msg('journal.averageR'),
       value: `${metrics.averageR > 0 ? '+' : ''}${metrics.averageR.toFixed(2)}`,
       hint: (
         <span className="inline-flex items-center gap-1.5">
           <Gauge size={12} aria-hidden />
-          mean outcome in risk units
+          {msg('research.meanOutcomeInRiskUnits')}
         </span>
       ),
     },
     {
       id: 'drawdown',
-      label: 'Max drawdown',
+      label: msg('metricsPanel.maxDrawdown'),
       value: `${metrics.maxDrawdownR.toFixed(1)}R`,
       hint: (
         <span className="inline-flex items-center gap-1.5">
           <TrendingDown size={12} aria-hidden />
-          worst peak-to-trough excursion
+          {msg('research.worstPeakToTroughExcursion')}
         </span>
       ),
     },
     {
       id: 'confidence',
-      label: 'Confidence',
+      label: msg('quality.dimension.confidence'),
       value: formatPercent(metrics.confidencePct, 0),
       hint: (
         <span className="inline-flex items-center gap-1.5">
           <BarChart3 size={12} aria-hidden />
-          about this sample, not the future
+          {msg('research.aboutThisSampleNotTheFuture')}
         </span>
       ),
     },
@@ -133,12 +134,10 @@ export function MetricsPanel({
     <Card surface="metric" className={className}>
       <CardHeader divider>
         <div>
-          <CardTitle className="text-body">Performance metrics</CardTitle>
-          <CardDescription>
-            Deterministic output over a fixed data set — never a model estimate
-          </CardDescription>
+          <CardTitle className="text-body">{msg('research.performanceMetrics')}</CardTitle>
+          <CardDescription>{msg('research.deterministicOutputOverAFixedData')}</CardDescription>
         </div>
-        <Tooltip content="Confidence describes the sample. It is not a probability about the next trade.">
+        <Tooltip content={msg('metricsPanel.confidenceDescribesTheSampleItIsNotA')}>
           <Badge tone={metrics.confidencePct >= 70 ? 'primary' : 'warning'}>
             {metrics.confidencePct >= 70 ? 'above bar' : 'below bar'}
           </Badge>

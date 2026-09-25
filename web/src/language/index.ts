@@ -200,7 +200,6 @@ export {
   DEFAULT_LANGUAGE_PREFERENCE,
   LANGUAGE_PREFERENCES,
   LANGUAGE_PREFERENCE_KEY,
-  LANGUAGE_PREFERENCE_LABELS,
   isLanguagePreference,
   parseLanguagePreference,
   preferenceStorage,

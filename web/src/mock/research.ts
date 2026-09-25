@@ -19,35 +19,39 @@
  */
 
 import type { Provenance } from '@shared/core/provenance';
+import { liveLabels, msg } from '../i18n/index.js';
 
 export type ExperimentStatus =
   'planned' | 'running' | 'complete' | 'awaiting-approval' | 'abandoned';
 
-export const EXPERIMENT_STATUS_LABEL: Record<ExperimentStatus, string> = {
-  planned: 'Planned',
-  running: 'Running',
-  complete: 'Complete',
-  'awaiting-approval': 'Awaiting approval',
-  abandoned: 'Abandoned',
-};
+export const EXPERIMENT_STATUS_LABEL: Record<ExperimentStatus, string> = liveLabels({
+  planned: 'research.experimentStatus.planned',
+  running: 'research.experimentStatus.running',
+  complete: 'research.experimentStatus.complete',
+  'awaiting-approval': 'research.experimentStatus.awaiting-approval',
+  abandoned: 'research.experimentStatus.abandoned',
+});
 
 export type ExperimentVerdict = 'promising' | 'inconclusive' | 'rejected' | 'pending';
 
-export const EXPERIMENT_VERDICT_LABEL: Record<ExperimentVerdict, string> = {
-  promising: 'Promising',
-  inconclusive: 'Inconclusive',
-  rejected: 'Rejected',
-  pending: 'No verdict yet',
-};
+export const EXPERIMENT_VERDICT_LABEL: Record<ExperimentVerdict, string> = liveLabels({
+  promising: 'research.experimentVerdict.promising',
+  inconclusive: 'research.experimentVerdict.inconclusive',
+  rejected: 'research.experimentVerdict.rejected',
+  pending: 'research.experimentVerdict.pending',
+});
 
-export const RESEARCH_PREVIEW_NOTICE =
-  'Illustrative research data. The deterministic backtest engine is not built in this phase, so every metric below is a layout example with synthetic provenance — not a measured result.';
+export function previewNotice(): string {
+  return msg('research.previewNotice');
+}
 
-export const RESEARCH_METHOD_NOTE =
-  'Metrics are produced by deterministic code over a fixed data set, never by the model. A rule cannot become active until an evaluation exists and a human has approved it.';
+export function methodNote(): string {
+  return msg('research.methodNote');
+}
 
-export const CONFIDENCE_CAVEAT =
-  'Confidence is a statement about the sample, not about the future. A result below the minimum sample size is a reason to keep testing, not a reason to trade it.';
+export function confidenceCaveat(): string {
+  return msg('research.confidenceCaveat');
+}
 
 export interface ExperimentMetrics {
   /** Number of trades in the evaluation set. */
@@ -85,9 +89,12 @@ export interface ResearchExperiment {
 export const mockExperiments: readonly ResearchExperiment[] = [
   {
     id: 'exp-01',
-    title: 'Risk-first checklist before entry',
-    hypothesis:
-      'Writing the risk budget and invalidation level before considering reward reduces avoidable sizing errors.',
+    get title(): string {
+      return msg('research.riskFirstChecklistBeforeEntry');
+    },
+    get hypothesis(): string {
+      return msg('research.writingTheRiskBudgetAndInvalidationLevelBefore');
+    },
     method:
       'Replay 240 practice setups; score each against the month 2 checklist; compare error rate with and without a written invalidation level.',
     status: 'complete',
@@ -106,22 +113,29 @@ export const mockExperiments: readonly ResearchExperiment[] = [
       ref: 'synthetic-generator',
       trust: 'verified',
       recordedAt: '2026-09-16T18:40:00Z',
-      note: 'synthetic — not real market data',
+      get note(): string {
+        return msg('memory.syntheticNotRealMarketData');
+      },
     },
-    findings: [
-      'Checklist compliance is the variable that moved, not market conditions.',
-      'A 46.5% win rate with positive average R is consistent with the risk-first lesson; it is not evidence of an edge.',
-      'Confidence of 62% is below the bar this project set for promoting anything.',
-    ],
+    get findings(): string[] {
+      return [
+        msg('research.checklistComplianceIsTheVariableThatMovedNot'),
+        msg('research.a465WinRateWithPositiveAverageR'),
+        msg('research.confidenceOf62IsBelowTheBarThis'),
+      ];
+    },
     approvalRef: null,
     startedAt: '2026-09-05T09:00:00Z',
     updatedAt: '2026-09-16T18:40:00Z',
   },
   {
     id: 'exp-02',
-    title: 'Skip the first 15 minutes of the session',
-    hypothesis:
-      'Opening volatility makes sizing errors more likely, so waiting 15 minutes lowers average R variance.',
+    get title(): string {
+      return msg('research.skipTheFirst15MinutesOfTheSession');
+    },
+    get hypothesis(): string {
+      return msg('research.openingVolatilityMakesSizingErrorsMoreLikelySo');
+    },
     method: 'Same 240 setups, split by time of entry; compare average R and drawdown per bucket.',
     status: 'running',
     verdict: 'pending',
@@ -139,21 +153,28 @@ export const mockExperiments: readonly ResearchExperiment[] = [
       ref: 'synthetic-generator',
       trust: 'verified',
       recordedAt: '2026-09-18T07:30:00Z',
-      note: 'synthetic — not real market data',
+      get note(): string {
+        return msg('memory.syntheticNotRealMarketData');
+      },
     },
-    findings: [
-      'Bucket sizes are unequal, so the comparison is not yet fair.',
-      'At 96 trades the interval around average R still contains zero.',
-    ],
+    get findings(): string[] {
+      return [
+        msg('research.bucketSizesAreUnequalSoTheComparisonIs'),
+        msg('research.at96TradesTheIntervalAroundAverageR'),
+      ];
+    },
     approvalRef: null,
     startedAt: '2026-09-12T08:00:00Z',
     updatedAt: '2026-09-18T07:30:00Z',
   },
   {
     id: 'exp-03',
-    title: 'Wider invalidation level with proportionally smaller size',
-    hypothesis:
-      'Widening the invalidation level while holding the risk budget constant reduces noise-driven exits without increasing loss per trade.',
+    get title(): string {
+      return msg('research.widerInvalidationLevelWithProportionallySmallerSize');
+    },
+    get hypothesis(): string {
+      return msg('research.wideningTheInvalidationLevelWhileHoldingTheRisk');
+    },
     method:
       'Paired evaluation on the same setups: identical risk budget, two invalidation distances.',
     status: 'awaiting-approval',
@@ -172,22 +193,29 @@ export const mockExperiments: readonly ResearchExperiment[] = [
       ref: 'synthetic-generator',
       trust: 'verified',
       recordedAt: '2026-09-17T16:20:00Z',
-      note: 'synthetic — not real market data',
+      get note(): string {
+        return msg('memory.syntheticNotRealMarketData');
+      },
     },
-    findings: [
-      'Loss per trade is unchanged by construction; only the exit distribution moved.',
-      'Confidence is the highest on record, and still not a licence to skip review.',
-      'Waiting on a human decision — the rule stays inactive until one is recorded.',
-    ],
+    get findings(): string[] {
+      return [
+        msg('research.lossPerTradeIsUnchangedByConstructionOnly'),
+        msg('research.confidenceIsTheHighestOnRecordAndStill'),
+        msg('research.waitingOnAHumanDecisionTheRule'),
+      ];
+    },
     approvalRef: 'appr_preview_01',
     startedAt: '2026-09-06T09:00:00Z',
     updatedAt: '2026-09-17T16:20:00Z',
   },
   {
     id: 'exp-04',
-    title: 'Gap continuation after earnings',
-    hypothesis:
-      'Post-earnings gaps that hold their opening range continue more often than they fade.',
+    get title(): string {
+      return msg('research.gapContinuationAfterEarnings');
+    },
+    get hypothesis(): string {
+      return msg('research.postEarningsGapsThatHoldTheirOpeningRangeContinue');
+    },
     method:
       'Not started: needs an event calendar and a larger synthetic data set to be honest about survivorship.',
     status: 'planned',
@@ -200,17 +228,25 @@ export const mockExperiments: readonly ResearchExperiment[] = [
       ref: 'user.omiid',
       trust: 'unverified',
       recordedAt: '2026-09-18T20:10:00Z',
-      note: 'Backlog item; no evidence attached yet.',
+      get note(): string {
+        return msg('research.backlogItemNoEvidenceAttachedYet');
+      },
     },
-    findings: ['Cannot be evaluated until the data set includes delisted and halted symbols.'],
+    get findings(): string[] {
+      return [msg('research.cannotBeEvaluatedUntilTheDataSetIncludes')];
+    },
     approvalRef: null,
     startedAt: '2026-09-18T20:10:00Z',
     updatedAt: '2026-09-18T20:10:00Z',
   },
   {
     id: 'exp-05',
-    title: 'Mean reversion at the range edge (abandoned)',
-    hypothesis: 'Fading the range edge with a tight invalidation level has positive expectancy.',
+    get title(): string {
+      return msg('research.meanReversionAtTheRangeEdgeAbandoned');
+    },
+    get hypothesis(): string {
+      return msg('research.fadingTheRangeEdgeWithATightInvalidation');
+    },
     method:
       'A 38-trade sample was collected, then the experiment was abandoned rather than extended.',
     status: 'abandoned',
@@ -229,12 +265,16 @@ export const mockExperiments: readonly ResearchExperiment[] = [
       ref: 'synthetic-generator',
       trust: 'verified',
       recordedAt: '2026-09-08T14:00:00Z',
-      note: 'synthetic — not real market data',
+      get note(): string {
+        return msg('memory.syntheticNotRealMarketData');
+      },
     },
-    findings: [
-      'A high win rate with a negative average R is the textbook shape of a hidden tail risk.',
-      'Abandoned with its reason recorded: the sample was too small to rescue by tuning.',
-    ],
+    get findings(): string[] {
+      return [
+        msg('research.aHighWinRateWithANegativeAverage'),
+        msg('research.abandonedWithItsReasonRecordedTheSampleWas'),
+      ];
+    },
     approvalRef: null,
     startedAt: '2026-08-28T09:00:00Z',
     updatedAt: '2026-09-08T14:00:00Z',
@@ -262,7 +302,9 @@ export const mockExperimentTimeline: readonly ExperimentTimelineEntry[] = [
     kind: 'created',
     at: '2026-09-05T09:00:00Z',
     actor: 'user.omiid',
-    detail: 'Hypothesis written before any data was reviewed.',
+    get detail(): string {
+      return msg('research.hypothesisWrittenBeforeAnyDataWasReviewed');
+    },
     sampleSize: null,
   },
   {
@@ -271,7 +313,9 @@ export const mockExperimentTimeline: readonly ExperimentTimelineEntry[] = [
     kind: 'evaluation-attached',
     at: '2026-09-14T11:10:00Z',
     actor: 'job.backtest.run',
-    detail: 'Deterministic evaluation over the synthetic set; evidence appended, never edited.',
+    get detail(): string {
+      return msg('research.deterministicEvaluationOverTheSyntheticSetEvidenceAp');
+    },
     sampleSize: 240,
   },
   {
@@ -280,8 +324,9 @@ export const mockExperimentTimeline: readonly ExperimentTimelineEntry[] = [
     kind: 'status-change',
     at: '2026-09-16T18:40:00Z',
     actor: 'user.omiid',
-    detail:
-      'Marked complete with an inconclusive-to-promising verdict and the confidence caveat attached.',
+    get detail(): string {
+      return msg('research.markedCompleteWithAnInconclusiveToPromisingVerdictAn');
+    },
     sampleSize: 240,
   },
   {
@@ -290,7 +335,9 @@ export const mockExperimentTimeline: readonly ExperimentTimelineEntry[] = [
     kind: 'evaluation-attached',
     at: '2026-09-18T07:30:00Z',
     actor: 'job.backtest.run',
-    detail: 'Partial evaluation at 96 trades; still running.',
+    get detail(): string {
+      return msg('research.partialEvaluationAt96TradesStillRunning');
+    },
     sampleSize: 96,
   },
   {
@@ -299,8 +346,9 @@ export const mockExperimentTimeline: readonly ExperimentTimelineEntry[] = [
     kind: 'approval-requested',
     at: '2026-09-17T16:25:00Z',
     actor: 'user.omiid',
-    detail:
-      'Approval requested before any activation; the rule stays inactive until a decision is recorded.',
+    get detail(): string {
+      return msg('research.approvalRequestedBeforeAnyActivationTheRuleStays');
+    },
     sampleSize: 180,
   },
   {
@@ -309,7 +357,9 @@ export const mockExperimentTimeline: readonly ExperimentTimelineEntry[] = [
     kind: 'abandoned',
     at: '2026-09-08T14:00:00Z',
     actor: 'user.omiid',
-    detail: 'Abandoned at 38 trades. Recorded as a rejection, not quietly deleted.',
+    get detail(): string {
+      return msg('research.abandonedAt38TradesRecordedAsARejection');
+    },
     sampleSize: 38,
   },
   {
@@ -318,7 +368,9 @@ export const mockExperimentTimeline: readonly ExperimentTimelineEntry[] = [
     kind: 'created',
     at: '2026-09-18T20:10:00Z',
     actor: 'user.omiid',
-    detail: 'Backlog: blocked on an event calendar and delisting-aware data.',
+    get detail(): string {
+      return msg('research.backlogBlockedOnAnEventCalendarAndDelistingAware');
+    },
     sampleSize: null,
   },
 ];
@@ -344,25 +396,44 @@ export const mockReports: readonly ResearchReport[] = [
   {
     id: 'rep-01',
     experimentId: 'exp-01',
-    title: 'Risk-first checklist — evaluation summary',
-    summary:
-      'A deterministic replay of 240 practice setups suggests the written invalidation level is the variable that changes sizing outcomes. The result is illustrative and the confidence is below the promotion bar.',
+    get title(): string {
+      return msg('research.riskFirstChecklistEvaluationSummary');
+    },
+    get summary(): string {
+      return msg('research.aDeterministicReplayOf240PracticeSetupsSuggests');
+    },
     sections: [
       {
-        heading: 'Method',
-        body: 'Each setup was replayed with a fixed risk budget. Half carried a written invalidation level before entry, half did not. Sizing errors were counted by rule, not judged by eye.',
+        get heading(): string {
+          return msg('research.method');
+        },
+        get body(): string {
+          return msg('research.eachSetupWasReplayedWithAFixedRisk');
+        },
       },
       {
-        heading: 'Metrics',
-        body: 'Sample 240 · win rate 46.5% · average R 0.32 · maximum drawdown −8.4R · confidence 62%. Win rate is reported because it is easy to misread: expectancy, not win rate, is what the evaluation is about.',
+        get heading(): string {
+          return msg('research.metrics');
+        },
+        get body(): string {
+          return msg('research.sample240WinRate465Average');
+        },
       },
       {
-        heading: 'Caveats',
-        body: 'The data set is synthetic, so the numbers describe the generator as much as the checklist. Confidence of 62% is below the bar for promoting a rule. Nothing here has been out-of-sample tested.',
+        get heading(): string {
+          return msg('research.caveats');
+        },
+        get body(): string {
+          return msg('research.theDataSetIsSyntheticSoTheNumbers');
+        },
       },
       {
-        heading: 'Decision required',
-        body: 'Continuing is a study decision, not a trading one. If the checklist is formally adopted, that is a rule change and requires a recorded human approval before it can be active.',
+        get heading(): string {
+          return msg('research.decisionRequired');
+        },
+        get body(): string {
+          return msg('research.continuingIsAStudyDecisionNotATrading');
+        },
       },
     ],
     generatedAt: '2026-09-16T18:45:00Z',
@@ -371,10 +442,13 @@ export const mockReports: readonly ResearchReport[] = [
       ref: 'evaluation.report',
       trust: 'verified',
       recordedAt: '2026-09-16T18:45:00Z',
-      note: 'Assembled from stored evaluation rows; no model text is included.',
+      get note(): string {
+        return msg('research.assembledFromStoredEvaluationRowsNoModelText');
+      },
     },
-    limitation:
-      'Synthetic data and a below-bar confidence interval. This report is a reason to design a better test, not a reason to change behaviour.',
+    get limitation(): string {
+      return msg('research.syntheticDataAndABelowBarConfidenceIntervalThis');
+    },
   },
 ];
 

@@ -7,6 +7,7 @@ import { CancelTaskControl } from './CancelTaskControl';
 import { cn } from '../../lib/cn';
 import { formatRelative, formatTimestamp } from '../../lib/format';
 import type { JobView } from '@shared/jobs/service';
+import { msg, liveLabels } from '../../i18n/index.js';
 
 export interface JobStatusCardProps {
   job: JobView;
@@ -28,14 +29,14 @@ const STATUS_TONE: Record<string, BadgeTone> = {
   cancelled: 'warning',
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  queued: 'Queued',
-  running: 'Running',
-  succeeded: 'Completed',
-  failed: 'Failed — will retry',
-  'dead-letter': 'Stopped after exhausting retries',
-  cancelled: 'Cancelled',
-};
+const STATUS_LABEL: Record<string, string> = liveLabels({
+  queued: 'realtime.status.queued',
+  running: 'realtime.status.running',
+  succeeded: 'realtime.status.succeeded',
+  failed: 'realtime.status.failed',
+  'dead-letter': 'realtime.status.dead-letter',
+  cancelled: 'realtime.status.cancelled',
+});
 
 function statusIcon(status: string): ReactNode {
   switch (status) {
@@ -93,13 +94,13 @@ export function JobStatusCard({
 
         <dl className="grid grid-cols-2 gap-2 text-caption">
           <div>
-            <dt className="text-text-faint">Attempts</dt>
+            <dt className="text-text-faint">{msg('realtime.attempts')}</dt>
             <dd className="num text-text">
-              {job.attempts} of {job.maxAttempts}
+              {job.attempts} {msg('exams.of')} {job.maxAttempts}
             </dd>
           </div>
           <div>
-            <dt className="text-text-faint">Correlation</dt>
+            <dt className="text-text-faint">{msg('realtime.correlation2')}</dt>
             <dd className="num truncate text-text" title={job.correlationId ?? 'none'}>
               {job.correlationId ?? 'none recorded'}
             </dd>
@@ -112,7 +113,9 @@ export function JobStatusCard({
       </CardContent>
 
       <CardFooter className="text-caption text-text-faint">
-        <span title={job.updatedAt}>updated {formatRelative(job.updatedAt)}</span>
+        <span title={job.updatedAt}>
+          {msg('memory.updated')} {formatRelative(job.updatedAt)}
+        </span>
         <span className="num" title={job.createdAt}>
           {formatTimestamp(job.createdAt)}
         </span>

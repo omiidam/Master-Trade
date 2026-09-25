@@ -36,36 +36,61 @@ import { Grid, Workspace } from '../app/Workspace';
 import { describeUnavailability, type RealtimeUnavailable } from '../realtime/session.js';
 import { DEFAULT_SUBSCRIPTION, useRealtimeStore } from '../realtime/store.js';
 import {
-  ACTIVITY_PREVIEW_NOTICE,
-  JOB_PREVIEW_NOTICE,
-  REALTIME_PREVIEW_NOTICE,
+  activityPreviewNotice,
+  jobPreviewNotice,
+  previewNotice,
   mockActivity,
   mockJobs,
   mockNotifications,
   mockRetryingSnapshot,
   summariseJobs,
 } from '../mock/realtime';
+import { msg, liveLabels } from '../i18n/index.js';
 
 const TABS = [
-  { id: 'stream', label: 'Event stream', icon: <Radio size={14} aria-hidden /> },
-  { id: 'tasks', label: 'Background tasks', icon: <ListChecks size={14} aria-hidden /> },
-  { id: 'notifications', label: 'Notifications', icon: <BellRing size={14} aria-hidden /> },
-  { id: 'connection', label: 'Connection', icon: <PlugZap size={14} aria-hidden /> },
+  {
+    id: 'stream',
+    get label(): string {
+      return msg('activityPage.eventStream');
+    },
+    icon: <Radio size={14} aria-hidden />,
+  },
+  {
+    id: 'tasks',
+    get label(): string {
+      return msg('realtime.backgroundTasks');
+    },
+    icon: <ListChecks size={14} aria-hidden />,
+  },
+  {
+    id: 'notifications',
+    get label(): string {
+      return msg('ui.notifications');
+    },
+    icon: <BellRing size={14} aria-hidden />,
+  },
+  {
+    id: 'connection',
+    get label(): string {
+      return msg('activityPage.connection');
+    },
+    icon: <PlugZap size={14} aria-hidden />,
+  },
 ] as const;
 
 /** Human wording for the job kinds the queue defines. */
-const KIND_LABELS: Record<string, string> = {
-  'training.gradeSession': 'Grade a training session',
-  'training.progress': 'Recompute curriculum progress',
-  'dataset.process': 'Validate and index a dataset',
-  'embedding.generate': 'Generate embeddings',
-  'memory.index': 'Index memory records',
-  'marketData.ingest': 'Ingest normalized bars',
-  'backtest.run': 'Run a backtest (needs approval)',
-  'report.generate': 'Render a report',
-  'evaluation.scheduled': 'Scheduled invariant evaluation',
-  'maintenance.cleanup': 'Purge expired scratch data',
-};
+const KIND_LABELS: Record<string, string> = liveLabels({
+  'training.gradeSession': 'activity.kind.training.gradeSession',
+  'training.progress': 'activity.kind.training.progress',
+  'dataset.process': 'activity.kind.dataset.process',
+  'embedding.generate': 'activity.kind.embedding.generate',
+  'memory.index': 'activity.kind.memory.index',
+  'marketData.ingest': 'activity.kind.marketData.ingest',
+  'backtest.run': 'activity.kind.backtest.run',
+  'report.generate': 'activity.kind.report.generate',
+  'evaluation.scheduled': 'activity.kind.evaluation.scheduled',
+  'maintenance.cleanup': 'activity.kind.maintenance.cleanup',
+});
 
 /**
  * Activity: the live event stream and the background-task queue.
@@ -143,12 +168,12 @@ export function ActivityPage() {
 
   return (
     <Workspace
-      title="Activity"
-      description="The realtime event stream and the background-task queue. Events carry a contract type, a sequence, a source and a correlation id; jobs are read from the queue that runs them. Neither surface exists to place or execute anything."
+      title={msg('realtime.activity')}
+      description={msg('activityPage.theRealtimeEventStreamAndTheBackgroundTaskQueue')}
       actions={
         <>
           <ConnectionStatus state={state} detail={snapshot?.detail} compact />
-          <Tooltip content="The event stream opens over an authenticated WebSocket on the loopback interface only.">
+          <Tooltip content={msg('activityPage.theEventStreamOpensOverAnAuthenticatedWebSocket')}>
             <Badge tone="outline" icon={<Radio size={12} aria-hidden />}>
               loopback only
             </Badge>
@@ -180,16 +205,15 @@ export function ActivityPage() {
         <Card surface="data">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Stream</CardTitle>
-              <CardDescription>Delivered vs. dropped frames</CardDescription>
+              <CardTitle className="text-body">{msg('activity.stream')}</CardTitle>
+              <CardDescription>{msg('activity.deliveredVsDroppedFrames')}</CardDescription>
             </div>
             <Badge tone={live ? 'success' : 'neutral'}>{live ? 'live' : 'not live'}</Badge>
           </CardHeader>
           <CardContent>
             <span className="num text-metric text-text">{streamSummary.delivered}</span>
             <p className="mt-2 text-caption text-text-faint">
-              {streamSummary.dropped} frame(s) dropped — stale or unreadable. A dropped frame is
-              counted, never rendered as if it passed validation.
+              {streamSummary.dropped} {msg('activity.frameSDroppedStaleOrUnreadable')}
             </p>
           </CardContent>
         </Card>
@@ -197,7 +221,7 @@ export function ActivityPage() {
         <Card surface="data">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Queue</CardTitle>
+              <CardTitle className="text-body">{msg('activity.queue')}</CardTitle>
               <CardDescription>
                 {live ? 'From the running queue' : 'Preview fixture counts'}
               </CardDescription>
@@ -221,8 +245,8 @@ export function ActivityPage() {
         <Card surface="data">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Notifications</CardTitle>
-              <CardDescription>Server notices and stream warnings</CardDescription>
+              <CardTitle className="text-body">{msg('ui.notifications')}</CardTitle>
+              <CardDescription>{msg('activity.serverNoticesAndStreamWarnings')}</CardDescription>
             </div>
             <Badge tone="outline" icon={<BellRing size={12} aria-hidden />}>
               {notifications.length}
@@ -233,8 +257,7 @@ export function ActivityPage() {
               {notifications.filter((entry) => entry.origin === 'client').length}
             </span>
             <p className="mt-2 text-caption text-text-faint">
-              Raised by this client about the stream itself — a gap in replay coverage, a refused
-              frame, a refused subscription. They are kept because a silent hole is worse.
+              {msg('activity.raisedByThisClientAboutThe')}
             </p>
           </CardContent>
         </Card>
@@ -242,16 +265,17 @@ export function ActivityPage() {
         <Card surface="data">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Subscription</CardTitle>
-              <CardDescription>What this client asked to receive</CardDescription>
+              <CardTitle className="text-body">{msg('activity.subscription')}</CardTitle>
+              <CardDescription>{msg('activity.whatThisClientAskedToReceive')}</CardDescription>
             </div>
             <Badge tone="outline" icon={<Layers size={12} aria-hidden />}>
-              {snapshot?.availableTypes.length ?? 0} available
+              {snapshot?.availableTypes.length ?? 0} {msg('activity.available')}
             </Badge>
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="num text-caption text-text">
-              {subscribed.length} of {DEFAULT_SUBSCRIPTION.length} default types
+              {subscribed.length} {msg('exams.of')} {DEFAULT_SUBSCRIPTION.length}{' '}
+              {msg('activity.defaultTypes')}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {subscribed.slice(0, 6).map((type) => (
@@ -260,7 +284,9 @@ export function ActivityPage() {
                 </Badge>
               ))}
               {subscribed.length > 6 ? (
-                <Badge tone="outline">+{subscribed.length - 6} more</Badge>
+                <Badge tone="outline">
+                  +{subscribed.length - 6} {msg('activity.more')}
+                </Badge>
               ) : null}
             </div>
             {snapshot && snapshot.availableTypes.length > 0 ? (
@@ -273,7 +299,7 @@ export function ActivityPage() {
                   )
                 }
               >
-                Subscribe to everything this role may receive
+                {msg('activity.subscribeToEverythingThisRoleMay')}
               </Button>
             ) : null}
           </CardContent>
@@ -283,7 +309,7 @@ export function ActivityPage() {
       {unavailable ? (
         <ErrorState
           severity="warning"
-          title="No live stream in this session"
+          title={msg('activity.noLiveStreamInThisSession')}
           description={describeUnavailability(unavailable)}
           code={unavailable.reason.toUpperCase().replace(/-/g, '_')}
           action={
@@ -314,7 +340,7 @@ export function ActivityPage() {
         items={TABS.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
         value={tab}
         onValueChange={setTab}
-        aria-label="Activity sections"
+        aria-label={msg('activity.activitySections')}
       >
         <TabPanel value="stream" className="space-y-4">
           <AgentActivityFeed
@@ -325,17 +351,16 @@ export function ActivityPage() {
             {...(live
               ? {}
               : {
-                  emptyTitle: 'Nothing has arrived yet',
-                  emptyDescription:
-                    'Connect to see real entries; the rows below this notice are the labelled preview fixtures.',
+                  emptyTitle: msg('activityPage.nothingHasArrivedYet'),
+                  emptyDescription: msg('activityPage.connectToSeeRealEntriesTheRowsBelow'),
                 })}
           />
 
           {!live ? (
             <ErrorState
               severity="info"
-              title="Showing captured fixtures"
-              description={REALTIME_PREVIEW_NOTICE}
+              title={msg('activity.showingCapturedFixtures')}
+              description={previewNotice()}
               code="PREVIEW_FIXTURE"
             />
           ) : null}
@@ -343,31 +368,32 @@ export function ActivityPage() {
           <Grid columns={3}>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Sequence, not arrival order</CardTitle>
+                <CardTitle className="text-body">
+                  {msg('activity.sequenceNotArrivalOrder')}
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Every event carries a monotonic sequence number. A duplicate or an older event is
-                dropped, so a reconnect cannot make the feed run backwards — and the count of
-                dropped frames is on screen above.
+                {msg('activity.everyEventCarriesAMonotonicSequence')}
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Internal events never arrive</CardTitle>
+                <CardTitle className="text-body">
+                  {msg('activity.internalEventsNeverArrive')}
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Tool execution detail and audit records are internal: the server refuses to give
-                them an audience, so no subscription can ask for them and no payload arrives to be
-                hidden.
+                {msg('activity.toolExecutionDetailAndAuditRecords')}
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Unknown types are dropped</CardTitle>
+                <CardTitle className="text-body">
+                  {msg('activity.unknownTypesAreDropped')}
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                A payload that fails its contract, or a type this build does not know, is counted
-                and refused. Rendering it anyway would mean printing a shape nobody validated.
+                {msg('activity.aPayloadThatFailsItsContract')}
               </CardContent>
             </Card>
           </Grid>
@@ -385,30 +411,30 @@ export function ActivityPage() {
             cancelling={jobs.cancelling}
             kindLabels={KIND_LABELS}
             unavailableReason={unavailable ? describeUnavailability(unavailable) : null}
-            {...(live || jobs.jobs.length > 0 ? {} : { previewNotice: JOB_PREVIEW_NOTICE })}
+            {...(live || jobs.jobs.length > 0 ? {} : { previewNotice: jobPreviewNotice() })}
           />
 
           <Section
-            title="Lifecycle"
-            description="The four transitions the queue defines, and what the UI shows for each."
+            title={msg('activity.lifecycle')}
+            description={msg('activityPage.theFourTransitionsTheQueueDefinesAndWhat')}
           >
             <Grid columns={4}>
               {[
                 {
                   state: 'Queued → running',
-                  text: 'A worker claimed the job and holds a lease; the lease is renewed while it runs.',
+                  text: msg('activityPage.aWorkerClaimedTheJobAndHoldsA'),
                 },
                 {
                   state: 'Running → completed',
-                  text: 'The result is stored and the progress row is left behind to expire.',
+                  text: msg('activityPage.theResultIsStoredAndTheProgressRow'),
                 },
                 {
                   state: 'Running → failed',
-                  text: 'A retryable failure returns to queued with backoff; a non-retryable one stops immediately.',
+                  text: msg('activityPage.aRetryableFailureReturnsToQueuedWithBackoff'),
                 },
                 {
                   state: 'Queued or running → cancelled',
-                  text: 'The status is recorded in the row, so cancellation crosses processes and survives a restart.',
+                  text: msg('activityPage.theStatusIsRecordedInTheRowSo'),
                 },
               ].map((item) => (
                 <Card surface="utility" key={item.state}>
@@ -426,7 +452,7 @@ export function ActivityPage() {
           {notifications.length === 0 ? (
             <EmptyState
               icon={<BellRing size={22} aria-hidden />}
-              title="No notices in this session"
+              title={msg('activity.noNoticesInThisSession')}
               description="Server notifications arrive as `notification` events. Notices this client raises about the stream itself appear here too, labelled as such."
             />
           ) : (
@@ -440,8 +466,8 @@ export function ActivityPage() {
           )}
 
           <Section
-            title="Preview fixtures"
-            description="Deterministic samples so the severity levels can be reviewed without a server."
+            title={msg('activity.previewFixtures')}
+            description={msg('activityPage.deterministicSamplesSoTheSeverityLevelsCanBe')}
           >
             <ul className="space-y-2">
               {mockNotifications.map((entry) => (
@@ -450,7 +476,7 @@ export function ActivityPage() {
                 </li>
               ))}
             </ul>
-            <p className="text-caption text-text-faint">{ACTIVITY_PREVIEW_NOTICE}</p>
+            <p className="text-caption text-text-faint">{activityPreviewNotice()}</p>
           </Section>
         </TabPanel>
 
@@ -470,25 +496,18 @@ export function ActivityPage() {
             <Card>
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">What a reconnect keeps</CardTitle>
-                  <CardDescription>Resume, replay and the honest gap</CardDescription>
+                  <CardTitle className="text-body">{msg('activity.whatAReconnectKeeps')}</CardTitle>
+                  <CardDescription>{msg('activity.resumeReplayAndTheHonestGap')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-caption text-text-muted">
-                <p>
-                  The client remembers the highest sequence it delivered and asks the server to
-                  replay from there, in the same frame as the token — a client that authenticated
-                  first and subscribed second would miss the replay it just asked for.
-                </p>
-                <p>
-                  If the server's buffer no longer covers that point, the client records the gap and
-                  says so, instead of continuing from a counter that looks continuous.
-                </p>
+                <p>{msg('activity.theClientRemembersTheHighestSequence')}</p>
+                <p>{msg('activity.ifTheServerSBufferNo')}</p>
                 {snapshot?.gapDetected ? (
                   <ErrorState
                     severity="warning"
-                    title="A replay gap was detected in this session"
-                    description="Some events between the delivered sequence and the server's buffer were never seen. The queue and the audit trail are the record of what happened; the feed is not."
+                    title={msg('activity.aReplayGapWasDetectedIn')}
+                    description={msg('activityPage.someEventsBetweenTheDeliveredSequenceAndThe')}
                     code="REPLAY_GAP"
                   />
                 ) : null}
@@ -498,41 +517,40 @@ export function ActivityPage() {
             <Card surface="utility">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Endpoint</CardTitle>
-                  <CardDescription>Where this client is pointed, and with what</CardDescription>
+                  <CardTitle className="text-body">{msg('activity.endpoint')}</CardTitle>
+                  <CardDescription>{msg('activity.whereThisClientIsPointedAnd')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 <dl className="space-y-1 text-caption">
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-text-faint">Source</dt>
+                    <dt className="text-text-faint">{msg('activity.source')}</dt>
                     <dd className="text-text">
                       {resolution?.status === 'ready' ? resolution.source : 'none'}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-text-faint">Socket</dt>
+                    <dt className="text-text-faint">{msg('activity.socket')}</dt>
                     <dd className="num truncate text-text">
                       {resolution?.status === 'ready' ? resolution.websocketUrl : 'not configured'}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-text-faint">Session</dt>
+                    <dt className="text-text-faint">{msg('activity.session')}</dt>
                     <dd className="text-text">
                       {snapshot?.principalId ??
                         (resolution?.status === 'ready' ? 'not authenticated' : 'none')}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-text-faint">Roles</dt>
+                    <dt className="text-text-faint">{msg('activity.roles')}</dt>
                     <dd className="text-text">
                       {snapshot?.roles.length ? snapshot.roles.join(', ') : 'none reported'}
                     </dd>
                   </div>
                 </dl>
                 <p className="text-caption text-text-faint">
-                  The token is never rendered, never logged and never placed in a URL. It goes in
-                  the first frame, and only the credentials the shell hands over are used.
+                  {msg('activity.theTokenIsNeverRenderedNever')}
                 </p>
               </CardContent>
             </Card>
@@ -541,32 +559,26 @@ export function ActivityPage() {
           <Grid columns={3}>
             <Card surface="utility">
               <CardHeader divider>
-                <CardTitle className="text-body">Heartbeat</CardTitle>
+                <CardTitle className="text-body">{msg('activity.heartbeat')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                The client pings on the server's cadence and treats a missed reply as a failure. A
-                socket that is open but silent is not a working stream, and showing “live” for one
-                is the failure mode the check exists to prevent.
+                {msg('activity.theClientPingsOnTheServer')}
               </CardContent>
             </Card>
             <Card surface="utility">
               <CardHeader divider>
-                <CardTitle className="text-body">Backoff, then stop</CardTitle>
+                <CardTitle className="text-body">{msg('activity.backoffThenStop')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Retries use bounded exponential backoff with jitter. A rejected token, a protocol
-                mismatch or a refused subscription is terminal: the state moves to “not permitted”
-                and no further attempts are made.
+                {msg('activity.retriesUseBoundedExponentialBackoffWith')}
               </CardContent>
             </Card>
             <Card surface="utility">
               <CardHeader divider>
-                <CardTitle className="text-body">Frame validation</CardTitle>
+                <CardTitle className="text-body">{msg('activity.frameValidation')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Inbound frames are bounded, parsed and checked against the contract registry before
-                anything is done with them. A malformed frame is counted and dropped, never
-                rendered.
+                {msg('activity.inboundFramesAreBoundedParsedAnd')}
               </CardContent>
             </Card>
           </Grid>
@@ -579,7 +591,7 @@ export function ActivityPage() {
               onClick={retry}
               disabled={state === 'connecting' || state === 'authenticating'}
             >
-              Retry the stream now
+              {msg('activity.retryTheStreamNow')}
             </Button>
             <Button
               size="sm"
@@ -588,10 +600,10 @@ export function ActivityPage() {
               onClick={() => void refreshJobs()}
               disabled={resolution?.status !== 'ready'}
             >
-              Re-read the queue
+              {msg('activity.reReadTheQueue')}
             </Button>
             <span className="text-caption text-text-faint">
-              Both actions go through the same authenticated session as the stream.
+              {msg('activity.bothActionsGoThroughTheSame')}
             </span>
           </div>
         </TabPanel>

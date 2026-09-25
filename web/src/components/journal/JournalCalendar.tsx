@@ -11,6 +11,7 @@ import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
 import { CALENDAR_DAY_STATE_LABEL, RESULT_LABEL, setupLabel } from '../../mock/journal';
 import type { CalendarDayState, JournalCalendarDay, JournalTrade } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 const STATE_STYLE: Record<CalendarDayState, string> = {
   win: 'border-success-border bg-primary-soft/60',
@@ -123,7 +124,7 @@ export function JournalCalendar({
   const monthRisk = monthDays.reduce((sum, day) => sum + day.riskTotal, 0);
 
   return (
-    <Card as="section" aria-label="Trading calendar" className={className}>
+    <Card as="section" aria-label={msg('journal.tradingCalendar')} className={className}>
       <CardHeader divider>
         <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -137,8 +138,9 @@ export function JournalCalendar({
                 : `Week of ${formatDayLabel(weekCells[0]?.date ?? anchorDate)}`}
             </CardTitle>
             <CardDescription>
-              {monthTrades} trades · {monthRisk.toLocaleString('en-US')} committed risk across{' '}
-              {monthDays.length} trading {monthDays.length === 1 ? 'day' : 'days'} this month.
+              {monthTrades} {msg('journal.trades')} {monthRisk.toLocaleString('en-US')}{' '}
+              {msg('journal.committedRiskAcross')} {monthDays.length} {msg('journal.trading')}{' '}
+              {monthDays.length === 1 ? 'day' : 'days'} {msg('journal.thisMonth')}
             </CardDescription>
           </div>
           {/* `min-w-0` so this group can be narrower than the controls inside it: an automatic
@@ -150,13 +152,21 @@ export function JournalCalendar({
             <CardTile
               space="none"
               role="group"
-              aria-label="Calendar view"
+              aria-label={msg('journal.calendarView')}
               className="inline-flex items-center gap-0.5 p-0.5"
             >
               {(
                 [
-                  { id: 'month', label: 'Month', icon: <CalendarDays size={13} aria-hidden /> },
-                  { id: 'week', label: 'Week', icon: <Rows3 size={13} aria-hidden /> },
+                  {
+                    id: 'month',
+                    label: msg('journalCalendar.month'),
+                    icon: <CalendarDays size={13} aria-hidden />,
+                  },
+                  {
+                    id: 'week',
+                    label: msg('journalCalendar.week'),
+                    icon: <Rows3 size={13} aria-hidden />,
+                  },
                 ] as const
               ).map((option) => (
                 <button
@@ -181,9 +191,9 @@ export function JournalCalendar({
               size="sm"
               onClick={() => onSelectDate(null)}
               disabled={selectedDate === null}
-              label="Clear the selected day"
+              label={msg('journalCalendar.clearTheSelectedDay')}
             >
-              Clear day
+              {msg('journal.clearDay')}
             </Button>
           </div>
         </div>
@@ -233,7 +243,10 @@ export function JournalCalendar({
                   <span className="flex items-center justify-between gap-1">
                     <span className="num text-caption text-text-muted">{cell.dayNumber}</span>
                     {day ? (
-                      <span className="num text-caption text-text-faint">{day.tradeCount}t</span>
+                      <span className="num text-caption text-text-faint">
+                        {day.tradeCount}
+                        {msg('journal.t')}
+                      </span>
                     ) : (
                       <span className="text-caption text-text-faint">—</span>
                     )}
@@ -274,7 +287,9 @@ export function JournalCalendar({
                       </span>
                     </>
                   ) : (
-                    <span className="mt-auto text-caption text-text-faint">no trades</span>
+                    <span className="mt-auto text-caption text-text-faint">
+                      {msg('journal.noTrades')}
+                    </span>
                   )}
                 </button>
               );
@@ -293,7 +308,8 @@ export function JournalCalendar({
             </li>
           ))}
           <li className="inline-flex items-center gap-1.5">
-            <span className="num">n/10</span> self-reported emotional read
+            <span className="num">{msg('journal.n10')}</span>{' '}
+            {msg('journal.selfReportedEmotionalRead')}
           </li>
         </ul>
 
@@ -332,7 +348,7 @@ export function JournalCalendar({
                   {CALENDAR_DAY_STATE_LABEL[selectedDay.state]} · {selectedDay.tradeCount}{' '}
                   {selectedDay.tradeCount === 1 ? 'trade' : 'trades'} ·{' '}
                   {formatNetR(selectedDay.netR)} · {selectedDay.riskTotal.toLocaleString('en-US')}{' '}
-                  committed risk
+                  {msg('journal.committedRisk')}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -352,7 +368,7 @@ export function JournalCalendar({
                           : `${trade.actual.actualR > 0 ? '+' : ''}${trade.actual.actualR.toFixed(2)}R`}
                       </span>
                       <span className="num text-caption text-text-faint">
-                        closed{' '}
+                        {msg('journal.closed')}{' '}
                         {trade.closedAt === null ? '—' : formatTimestamp(trade.closedAt).slice(11)}
                       </span>
                     </li>
@@ -360,16 +376,18 @@ export function JournalCalendar({
                 </ul>
               ) : (
                 <p className="text-caption text-text-faint">
-                  The day has a summary but no openable records in this view.
+                  {msg('journal.theDayHasASummaryBut')}
                 </p>
               )}
 
               <div className="grid gap-3 lg:grid-cols-2">
                 <div>
-                  <p className="text-caption font-semibold text-text-muted uppercase">Mistakes</p>
+                  <p className="text-caption font-semibold text-text-muted uppercase">
+                    {msg('journal.mistakes')}
+                  </p>
                   {selectedDay.mistakes.length === 0 ? (
                     <p className="mt-1 text-caption text-text-faint">
-                      Nothing recorded as a mistake.
+                      {msg('journal.nothingRecordedAsAMistake')}
                     </p>
                   ) : (
                     <ul className="mt-1.5 flex flex-wrap gap-1.5">
@@ -382,7 +400,9 @@ export function JournalCalendar({
                   )}
                 </div>
                 <div>
-                  <p className="text-caption font-semibold text-text-muted uppercase">Lesson</p>
+                  <p className="text-caption font-semibold text-text-muted uppercase">
+                    {msg('journal.lesson')}
+                  </p>
                   <p className="mt-1 text-caption text-text-muted">
                     {selectedDay.lesson === '' ? 'No lesson recorded.' : selectedDay.lesson}
                   </p>
@@ -398,7 +418,7 @@ export function JournalCalendar({
 
               <div className="flex items-center gap-2 text-caption text-text-faint">
                 <ChevronLeft size={12} aria-hidden />
-                Screenshots for these records live on each trade; open a record to see them.
+                {msg('journal.screenshotsForTheseRecordsLiveOn')}
               </div>
             </CardContent>
           </Card>

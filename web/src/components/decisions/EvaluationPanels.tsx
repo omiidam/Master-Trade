@@ -62,6 +62,7 @@ import {
   figureClass,
   figureMark,
 } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * The badge that must travel with anything a scenario produced.
@@ -80,7 +81,7 @@ export function HypotheticalScenarioBadge({
   if (outcome === 'realised' || outcome === 'unrealised') return null;
   return (
     <Badge tone={OUTCOME_TONE[outcome]} className={className}>
-      {EVALUATION_OUTCOME_LABEL[outcome]} — not a result
+      {EVALUATION_OUTCOME_LABEL[outcome]} {msg('decisions.notAResult')}
     </Badge>
   );
 }
@@ -109,33 +110,36 @@ export function DecisionSummary({
         <div className="min-w-0">
           <CardTitle className="truncate">{scope}</CardTitle>
           <CardDescription>
-            {DECISION_TYPE_LABEL[decision.type]} · recorded{' '}
+            {DECISION_TYPE_LABEL[decision.type]} {msg('decisions.recorded')}{' '}
             {new Date(decision.decidedAt).toLocaleString()}
           </CardDescription>
         </div>
         <Badge tone={KIND_TONE[decision.kind]}>{decision.kind}</Badge>
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <Chip label="Currency" value={decision.currency} />
+        <Chip label={msg('evaluationPanels.currency')} value={decision.currency} />
         <Chip
-          label="Entry"
+          label={msg('evaluationPanels.entry')}
           value={decision.entryPrice === null ? 'not recorded' : decision.entryPrice.value}
         />
         <Chip
-          label="Exit"
+          label={msg('evaluationPanels.exit')}
           value={decision.exitPrice === null ? 'not recorded' : decision.exitPrice.value}
         />
         <Chip
-          label="Planned risk"
+          label={msg('evaluationPanels.plannedRisk')}
           value={
             decision.risk.plannedRiskPercent === null
               ? 'not recorded'
               : `${decision.risk.plannedRiskPercent}%`
           }
         />
-        <Chip label="Window opens" value={new Date(decision.period.startAt).toLocaleDateString()} />
         <Chip
-          label="Window closes"
+          label={msg('evaluationPanels.windowOpens')}
+          value={new Date(decision.period.startAt).toLocaleDateString()}
+        />
+        <Chip
+          label={msg('evaluationPanels.windowCloses')}
           value={
             decision.period.endAt === null
               ? 'still open'
@@ -143,7 +147,7 @@ export function DecisionSummary({
           }
         />
         <Chip
-          label="Expected return"
+          label={msg('evaluationPanels.expectedReturn')}
           value={
             decision.expectation.returnPercent === null
               ? 'not stated'
@@ -151,7 +155,7 @@ export function DecisionSummary({
           }
         />
         <Chip
-          label="Expected R"
+          label={msg('evaluationPanels.expectedR')}
           value={
             decision.expectation.rMultiple === null
               ? 'not stated'
@@ -163,7 +167,9 @@ export function DecisionSummary({
         <>
           <CardDivider />
           <CardContent className="pt-3">
-            <p className="text-caption text-text-muted">Your rationale, as you recorded it</p>
+            <p className="text-caption text-text-muted">
+              {msg('decisions.yourRationaleAsYouRecordedIt')}
+            </p>
             <p className="mt-1 text-body text-text">{decision.rationale}</p>
           </CardContent>
         </>
@@ -226,15 +232,15 @@ export function ExpectedVsActualPanel({
 
   const rows: { label: string; expected: string; actual: string; difference: string | null }[] = [
     {
-      label: 'Return',
-      expected: format(comparison.expectedReturnPercent, '%', 'not stated'),
-      actual: format(comparison.actualReturnPercent, '%', 'not measurable'),
-      difference: format(comparison.differencePercent, '%', 'not measurable'),
+      label: msg('evaluationPanels.return'),
+      expected: format(comparison.expectedReturnPercent, '%', msg('evaluationPanels.notStated')),
+      actual: format(comparison.actualReturnPercent, '%', msg('evaluationPanels.notMeasurable')),
+      difference: format(comparison.differencePercent, '%', msg('evaluationPanels.notMeasurable')),
     },
     {
-      label: 'R multiple',
-      expected: format(comparison.expectedRMultiple, 'R', 'not stated'),
-      actual: format(comparison.actualRMultiple, 'R', 'not measurable'),
+      label: msg('evaluationPanels.rMultiple'),
+      expected: format(comparison.expectedRMultiple, 'R', msg('evaluationPanels.notStated')),
+      actual: format(comparison.actualRMultiple, 'R', msg('evaluationPanels.notMeasurable')),
       difference: null,
     },
   ];
@@ -243,11 +249,8 @@ export function ExpectedVsActualPanel({
     <Card className={className}>
       <CardHeader divider>
         <div className="min-w-0">
-          <CardTitle>Expected versus actual</CardTitle>
-          <CardDescription>
-            What you said you expected, and what the record says happened. The comparison is only
-            made when both sides exist and the actual side is a real outcome.
-          </CardDescription>
+          <CardTitle>{msg('decisions.expectedVersusActual')}</CardTitle>
+          <CardDescription>{msg('decisions.whatYouSaidYouExpectedAnd')}</CardDescription>
         </div>
         <Badge tone={comparison.comparable ? 'info' : 'outline'}>
           {comparison.comparable ? 'Comparable' : 'Not comparable'}
@@ -258,9 +261,9 @@ export function ExpectedVsActualPanel({
             be read sideways on a phone. */}
         <div className="hidden text-caption text-text-muted sm:grid sm:grid-cols-[minmax(0,7rem)_1fr_1fr_1fr] sm:gap-3">
           <span />
-          <span>Expected</span>
-          <span>Actual</span>
-          <span>Difference</span>
+          <span>{msg('decisions.expected')}</span>
+          <span>{msg('decisions.actual')}</span>
+          <span>{msg('decisions.difference')}</span>
         </div>
         {rows.map((row) => (
           <div
@@ -271,17 +274,23 @@ export function ExpectedVsActualPanel({
               {row.label}
             </p>
             <p className="text-body text-text">
-              <span className="text-caption text-text-muted sm:hidden">Expected </span>
+              <span className="text-caption text-text-muted sm:hidden">
+                {msg('decisions.expected')}{' '}
+              </span>
               {row.expected}
             </p>
             <p className="text-body text-text">
-              <span className="text-caption text-text-muted sm:hidden">Actual </span>
+              <span className="text-caption text-text-muted sm:hidden">
+                {msg('decisions.actual')}{' '}
+              </span>
               {row.actual}
             </p>
             <p className="text-body">
-              <span className="text-caption text-text-muted sm:hidden">Difference </span>
+              <span className="text-caption text-text-muted sm:hidden">
+                {msg('decisions.difference')}{' '}
+              </span>
               {row.difference === null ? (
-                <span className="text-text-muted">reported for the return only</span>
+                <span className="text-text-muted">{msg('decisions.reportedForTheReturnOnly')}</span>
               ) : (
                 <span className={figureClass(row.difference.startsWith('-') ? '-1' : '+1')}>
                   {row.difference}
@@ -316,7 +325,7 @@ export function DecisionReadinessPanel({
     <Card className={className}>
       <CardHeader divider>
         <div className="min-w-0">
-          <CardTitle>Evaluation readiness</CardTitle>
+          <CardTitle>{msg('decisions.evaluationReadiness')}</CardTitle>
           <CardDescription>{EVALUATION_READINESS_MEANING[readiness.readiness]}</CardDescription>
         </div>
         <Badge tone={EVALUATION_READINESS_TONE[readiness.readiness]}>
@@ -325,12 +334,14 @@ export function DecisionReadinessPanel({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-caption text-text-muted">Your declared context</span>
+          <span className="text-caption text-text-muted">
+            {msg('decisions.yourDeclaredContext')}
+          </span>
           <Badge tone={BASE_READINESS_TONE[readiness.base.readiness]}>
             {readiness.base.readiness.replaceAll('_', ' ').toLowerCase()}
           </Badge>
           <span className="text-caption text-text-muted">·</span>
-          <span className="text-caption text-text-muted">the record itself</span>
+          <span className="text-caption text-text-muted">{msg('decisions.theRecordItself')}</span>
           <Badge tone={EVALUATION_READINESS_TONE[readiness.readiness]}>
             {readiness.readiness.replaceAll('_', ' ').toLowerCase()}
           </Badge>
@@ -349,14 +360,15 @@ export function DecisionReadinessPanel({
           </ul>
         ) : (
           <p className="text-caption text-text-muted">
-            No findings. The record is complete enough to measure, and the window is the one it
-            declares.
+            {msg('decisions.noFindingsTheRecordIsComplete')}
           </p>
         )}
 
         {readiness.clarifications.length > 0 ? (
           <CardTile tone="raised" space="roomy">
-            <p className="text-caption font-medium text-text">What would change the answer</p>
+            <p className="text-caption font-medium text-text">
+              {msg('decisions.whatWouldChangeTheAnswer')}
+            </p>
             <ul className="mt-1.5 list-disc space-y-1 pl-5">
               {readiness.clarifications.map((question) => (
                 <li
@@ -399,11 +411,8 @@ export function EvaluationLimitationsPanel({
     <Card className={className}>
       <CardHeader divider>
         <div className="min-w-0">
-          <CardTitle>Limitations and assumptions</CardTitle>
-          <CardDescription>
-            Kept in the flow of the figures rather than folded away: a number read without these is
-            a different number.
-          </CardDescription>
+          <CardTitle>{msg('decisions.limitationsAndAssumptions')}</CardTitle>
+          <CardDescription>{msg('decisions.keptInTheFlowOfThe')}</CardDescription>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -418,7 +427,9 @@ export function EvaluationLimitationsPanel({
         ) : null}
         {assumptions.length > 0 ? (
           <div className="space-y-1.5">
-            <p className="text-caption font-medium text-text">Assumptions this reading rests on</p>
+            <p className="text-caption font-medium text-text">
+              {msg('decisions.assumptionsThisReadingRestsOn')}
+            </p>
             {assumptions.map((assumption) => (
               <div key={assumption.id} className="flex flex-wrap items-center gap-2">
                 <Badge tone={assumption.origin === 'user-declared' ? 'info' : 'neutral'}>
@@ -499,9 +510,9 @@ export function EvaluationSummary({
       <Card surface="data">
         <CardHeader divider>
           <div className="min-w-0">
-            <CardTitle>What the record says happened</CardTitle>
+            <CardTitle>{msg('decisions.whatTheRecordSaysHappened')}</CardTitle>
             <CardDescription>
-              Window {new Date(report.window.startAt).toLocaleDateString()} –{' '}
+              {msg('decisions.window')} {new Date(report.window.startAt).toLocaleDateString()} –{' '}
               {new Date(report.window.endAt).toLocaleDateString()}
               {report.window.days === null ? '' : ` · ${report.window.days} days`}
               {report.window.elapsing ? ' · still measuring' : ''}
@@ -520,8 +531,7 @@ export function EvaluationSummary({
           </p>
           {report.figures.length === 0 ? (
             <p className="text-caption text-text-muted">
-              No figure exists for this record, and the reasons are listed below rather than shown
-              as zeroes.
+              {msg('decisions.noFigureExistsForThisRecord')}
             </p>
           ) : (
             <div className="divide-y divide-border">
@@ -537,8 +547,8 @@ export function EvaluationSummary({
 
       {report.observations.length > 0 ? (
         <Section
-          title="Observations"
-          description="Readings the engine derived, each with the metrics it rests on and what it does not cover."
+          title={msg('decisions.observations')}
+          description={msg('evaluationPanels.readingsTheEngineDerivedEachWithTheMetrics')}
         >
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {report.observations.map((observation) => (
@@ -565,8 +575,8 @@ export function EvaluationHistory({
   if (evaluations.length === 0) {
     return (
       <EmptyState
-        title="Not evaluated yet"
-        description="Asking for an evaluation appends a row here. Nothing is overwritten, so a changed figure is explained by two rows rather than by one that was edited."
+        title={msg('decisions.notEvaluatedYet')}
+        description={msg('evaluationPanels.askingForAnEvaluationAppendsARowHere')}
         className={className}
       />
     );
@@ -576,25 +586,22 @@ export function EvaluationHistory({
     <Card surface="data" className={className}>
       <CardHeader divider>
         <div className="min-w-0">
-          <CardTitle>Evaluation history</CardTitle>
-          <CardDescription>
-            Append-only. Each row names the rule that produced the verdict and the version it read;
-            the figures themselves are recomputed whenever they are shown.
-          </CardDescription>
+          <CardTitle>{msg('decisions.evaluationHistory')}</CardTitle>
+          <CardDescription>{msg('decisions.appendOnlyEachRowNamesThe')}</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
         <Table
           className="text-caption"
           minWidth={544}
-          label="Each evaluation this decision has had, with the rule that produced it"
+          label={msg('evaluationPanels.eachEvaluationThisDecisionHasHadWithThe')}
         >
           <TableHead>
-            <TableHeaderCell>When</TableHeaderCell>
-            <TableHeaderCell>Reason</TableHeaderCell>
-            <TableHeaderCell>Outcome</TableHeaderCell>
-            <TableHeaderCell>Readiness</TableHeaderCell>
-            <TableHeaderCell numeric>Version</TableHeaderCell>
+            <TableHeaderCell>{msg('decisions.when')}</TableHeaderCell>
+            <TableHeaderCell>{msg('decisions.reason')}</TableHeaderCell>
+            <TableHeaderCell>{msg('decisions.outcome')}</TableHeaderCell>
+            <TableHeaderCell>{msg('decisions.readiness')}</TableHeaderCell>
+            <TableHeaderCell numeric>{msg('decisions.version')}</TableHeaderCell>
           </TableHead>
           <TableBody>
             {evaluations.map((evaluation) => (
@@ -616,7 +623,8 @@ export function EvaluationHistory({
                   </Badge>
                 </TableCell>
                 <TableCell numeric tone="muted">
-                  v{evaluation.decisionVersion}
+                  {msg('decisions.v')}
+                  {evaluation.decisionVersion}
                 </TableCell>
               </TableRow>
             ))}
@@ -668,7 +676,7 @@ export function DecisionCard({
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {decision.latest === null ? (
-          <Badge tone="outline">Not evaluated</Badge>
+          <Badge tone="outline">{msg('decisions.notEvaluated')}</Badge>
         ) : (
           <>
             <Badge tone={OUTCOME_TONE[decision.latest.outcome]}>
@@ -680,7 +688,10 @@ export function DecisionCard({
             </span>
           </>
         )}
-        <span className="text-caption text-text-muted num">v{decision.version}</span>
+        <span className="text-caption text-text-muted num">
+          {msg('decisions.v')}
+          {decision.version}
+        </span>
       </div>
     </button>
   );

@@ -12,6 +12,7 @@ import { DEFAULT_VISIBLE_COLUMNS, TRADE_COLUMNS, TradeRow, type TradeColumnId } 
 import { cn } from '../../lib/cn';
 import { sortTrades } from '../../mock/journal';
 import type { JournalTrade, SortDirection, TradeSortKey } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 export interface TradeTableProps {
   trades: readonly JournalTrade[];
@@ -117,16 +118,17 @@ export function TradeTable({
           {ordered.length} {ordered.length === 1 ? 'record' : 'records'}
         </Badge>
         <Badge tone="outline">
-          sorted by {TRADE_COLUMNS.find((column) => column.sortable === sortKey)?.label ?? sortKey}{' '}
-          · {sortDirection === 'asc' ? 'ascending' : 'descending'}
+          {msg('journal.sortedBy')}{' '}
+          {TRADE_COLUMNS.find((column) => column.sortable === sortKey)?.label ?? sortKey} ·{' '}
+          {sortDirection === 'asc' ? 'ascending' : 'descending'}
         </Badge>
       </div>
 
       <div className="relative flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5 text-caption text-text-faint">
-          Rows
+          {msg('journal.rows')}
           <select
-            aria-label="Rows per page"
+            aria-label={msg('journal.rowsPerPage')}
             className="h-8 rounded-[var(--radius-control)] border border-border bg-surface-sunken px-2 text-caption text-text"
             value={pageSize}
             onChange={(event) => setPageSize(Number(event.target.value))}
@@ -147,19 +149,19 @@ export function TradeTable({
           label={pickerOpen ? 'Hide column options' : 'Show column options'}
           leadingIcon={<Columns3 size={14} aria-hidden />}
         >
-          Columns
+          {msg('journal.columns')}
         </Button>
 
         {onExport ? (
-          <Tooltip content="Export is not connected in this phase: no file is written.">
+          <Tooltip content={msg('tradeTable.exportIsNotConnectedInThisPhaseNo')}>
             <Button
               variant="secondary"
               size="sm"
               onClick={onExport}
-              label="Export the current view"
+              label={msg('tradeTable.exportTheCurrentView')}
               leadingIcon={<Download size={14} aria-hidden />}
             >
-              Export
+              {msg('journal.export')}
             </Button>
           </Tooltip>
         ) : null}
@@ -168,7 +170,7 @@ export function TradeTable({
           <>
             <button
               type="button"
-              aria-label="Close column options"
+              aria-label={msg('journal.closeColumnOptions')}
               className="fixed inset-0 z-[var(--z-overlay)] cursor-default"
               onClick={() => setPickerOpen(false)}
             />
@@ -179,7 +181,7 @@ export function TradeTable({
               )}
             >
               <legend className="px-1 pb-1 text-caption font-semibold text-text-muted">
-                Visible columns
+                {msg('journal.visibleColumns')}
               </legend>
               <div className="max-h-64 space-y-0.5 overflow-y-auto">
                 {TRADE_COLUMNS.map((column) => (
@@ -195,7 +197,7 @@ export function TradeTable({
                     />
                     <span className="flex-1">{column.label}</span>
                     {column.required ? (
-                      <span className="text-caption text-text-faint">core</span>
+                      <span className="text-caption text-text-faint">{msg('journal.core')}</span>
                     ) : null}
                   </label>
                 ))}
@@ -205,17 +207,17 @@ export function TradeTable({
                   variant="ghost"
                   size="sm"
                   onClick={() => setVisible(DEFAULT_VISIBLE_COLUMNS)}
-                  label="Restore default columns"
+                  label={msg('tradeTable.restoreDefaultColumns')}
                 >
-                  Defaults
+                  {msg('journal.defaults')}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setVisible(TRADE_COLUMNS.map((column) => column.id))}
-                  label="Show every column"
+                  label={msg('tradeTable.showEveryColumn')}
                 >
-                  Show all
+                  {msg('journal.showAll')}
                 </Button>
               </div>
             </fieldset>
@@ -229,8 +231,8 @@ export function TradeTable({
     return (
       <div className={className}>
         <LoadingState
-          label="Reading trades"
-          description="Journal records are being read for this view."
+          label={msg('tradeTable.readingTrades')}
+          description={msg('tradeTable.journalRecordsAreBeingReadForThisView')}
           shape="table"
           rows={5}
         />
@@ -242,11 +244,16 @@ export function TradeTable({
     return (
       <div className={className}>
         <ErrorState
-          title="The trade list could not be read"
+          title={msg('journal.theTradeListCouldNotBe')}
           description={error}
           code="JOURNAL_READ_FAILED"
           action={
-            <Button variant="secondary" size="sm" onClick={onResetFilters} label="Clear filters">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onResetFilters}
+              label={msg('tradeTable.clearFilters')}
+            >
               Clear filters
             </Button>
           }
@@ -256,7 +263,11 @@ export function TradeTable({
   }
 
   return (
-    <Card as="section" aria-label="Trade history" className={cn('space-y-3 p-4', className)}>
+    <Card
+      as="section"
+      aria-label={msg('journal.tradeHistory')}
+      className={cn('space-y-3 p-4', className)}
+    >
       {toolbar}
 
       {ordered.length === 0 ? (
@@ -276,7 +287,7 @@ export function TradeTable({
                 variant="secondary"
                 size="sm"
                 onClick={onResetFilters}
-                label="Clear all trade filters"
+                label={msg('tradeFilters.clearAllTradeFilters')}
                 leadingIcon={<RotateCcw size={14} aria-hidden />}
               >
                 Clear filters
@@ -293,7 +304,7 @@ export function TradeTable({
         <>
           <Table
             minWidth={880}
-            label="Trade history with date, symbol, direction, setup, risk, realised R, result, rule compliance and status. Each row has a menu of record actions."
+            label={msg('tradeTable.tradeHistoryWithDateSymbolDirectionSetupRisk')}
           >
             <TableHead>
               {TRADE_COLUMNS.filter((column) => orderedColumns.includes(column.id)).map(
@@ -341,8 +352,8 @@ export function TradeTable({
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-caption text-text-faint">
-              {start + 1}–{Math.min(start + rows.length, ordered.length)} of {ordered.length}{' '}
-              records
+              {start + 1}–{Math.min(start + rows.length, ordered.length)} {msg('exams.of')}{' '}
+              {ordered.length} {msg('journal.records')}
               {ordered.length === totalRecords ? '' : ` (filtered from ${totalRecords})`}
             </p>
             <div className="flex items-center gap-2">
@@ -351,10 +362,10 @@ export function TradeTable({
                 size="sm"
                 disabled={currentPage <= 1}
                 onClick={() => setPage(currentPage - 1)}
-                label="Previous page of trades"
+                label={msg('tradeTable.previousPageOfTrades')}
                 leadingIcon={<ChevronLeft size={14} aria-hidden />}
               >
-                Previous
+                {msg('exams.previous')}
               </Button>
               <span className="num text-caption text-text-muted">
                 {currentPage} / {pageCount}
@@ -364,10 +375,10 @@ export function TradeTable({
                 size="sm"
                 disabled={currentPage >= pageCount}
                 onClick={() => setPage(currentPage + 1)}
-                label="Next page of trades"
+                label={msg('tradeTable.nextPageOfTrades')}
                 trailingIcon={<ChevronRight size={14} aria-hidden />}
               >
-                Next
+                {msg('journal.next')}
               </Button>
             </div>
           </div>

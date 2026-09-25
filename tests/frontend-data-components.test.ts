@@ -365,7 +365,7 @@ describe('Task 3 — a direction with three cues, and only one home', () => {
     // Zero is a measured flat result; a figure that was never produced is a different fact, and the
     // two must not be confusable.
     const indicator = code(join(COMPONENTS, 'journal', 'RMultipleIndicator.tsx'));
-    expect(indicator).toMatch(/unavailable="not scored"/);
+    expect(indicator).toMatch(/unavailable=\{msg\('journal\.notScored'\)\}/);
     expect(TREND).toMatch(/unavailable = 'no figure'/);
     expect(TREND).toMatch(/direction === 'unavailable' \? unavailable/);
   });

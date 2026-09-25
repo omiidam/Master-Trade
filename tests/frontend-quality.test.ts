@@ -22,6 +22,7 @@ import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 import { NAV_SECTIONS } from '../web/src/config/navigation.js';
+import { copyOf } from './helpers/source-copy.js';
 
 const root = process.cwd();
 const web = join(root, 'web');
@@ -91,7 +92,7 @@ describe('input-quality surface', () => {
   it('is an in-page tab, not a new navigation category', () => {
     const page = read(PAGE);
     expect(page).toMatch(/value="quality"/);
-    expect(page).toMatch(/label: 'Data quality'/);
+    expect(page).toMatch(/return msg\('portfolio\.dataQuality'\)/);
 
     const ids = NAV_SECTIONS.map((section) => section.id);
     for (const tab of ['quality', 'data-quality', 'readiness', 'input-quality']) {
@@ -132,7 +133,7 @@ describe('input-quality surface', () => {
     }
     // An unknown token falls back to itself, never to a prettier guess.
     expect(badge).toMatch(/label: value/);
-    expect(badge).toMatch(/does not know this token/);
+    expect(copyOf(badge)).toMatch(/does not know this token/);
   });
 
   it('renders the server’s decision and computes none of its own', () => {
@@ -175,7 +176,7 @@ describe('input-quality surface', () => {
 
     // Empty is a real rendering, not a blank: the panels say what "nothing" means.
     const missing = read('components/quality/MissingInformationPanel.tsx');
-    expect(missing).toMatch(/Nothing required is missing/);
+    expect(copyOf(missing)).toMatch(/Nothing required is missing/);
     const summary = read('components/quality/InputQualitySummary.tsx');
     expect(summary).toMatch(/Nothing declared yet/);
     const issues = read('components/quality/ValidationIssueList.tsx');
@@ -198,7 +199,7 @@ describe('input-quality surface', () => {
   it('shows a provenance pointer, and shows its absence as a finding', () => {
     const indicator = read('components/quality/ProvenanceIndicator.tsx');
     expect(indicator).toMatch(/provenance === null/);
-    expect(indicator).toMatch(/No provenance recorded/);
+    expect(copyOf(indicator)).toMatch(/No provenance recorded/);
     for (const trust of ['authoritative', 'verified', 'unverified']) {
       expect(indicator).toMatch(new RegExp(`\\b${trust}\\b`));
     }

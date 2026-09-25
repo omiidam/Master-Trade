@@ -1,6 +1,7 @@
 import type { ProvenanceRef } from '@shared/quality/model';
 import { Badge } from '../Badge';
 import { Tooltip } from '../Tooltip';
+import { msg, liveLabels } from '../../i18n/index.js';
 
 /**
  * Where one input came from, in the smallest form that is still checkable.
@@ -16,12 +17,12 @@ import { Tooltip } from '../Tooltip';
  *      what keeps the assessment safe to display and to log.
  */
 
-const SOURCE_LABEL: Readonly<Record<ProvenanceRef['source'], string>> = {
-  user: 'You',
-  derived: 'Derived',
-  system: 'System',
-  'market-data': 'Market data',
-};
+const SOURCE_LABEL: Readonly<Record<ProvenanceRef['source'], string>> = liveLabels({
+  user: 'quality.source.user',
+  derived: 'quality.source.derived',
+  system: 'quality.source.system',
+  'market-data': 'quality.source.market-data',
+});
 
 const TRUST_TONE: Readonly<Record<ProvenanceRef['trust'], 'success' | 'warning' | 'outline'>> = {
   authoritative: 'success',
@@ -29,11 +30,11 @@ const TRUST_TONE: Readonly<Record<ProvenanceRef['trust'], 'success' | 'warning' 
   unverified: 'warning',
 };
 
-const TRUST_MEANING: Readonly<Record<ProvenanceRef['trust'], string>> = {
-  authoritative: 'An authoritative source: the system read it directly rather than being told.',
-  verified: 'Confirmed against a source the system can point at.',
-  unverified: 'Nothing confirms this beyond the claim itself, so it cannot be weighed fully.',
-};
+const TRUST_MEANING: Readonly<Record<ProvenanceRef['trust'], string>> = liveLabels({
+  authoritative: 'quality.trust.authoritative',
+  verified: 'quality.trust.verified',
+  unverified: 'quality.trust.unverified',
+});
 
 export interface ProvenanceIndicatorProps {
   provenance: ProvenanceRef | null;
@@ -56,7 +57,7 @@ export function ProvenanceIndicator({
         }
       >
         <Badge tone="outline" className={className}>
-          No provenance recorded
+          {msg('quality.noProvenanceRecorded')}
         </Badge>
       </Tooltip>
     );
@@ -74,7 +75,7 @@ export function ProvenanceIndicator({
         <Badge tone={TRUST_TONE[provenance.trust]}>{provenance.trust}</Badge>
       </Tooltip>
       <span className="text-caption text-text-faint">
-        recorded {new Date(provenance.recordedAt).toLocaleString()}
+        {msg('quality.recorded')} {new Date(provenance.recordedAt).toLocaleString()}
       </span>
     </span>
   );

@@ -17,7 +17,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { NAV_ARIA_LABEL, NAV_GROUPS, NAV_SECTIONS } from '../config/navigation';
+import { NAV_GROUPS, NAV_SECTIONS, navAriaLabel } from '../config/navigation';
 import type { NavIconName } from '../config/navigation';
 import { Badge } from '../components/Badge';
 import { BrandLockup } from '../components/brand';
@@ -27,6 +27,7 @@ import { cn } from '../lib/cn';
 import { COMPACT_SHELL_QUERY, useMediaQuery } from '../lib/useMediaQuery';
 import { useUiStore } from '../store/ui';
 import { CardTile } from '../components/Card';
+import { msg } from '../i18n/index.js';
 
 const ICONS: Record<NavIconName, ReactNode> = {
   gauge: <Gauge size={17} aria-hidden />,
@@ -84,7 +85,7 @@ export function Sidebar() {
         )}
       </div>
 
-      <nav aria-label={NAV_ARIA_LABEL} className="flex-1 overflow-y-auto px-2 pb-4">
+      <nav aria-label={navAriaLabel()} className="flex-1 overflow-y-auto px-2 pb-4">
         {NAV_GROUPS.map((group) => {
           const items = NAV_SECTIONS.filter((section) => section.group === group.id);
           if (items.length === 0) return null;
@@ -94,7 +95,7 @@ export function Sidebar() {
                 <div aria-hidden className="mx-2 my-2 border-t border-border" />
               ) : (
                 <p className="px-2 py-1.5 text-caption font-semibold tracking-wide text-text-faint uppercase">
-                  {group.label}
+                  {msg(group.labelKey)}
                 </p>
               )}
               <ul className="space-y-0.5">
@@ -105,7 +106,7 @@ export function Sidebar() {
                       type="button"
                       onClick={() => setPage(section.id)}
                       aria-current={active ? 'page' : undefined}
-                      {...(collapsed ? { 'aria-label': section.label } : {})}
+                      {...(collapsed ? { 'aria-label': msg(section.labelKey) } : {})}
                       className={cn(
                         'group flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 py-2',
                         'text-start text-body transition-colors duration-[var(--duration-fast)]',
@@ -123,7 +124,7 @@ export function Sidebar() {
                       >
                         {ICONS[section.icon]}
                       </span>
-                      {collapsed ? null : <span className="truncate">{section.label}</span>}
+                      {collapsed ? null : <span className="truncate">{msg(section.labelKey)}</span>}
                       {collapsed || !active ? null : (
                         <span aria-hidden className="ms-auto h-1.5 w-1.5 rounded-full bg-primary" />
                       )}
@@ -132,7 +133,7 @@ export function Sidebar() {
                   return (
                     <li key={section.id}>
                       {collapsed ? (
-                        <Tooltip content={section.label} side="right">
+                        <Tooltip content={msg(section.labelKey)} side="right">
                           {button}
                         </Tooltip>
                       ) : (
@@ -150,13 +151,13 @@ export function Sidebar() {
       <div className="border-t border-border px-3 py-3">
         {collapsed ? (
           <Tooltip
-            content="Safety: live trading and broker execution disabled by design"
+            content={msg('sidebar.safetyLiveTradingAndBrokerExecutionDisabledBy')}
             side="right"
           >
             <Button
               variant="ghost"
               size="icon"
-              label="Safety status"
+              label={msg('sidebar.safetyStatus')}
               onClick={() => openSafety(true)}
             >
               <ShieldCheck size={16} aria-hidden />
@@ -167,18 +168,18 @@ export function Sidebar() {
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1.5 text-caption text-text-muted">
                 <ShieldCheck size={14} aria-hidden className="text-primary" />
-                Safety
+                {msg('shell.safety')}
               </span>
-              <Badge tone="primary">Training</Badge>
+              <Badge tone="primary">{msg('shell.training')}</Badge>
             </div>
             <dl className="mt-2 space-y-1 text-caption text-text-faint">
               <div className="flex items-center justify-between gap-2">
-                <dt>Live trading</dt>
-                <dd className="num text-text-muted">disabled</dd>
+                <dt>{msg('shell.liveTrading')}</dt>
+                <dd className="num text-text-muted">{msg('shell.disabled')}</dd>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <dt>Broker execution</dt>
-                <dd className="num text-text-muted">disabled</dd>
+                <dt>{msg('shell.brokerExecution')}</dt>
+                <dd className="num text-text-muted">{msg('shell.disabled')}</dd>
               </div>
             </dl>
             <Button
@@ -187,7 +188,7 @@ export function Sidebar() {
               className="mt-2 px-0"
               onClick={() => openSafety(true)}
             >
-              Safety details
+              {msg('shell.safetyDetails')}
             </Button>
           </CardTile>
         )}

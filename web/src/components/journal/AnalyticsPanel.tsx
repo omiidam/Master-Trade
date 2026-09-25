@@ -26,7 +26,7 @@ import {
   TableRowHeaderCell,
 } from '../Table';
 import {
-  JOURNAL_STAT_NOTE,
+  statNote,
   TRADE_RANGES,
   TRADE_RANGE_LABEL,
   describeRange,
@@ -46,6 +46,7 @@ import {
   mockWinLossDistribution,
 } from '../../mock/journal';
 import type { BreakdownRow, JournalSeries, TradeRange } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 function toSeries(series: JournalSeries, tone: 'primary' | 'danger' | 'info' | 'ai' | 'warning') {
   return [
@@ -92,11 +93,11 @@ function BreakdownTable({
           label={`${title}: sample size, win rate, average R and ${plannedLabel} for each bucket.`}
         >
           <TableHead>
-            <TableHeaderCell>Bucket</TableHeaderCell>
-            <TableHeaderCell numeric>Sample</TableHeaderCell>
-            <TableHeaderCell numeric>Win rate</TableHeaderCell>
-            <TableHeaderCell numeric>Average R</TableHeaderCell>
-            <TableHeaderCell numeric>Planned</TableHeaderCell>
+            <TableHeaderCell>{msg('journal.bucket')}</TableHeaderCell>
+            <TableHeaderCell numeric>{msg('journal.sample')}</TableHeaderCell>
+            <TableHeaderCell numeric>{msg('journal.winRate')}</TableHeaderCell>
+            <TableHeaderCell numeric>{msg('journal.averageR')}</TableHeaderCell>
+            <TableHeaderCell numeric>{msg('journal.planned')}</TableHeaderCell>
           </TableHead>
           <TableBody>
             {rows.map((row) => (
@@ -113,7 +114,8 @@ function BreakdownTable({
                   tone={row.averageR > 0.15 ? 'success' : row.averageR < -0.15 ? 'danger' : 'muted'}
                 >
                   {row.averageR > 0 ? '+' : row.averageR < 0 ? '−' : ''}
-                  {Math.abs(row.averageR).toFixed(2)}R
+                  {Math.abs(row.averageR).toFixed(2)}
+                  {msg('journal.r')}
                 </TableCell>
                 <TableCell numeric tone="faint">
                   {row.plannedRr.toFixed(1)}:1
@@ -122,10 +124,7 @@ function BreakdownTable({
             ))}
           </TableBody>
         </Table>
-        <p className="text-caption text-text-faint">
-          Rows are buckets of the same records, not independent samples — a bucket with a small
-          sample is a hint, not a finding.
-        </p>
+        <p className="text-caption text-text-faint">{msg('journal.rowsAreBucketsOfTheSame')}</p>
       </CardContent>
     </Card>
   );
@@ -166,7 +165,7 @@ export function AnalyticsPanel({
       <CardTile
         space="none"
         role="group"
-        aria-label="Analytics timeframe"
+        aria-label={msg('journal.analyticsTimeframe')}
         className="inline-flex flex-wrap items-center gap-0.5 p-0.5"
       >
         {TRADE_RANGES.map((value) => {
@@ -197,20 +196,24 @@ export function AnalyticsPanel({
       {custom ? (
         <div className="flex flex-wrap items-end gap-2">
           <label className="block min-w-0">
-            <span className="mb-1 block text-caption font-medium text-text-faint">From</span>
+            <span className="mb-1 block text-caption font-medium text-text-faint">
+              {msg('journal.from')}
+            </span>
             <Input
               type="date"
-              aria-label="Custom range start date"
+              aria-label={msg('journal.customRangeStartDate')}
               className="h-9 text-caption"
               value={rangeFrom}
               onChange={(event) => onRangeFromChange?.(event.target.value)}
             />
           </label>
           <label className="block min-w-0">
-            <span className="mb-1 block text-caption font-medium text-text-faint">To</span>
+            <span className="mb-1 block text-caption font-medium text-text-faint">
+              {msg('journal.to')}
+            </span>
             <Input
               type="date"
-              aria-label="Custom range end date"
+              aria-label={msg('journal.customRangeEndDate')}
               className="h-9 text-caption"
               value={rangeTo}
               onChange={(event) => onRangeToChange?.(event.target.value)}
@@ -227,17 +230,17 @@ export function AnalyticsPanel({
     <div className={cn('space-y-4', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Badge tone="warning">illustrative values</Badge>
+          <Badge tone="warning">{msg('journal.illustrativeValues')}</Badge>
           <span className="text-caption text-text-faint">
-            Scope: {rangeLabel}. {JOURNAL_STAT_NOTE}
+            {msg('journal.scope')} {rangeLabel}. {statNote()}
           </span>
         </div>
         {timeframe}
       </div>
 
       <Section
-        title="Curve"
-        description="Equity, per-trade result and the distance below the high-water mark."
+        title={msg('journal.curve')}
+        description={msg('analyticsPanel.equityPerTradeResultAndTheDistanceBelowThe')}
       >
         <div className="grid gap-4 xl:grid-cols-2">
           <PerformanceChart
@@ -247,7 +250,7 @@ export function AnalyticsPanel({
             unit={mockEquityCurve.unit}
             provenance={provenance}
             sourceRef="synthetic-journal-analytics"
-            footnote="A rising curve is history. It is a record of what happened, not a forecast of what will."
+            footnote={msg('analyticsPanel.aRisingCurveIsHistoryItIsA')}
           />
           <PerformanceChart
             title={mockCumulativeR.title}
@@ -262,10 +265,10 @@ export function AnalyticsPanel({
             description={mockDrawdownCurve.description}
             series={toSeries(mockDrawdownCurve, 'danger')}
             unit={mockDrawdownCurve.unit}
-            levels={[{ value: 0, label: 'high-water mark', tone: 'muted' }]}
+            levels={[{ value: 0, label: msg('analyticsPanel.highWaterMark'), tone: 'muted' }]}
             provenance={provenance}
             sourceRef="synthetic-journal-analytics"
-            footnote="Drawdown is measured from every high-water mark, so a new high resets it to zero."
+            footnote={msg('analyticsPanel.drawdownIsMeasuredFromEveryHighWaterMarkSo')}
           />
           <PerformanceChart
             title={mockExpectancyOverTime.title}
@@ -275,14 +278,14 @@ export function AnalyticsPanel({
             levels={[{ value: 0, label: 'break-even', tone: 'muted' }]}
             provenance={provenance}
             sourceRef="synthetic-journal-analytics"
-            footnote="Expectancy early in a sample moves for arithmetic reasons, not for strategic ones."
+            footnote={msg('analyticsPanel.expectancyEarlyInASampleMovesForArithmetic')}
           />
         </div>
       </Section>
 
       <Section
-        title="Distribution and risk"
-        description="Outcomes, size of wins against size of losses, and how consistent the risk was."
+        title={msg('journal.distributionAndRisk')}
+        description={msg('analyticsPanel.outcomesSizeOfWinsAgainstSizeOfLosses')}
       >
         <div className="grid gap-4 xl:grid-cols-2">
           <PerformanceChart
@@ -292,7 +295,7 @@ export function AnalyticsPanel({
             unit={mockWinLossDistribution.unit}
             provenance={provenance}
             sourceRef="synthetic-journal-analytics"
-            footnote="Open and incomplete records are listed rather than excluded, so the bars account for every row."
+            footnote={msg('analyticsPanel.openAndIncompleteRecordsAreListedRatherThan')}
           />
           <PerformanceChart
             title={mockAverageWinLoss.title}
@@ -310,7 +313,7 @@ export function AnalyticsPanel({
             unit={mockRiskConsistency.unit}
             provenance={provenance}
             sourceRef="synthetic-journal-analytics"
-            footnote="Consistent risk is what makes an R multiple comparable between two trades."
+            footnote={msg('analyticsPanel.consistentRiskIsWhatMakesAnRMultiple')}
           />
           <PerformanceChart
             title={mockTradeDuration.title}
@@ -324,28 +327,28 @@ export function AnalyticsPanel({
       </Section>
 
       <Section
-        title="Breakdowns"
-        description="Where the results came from. Sample size is reported before any rate."
+        title={msg('journal.breakdowns')}
+        description={msg('analyticsPanel.whereTheResultsCameFromSampleSizeIs')}
       >
         <div className="grid gap-4 xl:grid-cols-2">
           <BreakdownTable
-            title="Performance by setup"
-            description="Planned against realised, per setup."
+            title={msg('journal.performanceBySetup')}
+            description={msg('analyticsPanel.plannedAgainstRealisedPerSetup')}
             rows={mockSetupPerformance}
           />
           <BreakdownTable
-            title="Performance by session"
-            description="The session a setup is taken in is part of the setup's evidence."
+            title={msg('journal.performanceBySession')}
+            description={msg('analyticsPanel.theSessionASetupIsTakenInIs')}
             rows={mockSessionPerformance}
           />
           <BreakdownTable
-            title="Planned versus actual R:R"
-            description="What was planned against what the records realised, by setup."
+            title={msg('journal.plannedVersusActualRR')}
+            description={msg('analyticsPanel.whatWasPlannedAgainstWhatTheRecordsRealised')}
             rows={mockSetupPerformance}
           />
           <BreakdownTable
-            title="Performance by direction"
-            description="Long and short, kept separate — they are different samples."
+            title={msg('journal.performanceByDirection')}
+            description={msg('analyticsPanel.longAndShortKeptSeparateTheyAre')}
             rows={mockDirectionPerformance}
           />
         </div>
@@ -355,8 +358,8 @@ export function AnalyticsPanel({
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Rule compliance</CardTitle>
-              <CardDescription>Records by checklist outcome</CardDescription>
+              <CardTitle className="text-body">{msg('journal.ruleCompliance')}</CardTitle>
+              <CardDescription>{msg('journal.recordsByChecklistOutcome')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -370,8 +373,7 @@ export function AnalyticsPanel({
               />
             ))}
             <p className="text-caption text-text-faint">
-              A rate is reported over assessed records only; unassessed records are shown, not
-              counted as compliant.
+              {msg('journal.aRateIsReportedOverAssessed')}
             </p>
           </CardContent>
         </Card>
@@ -379,39 +381,43 @@ export function AnalyticsPanel({
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Consecutive wins and losses</CardTitle>
-              <CardDescription>Streaks read from the recorded sequence</CardDescription>
+              <CardTitle className="text-body">{msg('journal.consecutiveWinsAndLosses')}</CardTitle>
+              <CardDescription>{msg('journal.streaksReadFromTheRecordedSequence')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
               <Flame size={14} aria-hidden className="text-warning" />
-              <span className="text-caption text-text-muted">Longest winning run</span>
+              <span className="text-caption text-text-muted">
+                {msg('journal.longestWinningRun')}
+              </span>
               <span className="num ms-auto text-body text-text">{mockStreaks.maxWinStreak}</span>
             </div>
             <div className="flex items-center gap-2">
               <AlertTriangle size={14} aria-hidden className="text-danger" />
-              <span className="text-caption text-text-muted">Longest losing run</span>
+              <span className="text-caption text-text-muted">
+                {msg('journal.longestLosingRun')}
+              </span>
               <span className="num ms-auto text-body text-text">{mockStreaks.maxLossStreak}</span>
             </div>
             <div className="flex items-center gap-2 border-t border-border pt-2">
               <Repeat size={14} aria-hidden className="text-info" />
-              <span className="text-caption text-text-muted">Current run</span>
+              <span className="text-caption text-text-muted">{msg('journal.currentRun')}</span>
               <span className="num ms-auto text-caption text-text-muted">
                 {mockStreaks.currentLength} {mockStreaks.currentKind}
               </span>
             </div>
-            <p className="text-caption text-text-faint">
-              A streak is a property of a small sample, not of the trader.
-            </p>
+            <p className="text-caption text-text-faint">{msg('journal.aStreakIsAPropertyOf')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Mistake frequency</CardTitle>
-              <CardDescription>Recorded patterns, with the corrective note</CardDescription>
+              <CardTitle className="text-body">{msg('journal.mistakeFrequency')}</CardTitle>
+              <CardDescription>
+                {msg('journal.recordedPatternsWithTheCorrectiveNote')}
+              </CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -426,7 +432,7 @@ export function AnalyticsPanel({
               />
             ))}
             <p className="text-caption text-text-faint">
-              Shares are of the recorded occurrences, so a quiet week does not look like progress.
+              {msg('journal.sharesAreOfTheRecordedOccurrences')}
             </p>
           </CardContent>
         </Card>
@@ -434,8 +440,8 @@ export function AnalyticsPanel({
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Reading these numbers</CardTitle>
-              <CardDescription>What the analytics do not support</CardDescription>
+              <CardTitle className="text-body">{msg('journal.readingTheseNumbers')}</CardTitle>
+              <CardDescription>{msg('journal.whatTheAnalyticsDoNotSupport')}</CardDescription>
             </div>
           </CardHeader>
           {/*
@@ -452,8 +458,7 @@ export function AnalyticsPanel({
                   </AgentBadge>
                 }
               >
-                Fourteen scored trades is a sample, not a result. Every figure on this page is
-                illustrative.
+                {msg('journal.fourteenScoredTradesIsASample')}
               </AgentCardItem>
               <AgentCardItem
                 badge={
@@ -462,8 +467,7 @@ export function AnalyticsPanel({
                   </AgentBadge>
                 }
               >
-                Win rate and average R can disagree; when they do, expectancy is the figure to look
-                at.
+                {msg('journal.winRateAndAverageRCan')}
               </AgentCardItem>
               <AgentCardItem
                 badge={
@@ -472,8 +476,7 @@ export function AnalyticsPanel({
                   </AgentBadge>
                 }
               >
-                Nothing here is a signal, a recommendation or a rule. A rule change needs an
-                evaluation and a recorded human approval.
+                {msg('journal.nothingHereIsASignalA')}
               </AgentCardItem>
             </AgentCardList>
           </CardContent>

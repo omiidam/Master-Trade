@@ -4,6 +4,7 @@ import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { denialHeading } from './labels';
 import { CardTile } from '../Card';
+import { msg } from '../../i18n/index.js';
 
 /**
  * Three refusals, three surfaces, and the difference between them is the product decision.
@@ -43,10 +44,7 @@ export function UpgradePrompt({ feature, upgradePlanName, className }: UpgradePr
         </p>
       </div>
       <p className="text-body text-text-muted">{feature.reason}</p>
-      <p className="text-caption text-text-faint">
-        Nothing here can take a payment: this build has no payment integration, and every plan is
-        declared as not purchasable.
-      </p>
+      <p className="text-caption text-text-faint">{msg('usage.nothingHereCanTakeAPayment')}</p>
     </CardTile>
   );
 }
@@ -71,11 +69,14 @@ export function UsageLimitNotice({ feature, resetsAt, className }: UsageLimitNot
       <Clock size={14} aria-hidden className="mt-0.5 shrink-0 text-warning" />
       <div className="space-y-1">
         <p className="text-body font-medium text-text">
-          {feature.label}: {feature.usedThisPeriod} of {feature.periodLimit ?? 0} used this period
+          {feature.label}: {feature.usedThisPeriod} {msg('exams.of')} {feature.periodLimit ?? 0}{' '}
+          {msg('usage.usedThisPeriod')}
         </p>
         <p className="text-body text-text-muted">{feature.reason}</p>
         {resetsAt === undefined || resetsAt === null ? null : (
-          <p className="text-caption text-text-faint">The allowance renews at {resetsAt}.</p>
+          <p className="text-caption text-text-faint">
+            {msg('usage.theAllowanceRenewsAt')} {resetsAt}.
+          </p>
         )}
       </div>
     </div>
@@ -108,7 +109,7 @@ export function InsufficientCreditsState({
     >
       <div className="flex items-center gap-1.5">
         <CircleAlert size={15} aria-hidden className="text-warning" />
-        <p className="text-body font-medium text-text">Not enough credits</p>
+        <p className="text-body font-medium text-text">{msg('usage.notEnoughCredits')}</p>
         <Badge tone="warning">{denialHeading('insufficient-credits')}</Badge>
       </div>
       <p className="text-body text-text-muted">
@@ -118,10 +119,7 @@ export function InsufficientCreditsState({
               shortfall === null || shortfall === 0 ? '' : ` — ${shortfall} short`
             }. Nothing was consumed.`}
       </p>
-      <p className="text-caption text-text-faint">
-        The allowance is a budget for the period rather than a balance that accumulates, and the
-        deterministic capabilities keep working with a spent allowance.
-      </p>
+      <p className="text-caption text-text-faint">{msg('usage.theAllowanceIsABudgetFor')}</p>
       {action === undefined ? null : <div className="pt-1">{action}</div>}
     </div>
   );
@@ -152,8 +150,8 @@ export function ComingSoonNotice({ feature, action }: ComingSoonNoticeProps) {
           'This capability is included in your plan and has not been built yet.'}
       </p>
       <p className="text-caption text-text-faint">
-        That is a gap in the product, not in your entitlement — the declared cost is{' '}
-        {feature.creditCost} credits per invocation once it exists.
+        {msg('usage.thatIsAGapInThe')} {feature.creditCost}{' '}
+        {msg('usage.creditsPerInvocationOnceItExists')}
       </p>
       {action === undefined ? null : action}
     </CardTile>
@@ -174,7 +172,7 @@ export function UsageEmptyState({ title, hint }: { title: string; hint: string }
 export function UsageRetryAction({ onRetry }: { onRetry: () => void }) {
   return (
     <Button variant="secondary" size="sm" onClick={onRetry}>
-      Try again
+      {msg('usage.tryAgain')}
     </Button>
   );
 }

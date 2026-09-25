@@ -4,11 +4,12 @@ import { Button, IconButton } from '../components/Button';
 import { Input } from '../components/Input';
 import { Tooltip } from '../components/Tooltip';
 import { ConnectionStatus } from '../components/realtime/ConnectionStatus';
-import { findNavSection, PREVIEW_NOTICE } from '../config/navigation';
+import { findNavSection, previewNotice } from '../config/navigation';
 import { useShellStatus } from '../desktop/useShellStatus';
 import { PROCESS_STATE_LABEL } from '@shared/desktop/process';
 import { useRealtimeStore } from '../realtime/store.js';
 import { useUiStore } from '../store/ui';
+import { msg } from '../i18n/index.js';
 
 /**
  * Topbar: context, honesty about connectivity, and global affordances.
@@ -59,18 +60,18 @@ export function Topbar() {
     <header className="sticky top-0 z-[var(--z-shell)] border-b border-border bg-bg/85 backdrop-blur">
       <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
         <div className="min-w-0 grow basis-40">
-          <h1 className="truncate text-title font-semibold text-text">{section.label}</h1>
-          <p className="truncate text-caption text-text-muted">{section.description}</p>
+          <h1 className="truncate text-title font-semibold text-text">{msg(section.labelKey)}</h1>
+          <p className="truncate text-caption text-text-muted">{msg(section.descriptionKey)}</p>
         </div>
 
-        <Tooltip content={PREVIEW_NOTICE}>
+        <Tooltip content={previewNotice()}>
           <button
             type="button"
             onClick={() => openAbout(true)}
             className="rounded-[var(--radius-pill)]"
           >
             <Badge tone="warning" dot>
-              Preview · mock data
+              {msg('shell.previewMockData')}
             </Badge>
           </button>
         </Tooltip>
@@ -107,10 +108,10 @@ export function Topbar() {
           />
           <Input
             className="w-64 ps-8"
-            placeholder="Search lessons, sessions, notes"
-            aria-label="Search"
+            placeholder={msg('shell.searchLessonsSessionsNotes')}
+            aria-label={msg('shell.search')}
             disabled
-            title="Search arrives with the API layer in Phase 3.3"
+            title={msg('shell.searchArrivesWithTheAPILayer')}
           />
         </div>
 
@@ -122,7 +123,7 @@ export function Topbar() {
           }
         >
           <IconButton
-            label="Toggle writing direction"
+            label={msg('topbar.toggleWritingDirection')}
             variant="secondary"
             onClick={toggleDirection}
             aria-pressed={direction === 'rtl'}
@@ -139,7 +140,7 @@ export function Topbar() {
           }
         >
           <IconButton
-            label="Notifications and background tasks"
+            label={msg('topbar.notificationsAndBackgroundTasks')}
             variant="secondary"
             className="relative"
             onClick={() => setPage('activity')}
@@ -159,7 +160,7 @@ export function Topbar() {
           leadingIcon={<ShieldCheck size={15} aria-hidden />}
           onClick={() => openSafety(true)}
         >
-          Safety
+          {msg('shell.safety')}
         </Button>
       </div>
     </header>

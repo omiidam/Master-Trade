@@ -1828,3 +1828,100 @@ counterpart.
   code the product ships but does not yet call, and the note catalogue is checked for reachability: every
   note in it is produced by some message in the suite's corpus, so no instruction can sit in the catalogue
   untested.
+
+## 24. Phase 7.5.3.3 — the interface in Persian, and the one control that decides it
+
+The visible application is translatable: 2,440 keys in `web/src/i18n/messages.en.ts`, the same 2,440 in
+`messages.fa.ts`, and a component that addresses its copy by id rather than holding a sentence. The
+mechanism, and the boundary that the phase had to state before it could write any Persian, are
+`docs/ui-language.md`; the wording, the terminology it stays consistent with and the defects below are
+`docs/persian-language.md`.
+
+The claim the phase makes is narrow and testable: **the words the interface shows come from a catalogue, and
+one explicit choice decides which catalogue**. Everything else follows from that — including what the layer
+must _not_ do, which is decide anything for itself.
+
+### The setting was already there, so nothing new is persisted
+
+Phase 7.5.3.1 built a three-way control — `auto`, `fa`, `en` — that decides what language the _agent_ answers
+in, and stored it under one namespaced key. This phase gives the same choice a second effect: an explicit
+`fa` is also an instruction about the interface, and `auto` is not. So there is no second setting, no second
+key and no second store; `uiLocaleOf` is a pure function of the value 7.5.3.1 already kept, which is why
+"connected to the entire visible UI" and "do not mix the two persistence systems" could both be satisfied by
+one control.
+
+The interface layer reads that value and never writes it. The suite asserts the separation in both
+directions — no module under `web/src/i18n` may import the language knowledge store, and no module under
+`web/src/language` may import the interface — and the browser case measures the effect on the document
+(`<html lang>` becomes `fa-IR`, which is also what loads the Vazirmatn face) rather than only on one card.
+
+### One function at module level, and the reason it is not a hook per component
+
+The idiomatic React answer is `const { t } = useTranslation()` in each component, and about ninety
+components here render copy. So the locale lives in `active.ts`, the store's subscription updates it _before_
+React re-renders, and the shell subscribes to the locale so the whole tree re-renders and reads the new
+value. A `useEffect` would have run after paint and flashed the previous language on every switch.
+
+The one failure mode that mechanism has is a memoised component skipping the re-render, so the suite fails if
+any file under `web/src` imports `memo`. The second is subtler and is why a module-level value can never hold
+the result of a lookup: `const ALERTS = [{ title: 'Worth knowing' }]` is evaluated once at import, and the
+switch happens later. A module-scope property whose value is copy therefore became a **getter**, and an array
+of copy became one getter that rebuilds the array on each read; function-scope values stayed plain calls. The
+suite reads a label map before and after a switch, because that is the case a snapshot of the catalogue
+cannot see.
+
+### Two migrations, and the honest account of the first one
+
+The first pass rewrote JSX text nodes and module-level prose constants — 1,288 keys — and it was written as a
+regex over the source. That was a mistake, and it was caught by reading the diff: a pattern broad enough to
+match a sentence inside JSX is also broad enough to reach into a template literal, and it corrupted
+seventy-one files before it was reverted. The second attempt walked the TypeScript AST, which cannot rewrite
+anything that is not a string literal in a position the pass chose, and the second _phase_ of that attempt
+— the 1,152 keys this commit adds — extended it to the three positions the first pass could not reach: a JSX
+attribute built inside a `.map()`, an object property in a data array, and a string handed to a helper.
+
+What made the volume tractable was refusing to classify by hand: a value is copy if it looks like a sentence
+and sits somewhere a sentence can be shown, and it is data if it looks like an identifier, a class list, a
+path, a timestamp or a record reference. Everything the pass could not classify faithfully — a module-scope
+scalar const, a module-scope array that is not a property value — was _reported_ rather than guessed at, and
+those twenty-odd sites were converted by hand. Of the 1,362 rewrites, 161 reused a key the first pass had
+already translated, which is how the Persian for `Try again` did not get written twice.
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean, with the
+  running bundle at 1,687 kB (476 kB gzipped). The Persian catalogue is **in** that bundle, because a
+  language switch that needed a network round trip would not be a switch.
+- **1554** unit tests across **77** files (1537/76 before), including the new `tests/ui-language.test.ts` (22
+  tests) and one case in `tests/persian-terminology.test.ts` that ties the sidebar's Persian wording to the
+  7.5.2 terminology record — the interface cannot rename a concept the glossary already named.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**.
+- The browser suite is **32** cases (30 before): the switch offers one visible selected state and remembers it
+  across a reload, the interface around it changes with it, `<html lang>` and the navigation landmark's own
+  name follow, and all three controls fit and do not pan the layout at 375 px **in both languages**.
+- No new dependency and no new persistence key. `web/src/i18n` reads one value the product already stored.
+
+### What verification found
+
+Seven defects, and the pattern is that six of them are the migration believing it knew better than the code
+it was rewriting:
+
+1. **The regex pass corrupted template literals** in seventy-one files. Caught by reading the diff, reverted,
+   and replaced with an AST pass that can only touch a node it has classified.
+2. **A getter for a quoted key is not valid JavaScript.** `const EXPLANATION = { 'not-available': … }`
+   produced `get not-available()`; a computed accessor (`get ['not-available']()`) is what a record keyed by
+   a discriminant needs, and the key stays data while only the value is wording.
+3. **A file that already imported the catalogue still needed the import.** `Badge.tsx` imported
+   `liveLabels` and not `msg`, and the guard that decided whether to add the import asked whether the file
+   imported from the module rather than whether it imported the symbol.
+4. **Inline SVG path geometry is not a sentence.** `M32 0H0V32` reached the Persian catalogue before a rule
+   requiring a lower-case letter anywhere in the value ruled it out.
+5. **A driver that navigates by the landmark's English name stops working the moment the switch works.** Both
+   the browser driver and three shell cases selected `nav[aria-label="Primary"]`; the driver now finds the
+   navigation by shape, and the shell cases read the name from the catalogue.
+6. **`localStorage` belongs to an origin.** A browser case wrote the stored choice into a document that had
+   not loaded the app yet, which is a `SecurityError` rather than a preference; the case now loads the app
+   first and then sets the choice.
+7. **Seven test files asserted on English sentences that had moved into the catalogue.** They read through
+   `tests/helpers/source-copy.ts`, which resolves the keys a file mentions into the English it renders, so
+   each one still asserts what the surface _says_ rather than which id it says it with.

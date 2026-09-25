@@ -14,7 +14,7 @@ import { cn } from '../../lib/cn';
 import {
   ATTACHMENT_KIND_LABEL,
   EMOTIONAL_STATE_LABEL,
-  JOURNAL_ATTACHMENT_NOTE,
+  attachmentNote,
   JOURNAL_RULE_CHECKLIST,
   MARKET_LABEL,
   SESSION_LABEL,
@@ -33,18 +33,33 @@ import type {
   TradeStatus,
   TradingSession,
 } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 export { EMPTY_TRADE_FORM, validateTradeForm, countFormErrors } from './tradeFormModel';
 export type { TradeFormErrors, TradeFormSectionId, TradeFormValues } from './tradeFormModel';
 
 const SECTION_TITLES: Record<TradeFormSectionId, string> = {
-  information: 'Trade information',
-  risk: 'Execution and risk',
-  context: 'Market context',
-  plan: 'Trading plan',
-  psychology: 'Psychology',
-  review: 'Review',
-  attachments: 'Attachments',
+  get information(): string {
+    return msg('tradeForm.tradeInformation');
+  },
+  get risk(): string {
+    return msg('tradeForm.executionAndRisk');
+  },
+  get context(): string {
+    return msg('tradeForm.marketContext');
+  },
+  get plan(): string {
+    return msg('tradeForm.tradingPlan');
+  },
+  get psychology(): string {
+    return msg('journal.psychology');
+  },
+  get review(): string {
+    return msg('journal.review');
+  },
+  get attachments(): string {
+    return msg('tradeForm.attachments');
+  },
 };
 
 export interface TradeFormProps {
@@ -205,13 +220,13 @@ export function TradeForm({
   ];
 
   const SECTION_HINT: Record<TradeFormSectionId, string> = {
-    information: 'What was traded, when, and from which setup.',
-    risk: 'The levels and the risk. These must agree with the direction.',
-    context: 'What the chart looked like before the entry.',
-    plan: 'The plan written before entry, and the checklist it was measured against.',
-    psychology: 'Self-reported, recorded at the time rather than reconstructed afterwards.',
-    review: 'What it taught. A record with no review cannot be studied.',
-    attachments: 'Screenshots and markups that support the record.',
+    information: msg('tradeForm.whatWasTradedWhenAndFromWhichSetup'),
+    risk: msg('tradeForm.theLevelsAndTheRiskTheseMustAgree'),
+    context: msg('tradeForm.whatTheChartLookedLikeBeforeTheEntry'),
+    plan: msg('tradeForm.thePlanWrittenBeforeEntryAndTheChecklist'),
+    psychology: msg('tradeForm.selfReportedRecordedAtTheTimeRatherThanReconstructed'),
+    review: msg('tradeForm.whatItTaughtARecordWithNoReview'),
+    attachments: msg('tradeForm.screenshotsAndMarkupsThatSupportTheRecord'),
   };
 
   const SECTION_SUMMARY: Record<TradeFormSectionId, (values: TradeFormValues) => string> = {
@@ -241,13 +256,13 @@ export function TradeForm({
   const SECTION_BODY: Record<TradeFormSectionId, ReactNode> = {
     information: (
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {text('symbol', 'Symbol', {
+        {text('symbol', msg('tradeForm.symbol'), {
           placeholder: 'ES, EURUSD, AAPL…',
-          hint: 'The instrument as your platform names it.',
+          hint: msg('tradeForm.theInstrumentAsYourPlatformNamesIt'),
         })}
         {select(
           'market',
-          'Market',
+          msg('tradeFilters.market'),
           (Object.keys(MARKET_LABEL) as TradeMarket[]).map((key) => ({
             value: key,
             label: MARKET_LABEL[key],
@@ -255,30 +270,30 @@ export function TradeForm({
         )}
         {select(
           'direction',
-          'Direction',
+          msg('tradeFilters.direction'),
           (Object.keys(DIRECTION_LABEL) as TradeDirection[]).map((key) => ({
             value: key,
             label: DIRECTION_LABEL[key],
           })),
-          'Changing this re-checks the levels in the next section.',
+          msg('tradeForm.changingThisReChecksTheLevelsInTheNext'),
         )}
         {select(
           'status',
-          'Trade status',
+          msg('tradeForm.tradeStatus'),
           (Object.keys(STATUS_LABEL) as TradeStatus[]).map((key) => ({
             value: key,
             label: STATUS_LABEL[key],
           })),
         )}
-        {text('date', 'Trade date', { type: 'date' })}
-        {text('entryTime', 'Entry time', { type: 'time' })}
-        {text('exitTime', 'Exit time', {
+        {text('date', msg('tradeForm.tradeDate'), { type: 'date' })}
+        {text('entryTime', msg('tradeForm.entryTime'), { type: 'time' })}
+        {text('exitTime', msg('tradeForm.exitTime'), {
           type: 'time',
-          hint: 'Leave empty while the trade is open.',
+          hint: msg('tradeForm.leaveEmptyWhileTheTradeIsOpen'),
         })}
         {select(
           'session',
-          'Trading session',
+          msg('tradeForm.tradingSession'),
           (Object.keys(SESSION_LABEL) as TradingSession[]).map((key) => ({
             value: key,
             label: SESSION_LABEL[key],
@@ -286,74 +301,76 @@ export function TradeForm({
         )}
         {select(
           'timeframe',
-          'Timeframe',
+          msg('tradeForm.timeframe'),
           TRADE_TIMEFRAMES.map((frame) => ({ value: frame, label: frame })),
-          'The timeframe the setup was read on.',
+          msg('tradeForm.theTimeframeTheSetupWasReadOn'),
         )}
         <div className="md:col-span-2 xl:col-span-3">
           {select(
             'setupId',
-            'Setup',
+            msg('tradeFilters.setup'),
             [
-              { value: '', label: 'Choose a setup…' },
+              { value: '', label: msg('tradeForm.chooseASetup') },
               ...TRADE_SETUPS.map((setup) => ({ value: setup.id, label: setup.label })),
             ],
-            'A result without its setup cannot be reviewed.',
+            msg('tradeForm.aResultWithoutItsSetupCannotBeReviewed'),
           )}
         </div>
       </div>
     ),
     risk: (
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {text('entryPrice', 'Entry price', { type: 'number' })}
-        {text('exitPrice', 'Exit price', {
+        {text('entryPrice', msg('tradeForm.entryPrice'), { type: 'number' })}
+        {text('exitPrice', msg('tradeForm.exitPrice'), {
           type: 'number',
-          hint: 'Empty while the trade is open.',
+          hint: msg('tradeForm.emptyWhileTheTradeIsOpen'),
         })}
-        {text('stopLoss', 'Stop loss / invalidation')}
-        {text('takeProfit', 'Take profit')}
-        {text('positionSize', 'Position size', { type: 'number' })}
-        {text('plannedRisk', 'Planned risk (account currency)', { type: 'number' })}
-        {text('plannedRr', 'Planned reward-to-risk', {
+        {text('stopLoss', msg('tradeForm.stopLossInvalidation'))}
+        {text('takeProfit', msg('tradeForm.takeProfit'))}
+        {text('positionSize', msg('riskSummary.positionSize'), { type: 'number' })}
+        {text('plannedRisk', msg('tradeForm.plannedRiskAccountCurrency'), { type: 'number' })}
+        {text('plannedRr', msg('tradeForm.plannedRewardToRisk'), {
           type: 'number',
-          hint: 'Planned, not achieved.',
+          hint: msg('tradeForm.plannedNotAchieved'),
         })}
-        {text('actualR', 'Actual R realised', {
+        {text('actualR', msg('tradeForm.actualRRealised'), {
           type: 'number',
-          hint: 'Leave empty until the trade is scored.',
+          hint: msg('tradeForm.leaveEmptyUntilTheTradeIsScored'),
         })}
-        {text('commission', 'Commission', { type: 'number' })}
-        {text('fees', 'Fees', { type: 'number' })}
+        {text('commission', msg('tradeForm.commission'), { type: 'number' })}
+        {text('fees', msg('riskSummary.fees'), { type: 'number' })}
         <p className="text-caption text-text-faint md:col-span-2 xl:col-span-3">
-          The form checks that the levels agree with the direction. It does not compute your risk,
-          your R multiple or your size — those come from the deterministic engine, and a form that
-          invented them would be the most dangerous component in the application.
+          {msg('journal.theFormChecksThatTheLevels')}
         </p>
       </div>
     ),
     context: (
       <div className="grid gap-3 md:grid-cols-2">
-        {area('higherTimeframeBias', 'Higher-timeframe bias')}
-        {area('marketStructure', 'Market structure')}
-        {area('liquidityContext', 'Liquidity context')}
-        {area('keyZone', 'Key zone')}
-        {area('entryConfirmation', 'Entry confirmation')}
-        {area('confluences', 'Confluences', 'One per line.')}
-        {area('volatility', 'Volatility conditions')}
-        {area('newsExposure', 'News exposure')}
+        {area('higherTimeframeBias', msg('tradeForm.higherTimeframeBias'))}
+        {area('marketStructure', msg('profile.array.market-structure'))}
+        {area('liquidityContext', msg('tradeForm.liquidityContext'))}
+        {area('keyZone', msg('tradeForm.keyZone'))}
+        {area('entryConfirmation', msg('tradeForm.entryConfirmation'))}
+        {area('confluences', msg('tradeForm.confluences'), msg('tradeForm.onePerLine'))}
+        {area('volatility', msg('tradeForm.volatilityConditions'))}
+        {area('newsExposure', msg('tradeForm.newsExposure'))}
       </div>
     ),
     plan: (
       <div className="grid gap-3 md:grid-cols-2">
-        {area('thesis', 'Trade thesis')}
-        {area('entryRationale', 'Entry rationale')}
-        {area('invalidation', 'Invalidation condition', 'Required: what makes this trade wrong.')}
-        {area('management', 'Planned management')}
-        {area('exitPlan', 'Exit plan')}
+        {area('thesis', msg('tradeForm.tradeThesis'))}
+        {area('entryRationale', msg('tradeForm.entryRationale'))}
+        {area(
+          'invalidation',
+          msg('tradeForm.invalidationCondition'),
+          msg('tradeForm.requiredWhatMakesThisTradeWrong'),
+        )}
+        {area('management', msg('tradeForm.plannedManagement'))}
+        {area('exitPlan', msg('tradeForm.exitPlan'))}
         <div className="md:col-span-2">
           <ChecklistField
-            label="Rule checklist"
-            hint="Mark the items satisfied before entry. An unmarked checklist is a blank, not a pass."
+            label={msg('tradeForm.ruleChecklist')}
+            hint={msg('tradeForm.markTheItemsSatisfiedBeforeEntryAnUnmarked')}
             items={JOURNAL_RULE_CHECKLIST}
             selected={values.checklist}
             onToggle={(itemId) =>
@@ -369,14 +386,14 @@ export function TradeForm({
         <div className="md:col-span-2">
           {select(
             'compliance',
-            'Plan compliance',
+            msg('tradeForm.planCompliance'),
             [
-              { value: 'compliant', label: 'Compliant — every rule followed' },
-              { value: 'partial', label: 'Partial — at least one rule missed' },
-              { value: 'violation', label: 'Rule broken' },
-              { value: 'not-assessed', label: 'Not assessed yet' },
+              { value: 'compliant', label: msg('tradeForm.compliantEveryRuleFollowed') },
+              { value: 'partial', label: msg('tradeForm.partialAtLeastOneRuleMissed') },
+              { value: 'violation', label: msg('journal.compliance.violation') },
+              { value: 'not-assessed', label: msg('tradeForm.notAssessedYet') },
             ] as const,
-            'Reporting a break honestly is worth more than a clean-looking record.',
+            msg('tradeForm.reportingABreakHonestlyIsWorthMoreThan'),
           )}
         </div>
       </div>
@@ -386,7 +403,7 @@ export function TradeForm({
         <div className="grid gap-3 md:grid-cols-3">
           {select(
             'beforeEntry',
-            'Emotional state before entry',
+            msg('tradeForm.emotionalStateBeforeEntry'),
             (Object.keys(EMOTIONAL_STATE_LABEL) as EmotionalState[]).map((key) => ({
               value: key,
               label: EMOTIONAL_STATE_LABEL[key],
@@ -394,7 +411,7 @@ export function TradeForm({
           )}
           {select(
             'duringTrade',
-            'Emotional state during the trade',
+            msg('tradeForm.emotionalStateDuringTheTrade'),
             (Object.keys(EMOTIONAL_STATE_LABEL) as EmotionalState[]).map((key) => ({
               value: key,
               label: EMOTIONAL_STATE_LABEL[key],
@@ -402,7 +419,7 @@ export function TradeForm({
           )}
           {select(
             'afterExit',
-            'Emotional state after exit',
+            msg('tradeForm.emotionalStateAfterExit'),
             (Object.keys(EMOTIONAL_STATE_LABEL) as EmotionalState[]).map((key) => ({
               value: key,
               label: EMOTIONAL_STATE_LABEL[key],
@@ -411,18 +428,18 @@ export function TradeForm({
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <PsychologyScale
-            label="Confidence"
+            label={msg('quality.dimension.confidence')}
             value={values.confidence}
             onChange={(value) => set('confidence', value)}
           />
           <PsychologyScale
-            label="Fear"
+            label={msg('tradeForm.fear')}
             value={values.fear}
             onChange={(value) => set('fear', value)}
             caution
           />
           <PsychologyScale
-            label="Greed"
+            label={msg('tradeForm.greed')}
             value={values.greed}
             onChange={(value) => set('greed', value)}
             caution
@@ -434,46 +451,49 @@ export function TradeForm({
             caution
           />
           <PsychologyScale
-            label="Hesitation"
+            label={msg('tradeForm.hesitation')}
             value={values.hesitation}
             onChange={(value) => set('hesitation', value)}
             caution
           />
           <PsychologyScale
-            label="Impulsiveness"
+            label={msg('tradeForm.impulsiveness')}
             value={values.impulsiveness}
             onChange={(value) => set('impulsiveness', value)}
             caution
           />
           <PsychologyScale
-            label="Discipline"
+            label={msg('tradeForm.discipline')}
             value={values.discipline}
             onChange={(value) => set('discipline', value)}
           />
         </div>
         <p className="text-caption text-text-faint">
-          Self-reported and timestamped. These are the trader's own reading at the time, not a
-          measurement the system makes.
+          {msg('journal.selfReportedAndTimestampedTheseAre')}
         </p>
       </div>
     ),
     review: (
       <div className="grid gap-3 md:grid-cols-2">
-        {area('mistakes', 'Mistakes', 'One per line. These become countable tags.')}
-        {area('wentWell', 'What went well', 'One per line.')}
-        {area('improvements', 'Improvements to make', 'One per line.')}
-        {area('lesson', 'Main lesson')}
-        {area('adjustment', 'Future adjustment')}
-        {area('tags', 'Tags', 'Comma separated, e.g. A+ setup, runner held.')}
-        {area('notes', 'Notes')}
+        {area(
+          'mistakes',
+          msg('journal.mistakes'),
+          msg('tradeForm.onePerLineTheseBecomeCountableTags'),
+        )}
+        {area('wentWell', msg('tradeForm.whatWentWell'), msg('tradeForm.onePerLine'))}
+        {area('improvements', msg('tradeForm.improvementsToMake'), msg('tradeForm.onePerLine'))}
+        {area('lesson', msg('tradeForm.mainLesson'))}
+        {area('adjustment', msg('tradeForm.futureAdjustment'))}
+        {area('tags', msg('tradeForm.tags'), msg('tradeForm.commaSeparatedEGASetupRunnerHeld'))}
+        {area('notes', msg('tradeForm.notes'))}
         <p className="text-caption text-text-faint md:col-span-2">
-          A review is written from the record, and the record is not edited to fit the review.
+          {msg('journal.aReviewIsWrittenFromThe')}
         </p>
       </div>
     ),
     attachments: (
       <div className="space-y-3">
-        <p className="text-caption text-text-muted">{JOURNAL_ATTACHMENT_NOTE}</p>
+        <p className="text-caption text-text-muted">{attachmentNote()}</p>
         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
           {(Object.keys(ATTACHMENT_KIND_LABEL) as AttachmentKind[]).map((kind) => {
             const attached = values.attachments.includes(kind);
@@ -510,8 +530,7 @@ export function TradeForm({
           })}
         </div>
         <p className="text-caption text-text-faint">
-          Attachment slots are recorded as metadata only. No file is uploaded or stored in this
-          phase, so nothing here should be read as a stored image.
+          {msg('journal.attachmentSlotsAreRecordedAsMetadata')}
         </p>
       </div>
     ),
@@ -556,10 +575,9 @@ export function TradeForm({
     <div className={cn('space-y-3', className)}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-title font-semibold text-text">New trade record</h3>
+          <h3 className="text-title font-semibold text-text">{msg('journal.newTradeRecord')}</h3>
           <p className="mt-0.5 max-w-3xl text-caption text-text-muted">
-            Seven sections, opened one at a time. Errors travel with the collapsed header, so a
-            closed section can never hide a problem.
+            {msg('journal.sevenSectionsOpenedOneAtA')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -567,9 +585,9 @@ export function TradeForm({
             {errorCount === 0 ? 'no blocking problems' : `${errorCount} blocking`}
           </Badge>
           {dirty ? (
-            <Badge tone="warning">unsaved changes</Badge>
+            <Badge tone="warning">{msg('journal.unsavedChanges')}</Badge>
           ) : (
-            <Badge tone="outline">unchanged</Badge>
+            <Badge tone="outline">{msg('journal.unchanged')}</Badge>
           )}
         </div>
       </header>
@@ -593,7 +611,7 @@ export function TradeForm({
         <Alert
           tone="success"
           title={submitState.mode === 'submitted' ? 'Record written' : 'Draft written'}
-          description="A written record is appended to the journal; it never activates a rule and never reaches a broker."
+          description={msg('tradeForm.aWrittenRecordIsAppendedToTheJournal')}
         />
       ) : null}
 
@@ -616,31 +634,31 @@ export function TradeForm({
               }
               onCancel?.();
             }}
-            label="Cancel this trade record"
+            label={msg('tradeForm.cancelThisTradeRecord')}
             leadingIcon={<Trash2 size={14} aria-hidden />}
           >
-            Cancel
+            {msg('journal.cancel')}
           </Button>
           <Button
             variant="secondary"
             size="md"
             disabled={submitState.kind === 'saving'}
             onClick={() => void run('draft')}
-            label="Save this record as a draft"
+            label={msg('tradeForm.saveThisRecordAsADraft')}
             leadingIcon={<Save size={14} aria-hidden />}
           >
-            Save draft
+            {msg('journal.saveDraft')}
           </Button>
-          <Tooltip content="Submitting validates the record and writes it to the journal. It cannot place, change or close anything.">
+          <Tooltip content={msg('tradeForm.submittingValidatesTheRecordAndWritesItTo')}>
             <Button
               variant="primary"
               size="md"
               disabled={submitState.kind === 'saving'}
               onClick={() => void run('submitted')}
-              label="Submit this trade record"
+              label={msg('tradeForm.submitThisTradeRecord')}
               leadingIcon={<Send size={14} aria-hidden />}
             >
-              Submit trade
+              {msg('journal.submitTrade')}
             </Button>
           </Tooltip>
         </div>
@@ -649,8 +667,8 @@ export function TradeForm({
       <Modal
         open={confirmDiscard}
         onOpenChange={setConfirmDiscard}
-        title="Discard this record?"
-        description="Leaving now drops everything entered on this form. Nothing has been written to the journal."
+        title={msg('journal.discardThisRecord')}
+        description={msg('tradeForm.leavingNowDropsEverythingEnteredOnThisForm')}
         size="sm"
         footer={
           <>
@@ -658,7 +676,7 @@ export function TradeForm({
               variant="secondary"
               size="md"
               onClick={() => setConfirmDiscard(false)}
-              label="Keep editing this record"
+              label={msg('tradeForm.keepEditingThisRecord')}
             >
               Keep editing
             </Button>
@@ -672,7 +690,7 @@ export function TradeForm({
                 setSubmitState({ kind: 'idle' });
                 onCancel?.();
               }}
-              label="Discard this trade record"
+              label={msg('tradeForm.discardThisTradeRecord')}
               leadingIcon={<FileText size={14} aria-hidden />}
             >
               Discard and leave
@@ -684,11 +702,11 @@ export function TradeForm({
           {values.symbol === ''
             ? 'The record has no symbol yet.'
             : `The record is for ${values.symbol}.`}{' '}
-          {values.checklist.length} checklist{' '}
-          {values.checklist.length === 1 ? 'item is' : 'items are'} marked, and{' '}
+          {values.checklist.length} {msg('journal.checklist')}{' '}
+          {values.checklist.length === 1 ? 'item is' : 'items are'} {msg('journal.markedAnd')}{' '}
           {values.attachments.length}{' '}
           {values.attachments.length === 1 ? 'attachment slot is' : 'attachment slots are'}{' '}
-          selected.
+          {msg('journal.selected')}
         </p>
       </Modal>
     </div>

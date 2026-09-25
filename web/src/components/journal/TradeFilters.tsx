@@ -31,6 +31,7 @@ import type {
   TradeStatus,
   TradingSession,
 } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 export interface TradeFiltersProps {
   filters: TradeFilterState;
@@ -95,11 +96,11 @@ export function TradeFilters({
   const facets = (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
       <Facet
-        label="Market"
+        label={msg('tradeFilters.market')}
         value={filters.market}
         onChange={(value) => set('market', value as TradeMarket | 'all')}
       >
-        <option value="all">Any market</option>
+        <option value="all">{msg('journal.anyMarket')}</option>
         {(Object.keys(MARKET_LABEL) as TradeMarket[]).map((key) => (
           <option key={key} value={key}>
             {MARKET_LABEL[key]}
@@ -107,11 +108,11 @@ export function TradeFilters({
         ))}
       </Facet>
       <Facet
-        label="Direction"
+        label={msg('tradeFilters.direction')}
         value={filters.direction}
         onChange={(value) => set('direction', value as TradeDirection | 'all')}
       >
-        <option value="all">Both</option>
+        <option value="all">{msg('journal.both')}</option>
         {(Object.keys(DIRECTION_LABEL) as TradeDirection[]).map((key) => (
           <option key={key} value={key}>
             {DIRECTION_LABEL[key]}
@@ -119,19 +120,23 @@ export function TradeFilters({
         ))}
       </Facet>
       <Facet
-        label="Session"
+        label={msg('activity.session')}
         value={filters.session}
         onChange={(value) => set('session', value as TradingSession | 'all')}
       >
-        <option value="all">Any session</option>
+        <option value="all">{msg('journal.anySession')}</option>
         {(Object.keys(SESSION_LABEL) as TradingSession[]).map((key) => (
           <option key={key} value={key}>
             {SESSION_LABEL[key]}
           </option>
         ))}
       </Facet>
-      <Facet label="Setup" value={filters.setupId} onChange={(value) => set('setupId', value)}>
-        <option value="all">Any setup</option>
+      <Facet
+        label={msg('tradeFilters.setup')}
+        value={filters.setupId}
+        onChange={(value) => set('setupId', value)}
+      >
+        <option value="all">{msg('journal.anySetup')}</option>
         {TRADE_SETUPS.map((setup) => (
           <option key={setup.id} value={setup.id}>
             {setup.label}
@@ -139,11 +144,11 @@ export function TradeFilters({
         ))}
       </Facet>
       <Facet
-        label="Result"
+        label={msg('tradeFilters.result')}
         value={filters.result}
         onChange={(value) => set('result', value as TradeResult | 'all')}
       >
-        <option value="all">Any result</option>
+        <option value="all">{msg('journal.anyResult')}</option>
         {TRADE_RESULTS.map((key) => (
           <option key={key} value={key}>
             {RESULT_LABEL[key]}
@@ -151,11 +156,11 @@ export function TradeFilters({
         ))}
       </Facet>
       <Facet
-        label="Rule compliance"
+        label={msg('journal.ruleCompliance')}
         value={filters.compliance}
         onChange={(value) => set('compliance', value as RuleCompliance | 'all')}
       >
-        <option value="all">Any state</option>
+        <option value="all">{msg('journal.anyState')}</option>
         {RULE_COMPLIANCES.map((key) => (
           <option key={key} value={key}>
             {COMPLIANCE_LABEL[key]}
@@ -163,11 +168,11 @@ export function TradeFilters({
         ))}
       </Facet>
       <Facet
-        label="Status"
+        label={msg('tradeFilters.status')}
         value={filters.status}
         onChange={(value) => set('status', value as TradeStatus | 'all')}
       >
-        <option value="all">Any status</option>
+        <option value="all">{msg('journal.anyStatus')}</option>
         {TRADE_STATUSES.map((key) => (
           <option key={key} value={key}>
             {STATUS_LABEL[key]}
@@ -175,7 +180,7 @@ export function TradeFilters({
         ))}
       </Facet>
       <Facet
-        label="Date range"
+        label={msg('tradeFilters.dateRange')}
         value={filters.range}
         onChange={(value) => set('range', value as TradeRange)}
       >
@@ -188,7 +193,9 @@ export function TradeFilters({
       {filters.range === 'custom' ? (
         <>
           <label className="block min-w-0">
-            <span className="mb-1 block text-caption font-medium text-text-faint">From</span>
+            <span className="mb-1 block text-caption font-medium text-text-faint">
+              {msg('journal.from')}
+            </span>
             <Input
               type="date"
               className="h-9 text-caption"
@@ -197,7 +204,9 @@ export function TradeFilters({
             />
           </label>
           <label className="block min-w-0">
-            <span className="mb-1 block text-caption font-medium text-text-faint">To</span>
+            <span className="mb-1 block text-caption font-medium text-text-faint">
+              {msg('journal.to')}
+            </span>
             <Input
               type="date"
               className="h-9 text-caption"
@@ -211,7 +220,11 @@ export function TradeFilters({
   );
 
   return (
-    <Card as="section" aria-label="Trade filters" className={cn('space-y-3 p-4', className)}>
+    <Card
+      as="section"
+      aria-label={msg('journal.tradeFilters')}
+      className={cn('space-y-3 p-4', className)}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <span
@@ -223,8 +236,8 @@ export function TradeFilters({
           <Input
             type="search"
             className="ps-9"
-            placeholder="Search symbol, reference, setup or tag"
-            aria-label="Search trades"
+            placeholder={msg('journal.searchSymbolReferenceSetupOrTag')}
+            aria-label={msg('journal.searchTrades')}
             value={filters.search}
             onChange={(event) => set('search', event.target.value)}
           />
@@ -255,10 +268,10 @@ export function TradeFilters({
             variant="ghost"
             size="md"
             onClick={onReset}
-            label="Clear all trade filters"
+            label={msg('tradeFilters.clearAllTradeFilters')}
             leadingIcon={<RotateCcw size={14} aria-hidden />}
           >
-            Reset
+            {msg('journal.reset')}
           </Button>
         ) : null}
       </div>

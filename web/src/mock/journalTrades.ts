@@ -19,6 +19,7 @@
  */
 
 import type { AttachmentKind, JournalTrade, TradeAttachment, TradeEvent } from './journal.js';
+import { msg } from '../i18n/index.js';
 
 function shots(
   ref: string,
@@ -68,32 +69,67 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'compliant',
     reviewState: 'reviewed',
     aiReviewState: 'not-available',
-    tags: ['A+ setup', 'runner held', 'session open'],
+    get tags(): string[] {
+      return [
+        msg('journalTrades.aSetup'),
+        msg('journalTrades.runnerHeld'),
+        msg('journalTrades.sessionOpen'),
+      ];
+    },
     screenshots: shots('TR-041', '2026-09-19T15:35:00Z', '2026-09-19T16:12:00Z', [
       'entry',
       'exit',
       'markup',
     ]),
     context: {
-      higherTimeframeBias: 'Daily above the prior week high; bias long above 5800.',
-      marketStructure: 'Higher highs and higher lows through the European session.',
-      liquidityContext: 'Equal highs at 5858 taken before the retest.',
+      get higherTimeframeBias(): string {
+        return msg('journalTrades.dailyAboveThePriorWeekHighBiasLong');
+      },
+      get marketStructure(): string {
+        return msg('journalTrades.higherHighsAndHigherLowsThroughTheEuropean');
+      },
+      get liquidityContext(): string {
+        return msg('journalTrades.equalHighsAt5858TakenBeforeTheRetest');
+      },
       keyZone: '5840–5844 (prior session high, retested twice).',
-      entryConfirmation: 'Lower-timeframe higher low inside the zone, then a close back above it.',
-      confluences: ['Daily bias', 'Level retested twice', 'Volume expansion on the break'],
-      volatility: 'Above average; the day range was 1.4× the twenty-day mean.',
-      newsExposure: 'No scheduled release inside the holding window.',
+      get entryConfirmation(): string {
+        return msg('journalTrades.lowerTimeframeHigherLowInsideTheZoneThenA');
+      },
+      get confluences(): string[] {
+        return [
+          msg('journalTrades.dailyBias'),
+          msg('journalTrades.levelRetestedTwice'),
+          msg('journalTrades.volumeExpansionOnTheBreak'),
+        ];
+      },
+      get volatility(): string {
+        return msg('journalTrades.aboveAverageTheDayRangeWas14The');
+      },
+      get newsExposure(): string {
+        return msg('journalTrades.noScheduledReleaseInsideTheHoldingWindow');
+      },
     },
     rationale: {
-      thesis:
-        'A level that produced two failed pushes is more likely to hold on the third attempt after it breaks and is retested.',
-      entryRationale: 'The retest held with a higher low, so the stop could sit under the zone.',
-      invalidation: 'A close back inside 5840–5844 without a rejection voids the setup.',
-      management: 'Move the stop to breakeven only after 1R, never before.',
-      exitPlan: 'Trim half at 2R, trail the remainder under each 5m higher low.',
+      get thesis(): string {
+        return msg('journalTrades.aLevelThatProducedTwoFailedPushesIs');
+      },
+      get entryRationale(): string {
+        return msg('journalTrades.theRetestHeldWithAHigherLowSo');
+      },
+      get invalidation(): string {
+        return msg('journalTrades.aCloseBackInside58405844WithoutARejection');
+      },
+      get management(): string {
+        return msg('journalTrades.moveTheStopToBreakevenOnlyAfter1R');
+      },
+      get exitPlan(): string {
+        return msg('journalTrades.trimHalfAt2RTrailTheRemainderUnder');
+      },
       checklist: ['bias', 'level', 'invalidation', 'risk', 'size', 'session', 'news', 'reward'],
       compliance: 'compliant',
-      complianceNote: 'All eight checklist items were satisfied before entry.',
+      get complianceNote(): string {
+        return msg('journalTrades.allEightChecklistItemsWereSatisfiedBeforeEntry');
+      },
     },
     psychology: {
       beforeEntry: 'focused',
@@ -109,14 +145,24 @@ export const mockTrades: readonly JournalTrade[] = [
     },
     review: {
       mistakes: [],
-      wentWell: [
-        'Waited for the retest instead of the break.',
-        'Held the runner to the planned level rather than the first reaction.',
-      ],
-      improvements: ['Log the trim decision at the time rather than at the close.'],
-      lesson: 'The retest is the trade. The break is only the condition.',
-      adjustment: 'Keep the two-step entry rule for every breakout-retest in this session.',
-      notes: 'Best execution on record for this setup.',
+      get wentWell(): string[] {
+        return [
+          msg('journalTrades.waitedForTheRetestInsteadOfTheBreak'),
+          msg('journalTrades.heldTheRunnerToThePlannedLevelRather'),
+        ];
+      },
+      get improvements(): string[] {
+        return [msg('journalTrades.logTheTrimDecisionAtTheTimeRather')];
+      },
+      get lesson(): string {
+        return msg('journalTrades.theRetestIsTheTradeTheBreakIs');
+      },
+      get adjustment(): string {
+        return msg('journalTrades.keepTheTwoStepEntryRuleForEveryBreakoutRetest');
+      },
+      get notes(): string {
+        return msg('journalTrades.bestExecutionOnRecordForThisSetup');
+      },
     },
     updatedAt: '2026-09-19T16:40:00Z',
   },
@@ -153,27 +199,55 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'compliant',
     reviewState: 'reviewed',
     aiReviewState: 'not-available',
-    tags: ['stopped out', 'clean loss'],
+    get tags(): string[] {
+      return [msg('journalTrades.stoppedOut'), msg('journalTrades.cleanLoss')];
+    },
     screenshots: shots('TR-040', '2026-09-19T10:20:00Z', '2026-09-19T11:05:00Z', ['entry', 'exit']),
     context: {
-      higherTimeframeBias: 'Neutral: price inside the prior day range.',
-      marketStructure: 'Range with a clear upper boundary at 21310.',
-      liquidityContext: 'Stops resting above the overnight high at 21290.',
+      get higherTimeframeBias(): string {
+        return msg('journalTrades.neutralPriceInsideThePriorDayRange');
+      },
+      get marketStructure(): string {
+        return msg('journalTrades.rangeWithAClearUpperBoundaryAt21310');
+      },
+      get liquidityContext(): string {
+        return msg('journalTrades.stopsRestingAboveTheOvernightHighAt21290');
+      },
       keyZone: '21290–21310 (overnight high and range boundary).',
-      entryConfirmation: 'Rejection wick into the boundary, then a lower close.',
-      confluences: ['Range boundary', 'Overnight high'],
-      volatility: 'Average.',
-      newsExposure: 'None scheduled.',
+      get entryConfirmation(): string {
+        return msg('journalTrades.rejectionWickIntoTheBoundaryThenALower');
+      },
+      get confluences(): string[] {
+        return [msg('journalTrades.rangeBoundary'), msg('journalTrades.overnightHigh')];
+      },
+      get volatility(): string {
+        return msg('journalTrades.average');
+      },
+      get newsExposure(): string {
+        return msg('journalTrades.noneScheduled');
+      },
     },
     rationale: {
-      thesis: 'The push into the overnight high would fail and return to the range mid.',
-      entryRationale: 'Entry taken on the first lower close after the rejection wick.',
-      invalidation: 'A close above 21310 invalidates the range read.',
-      management: 'No adjustment planned; the stop was the thesis.',
-      exitPlan: 'Target the range mid, then reassess.',
+      get thesis(): string {
+        return msg('journalTrades.thePushIntoTheOvernightHighWouldFail');
+      },
+      get entryRationale(): string {
+        return msg('journalTrades.entryTakenOnTheFirstLowerCloseAfter');
+      },
+      get invalidation(): string {
+        return msg('journalTrades.aCloseAbove21310InvalidatesTheRangeRead');
+      },
+      get management(): string {
+        return msg('journalTrades.noAdjustmentPlannedTheStopWasTheThesis');
+      },
+      get exitPlan(): string {
+        return msg('journalTrades.targetTheRangeMidThenReassess');
+      },
       checklist: ['bias', 'level', 'invalidation', 'risk', 'size', 'session', 'news', 'reward'],
       compliance: 'compliant',
-      complianceNote: 'A losing trade that followed every rule. Compliance is not outcome.',
+      get complianceNote(): string {
+        return msg('journalTrades.aLosingTradeThatFollowedEveryRuleCompliance');
+      },
     },
     psychology: {
       beforeEntry: 'focused',
@@ -189,13 +263,21 @@ export const mockTrades: readonly JournalTrade[] = [
     },
     review: {
       mistakes: [],
-      wentWell: [
-        'The stop was not touched, widened or cancelled.',
-        'The loss stayed inside budget.',
-      ],
-      improvements: ['Note that the boundary had been tested three times, which weakens a fade.'],
-      lesson: 'A boundary tested repeatedly is thinner than it looks.',
-      adjustment: 'Count how many times a level was tested before fading it.',
+      get wentWell(): string[] {
+        return [
+          msg('journalTrades.theStopWasNotTouchedWidenedOrCancelled'),
+          msg('journalTrades.theLossStayedInsideBudget'),
+        ];
+      },
+      get improvements(): string[] {
+        return [msg('journalTrades.noteThatTheBoundaryHadBeenTestedThree')];
+      },
+      get lesson(): string {
+        return msg('journalTrades.aBoundaryTestedRepeatedlyIsThinnerThanIt');
+      },
+      get adjustment(): string {
+        return msg('journalTrades.countHowManyTimesALevelWasTested');
+      },
       notes: '',
     },
     updatedAt: '2026-09-19T11:30:00Z',
@@ -233,32 +315,63 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'compliant',
     reviewState: 'reviewed',
     aiReviewState: 'not-available',
-    tags: ['trend day', 'pullback into demand'],
+    get tags(): string[] {
+      return [msg('journalTrades.trendDay'), msg('journalTrades.pullbackIntoDemand')];
+    },
     screenshots: shots('TR-039', '2026-09-18T09:10:00Z', '2026-09-18T10:40:00Z', [
       'entry',
       'exit',
       'analysis',
     ]),
     context: {
-      higherTimeframeBias: 'Four-hour uptrend intact above 1.1050.',
-      marketStructure: 'Clean higher lows on the fifteen-minute chart.',
-      liquidityContext: 'Sell-side liquidity below the London open low was swept first.',
+      get higherTimeframeBias(): string {
+        return msg('journalTrades.fourHourUptrendIntactAbove11050');
+      },
+      get marketStructure(): string {
+        return msg('journalTrades.cleanHigherLowsOnTheFifteenMinuteChart');
+      },
+      get liquidityContext(): string {
+        return msg('journalTrades.sellSideLiquidityBelowTheLondonOpenLowWas');
+      },
       keyZone: '1.1082–1.1090 (prior breakout shelf).',
-      entryConfirmation: 'Bullish engulfing close back above the shelf.',
-      confluences: ['Four-hour trend', 'Shelf retest', 'London session'],
-      volatility: 'Below average; the range was narrow.',
-      newsExposure: 'No release until the afternoon.',
+      get entryConfirmation(): string {
+        return msg('journalTrades.bullishEngulfingCloseBackAboveTheShelf');
+      },
+      get confluences(): string[] {
+        return [
+          msg('journalTrades.fourHourTrend'),
+          msg('journalTrades.shelfRetest'),
+          msg('journalTrades.londonSession'),
+        ];
+      },
+      get volatility(): string {
+        return msg('journalTrades.belowAverageTheRangeWasNarrow');
+      },
+      get newsExposure(): string {
+        return msg('journalTrades.noReleaseUntilTheAfternoon');
+      },
     },
     rationale: {
-      thesis:
-        'A trend that pulls into a prior breakout shelf offers a defined risk against the trend.',
-      entryRationale: 'The stop sat under the shelf, which is where the pullback would be wrong.',
-      invalidation: 'A fifteen-minute close below 1.1060.',
-      management: 'Half off at 1.5R, stop to breakeven after.',
-      exitPlan: 'Full exit at 2.5R or on the first fifteen-minute close below the rising shelf.',
+      get thesis(): string {
+        return msg('journalTrades.aTrendThatPullsIntoAPriorBreakout');
+      },
+      get entryRationale(): string {
+        return msg('journalTrades.theStopSatUnderTheShelfWhichIs');
+      },
+      get invalidation(): string {
+        return msg('journalTrades.aFifteenMinuteCloseBelow11060');
+      },
+      get management(): string {
+        return msg('journalTrades.halfOffAt15RStopToBreakevenAfter');
+      },
+      get exitPlan(): string {
+        return msg('journalTrades.fullExitAt25ROrOnTheFirst');
+      },
       checklist: ['bias', 'level', 'invalidation', 'risk', 'size', 'session', 'news', 'reward'],
       compliance: 'compliant',
-      complianceNote: 'Checklist complete; the exit came in slightly under the plan target.',
+      get complianceNote(): string {
+        return msg('journalTrades.checklistCompleteTheExitCameInSlightlyUnder');
+      },
     },
     psychology: {
       beforeEntry: 'calm',
@@ -274,13 +387,21 @@ export const mockTrades: readonly JournalTrade[] = [
     },
     review: {
       mistakes: [],
-      wentWell: [
-        'Entry came from the shelf, not from the open.',
-        'Half was trimmed at 1.5R as planned.',
-      ],
-      improvements: ['The runner was closed a little early against the plan.'],
-      lesson: 'Trimming is a plan; closing the rest is a second, separate decision.',
-      adjustment: 'Set the runner exit at the level, not on feel.',
+      get wentWell(): string[] {
+        return [
+          msg('journalTrades.entryCameFromTheShelfNotFromThe'),
+          msg('journalTrades.halfWasTrimmedAt15RAsPlanned'),
+        ];
+      },
+      get improvements(): string[] {
+        return [msg('journalTrades.theRunnerWasClosedALittleEarlyAgainst')];
+      },
+      get lesson(): string {
+        return msg('journalTrades.trimmingIsAPlanClosingTheRestIs');
+      },
+      get adjustment(): string {
+        return msg('journalTrades.setTheRunnerExitAtTheLevelNot');
+      },
       notes: '',
     },
     updatedAt: '2026-09-18T11:00:00Z',
@@ -318,38 +439,75 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'partial',
     reviewState: 'required',
     aiReviewState: 'not-available',
-    tags: ['range edge', 'asia session'],
+    get tags(): string[] {
+      return [msg('journalTrades.rangeEdge'), msg('journalTrades.asiaSession')];
+    },
     screenshots: shots('TR-038', '2026-09-18T03:40:00Z', '2026-09-18T06:05:00Z', ['entry', 'exit']),
     context: {
-      higherTimeframeBias: 'Neutral: price inside a three-day range.',
-      marketStructure: 'Lower highs into the range low.',
-      liquidityContext: 'Range low sat directly beneath a visible support line.',
+      get higherTimeframeBias(): string {
+        return msg('journalTrades.neutralPriceInsideAThreeDayRange');
+      },
+      get marketStructure(): string {
+        return msg('journalTrades.lowerHighsIntoTheRangeLow');
+      },
+      get liquidityContext(): string {
+        return msg('journalTrades.rangeLowSatDirectlyBeneathAVisibleSupport');
+      },
       keyZone: '62900–63200 (range low).',
-      entryConfirmation: 'None recorded before entry — the level was assumed to hold.',
-      confluences: ['Range low'],
-      volatility: 'Low.',
-      newsExposure: 'Not checked before entry.',
+      get entryConfirmation(): string {
+        return msg('journalTrades.noneRecordedBeforeEntryTheLevelWas');
+      },
+      get confluences(): string[] {
+        return [msg('journalTrades.rangeLow')];
+      },
+      get volatility(): string {
+        return msg('journalTrades.low');
+      },
+      get newsExposure(): string {
+        return msg('journalTrades.notCheckedBeforeEntry');
+      },
     },
     rationale: {
-      thesis: 'The range low would hold for a third time.',
-      entryRationale: 'Entry taken on approach rather than on a rejection.',
-      invalidation: 'A one-hour close below 62900.',
-      management: 'Not written before entry.',
-      exitPlan: 'Range mid.',
+      get thesis(): string {
+        return msg('journalTrades.theRangeLowWouldHoldForAThird');
+      },
+      get entryRationale(): string {
+        return msg('journalTrades.entryTakenOnApproachRatherThanOnA');
+      },
+      get invalidation(): string {
+        return msg('journalTrades.aOneHourCloseBelow62900');
+      },
+      get management(): string {
+        return msg('journalTrades.notWrittenBeforeEntry');
+      },
+      get exitPlan(): string {
+        return msg('journalTrades.rangeMid');
+      },
       checklist: ['bias', 'level', 'risk', 'session', 'reward'],
       compliance: 'partial',
-      complianceNote:
-        'Three checklist items were skipped: no written invalidation, size above the written risk, and no rejection before entry.',
+      get complianceNote(): string {
+        return msg('journalTrades.threeChecklistItemsWereSkippedNoWrittenInvalidation');
+      },
     },
     review: {
-      mistakes: [
-        'Entered on approach without a rejection',
-        'Skipped the invalidation checklist item',
-      ],
-      wentWell: ['The stop was honoured exactly as planned.'],
-      improvements: ['Write the invalidation before looking at size.'],
-      lesson: 'The level is a location. Without a rejection it is only a hope.',
-      adjustment: 'Require a rejection close before any range-edge entry.',
+      get mistakes(): string[] {
+        return [
+          msg('journalTrades.enteredOnApproachWithoutARejection'),
+          msg('journalTrades.skippedTheInvalidationChecklistItem'),
+        ];
+      },
+      get wentWell(): string[] {
+        return [msg('journalTrades.theStopWasHonouredExactlyAsPlanned')];
+      },
+      get improvements(): string[] {
+        return [msg('journalTrades.writeTheInvalidationBeforeLookingAtSize')];
+      },
+      get lesson(): string {
+        return msg('journalTrades.theLevelIsALocationWithoutARejection');
+      },
+      get adjustment(): string {
+        return msg('journalTrades.requireARejectionCloseBeforeAnyRangeEdgeEntry');
+      },
       notes: '',
     },
     updatedAt: '2026-09-18T07:10:00Z',
@@ -387,7 +545,9 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'compliant',
     reviewState: 'not-required',
     aiReviewState: 'not-available',
-    tags: ['managed exit', 'flat close'],
+    get tags(): string[] {
+      return [msg('journalTrades.managedExit'), msg('journalTrades.flatClose')];
+    },
     screenshots: shots('TR-037', '2026-09-17T14:20:00Z', '2026-09-17T15:02:00Z', ['entry']),
     updatedAt: '2026-09-17T15:30:00Z',
   },
@@ -424,33 +584,63 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'partial',
     reviewState: 'reviewed',
     aiReviewState: 'not-available',
-    tags: ['early entry'],
+    get tags(): string[] {
+      return [msg('journalTrades.earlyEntry')];
+    },
     screenshots: shots('TR-036', '2026-09-16T09:25:00Z', '2026-09-16T11:15:00Z', [
       'entry',
       'exit',
       'markup',
     ]),
     context: {
-      higherTimeframeBias: 'Daily downtrend; rallies sold into the prior day high.',
-      marketStructure: 'Lower highs and lower lows across the London session.',
-      liquidityContext: 'Buy-side liquidity above the Asian session high was taken first.',
+      get higherTimeframeBias(): string {
+        return msg('journalTrades.dailyDowntrendRalliesSoldIntoThePriorDay');
+      },
+      get marketStructure(): string {
+        return msg('journalTrades.lowerHighsAndLowerLowsAcrossTheLondon');
+      },
+      get liquidityContext(): string {
+        return msg('journalTrades.buySideLiquidityAboveTheAsianSessionHighWas');
+      },
       keyZone: '189.60–189.90 (prior day high shelf).',
-      entryConfirmation:
-        'Bearish rejection from the shelf, but entered before the confirming close.',
-      confluences: ['Daily downtrend', 'Shelf', 'Asian high swept'],
-      volatility: 'High; the pair was moving on a rate decision later in the week.',
-      newsExposure: 'No release during the holding window, but elevated event risk in the week.',
+      get entryConfirmation(): string {
+        return msg('journalTrades.bearishRejectionFromTheShelfButEnteredBefore');
+      },
+      get confluences(): string[] {
+        return [
+          msg('journalTrades.dailyDowntrend'),
+          msg('journalTrades.shelf'),
+          msg('journalTrades.asianHighSwept'),
+        ];
+      },
+      get volatility(): string {
+        return msg('journalTrades.highThePairWasMovingOnARate');
+      },
+      get newsExposure(): string {
+        return msg('journalTrades.noReleaseDuringTheHoldingWindowButElevated');
+      },
     },
     rationale: {
-      thesis: 'Counter-trend rallies into a prior high offer a defined stop above the shelf.',
-      entryRationale: 'Entry was taken one candle before the rejection close.',
-      invalidation: 'A fifteen-minute close above 190.05.',
-      management: 'Stop to breakeven at 1R.',
-      exitPlan: 'Full exit at 2.5R or on the first higher low.',
+      get thesis(): string {
+        return msg('journalTrades.counterTrendRalliesIntoAPriorHighOfferA');
+      },
+      get entryRationale(): string {
+        return msg('journalTrades.entryWasTakenOneCandleBeforeTheRejection');
+      },
+      get invalidation(): string {
+        return msg('journalTrades.aFifteenMinuteCloseAbove19005');
+      },
+      get management(): string {
+        return msg('journalTrades.stopToBreakevenAt1R');
+      },
+      get exitPlan(): string {
+        return msg('journalTrades.fullExitAt25ROrOnTheFirst2');
+      },
       checklist: ['bias', 'level', 'invalidation', 'risk', 'size', 'session', 'news'],
       compliance: 'partial',
-      complianceNote:
-        'The reward item and the confirmation requirement were both skipped: entry was taken before the rejection close.',
+      get complianceNote(): string {
+        return msg('journalTrades.theRewardItemAndTheConfirmationRequirementWere');
+      },
     },
     psychology: {
       beforeEntry: 'confident',
@@ -465,12 +655,24 @@ export const mockTrades: readonly JournalTrade[] = [
       discipline: 6,
     },
     review: {
-      mistakes: ['Entered before the rejection close'],
-      wentWell: ['Sizing respected the written risk despite the early entry.'],
-      improvements: ['Wait for the confirming close even when the level looks obvious.'],
-      lesson: 'Being early is not the same as being right, even when it works.',
-      adjustment: 'No entry without the confirmation candle, regardless of how the level looks.',
-      notes: 'Recorded as partial compliance even though the trade was profitable.',
+      get mistakes(): string[] {
+        return [msg('journalTrades.enteredBeforeTheRejectionClose')];
+      },
+      get wentWell(): string[] {
+        return [msg('journalTrades.sizingRespectedTheWrittenRiskDespiteTheEarly')];
+      },
+      get improvements(): string[] {
+        return [msg('journalTrades.waitForTheConfirmingCloseEvenWhenThe')];
+      },
+      get lesson(): string {
+        return msg('journalTrades.beingEarlyIsNotTheSameAsBeing');
+      },
+      get adjustment(): string {
+        return msg('journalTrades.noEntryWithoutTheConfirmationCandleRegardlessOf');
+      },
+      get notes(): string {
+        return msg('journalTrades.recordedAsPartialComplianceEvenThoughTheTrade');
+      },
     },
     updatedAt: '2026-09-16T11:45:00Z',
   },
@@ -507,7 +709,9 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'violation',
     reviewState: 'reviewed',
     aiReviewState: 'not-available',
-    tags: ['stop moved', 'over-risk', 'rule break'],
+    get tags(): string[] {
+      return [msg('journalTrades.stopMoved'), 'over-risk', msg('journalTrades.ruleBreak')];
+    },
     screenshots: shots('TR-035', '2026-09-15T12:10:00Z', '2026-09-15T13:48:00Z', [
       'entry',
       'exit',
@@ -515,25 +719,50 @@ export const mockTrades: readonly JournalTrade[] = [
       'analysis',
     ]),
     context: {
-      higherTimeframeBias: 'Daily bullish, but the overlap session was choppy.',
-      marketStructure: 'Failed to make a higher high after the London close.',
-      liquidityContext: 'Stops were clustered just below the retest low.',
+      get higherTimeframeBias(): string {
+        return msg('journalTrades.dailyBullishButTheOverlapSessionWasChoppy');
+      },
+      get marketStructure(): string {
+        return msg('journalTrades.failedToMakeAHigherHighAfterThe');
+      },
+      get liquidityContext(): string {
+        return msg('journalTrades.stopsWereClusteredJustBelowTheRetestLow');
+      },
       keyZone: '5808–5814 (breakout shelf).',
-      entryConfirmation: 'Weak: the retest held for two candles only.',
-      confluences: ['Daily bias'],
-      volatility: 'Elevated into the overlap.',
-      newsExposure: 'A mid-session release was ignored.',
+      get entryConfirmation(): string {
+        return msg('journalTrades.weakTheRetestHeldForTwoCandlesOnly');
+      },
+      get confluences(): string[] {
+        return [msg('journalTrades.dailyBias')];
+      },
+      get volatility(): string {
+        return msg('journalTrades.elevatedIntoTheOverlap');
+      },
+      get newsExposure(): string {
+        return msg('journalTrades.aMidSessionReleaseWasIgnored');
+      },
     },
     rationale: {
-      thesis: 'The breakout shelf would hold and continue with the daily trend.',
-      entryRationale: 'Retest held for two candles, which was treated as confirmation.',
-      invalidation: 'A close below 5800 should have ended the trade.',
-      management: 'Planned: stop to breakeven at 1R. Actual: the stop was widened twice.',
-      exitPlan: 'Exit at 2.5R or on invalidation.',
+      get thesis(): string {
+        return msg('journalTrades.theBreakoutShelfWouldHoldAndContinueWith');
+      },
+      get entryRationale(): string {
+        return msg('journalTrades.retestHeldForTwoCandlesWhichWasTreated');
+      },
+      get invalidation(): string {
+        return msg('journalTrades.aCloseBelow5800ShouldHaveEndedThe');
+      },
+      get management(): string {
+        return msg('journalTrades.plannedStopToBreakevenAt1RActualThe');
+      },
+      get exitPlan(): string {
+        return msg('journalTrades.exitAt25ROrOnInvalidation');
+      },
       checklist: ['bias', 'level', 'risk', 'session'],
       compliance: 'violation',
-      complianceNote:
-        'The invalidation close happened and the stop was widened instead of honoured, which pushed the loss to 1.6R and past the daily risk budget.',
+      get complianceNote(): string {
+        return msg('journalTrades.theInvalidationCloseHappenedAndTheStopWas');
+      },
     },
     psychology: {
       beforeEntry: 'confident',
@@ -548,16 +777,28 @@ export const mockTrades: readonly JournalTrade[] = [
       discipline: 2,
     },
     review: {
-      mistakes: [
-        'Moved the stop away from the plan',
-        'Risked past the daily budget',
-        'Ignored a scheduled release',
-      ],
-      wentWell: ['The trade was reviewed the same day and marked as a rule break.'],
-      improvements: ['Hard-stop the platform at the daily risk limit.'],
-      lesson: 'Widening a stop is a new trade with a bigger size and no thesis.',
-      adjustment: 'When the invalidation close prints, the trade is over — no exceptions.',
-      notes: 'The most instructive record in the journal, and the worst one.',
+      get mistakes(): string[] {
+        return [
+          msg('journalTrades.movedTheStopAwayFromThePlan'),
+          msg('journalTrades.riskedPastTheDailyBudget'),
+          msg('journalTrades.ignoredAScheduledRelease'),
+        ];
+      },
+      get wentWell(): string[] {
+        return [msg('journalTrades.theTradeWasReviewedTheSameDayAnd')];
+      },
+      get improvements(): string[] {
+        return [msg('journalTrades.hardStopThePlatformAtTheDailyRiskLimit')];
+      },
+      get lesson(): string {
+        return msg('journalTrades.wideningAStopIsANewTradeWith');
+      },
+      get adjustment(): string {
+        return msg('journalTrades.whenTheInvalidationClosePrintsTheTradeIs');
+      },
+      get notes(): string {
+        return msg('journalTrades.theMostInstructiveRecordInTheJournalAnd');
+      },
     },
     updatedAt: '2026-09-15T14:20:00Z',
   },
@@ -594,33 +835,63 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'compliant',
     reviewState: 'reviewed',
     aiReviewState: 'not-available',
-    tags: ['sweep', 'reclaim', 'runner held'],
+    get tags(): string[] {
+      return ['sweep', 'reclaim', msg('journalTrades.runnerHeld')];
+    },
     screenshots: shots('TR-034', '2026-09-14T07:55:00Z', '2026-09-14T09:30:00Z', [
       'entry',
       'exit',
       'markup',
     ]),
     context: {
-      higherTimeframeBias: 'Daily uptrend, price above the prior week close.',
-      marketStructure: 'Higher lows on the four-hour chart.',
-      liquidityContext: 'Sell-side stops below the London open low were taken in one impulse.',
+      get higherTimeframeBias(): string {
+        return msg('journalTrades.dailyUptrendPriceAboveThePriorWeekClose');
+      },
+      get marketStructure(): string {
+        return msg('journalTrades.higherLowsOnTheFourHourChart');
+      },
+      get liquidityContext(): string {
+        return msg('journalTrades.sellSideStopsBelowTheLondonOpenLowWere');
+      },
       keyZone: '2634–2640 (prior day low and weekly open).',
-      entryConfirmation: 'Reclaim of the prior day low within the same impulse, then a higher low.',
-      confluences: ['Weekly open', 'Sweep of the session low', 'Daily trend'],
-      volatility: 'High, expanding after the sweep.',
-      newsExposure: 'A central-bank speaker after the holding window.',
+      get entryConfirmation(): string {
+        return msg('journalTrades.reclaimOfThePriorDayLowWithinThe');
+      },
+      get confluences(): string[] {
+        return [
+          msg('journalTrades.weeklyOpen'),
+          msg('journalTrades.sweepOfTheSessionLow'),
+          msg('journalTrades.dailyTrend'),
+        ];
+      },
+      get volatility(): string {
+        return msg('journalTrades.highExpandingAfterTheSweep');
+      },
+      get newsExposure(): string {
+        return msg('journalTrades.aCentralBankSpeakerAfterTheHoldingWindow');
+      },
     },
     rationale: {
-      thesis:
-        'When a session low is swept and reclaimed inside one impulse, the stops that were taken supply the move.',
-      entryRationale:
-        'Entry on the higher low after the reclaim, with the stop under the sweep low.',
-      invalidation: 'A fifteen-minute close below the sweep low.',
-      management: 'Stop to breakeven at 1R, trail under each fifteen-minute higher low after 2R.',
-      exitPlan: 'Trim at 2.5R, trail the remainder.',
+      get thesis(): string {
+        return msg('journalTrades.whenASessionLowIsSweptAndReclaimed');
+      },
+      get entryRationale(): string {
+        return msg('journalTrades.entryOnTheHigherLowAfterTheReclaim');
+      },
+      get invalidation(): string {
+        return msg('journalTrades.aFifteenMinuteCloseBelowTheSweepLow');
+      },
+      get management(): string {
+        return msg('journalTrades.stopToBreakevenAt1RTrailUnderEach');
+      },
+      get exitPlan(): string {
+        return msg('journalTrades.trimAt25RTrailTheRemainder');
+      },
       checklist: ['bias', 'level', 'invalidation', 'risk', 'size', 'session', 'news', 'reward'],
       compliance: 'compliant',
-      complianceNote: 'Checklist complete; the runner was allowed past the plan target.',
+      get complianceNote(): string {
+        return msg('journalTrades.checklistCompleteTheRunnerWasAllowedPastThe');
+      },
     },
     psychology: {
       beforeEntry: 'focused',
@@ -636,13 +907,21 @@ export const mockTrades: readonly JournalTrade[] = [
     },
     review: {
       mistakes: [],
-      wentWell: [
-        'Waited for the reclaim rather than the sweep itself.',
-        'The runner was managed by rule.',
-      ],
-      improvements: ['Record the trailing rule that was actually used, not the planned one.'],
-      lesson: 'The sweep supplies the fuel; the reclaim is the signal.',
-      adjustment: 'Keep the sweep-and-reclaim requirement for every session-low entry.',
+      get wentWell(): string[] {
+        return [
+          msg('journalTrades.waitedForTheReclaimRatherThanTheSweep'),
+          msg('journalTrades.theRunnerWasManagedByRule'),
+        ];
+      },
+      get improvements(): string[] {
+        return [msg('journalTrades.recordTheTrailingRuleThatWasActuallyUsed')];
+      },
+      get lesson(): string {
+        return msg('journalTrades.theSweepSuppliesTheFuelTheReclaimIs');
+      },
+      get adjustment(): string {
+        return msg('journalTrades.keepTheSweepAndReclaimRequirementForEverySessionLowE');
+      },
       notes: '',
     },
     updatedAt: '2026-09-14T10:00:00Z',
@@ -680,7 +959,9 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'compliant',
     reviewState: 'not-required',
     aiReviewState: 'not-available',
-    tags: ['failed push', 'range high'],
+    get tags(): string[] {
+      return [msg('journalTrades.failedPush'), msg('journalTrades.rangeHigh')];
+    },
     screenshots: shots('TR-033', '2026-09-11T15:20:00Z', '2026-09-11T16:04:00Z', ['entry', 'exit']),
     updatedAt: '2026-09-11T16:30:00Z',
   },
@@ -717,7 +998,9 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'violation',
     reviewState: 'required',
     aiReviewState: 'not-available',
-    tags: ['range edge', 'over-risk', 'rule break'],
+    get tags(): string[] {
+      return [msg('journalTrades.rangeEdge'), 'over-risk', msg('journalTrades.ruleBreak')];
+    },
     screenshots: shots('TR-032', '2026-09-10T02:15:00Z', '2026-09-10T04:40:00Z', ['entry']),
     updatedAt: '2026-09-10T05:20:00Z',
   },
@@ -791,7 +1074,9 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'partial',
     reviewState: 'reviewed',
     aiReviewState: 'not-available',
-    tags: ['archived', 'flat close'],
+    get tags(): string[] {
+      return ['archived', msg('journalTrades.flatClose')];
+    },
     screenshots: shots('TR-030', '2026-09-08T14:05:00Z', '2026-09-08T15:12:00Z', ['entry', 'exit']),
     updatedAt: '2026-09-08T15:40:00Z',
   },
@@ -828,7 +1113,9 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'compliant',
     reviewState: 'reviewed',
     aiReviewState: 'not-available',
-    tags: ['trend day', 'pullback'],
+    get tags(): string[] {
+      return [msg('journalTrades.trendDay'), 'pullback'];
+    },
     screenshots: shots('TR-029', '2026-09-05T08:30:00Z', '2026-09-05T10:10:00Z', ['entry', 'exit']),
     updatedAt: '2026-09-05T10:35:00Z',
   },
@@ -865,28 +1152,55 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'not-assessed',
     reviewState: 'required',
     aiReviewState: 'not-available',
-    tags: ['sweep', 'no reclaim'],
+    get tags(): string[] {
+      return ['sweep', msg('journalTrades.noReclaim')];
+    },
     screenshots: shots('TR-028', '2026-09-03T08:10:00Z', '2026-09-03T09:05:00Z', ['entry', 'exit']),
     context: {
-      higherTimeframeBias: 'Daily uptrend, but the four-hour chart was rolling over.',
-      marketStructure: 'Lower highs into the London open.',
-      liquidityContext: 'Stops taken below the prior day low.',
+      get higherTimeframeBias(): string {
+        return msg('journalTrades.dailyUptrendButTheFourHourChartWasRolling');
+      },
+      get marketStructure(): string {
+        return msg('journalTrades.lowerHighsIntoTheLondonOpen');
+      },
+      get liquidityContext(): string {
+        return msg('journalTrades.stopsTakenBelowThePriorDayLow');
+      },
       keyZone: '2604–2612 (prior day low).',
-      entryConfirmation: 'Treated the sweep as confirmation; no reclaim printed.',
-      confluences: ['Prior day low'],
-      volatility: 'Above average.',
-      newsExposure: 'No release inside the window.',
+      get entryConfirmation(): string {
+        return msg('journalTrades.treatedTheSweepAsConfirmationNoReclaimPrinted');
+      },
+      get confluences(): string[] {
+        return [msg('journalTrades.priorDayLow')];
+      },
+      get volatility(): string {
+        return msg('journalTrades.aboveAverage');
+      },
+      get newsExposure(): string {
+        return msg('journalTrades.noReleaseInsideTheWindow');
+      },
     },
     rationale: {
-      thesis: 'The prior day low would be swept and reclaimed as it had been twice that week.',
-      entryRationale: 'Entry was taken on the sweep itself rather than on the reclaim.',
-      invalidation: 'A fifteen-minute close back below the sweep low.',
-      management: 'Not written before entry.',
-      exitPlan: 'Full exit at 2.5R.',
+      get thesis(): string {
+        return msg('journalTrades.thePriorDayLowWouldBeSweptAnd');
+      },
+      get entryRationale(): string {
+        return msg('journalTrades.entryWasTakenOnTheSweepItselfRather');
+      },
+      get invalidation(): string {
+        return msg('journalTrades.aFifteenMinuteCloseBackBelowTheSweepLow');
+      },
+      get management(): string {
+        return msg('journalTrades.notWrittenBeforeEntry');
+      },
+      get exitPlan(): string {
+        return msg('journalTrades.fullExitAt25R');
+      },
       checklist: ['bias', 'level', 'invalidation', 'risk', 'size', 'news'],
       compliance: 'not-assessed',
-      complianceNote:
-        'Two checklist items are unrecorded, so compliance cannot be assessed either way — an honest unassessed is reported as unassessed.',
+      get complianceNote(): string {
+        return msg('journalTrades.twoChecklistItemsAreUnrecordedSoComplianceCannot');
+      },
     },
     updatedAt: '2026-09-03T09:40:00Z',
   },
@@ -923,7 +1237,9 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'not-assessed',
     reviewState: 'not-required',
     aiReviewState: 'not-available',
-    tags: ['position open'],
+    get tags(): string[] {
+      return [msg('journalTrades.positionOpen')];
+    },
     screenshots: shots('TR-027', '2026-09-01T13:45:00Z', null, ['entry']),
     updatedAt: '2026-09-01T13:45:00Z',
   },
@@ -960,7 +1276,9 @@ export const mockTrades: readonly JournalTrade[] = [
     compliance: 'partial',
     reviewState: 'required',
     aiReviewState: 'not-available',
-    tags: ['needs exit', 'record incomplete'],
+    get tags(): string[] {
+      return [msg('journalTrades.needsExit'), msg('journalTrades.recordIncomplete')];
+    },
     screenshots: shots('TR-026', '2026-09-01T01:20:00Z', null, ['entry', 'markup']),
     updatedAt: '2026-09-01T01:20:00Z',
   },
@@ -993,7 +1311,7 @@ export function buildTradeTimeline(trade: JournalTrade): TradeEvent[] {
       tradeId: trade.id,
       kind: 'entry',
       at: trade.openedAt,
-      actor: 'execution record',
+      actor: msg('journalTrades.executionRecord'),
       detail: `Filled at ${trade.actual.entry}. Risk recorded as ${trade.actual.riskAmount ?? trade.plan.riskAmount}.`,
     });
   }
@@ -1004,7 +1322,7 @@ export function buildTradeTimeline(trade: JournalTrade): TradeEvent[] {
       tradeId: trade.id,
       kind: 'exit',
       at: trade.closedAt,
-      actor: 'execution record',
+      actor: msg('journalTrades.executionRecord'),
       detail:
         trade.actual.actualR === null
           ? `Closed at ${trade.actual.exit}; not scored yet.`

@@ -1,5 +1,6 @@
 import { cn } from '../../lib/cn';
 import { useId } from 'react';
+import { msg } from '../../i18n/index.js';
 
 export interface PsychologyScaleProps {
   label: string;
@@ -55,7 +56,7 @@ export function PsychologyScale({
         )}
       />
       <div className="flex justify-between text-caption text-text-faint">
-        <span>none</span>
+        <span>{msg('journal.none')}</span>
         <span>{caution ? 'extreme' : 'complete'}</span>
       </div>
     </div>

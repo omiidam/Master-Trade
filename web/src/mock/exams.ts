@@ -18,26 +18,30 @@
  */
 
 import type { ExamView } from '@shared/frontend/viewModels';
+import { liveLabels, msg } from '../i18n/index.js';
 
 /** The six states the assessment surface must be able to render. */
 export type ExamRunState = 'available' | 'in-progress' | 'completed' | 'failed' | 'locked';
 
-export const EXAM_STATE_LABEL: Record<ExamRunState, string> = {
-  available: 'Available',
-  'in-progress': 'In progress',
-  completed: 'Completed',
-  failed: 'Failed',
-  locked: 'Locked',
-};
+export const EXAM_STATE_LABEL: Record<ExamRunState, string> = liveLabels({
+  available: 'exams.examState.available',
+  'in-progress': 'exams.examState.in-progress',
+  completed: 'exams.examState.completed',
+  failed: 'exams.examState.failed',
+  locked: 'exams.examState.locked',
+});
 
-export const EXAM_PREVIEW_NOTICE =
-  'Illustrative assessment data. No exam runner, grader or answer key is connected in this phase — scores shown are layout examples, not results.';
+export function examPreviewNotice(): string {
+  return msg('exams.examPreviewNotice');
+}
 
-export const EXAM_GRADING_POLICY =
-  'Grading is rubric-based and deterministic: the backend scores each answer against the rubric and the model only explains. Pass/fail is never a model opinion.';
+export function examGradingPolicy(): string {
+  return msg('exams.examGradingPolicy');
+}
 
-export const EXAM_INTEGRITY_POLICY =
-  'The answer key never reaches the client before submission. Questions below are shape only: every one is marked as withheld.';
+export function examIntegrityPolicy(): string {
+  return msg('exams.examIntegrityPolicy');
+}
 
 export interface ExamCategory {
   id: string;
@@ -51,36 +55,56 @@ export interface ExamCategory {
 export const mockExamCategories: readonly ExamCategory[] = [
   {
     id: 'risk-management',
-    label: 'Risk management',
-    description: 'Sizing, R-multiples, survivable loss',
+    get label(): string {
+      return msg('profile.array.risk-management');
+    },
+    get description(): string {
+      return msg('exams.sizingRMultiplesSurvivableLoss');
+    },
     examCount: 4,
     averageScore: 82.5,
   },
   {
     id: 'market-structure',
-    label: 'Market structure',
-    description: 'Sessions, levels, context before patterns',
+    get label(): string {
+      return msg('profile.array.market-structure');
+    },
+    get description(): string {
+      return msg('exams.sessionsLevelsContextBeforePatterns');
+    },
     examCount: 3,
     averageScore: 76,
   },
   {
     id: 'execution-discipline',
-    label: 'Execution discipline',
-    description: 'Process, journaling, review',
+    get label(): string {
+      return msg('exams.executionDiscipline');
+    },
+    get description(): string {
+      return msg('exams.processJournalingReview');
+    },
     examCount: 3,
     averageScore: null,
   },
   {
     id: 'statistics',
-    label: 'Statistics of outcomes',
-    description: 'Expectancy, sample size, out-of-sample caution',
+    get label(): string {
+      return msg('exams.statisticsOfOutcomes');
+    },
+    get description(): string {
+      return msg('exams.expectancySampleSizeOutOfSampleCaution');
+    },
     examCount: 2,
     averageScore: null,
   },
   {
     id: 'process-review',
-    label: 'Process review',
-    description: 'Written plan, evidence, human-approved changes',
+    get label(): string {
+      return msg('exams.processReview');
+    },
+    get description(): string {
+      return msg('exams.writtenPlanEvidenceHumanApprovedChanges');
+    },
     examCount: 2,
     averageScore: 88,
   },
@@ -110,10 +134,14 @@ export interface ExamDefinition {
 export const mockExamDefinitions: readonly ExamDefinition[] = [
   {
     id: 'e-risk-01',
-    title: 'Risk per trade before reward per trade',
+    get title(): string {
+      return msg('exams.riskPerTradeBeforeRewardPer');
+    },
     categoryId: 'risk-management',
     moduleId: 'm2',
-    summary: 'Why the loss side is decided before the entry is considered.',
+    get summary(): string {
+      return msg('exams.whyTheLossSideIsDecidedBeforeThe');
+    },
     questionCount: 12,
     passScore: 80,
     durationMinutes: 20,
@@ -126,10 +154,14 @@ export const mockExamDefinitions: readonly ExamDefinition[] = [
   },
   {
     id: 'e-risk-02',
-    title: 'Fixed-fractional position sizing',
+    get title(): string {
+      return msg('exams.fixedFractionalPositionSizing');
+    },
     categoryId: 'risk-management',
     moduleId: 'm2',
-    summary: 'Turning a risk budget into a unit count without rounding up.',
+    get summary(): string {
+      return msg('exams.turningARiskBudgetIntoAUnitCount');
+    },
     questionCount: 15,
     passScore: 80,
     durationMinutes: 25,
@@ -142,10 +174,14 @@ export const mockExamDefinitions: readonly ExamDefinition[] = [
   },
   {
     id: 'e-risk-03',
-    title: 'Thinking in R instead of currency',
+    get title(): string {
+      return msg('data.thinkingInRInsteadOfCurrency');
+    },
     categoryId: 'risk-management',
     moduleId: 'm2',
-    summary: 'Normalising outcomes so they can be compared across symbols.',
+    get summary(): string {
+      return msg('exams.normalisingOutcomesSoTheyCanBeComparedAcross');
+    },
     questionCount: 10,
     passScore: 80,
     durationMinutes: 18,
@@ -158,10 +194,14 @@ export const mockExamDefinitions: readonly ExamDefinition[] = [
   },
   {
     id: 'e-structure-01',
-    title: 'Sessions, spreads and the cost of impatience',
+    get title(): string {
+      return msg('exams.sessionsSpreadsAndTheCostOfImpatience');
+    },
     categoryId: 'market-structure',
     moduleId: 'm3',
-    summary: 'How session overlap changes what a fill actually costs.',
+    get summary(): string {
+      return msg('exams.howSessionOverlapChangesWhatAFillActually');
+    },
     questionCount: 14,
     passScore: 80,
     durationMinutes: 22,
@@ -174,10 +214,14 @@ export const mockExamDefinitions: readonly ExamDefinition[] = [
   },
   {
     id: 'e-process-01',
-    title: 'The written pre-trade checklist',
+    get title(): string {
+      return msg('exams.theWrittenPreTradeChecklist');
+    },
     categoryId: 'process-review',
     moduleId: 'm4',
-    summary: 'What a checklist must contain to be worth keeping.',
+    get summary(): string {
+      return msg('exams.whatAChecklistMustContainToBeWorth');
+    },
     questionCount: 9,
     passScore: 80,
     durationMinutes: 15,
@@ -190,10 +234,14 @@ export const mockExamDefinitions: readonly ExamDefinition[] = [
   },
   {
     id: 'e-stats-01',
-    title: 'Expectancy and the small-sample trap',
+    get title(): string {
+      return msg('exams.expectancyAndTheSmallSampleTrap');
+    },
     categoryId: 'statistics',
     moduleId: 'm5',
-    summary: 'Why a ten-trade sample is not evidence of an edge.',
+    get summary(): string {
+      return msg('exams.whyATenTradeSampleIsNotEvidenceOf');
+    },
     questionCount: 16,
     passScore: 85,
     durationMinutes: 28,
@@ -206,10 +254,14 @@ export const mockExamDefinitions: readonly ExamDefinition[] = [
   },
   {
     id: 'e-exec-01',
-    title: 'Review discipline after a loss',
+    get title(): string {
+      return msg('exams.reviewDisciplineAfterALoss');
+    },
     categoryId: 'execution-discipline',
     moduleId: 'm4',
-    summary: 'Separating a bad outcome from a bad decision.',
+    get summary(): string {
+      return msg('exams.separatingABadOutcomeFromABadDecision');
+    },
     questionCount: 11,
     passScore: 80,
     durationMinutes: 18,
@@ -257,7 +309,9 @@ export const mockExamAttempts: readonly ExamAttempt[] = [
     outcome: 'failed',
     durationMinutes: 16,
     questionCount: 12,
-    note: 'First attempt; sizing questions answered in currency rather than R.',
+    get note(): string {
+      return msg('exams.firstAttemptSizingQuestionsAnsweredInCurrencyRather');
+    },
   },
   {
     id: 'att-02',
@@ -268,7 +322,9 @@ export const mockExamAttempts: readonly ExamAttempt[] = [
     outcome: 'passed',
     durationMinutes: 16,
     questionCount: 12,
-    note: 'Passed after reworking the sizing lesson.',
+    get note(): string {
+      return msg('exams.passedAfterReworkingTheSizingLesson');
+    },
   },
   {
     id: 'att-03',
@@ -279,7 +335,9 @@ export const mockExamAttempts: readonly ExamAttempt[] = [
     outcome: 'failed',
     durationMinutes: 21,
     questionCount: 15,
-    note: 'Rounding direction wrong in four of five sizing questions.',
+    get note(): string {
+      return msg('exams.roundingDirectionWrongInFourOfFiveSizing');
+    },
   },
   {
     id: 'att-04',
@@ -290,7 +348,9 @@ export const mockExamAttempts: readonly ExamAttempt[] = [
     outcome: 'failed',
     durationMinutes: 17,
     questionCount: 15,
-    note: 'Improved, still below the pass score.',
+    get note(): string {
+      return msg('exams.improvedStillBelowThePassScore');
+    },
   },
   {
     id: 'att-05',
@@ -301,7 +361,9 @@ export const mockExamAttempts: readonly ExamAttempt[] = [
     outcome: 'failed',
     durationMinutes: 21,
     questionCount: 15,
-    note: 'Closest attempt so far; gaps are concentration, not raw error.',
+    get note(): string {
+      return msg('exams.closestAttemptSoFarGapsAreConcentrationNot');
+    },
   },
   {
     id: 'att-06',
@@ -312,7 +374,9 @@ export const mockExamAttempts: readonly ExamAttempt[] = [
     outcome: 'void',
     durationMinutes: 18,
     questionCount: 10,
-    note: 'Abandoned part way through — a blank is recorded as void, never as zero.',
+    get note(): string {
+      return msg('exams.abandonedPartWayThroughABlankIs');
+    },
   },
   {
     id: 'att-07',
@@ -323,7 +387,9 @@ export const mockExamAttempts: readonly ExamAttempt[] = [
     outcome: 'passed',
     durationMinutes: 15,
     questionCount: 9,
-    note: 'Passed on the first attempt.',
+    get note(): string {
+      return msg('exams.passedOnTheFirstAttempt');
+    },
   },
 ];
 
@@ -350,7 +416,9 @@ export const mockScoreEvolution: readonly ScorePoint[] = mockExamAttempts
 export const mockCurrentAssessment = {
   examId: 'e-risk-03',
   attemptId: 'att-06',
-  title: 'Thinking in R instead of currency',
+  get title(): string {
+    return msg('data.thinkingInRInsteadOfCurrency');
+  },
   questionCount: 10,
   answered: 6,
   startedAt: '2026-09-19T07:22:00Z',
@@ -378,13 +446,29 @@ export const mockQuestions: readonly QuestionPreview[] = [
   {
     id: 'q-risk-01',
     examId: 'e-risk-01',
-    prompt:
-      'A risk budget is defined in currency before an entry is considered. What does the budget determine first?',
+    get prompt(): string {
+      return msg('exams.aRiskBudgetIsDefinedInCurrencyBefore');
+    },
     kind: 'single-choice',
     options: [
-      { id: 'a', label: 'The number of units, from stop distance and budget' },
-      { id: 'b', label: 'The direction of the trade' },
-      { id: 'c', label: 'The reward target' },
+      {
+        id: 'a',
+        get label(): string {
+          return msg('exams.theNumberOfUnitsFromStopDistanceAnd');
+        },
+      },
+      {
+        id: 'b',
+        get label(): string {
+          return msg('exams.theDirectionOfTheTrade');
+        },
+      },
+      {
+        id: 'c',
+        get label(): string {
+          return msg('exams.theRewardTarget');
+        },
+      },
     ],
     rubricRef: 'academy.m2.rubric.sizing-order',
     answerKeyWithheld: true,
@@ -403,12 +487,29 @@ export const mockQuestions: readonly QuestionPreview[] = [
   {
     id: 'q-risk-03',
     examId: 'e-risk-03',
-    prompt: 'Which of these are valid reasons to express an outcome in R rather than currency?',
+    get prompt(): string {
+      return msg('exams.whichOfTheseAreValidReasonsToExpress');
+    },
     kind: 'multi-choice',
     options: [
-      { id: 'a', label: 'It makes two different symbols comparable' },
-      { id: 'b', label: 'It removes the need for a stop' },
-      { id: 'c', label: 'It separates decision quality from position size' },
+      {
+        id: 'a',
+        get label(): string {
+          return msg('exams.itMakesTwoDifferentSymbolsComparable');
+        },
+      },
+      {
+        id: 'b',
+        get label(): string {
+          return msg('exams.itRemovesTheNeedForAStop');
+        },
+      },
+      {
+        id: 'c',
+        get label(): string {
+          return msg('exams.itSeparatesDecisionQualityFromPositionSize');
+        },
+      },
     ],
     rubricRef: 'academy.m2.rubric.r-multiples',
     answerKeyWithheld: true,
@@ -417,7 +518,9 @@ export const mockQuestions: readonly QuestionPreview[] = [
   {
     id: 'q-stats-01',
     examId: 'e-stats-01',
-    prompt: 'In one paragraph, explain why a 12-trade winning streak is not evidence of an edge.',
+    get prompt(): string {
+      return msg('exams.inOneParagraphExplainWhyA12TradeWinning');
+    },
     kind: 'written',
     options: [],
     rubricRef: 'academy.m5.rubric.sample-size',
@@ -442,41 +545,57 @@ export interface MistakePattern {
 export const mockMistakes: readonly MistakePattern[] = [
   {
     id: 'mist-01',
-    topic: 'Rounding a unit count up instead of down',
+    get topic(): string {
+      return msg('exams.roundingAUnitCountUpInsteadOfDown');
+    },
     categoryId: 'risk-management',
     occurrences: 5,
     share: 0.28,
-    note: 'Rounding up silently exceeds the stated risk budget — the error is in the size, not the answer.',
+    get note(): string {
+      return msg('exams.roundingUpSilentlyExceedsTheStatedRiskBudget');
+    },
     lastSeenAt: '2026-09-18T09:05:00Z',
     lessonId: 'l-risk-02',
   },
   {
     id: 'mist-02',
-    topic: 'Confusing expectancy with win rate',
+    get topic(): string {
+      return msg('exams.confusingExpectancyWithWinRate');
+    },
     categoryId: 'statistics',
     occurrences: 4,
     share: 0.22,
-    note: 'A high win rate with negative expectancy still loses money; the rubric scores the distinction, not the arithmetic.',
+    get note(): string {
+      return msg('exams.aHighWinRateWithNegativeExpectancyStill');
+    },
     lastSeenAt: '2026-09-17T19:30:00Z',
     lessonId: 'l-stats-01',
   },
   {
     id: 'mist-03',
-    topic: 'Placing the invalidation level inside normal noise',
+    get topic(): string {
+      return msg('exams.placingTheInvalidationLevelInsideNormalNoise');
+    },
     categoryId: 'market-structure',
     occurrences: 3,
     share: 0.17,
-    note: 'A stop inside the noise range is a decision to be stopped out, not a risk limit.',
+    get note(): string {
+      return msg('exams.aStopInsideTheNoiseRangeIsA');
+    },
     lastSeenAt: '2026-09-15T09:19:00Z',
     lessonId: 'l-structure-01',
   },
   {
     id: 'mist-04',
-    topic: 'Skipping the written invalidation level',
+    get topic(): string {
+      return msg('exams.skippingTheWrittenInvalidationLevel');
+    },
     categoryId: 'process-review',
     occurrences: 2,
     share: 0.11,
-    note: 'Process omission rather than a knowledge gap: the checklist answer was correct, the journal practice was not.',
+    get note(): string {
+      return msg('exams.processOmissionRatherThanAKnowledgeGapThe');
+    },
     lastSeenAt: '2026-09-11T19:00:00Z',
     lessonId: 'l-process-01',
   },

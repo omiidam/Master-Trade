@@ -1,6 +1,7 @@
 import { cn } from '../../lib/cn';
 import { Tooltip } from '../Tooltip';
 import { Trend } from '../Trend';
+import { msg } from '../../i18n/index.js';
 
 export interface RMultipleIndicatorProps {
   /** Realised multiple of the risked amount. `null` means "not scored". */
@@ -38,7 +39,7 @@ export function RMultipleIndicator({ value, planned, className }: RMultipleIndic
         // Below a fifth of the risked amount the realised result is flat rather than directional:
         // calling ±0.11R a gain is a claim the record does not support.
         flatWithin={0.15}
-        unavailable="not scored"
+        unavailable={msg('journal.notScored')}
         // The sign is printed here rather than by `Trend`, because a currency formatter would
         // already have printed its own and two signs on one figure is a bug nothing would catch.
         format={(number) =>

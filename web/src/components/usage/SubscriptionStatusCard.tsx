@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } f
 import { Tooltip } from '../Tooltip';
 import { CreditBalance } from './CreditBalance';
 import { describeReset, subscriptionStatusLabel } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * What plan this account is on, and whether that is a record or a default.
@@ -53,8 +54,10 @@ export function SubscriptionStatusCard({
             {subscriptionStatusLabel(usage.subscriptionStatus)}
           </Badge>
           {stored ? null : (
-            <Tooltip content="No subscription has ever been stored for this account, so the free plan is being reported as a default rather than read back from a record.">
-              <span className="text-caption text-text-faint">Default, not recorded</span>
+            <Tooltip content={msg('subscriptionStatusCard.noSubscriptionHasEverBeenStoredForThis')}>
+              <span className="text-caption text-text-faint">
+                {msg('usage.defaultNotRecorded')}
+              </span>
             </Tooltip>
           )}
         </div>
@@ -85,18 +88,14 @@ export function SubscriptionStatusCard({
         {usage.purchasable === false ? (
           <CardTile className="inline-flex items-start gap-1.5 text-caption text-text-muted">
             <ShieldAlert size={13} aria-hidden className="mt-0.5 shrink-0 text-warning" />
-            <span>
-              This build has no payment integration, so no plan is purchasable and no price is
-              shown. A change of plan is recorded only as an administrative grant, with the decision
-              on file.
-            </span>
+            <span>{msg('usage.thisBuildHasNoPaymentIntegration')}</span>
           </CardTile>
         ) : null}
 
         {usage.durable ? null : (
           <p className="text-caption text-warning">
-            This deployment reports a {usage.storeKind} usage store: balances and history are not
-            durable here, so a restart resets them. The capability itself still meters.
+            {msg('usage.thisDeploymentReportsA')} {usage.storeKind}{' '}
+            {msg('usage.usageStoreBalancesAndHistoryAre')}
           </p>
         )}
       </CardContent>

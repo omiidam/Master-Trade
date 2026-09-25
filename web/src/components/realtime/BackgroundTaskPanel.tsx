@@ -9,6 +9,7 @@ import { SkeletonCard } from '../Skeleton';
 import { JobStatusCard } from './JobStatusCard';
 import { cn } from '../../lib/cn';
 import type { JobView } from '@shared/jobs/service';
+import { msg } from '../../i18n/index.js';
 
 export interface BackgroundTaskPanelProps {
   jobs: readonly JobView[];
@@ -36,23 +37,35 @@ type FilterId = 'all' | 'active' | 'attention' | 'finished';
 type Filter = { id: FilterId; label: string; matches: (job: JobView) => boolean };
 
 /** Declared once so the fallback below cannot be an undefined array entry. */
-const ALL_FILTER: Filter = { id: 'all', label: 'All', matches: () => true };
+const ALL_FILTER: Filter = {
+  id: 'all',
+  get label(): string {
+    return msg('backgroundTaskPanel.all');
+  },
+  matches: () => true,
+};
 
 const FILTERS: readonly Filter[] = [
   ALL_FILTER,
   {
     id: 'active',
-    label: 'Active',
+    get label(): string {
+      return msg('backgroundTaskPanel.active');
+    },
     matches: (job) => job.status === 'running' || job.status === 'queued',
   },
   {
     id: 'attention',
-    label: 'Needs attention',
+    get label(): string {
+      return msg('backgroundTaskPanel.needsAttention');
+    },
     matches: (job) => job.status === 'failed' || job.status === 'dead-letter',
   },
   {
     id: 'finished',
-    label: 'Finished',
+    get label(): string {
+      return msg('backgroundTaskPanel.finished');
+    },
     matches: (job) => job.status === 'succeeded' || job.status === 'cancelled',
   },
 ];
@@ -85,7 +98,7 @@ export function BackgroundTaskPanel({
   const visible = useMemo(() => jobs.filter((job) => active.matches(job)), [jobs, active]);
 
   return (
-    <section aria-label="Background tasks" className={cn('space-y-4', className)}>
+    <section aria-label={msg('realtime.backgroundTasks')} className={cn('space-y-4', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((entry) => (
@@ -103,9 +116,9 @@ export function BackgroundTaskPanel({
         <div className="flex items-center gap-2">
           {summary ? (
             <span className="text-caption text-text-faint">
-              {summary.queued ?? 0} queued · {summary.running ?? 0} running ·{' '}
-              {summary.succeeded ?? 0} completed ·{' '}
-              {(summary['dead-letter'] ?? 0) + (summary.failed ?? 0)} stopped
+              {summary.queued ?? 0} {msg('realtime.queued')} {summary.running ?? 0}{' '}
+              {msg('realtime.running')} {summary.succeeded ?? 0} {msg('realtime.completed')}{' '}
+              {(summary['dead-letter'] ?? 0) + (summary.failed ?? 0)} {msg('realtime.stopped')}
             </span>
           ) : null}
           {onRefresh ? (
@@ -127,7 +140,7 @@ export function BackgroundTaskPanel({
       {previewNotice ? (
         <ErrorState
           severity="info"
-          title="These are preview records"
+          title={msg('realtime.theseArePreviewRecords')}
           description={previewNotice}
           code="PREVIEW_FIXTURE"
         />
@@ -136,7 +149,7 @@ export function BackgroundTaskPanel({
       {unavailableReason ? (
         <ErrorState
           severity="warning"
-          title="The queue cannot be read"
+          title={msg('realtime.theQueueCannotBeRead')}
           description={unavailableReason}
           code="UNAUTHENTICATED"
         />
@@ -145,7 +158,7 @@ export function BackgroundTaskPanel({
       {error && !unavailableReason ? (
         <ErrorState
           severity="error"
-          title="The job list could not be read"
+          title={msg('realtime.theJobListCouldNotBe')}
           description={error}
           {...(errorCode === null ? {} : { code: errorCode })}
         />
@@ -183,8 +196,7 @@ export function BackgroundTaskPanel({
       {jobs.length > 0 ? (
         <p className="text-caption text-text-faint">
           <Badge tone="outline">{summary ? 'queue counts above' : 'counts unavailable'}</Badge>{' '}
-          Cancelling records who asked in the audit trail. Starting a task is not offered here:
-          background work is enqueued by the server, under its own permission and approval gate.
+          {msg('realtime.cancellingRecordsWhoAskedInThe')}
         </p>
       ) : null}
     </section>

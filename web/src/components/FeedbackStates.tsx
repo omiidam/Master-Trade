@@ -5,6 +5,7 @@ import { Button, type ButtonVariant } from './Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Section } from './Card';
 import { Reveal } from './Reveal';
 import { useToast } from './Toast';
+import { msg } from '../i18n/index.js';
 
 interface AlertExhibit {
   tone: AlertTone;
@@ -24,42 +25,62 @@ const ALERTS: readonly AlertExhibit[] = [
   {
     tone: 'neutral',
     label: 'neutral',
-    title: 'Nothing to report',
-    description: 'A statement with no verdict of its own — context, a count, a note.',
+    get title(): string {
+      return msg('feedbackStates.nothingToReport');
+    },
+    get description(): string {
+      return msg('feedbackStates.aStatementWithNoVerdictOfItsOwn');
+    },
   },
   {
     tone: 'info',
     label: 'info',
-    title: 'Worth knowing',
-    description:
-      'Announced politely. Information does not interrupt, which is what keeps an interruption meaningful.',
+    get title(): string {
+      return msg('feedbackStates.worthKnowing');
+    },
+    get description(): string {
+      return msg('feedbackStates.announcedPolitelyInformationDoesNotInterruptWhichIs');
+    },
   },
   {
     tone: 'success',
     label: 'success',
-    title: 'That worked',
-    description:
-      'A completed action, confirmed. It shares the brand green and is a distinct fill from it.',
+    get title(): string {
+      return msg('feedbackStates.thatWorked');
+    },
+    get description(): string {
+      return msg('feedbackStates.aCompletedActionConfirmedItSharesTheBrand');
+    },
   },
   {
     tone: 'warning',
     label: 'warning',
-    title: 'Check this before continuing',
-    description: 'Proceed-able, but not silently: something here may not be what was meant.',
+    get title(): string {
+      return msg('feedbackStates.checkThisBeforeContinuing');
+    },
+    get description(): string {
+      return msg('feedbackStates.proceedAbleButNotSilentlySomethingHereMayNot');
+    },
   },
   {
     tone: 'error',
     label: 'error',
-    title: 'That could not be done',
-    description:
-      'A failure, reported with its typed code as evidence rather than restated in prose.',
+    get title(): string {
+      return msg('feedbackStates.thatCouldNotBeDone');
+    },
+    get description(): string {
+      return msg('feedbackStates.aFailureReportedWithItsTypedCodeAs');
+    },
   },
   {
     tone: 'destructive',
     label: 'destructive',
-    title: 'This cannot be undone',
-    description:
-      'A confirmation rather than a report. The only feedback surface allowed a glow, because a decision deserves more weight than a notice.',
+    get title(): string {
+      return msg('feedbackStates.thisCannotBeUndone');
+    },
+    get description(): string {
+      return msg('feedbackStates.aConfirmationRatherThanAReportTheOnly');
+    },
   },
 ];
 
@@ -70,11 +91,41 @@ interface ToastExhibit {
 }
 
 const TOASTS: readonly ToastExhibit[] = [
-  { tone: 'neutral', label: 'Note', variant: 'secondary' },
-  { tone: 'info', label: 'Information', variant: 'info' },
-  { tone: 'success', label: 'Success', variant: 'success' },
-  { tone: 'warning', label: 'Warning', variant: 'warning' },
-  { tone: 'error', label: 'Failure', variant: 'danger' },
+  {
+    tone: 'neutral',
+    get label(): string {
+      return msg('feedbackStates.note');
+    },
+    variant: 'secondary',
+  },
+  {
+    tone: 'info',
+    get label(): string {
+      return msg('feedbackStates.information');
+    },
+    variant: 'info',
+  },
+  {
+    tone: 'success',
+    get label(): string {
+      return msg('feedbackStates.success');
+    },
+    variant: 'success',
+  },
+  {
+    tone: 'warning',
+    get label(): string {
+      return msg('feedbackStates.warning');
+    },
+    variant: 'warning',
+  },
+  {
+    tone: 'error',
+    get label(): string {
+      return msg('feedbackStates.failure');
+    },
+    variant: 'danger',
+  },
 ];
 
 export interface FeedbackStatesPanelProps {
@@ -132,16 +183,11 @@ export function FeedbackStatesPanel({
       <Card emphasis="accent">
         <CardHeader divider>
           <div>
-            <CardTitle className="text-body">Toasts — on the accent card</CardTitle>
-            <CardDescription>
-              The same component with a lifetime. Hover or focus one and it stops counting down;
-              each tone's default duration is its own, and a destructive prompt has none because it
-              is waiting for a decision. The card itself is the exhibit's accent emphasis: the one
-              surface on a screen that asks to be acted on, drawn here rather than described.
-            </CardDescription>
+            <CardTitle className="text-body">{msg('ui.toastsOnTheAccentCard')}</CardTitle>
+            <CardDescription>{msg('ui.theSameComponentWithALifetime')}</CardDescription>
           </div>
           <Badge tone="outline" shape="tag">
-            live
+            {msg('ui.live')}
           </Badge>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -156,12 +202,11 @@ export function FeedbackStatesPanel({
                   toast({
                     tone: entry.tone,
                     title: `${entry.label} toast`,
-                    description:
-                      'Raised through the shared provider, so it pauses when you reach for it.',
+                    description: msg('feedbackStates.raisedThroughTheSharedProviderSoItPauses'),
                   });
                 }}
               >
-                Raise {entry.label.toLowerCase()}
+                {msg('ui.raise')} {entry.label.toLowerCase()}
               </Button>
             ))}
           </div>

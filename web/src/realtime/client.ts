@@ -52,6 +52,7 @@ import {
   type RealtimeEventType,
 } from '@shared/realtime/contracts';
 import type { RealtimeEvent } from '@shared/realtime/events';
+import { msg } from '../i18n/index.js';
 
 /** Connection lifecycle, as the UI shows it. */
 export type ConnectionState =
@@ -241,7 +242,7 @@ export class RealtimeClient {
         // A socket that is already gone needs no closing.
       }
     }
-    this.setState('offline', 'Disconnected. Reconnect to resume the event stream.');
+    this.setState('offline', msg('client.disconnectedReconnectToResumeTheEventStream'));
   }
 
   /**
@@ -336,7 +337,7 @@ export class RealtimeClient {
 
     socket.onopen = () => {
       if (this.socket !== socket) return;
-      this.setState('authenticating', 'Authenticating…');
+      this.setState('authenticating', msg('client.authenticating'));
       // The subscription rides with the token so the server can replay from
       // `fromSeq` straight into the right subscription set.
       const frame: ClientFrame = {
@@ -375,7 +376,7 @@ export class RealtimeClient {
     this.connectedAt = null;
 
     if (this.stopped) {
-      this.setState('offline', 'Disconnected.');
+      this.setState('offline', msg('client.disconnected'));
       return;
     }
     if (!shouldRetryClose(code)) {

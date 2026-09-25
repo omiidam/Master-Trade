@@ -8,6 +8,7 @@ import { Button, IconButton } from '../Button';
 import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
 import { Field, Input, Select } from '../Input';
 import { assetClassLabel } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * Declaring a composition.
@@ -215,15 +216,15 @@ export function HoldingsEditor({
       <CardHeader divider>
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <Save size={16} aria-hidden className="text-text-muted" />
-          <CardTitle>Declare the composition</CardTitle>
-          <Badge tone="outline">replaces the current version</Badge>
-          <Badge tone="neutral">every figure is computed on the server</Badge>
+          <CardTitle>{msg('portfolio.declareTheComposition')}</CardTitle>
+          <Badge tone="outline">{msg('portfolio.replacesTheCurrentVersion')}</Badge>
+          <Badge tone="neutral">{msg('portfolio.everyFigureIsComputedOnThe')}</Badge>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Name">
+          <Field label={msg('holdingsEditor.name')}>
             {(inputProps) => (
               <Input
                 {...inputProps}
@@ -234,7 +235,7 @@ export function HoldingsEditor({
             )}
           </Field>
 
-          <Field label="Base currency">
+          <Field label={msg('holdingsEditor.baseCurrency')}>
             {(inputProps) => (
               <Select
                 {...inputProps}
@@ -251,8 +252,8 @@ export function HoldingsEditor({
           </Field>
 
           <Field
-            label="Cash weight (%)"
-            hint="Optional. The share held as cash, when you want it counted."
+            label={msg('holdingsEditor.cashWeight')}
+            hint={msg('holdingsEditor.optionalTheShareHeldAsCashWhenYou')}
           >
             {(inputProps) => (
               <Input
@@ -260,7 +261,7 @@ export function HoldingsEditor({
                 inputMode="decimal"
                 value={cashWeight}
                 onChange={(event) => setCashWeight(event.target.value)}
-                placeholder="blank stays blank"
+                placeholder={msg('portfolio.blankStaysBlank')}
               />
             )}
           </Field>
@@ -270,7 +271,9 @@ export function HoldingsEditor({
           {positions.map((position, index) => (
             <CardTile as="fieldset" key={position.key} space="roomy" className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <legend className="text-body font-medium text-text">Position {index + 1}</legend>
+                <legend className="text-body font-medium text-text">
+                  {msg('portfolio.position2')} {index + 1}
+                </legend>
                 <IconButton
                   label={`Remove position ${index + 1}`}
                   variant="ghost"
@@ -285,18 +288,18 @@ export function HoldingsEditor({
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label="Symbol" hint="Required.">
+                <Field label={msg('tradeForm.symbol')} hint={msg('holdingsEditor.required')}>
                   {(inputProps) => (
                     <Input
                       {...inputProps}
                       value={position.symbol}
                       onChange={(event) => update(position.key, { symbol: event.target.value })}
-                      placeholder="e.g. VOO"
+                      placeholder={msg('portfolio.eGVOO')}
                     />
                   )}
                 </Field>
 
-                <Field label="Asset class">
+                <Field label={msg('holdingsEditor.assetClass')}>
                   {(inputProps) => (
                     <Select
                       {...inputProps}
@@ -312,7 +315,7 @@ export function HoldingsEditor({
                   )}
                 </Field>
 
-                <Field label="Currency">
+                <Field label={msg('evaluationPanels.currency')}>
                   {(inputProps) => (
                     <Select
                       {...inputProps}
@@ -328,7 +331,10 @@ export function HoldingsEditor({
                   )}
                 </Field>
 
-                <Field label="Quantity" hint="Blank stays blank — never read as zero.">
+                <Field
+                  label={msg('portfolio.quantity')}
+                  hint={msg('holdingsEditor.blankStaysBlankNeverReadAsZero')}
+                >
                   {(inputProps) => (
                     <Input
                       {...inputProps}
@@ -339,7 +345,7 @@ export function HoldingsEditor({
                   )}
                 </Field>
 
-                <Field label="Average entry price">
+                <Field label={msg('holdingsEditor.averageEntryPrice')}>
                   {(inputProps) => (
                     <Input
                       {...inputProps}
@@ -352,7 +358,7 @@ export function HoldingsEditor({
                   )}
                 </Field>
 
-                <Field label="Current price">
+                <Field label={msg('holdingsEditor.currentPrice')}>
                   {(inputProps) => (
                     <Input
                       {...inputProps}
@@ -364,8 +370,8 @@ export function HoldingsEditor({
                 </Field>
 
                 <Field
-                  label="Price observed at"
-                  hint="Required with a price: an undated price is treated as an assumption."
+                  label={msg('holdingsEditor.priceObservedAt')}
+                  hint={msg('holdingsEditor.requiredWithAPriceAnUndatedPriceIs')}
                 >
                   {(inputProps) => (
                     <Input
@@ -380,8 +386,8 @@ export function HoldingsEditor({
                 </Field>
 
                 <Field
-                  label="Declared weight (%)"
-                  hint="Optional, and used only when no price exists for the position."
+                  label={msg('holdingsEditor.declaredWeight')}
+                  hint={msg('holdingsEditor.optionalAndUsedOnlyWhenNoPriceExists')}
                 >
                   {(inputProps) => (
                     <Input
@@ -396,7 +402,7 @@ export function HoldingsEditor({
                 </Field>
               </div>
 
-              <Field label="Note">
+              <Field label={msg('feedbackStates.note')}>
                 {(inputProps) => (
                   <Input
                     {...inputProps}
@@ -416,7 +422,7 @@ export function HoldingsEditor({
           leadingIcon={<Plus size={14} aria-hidden />}
           onClick={() => setPositions((current) => [...current, blankPosition()])}
         >
-          Add position
+          {msg('portfolio.addPosition')}
         </Button>
 
         {formError === null ? null : (
@@ -428,7 +434,7 @@ export function HoldingsEditor({
         {validationIssues.length > 0 ? (
           <div className="space-y-1 rounded-[var(--radius-control)] border border-danger/40 bg-danger-soft px-3 py-2">
             <p className="text-body font-medium text-danger">
-              The declaration was rejected by the server:
+              {msg('portfolio.theDeclarationWasRejectedByThe')}
             </p>
             <ul className="list-disc space-y-0.5 pl-5 text-body text-text" role="list">
               {validationIssues.map((issue) => (
@@ -449,15 +455,12 @@ export function HoldingsEditor({
           </Button>
           {onCancel === undefined ? null : (
             <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
-              Cancel
+              {msg('journal.cancel')}
             </Button>
           )}
         </div>
 
-        <p className="text-caption text-text-faint">
-          Nothing here is valued in the browser, and no figure is sent with the request. The server
-          stores the declaration, appends a version and computes every number from it.
-        </p>
+        <p className="text-caption text-text-faint">{msg('portfolio.nothingHereIsValuedInThe')}</p>
       </CardContent>
     </Card>
   );

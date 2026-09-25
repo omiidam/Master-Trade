@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { DURATION, EASE, PANEL_IN } from '../design/motion';
 import { cn } from '../lib/cn';
 import { Button } from './Button';
+import { msg } from '../i18n/index.js';
 
 export interface ModalProps {
   open: boolean;
@@ -98,8 +99,8 @@ export function Modal({
                     <Button
                       size="icon"
                       variant="ghost"
-                      label="Close dialog"
-                      aria-label="Close dialog"
+                      label={msg('ui.closeDialog')}
+                      aria-label={msg('ui.closeDialog')}
                     >
                       <X size={16} aria-hidden />
                     </Button>

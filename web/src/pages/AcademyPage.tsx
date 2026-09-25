@@ -24,6 +24,7 @@ import {
 } from '../mock/data';
 import { formatPercent } from '../lib/format';
 import { cn } from '../lib/cn';
+import { msg } from '../i18n/index.js';
 
 const STATUS_TONE = {
   complete: 'primary',
@@ -40,9 +41,27 @@ const LESSON_TONE = {
 } as const;
 
 const TABS = [
-  { id: 'modules', label: 'Modules', icon: <BookOpen size={14} aria-hidden /> },
-  { id: 'lessons', label: 'Lessons', icon: <ListChecks size={14} aria-hidden /> },
-  { id: 'exams', label: 'Examinations', icon: <GraduationCap size={14} aria-hidden /> },
+  {
+    id: 'modules',
+    get label(): string {
+      return msg('capabilities.modules');
+    },
+    icon: <BookOpen size={14} aria-hidden />,
+  },
+  {
+    id: 'lessons',
+    get label(): string {
+      return msg('journal.lessons');
+    },
+    icon: <ListChecks size={14} aria-hidden />,
+  },
+  {
+    id: 'exams',
+    get label(): string {
+      return msg('exams.examinations');
+    },
+    icon: <GraduationCap size={14} aria-hidden />,
+  },
 ] as const;
 
 export function AcademyPage() {
@@ -50,8 +69,8 @@ export function AcademyPage() {
 
   return (
     <Workspace
-      title="Academy"
-      description="A six-month curriculum from market mechanics to independent operation. Lessons unlock by prerequisite; examinations are graded deterministically."
+      title={msg('academy.academy')}
+      description={msg('academyPage.aSixMonthCurriculumFromMarketMechanicsToIndependent')}
       actions={
         <Badge tone="info" icon={<Target size={12} aria-hidden />}>
           {mockProgress.level}
@@ -62,9 +81,10 @@ export function AcademyPage() {
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Curriculum progress</CardTitle>
+              <CardTitle className="text-body">{msg('academy.curriculumProgress')}</CardTitle>
               <CardDescription>
-                {mockProgress.lessonsComplete} of {mockProgress.lessonsTotal} lessons complete
+                {mockProgress.lessonsComplete} {msg('exams.of')} {mockProgress.lessonsTotal}{' '}
+                {msg('academy.lessonsComplete')}
               </CardDescription>
             </div>
           </CardHeader>
@@ -74,7 +94,7 @@ export function AcademyPage() {
               aria-valuemin={0}
               aria-valuemax={mockProgress.lessonsTotal}
               aria-valuenow={mockProgress.lessonsComplete}
-              aria-label="Lessons complete"
+              aria-label={msg('academy.lessonsComplete2')}
               className="h-1.5 w-full overflow-hidden rounded-[var(--radius-pill)] bg-surface-sunken"
             >
               <div
@@ -85,15 +105,15 @@ export function AcademyPage() {
               />
             </div>
             <p className="mt-2 text-caption text-text-faint">
-              Progress is recorded per lesson, never inferred from time spent.
+              {msg('academy.progressIsRecordedPerLessonNever')}
             </p>
           </CardContent>
         </Card>
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Exam average</CardTitle>
-              <CardDescription>Best score per examination</CardDescription>
+              <CardTitle className="text-body">{msg('academy.examAverage')}</CardTitle>
+              <CardDescription>{msg('academy.bestScorePerExamination')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -101,24 +121,24 @@ export function AcademyPage() {
               {mockProgress.examAverage === null ? '—' : formatPercent(mockProgress.examAverage)}
             </span>
             <p className="mt-2 text-caption text-text-faint">
-              Grading is rubric-based and deterministic; the model does not decide pass/fail.
+              {msg('academy.gradingIsRubricBasedAndDeterministic')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">How grading works</CardTitle>
-              <CardDescription>What the Academy guarantees</CardDescription>
+              <CardTitle className="text-body">{msg('academy.howGradingWorks')}</CardTitle>
+              <CardDescription>{msg('academy.whatTheAcademyGuarantees')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-1.5 text-caption text-text-muted">
-            <p>Answers are scored against a rubric, not by the model&apos;s opinion.</p>
+            <p>{msg('academy.answersAreScoredAgainstARubric')}</p>
             <p>
-              Explanations carry {EPISTEMIC_LABEL.analysis} and {EPISTEMIC_LABEL.uncertainty}{' '}
-              labels.
+              {msg('academy.explanationsCarry')} {EPISTEMIC_LABEL.analysis} {msg('academy.and')}{' '}
+              {EPISTEMIC_LABEL.uncertainty} {msg('academy.labels')}
             </p>
-            <p>Rule changes proposed during study require human approval before activation.</p>
+            <p>{msg('academy.ruleChangesProposedDuringStudyRequire')}</p>
           </CardContent>
         </Card>
       </Grid>
@@ -127,12 +147,12 @@ export function AcademyPage() {
         items={TABS.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
         value={tab}
         onValueChange={setTab}
-        aria-label="Academy sections"
+        aria-label={msg('academy.academySections')}
       >
         <TabPanel value="modules" className="space-y-4">
           <Section
-            title="Six-month curriculum"
-            description="Each module lists its focus areas. Locked modules unlock when prerequisites are complete."
+            title={msg('academy.sixMonthCurriculum')}
+            description={msg('academyPage.eachModuleListsItsFocusAreasLockedModules')}
           >
             <ol className="space-y-3">
               {mockCurriculum.map((module, index) => (
@@ -169,8 +189,10 @@ export function AcademyPage() {
                             {module.status}
                           </Badge>
                           {module.status === 'locked' ? (
-                            <Tooltip content="Unlocks when prerequisite lessons are complete.">
-                              <span className="text-text-faint" aria-label="Locked">
+                            <Tooltip
+                              content={msg('academyPage.unlocksWhenPrerequisiteLessonsAreComplete')}
+                            >
+                              <span className="text-text-faint" aria-label={msg('academy.locked')}>
                                 <Lock size={14} aria-hidden />
                               </span>
                             </Tooltip>
@@ -184,7 +206,7 @@ export function AcademyPage() {
                           </Badge>
                         ))}
                         <span className="num ms-auto text-caption text-text-faint">
-                          {module.lessons} lessons
+                          {module.lessons} {msg('academy.lessons')}
                         </span>
                       </CardContent>
                     </Card>
@@ -196,14 +218,14 @@ export function AcademyPage() {
 
           <InterfaceStatesPanel
             states={['loading', 'error']}
-            title="States this curriculum surface owes you"
-            description="The module list is static in this preview. These are the two states it will use once lessons are read from the backend; the empty case is shown in the Examinations tab."
-            loadingTitle="Reading the curriculum"
-            loadingDescription="Module skeletons hold the layout while the curriculum is read, so unlocked and locked cards do not shift position."
-            errorTitle="Curriculum could not be read"
-            errorDescription="A failed read is reported with its typed code instead of an empty list, because an empty curriculum and an unreadable one demand different actions."
+            title={msg('academy.statesThisCurriculumSurfaceOwesYou')}
+            description={msg('academyPage.theModuleListIsStaticInThisPreview')}
+            loadingTitle={msg('academyPage.readingTheCurriculum')}
+            loadingDescription={msg('academyPage.moduleSkeletonsHoldTheLayoutWhileTheCurriculum')}
+            errorTitle={msg('academyPage.curriculumCouldNotBeRead')}
+            errorDescription={msg('academyPage.aFailedReadIsReportedWithItsTyped')}
             errorCode="PROVIDER_UNAVAILABLE"
-            hint="Progress is recorded per lesson against the real curriculum when the persistence slice lands; nothing here is inferred from time spent."
+            hint={msg('academyPage.progressIsRecordedPerLessonAgainstTheReal')}
           />
         </TabPanel>
 
@@ -211,8 +233,10 @@ export function AcademyPage() {
           <Card surface="data">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Module 2 — Risk First</CardTitle>
-                <CardDescription>Lesson states and prerequisite gating</CardDescription>
+                <CardTitle className="text-body">{msg('academy.module2RiskFirst')}</CardTitle>
+                <CardDescription>
+                  {msg('academy.lessonStatesAndPrerequisiteGating')}
+                </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="divide-y divide-border">
@@ -253,7 +277,9 @@ export function AcademyPage() {
                 <CardHeader divider>
                   <div>
                     <CardTitle className="num text-body">{exam.id}</CardTitle>
-                    <CardDescription>{exam.questionCount} questions</CardDescription>
+                    <CardDescription>
+                      {exam.questionCount} {msg('academy.questions')}
+                    </CardDescription>
                   </div>
                   <Badge tone={exam.bestScore === null ? 'outline' : 'primary'}>
                     {exam.bestScore === null ? 'not attempted' : formatPercent(exam.bestScore)}
@@ -269,14 +295,14 @@ export function AcademyPage() {
           </Grid>
           <Card>
             <CardHeader divider>
-              <CardTitle className="text-body">Examination integrity</CardTitle>
+              <CardTitle className="text-body">{msg('academy.examinationIntegrity')}</CardTitle>
             </CardHeader>
             <CardContent>
               <EmptyState
                 icon={<GraduationCap size={22} aria-hidden />}
-                title="Exam runner is not part of this phase"
-                description="The interface for taking an exam will be added with the persistence slice, when lessons and attempts can actually be stored and graded."
-                hint="Until then this tab shows the planned shape, not a working exam."
+                title={msg('academy.examRunnerIsNotPartOf')}
+                description={msg('academyPage.theInterfaceForTakingAnExamWillBe')}
+                hint={msg('academyPage.untilThenThisTabShowsThePlannedShape')}
               />
             </CardContent>
           </Card>

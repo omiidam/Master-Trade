@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import type { ChecklistItem } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 export interface ChecklistFieldProps {
   label: string;
@@ -32,7 +33,7 @@ export function ChecklistField({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <legend className="text-caption font-medium text-text-muted">{label}</legend>
         <span className="num text-caption text-text-faint">
-          {selected.length} / {items.length} marked
+          {selected.length} / {items.length} {msg('journal.marked')}
         </span>
       </div>
       {hint ? <p className="text-caption text-text-faint">{hint}</p> : null}

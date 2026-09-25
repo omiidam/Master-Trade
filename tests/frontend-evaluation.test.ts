@@ -27,6 +27,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 import { APP_PAGE_IDS, NAV_SECTIONS } from '../web/src/config/navigation.js';
+import { translate } from '../web/src/i18n/index.js';
+import { copyOf } from './helpers/source-copy.js';
 
 const read = (path: string): string => readFileSync(path, 'utf8');
 
@@ -64,7 +66,7 @@ describe('the evaluation navigation entry', () => {
 
     const section = NAV_SECTIONS.find((entry) => entry.id === 'evaluation');
     expect(section).toBeDefined();
-    expect(section?.label).toBe('Evaluation');
+    expect(section && translate('en', section.labelKey)).toBe('Evaluation');
     expect(section?.group).toBe('workspace');
 
     // No evaluation subsection is its own navigation entry: the tabs are internal.
@@ -81,7 +83,9 @@ describe('the evaluation navigation entry', () => {
 
   it('describes a measurement rather than a promise', () => {
     const section = NAV_SECTIONS.find((entry) => entry.id === 'evaluation');
-    const text = `${section?.label ?? ''} ${section?.description ?? ''}`.toLowerCase();
+    const text = section
+      ? `${translate('en', section.labelKey)} ${translate('en', section.descriptionKey)}`.toLowerCase()
+      : '';
     for (const word of [
       'order',
       'execute',
@@ -127,7 +131,7 @@ describe('the surfaces compute nothing', () => {
     // The difference is read from the contract…
     expect(source).toContain('comparison.differencePercent');
     // …and the R multiple row says the engine reports no difference rather than filling the gap.
-    expect(source).toContain('reported for the return only');
+    expect(copyOf(source)).toContain('reported for the return only');
     // The obvious shortcut is absent.
     expect(source).not.toMatch(/actualReturnPercent\s*-/);
     expect(source).not.toMatch(/expectedReturnPercent\s*-/);
@@ -232,7 +236,7 @@ describe('the surfaces authorize nothing', () => {
     const page = read(PAGE);
     // A refusal is badged where the button that produced it sits…
     expect(page).toContain("evaluateStatus === 'refused'");
-    expect(page).toContain('Not evaluated');
+    expect(copyOf(page)).toContain('Not evaluated');
     // …and the verdict itself comes from the gate, not from the page.
     expect(page).toContain('<DecisionReadinessPanel readiness={view.readiness} />');
     expect(page).toContain(
@@ -312,7 +316,7 @@ describe('the surfaces are responsive from the first line', () => {
   it('exposes touch-friendly controls and labelled landmarks', () => {
     const page = read(PAGE);
     // The tab set is labelled, and the page shell is the shared responsive workspace.
-    expect(page).toContain('aria-label="Evaluation sections"');
+    expect(copyOf(page)).toContain('Evaluation sections');
     expect(page).toContain('<Workspace');
     expect(page).toContain('<Tabs');
     // Buttons carry their own size, so a tap target is not a text run.

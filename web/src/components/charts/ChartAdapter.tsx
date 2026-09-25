@@ -3,6 +3,7 @@ import type { DataProvenance } from '@shared/marketdata/provider';
 import { ProvenanceBanner } from '../ProvenanceBanner';
 import { cn } from '../../lib/cn';
 import { ChartFrame, ChartStatePanel, PlotGrid, PlotReferenceLine } from './ChartFrame';
+import { msg } from '../../i18n/index.js';
 
 export interface ChartBar {
   time: string;
@@ -117,10 +118,9 @@ export function ChartAdapter({
       <ChartStatePanel
         state={{
           kind: 'empty',
-          title: 'Nothing to plot for this symbol and timeframe',
-          description:
-            'The provider returned no bars, so the chart is left empty rather than drawn from a placeholder series.',
-          hint: 'An empty chart is a fact about the data, not a flat market.',
+          title: msg('chartAdapter.nothingToPlotForThisSymbolAndTimeframe'),
+          description: msg('chartAdapter.theProviderReturnedNoBarsSoTheChart'),
+          hint: msg('chartAdapter.anEmptyChartIsAFactAboutThe'),
         }}
         className={className}
       />
@@ -135,9 +135,17 @@ export function ChartAdapter({
           <span className="text-caption text-text-muted">{timeframe}</span>
         </figcaption>
         <div className="flex items-baseline gap-3 text-caption text-text-faint">
-          <span className="num">low {min.toFixed(2)}</span>
-          <span className="num">high {max.toFixed(2)}</span>
-          {last ? <span className="num">last {last.close.toFixed(2)}</span> : null}
+          <span className="num">
+            {msg('charts.low')} {min.toFixed(2)}
+          </span>
+          <span className="num">
+            {msg('charts.high')} {max.toFixed(2)}
+          </span>
+          {last ? (
+            <span className="num">
+              {msg('charts.last')} {last.close.toFixed(2)}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -197,8 +205,7 @@ export function ChartAdapter({
 
       <ProvenanceBanner provenance={provenance} source={source} updatedAt={updatedAt} />
       <p className="text-caption text-text-faint">
-        Illustrative render — the charting library is not installed in this phase. The adapter keeps
-        provenance and read-only guarantees in one place.
+        {msg('charts.illustrativeRenderTheChartingLibraryIs')}
       </p>
     </figure>
   );

@@ -63,14 +63,28 @@ import {
 import { Grid, Workspace } from '../app/Workspace';
 import { useCapabilitiesStore } from '../store/capabilities';
 import { useDecisionsStore } from '../store/decisions';
+import { msg } from '../i18n/index.js';
 
 const TITLE = 'Evaluation';
-const DESCRIPTION =
-  'Record what you decided, see what the recorded prices say happened — and what could not be measured — and read what the platform claims it can and cannot do with it. Nothing here is predicted, and no decision is graded.';
+function description(): string {
+  return msg('evaluation.description');
+}
 
 const TABS = [
-  { id: 'decisions', label: 'Decisions', icon: <FileSearch size={14} aria-hidden /> },
-  { id: 'capabilities', label: 'Capabilities', icon: <Blocks size={14} aria-hidden /> },
+  {
+    id: 'decisions',
+    get label(): string {
+      return msg('evaluationPage.decisions');
+    },
+    icon: <FileSearch size={14} aria-hidden />,
+  },
+  {
+    id: 'capabilities',
+    get label(): string {
+      return msg('evaluation.capabilities');
+    },
+    icon: <Blocks size={14} aria-hidden />,
+  },
 ];
 
 export function EvaluationPage() {
@@ -107,8 +121,13 @@ export function EvaluationPage() {
   const selectedId = view?.decision.id ?? null;
 
   return (
-    <Workspace title={TITLE} description={DESCRIPTION}>
-      <Tabs items={TABS} value={tab} onValueChange={setTab} aria-label="Evaluation sections">
+    <Workspace title={TITLE} description={description()}>
+      <Tabs
+        items={TABS}
+        value={tab}
+        onValueChange={setTab}
+        aria-label={msg('evaluation.evaluationSections')}
+      >
         {/* ------------------------------------------------------------ */}
         {/* Decisions                                                      */}
         {/* ------------------------------------------------------------ */}
@@ -130,14 +149,14 @@ export function EvaluationPage() {
           {listStatus === 'unavailable' ? (
             <ErrorState
               severity="info"
-              title="No decisions to show"
+              title={msg('evaluation.noDecisionsToShow')}
               description={`${unavailableReason ?? 'The decision store could not be reached.'} Nothing is displayed in its place: a decision is a record of something you actually did, so a stand-in would be a fabricated one.`}
             />
           ) : null}
 
           {listStatus === 'error' ? (
             <ErrorState
-              title="Could not read your decisions"
+              title={msg('evaluation.couldNotReadYourDecisions')}
               description={listError?.message ?? 'The request failed without a reason.'}
               code={listError?.code}
               action={
@@ -151,9 +170,9 @@ export function EvaluationPage() {
           {listStatus === 'ready' && decisionList.length === 0 ? (
             <EmptyState
               icon={<ShieldQuestion size={22} aria-hidden />}
-              title="Nothing recorded yet"
-              description="Decisions are recorded through the API with the prices, the risk you planned and what you expected. Once one exists, this page measures what its own prices say happened."
-              hint="A decision is a record of your reasoning, not a trade order. Nothing on this page can place one."
+              title={msg('research.nothingRecordedYet')}
+              description={msg('evaluationPage.decisionsAreRecordedThroughTheAPIWithThe')}
+              hint={msg('evaluationPage.aDecisionIsARecordOfYourReasoning')}
             />
           ) : null}
 
@@ -163,16 +182,17 @@ export function EvaluationPage() {
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-caption text-text-muted">
-                    {decisionList.length} of {list?.total ?? decisionList.length} recorded
+                    {decisionList.length} {msg('exams.of')} {list?.total ?? decisionList.length}{' '}
+                    {msg('quality.recorded')}
                   </p>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => void loadDecisions()}
-                    aria-label="Refresh the decision list"
+                    aria-label={msg('evaluation.refreshTheDecisionList')}
                   >
                     <RefreshCw size={14} aria-hidden />
-                    Refresh
+                    {msg('evaluation.refresh')}
                   </Button>
                 </div>
                 <ul className="space-y-2">
@@ -193,8 +213,8 @@ export function EvaluationPage() {
               <div className="min-w-0 space-y-4">
                 {view === null ? (
                   <EmptyState
-                    title="Select a decision"
-                    description="Its record, the readiness verdict from both gates, and the evaluation computed from the prices on the record."
+                    title={msg('evaluation.selectADecision')}
+                    description={msg('evaluationPage.itsRecordTheReadinessVerdictFromBothGates')}
                   />
                 ) : null}
 
@@ -210,7 +230,7 @@ export function EvaluationPage() {
 
                 {detailStatus === 'error' || detailStatus === 'unavailable' ? (
                   <ErrorState
-                    title="Could not read the decision"
+                    title={msg('evaluation.couldNotReadTheDecision')}
                     description={detailError?.message ?? 'The request failed without a reason.'}
                     code={detailError?.code}
                   />
@@ -230,15 +250,17 @@ export function EvaluationPage() {
                         {evaluateStatus === 'evaluating' ? 'Evaluating…' : 'Evaluate this decision'}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={clearSelection}>
-                        Close
+                        {msg('journal.close')}
                       </Button>
                       {/* The refusal is rendered beside the button that produced it, in the
                           server's own words, rather than as a toast that disappears. */}
                       {evaluateStatus === 'refused' ? (
-                        <Badge tone="warning">Not evaluated — the reasons are below</Badge>
+                        <Badge tone="warning">
+                          {msg('evaluation.notEvaluatedTheReasonsAreBelow')}
+                        </Badge>
                       ) : null}
                       {evaluateStatus === 'done' ? (
-                        <Badge tone="success">Evaluation recorded</Badge>
+                        <Badge tone="success">{msg('evaluation.evaluationRecorded')}</Badge>
                       ) : null}
                       {evaluateStatus === 'failed' ? (
                         <Badge tone="danger">{evaluateMessage ?? 'The request failed.'}</Badge>
@@ -290,14 +312,14 @@ export function EvaluationPage() {
           {capabilitiesStatus === 'unavailable' ? (
             <ErrorState
               severity="info"
-              title="No capability catalogue to show"
+              title={msg('evaluation.noCapabilityCatalogueToShow')}
               description={`${unavailableReason ?? 'The catalogue could not be reached.'} Nothing is displayed in its place: the catalogue is a claim about what this deployment can do, and the client is not the thing that gets to make it.`}
             />
           ) : null}
 
           {capabilitiesStatus === 'error' ? (
             <ErrorState
-              title="Could not read the capability catalogue"
+              title={msg('evaluation.couldNotReadTheCapabilityCatalogue')}
               description={capabilitiesError?.message ?? 'The request failed without a reason.'}
               code={capabilitiesError?.code}
               action={
@@ -313,17 +335,12 @@ export function EvaluationPage() {
               <Card surface="data">
                 <CardHeader divider>
                   <div className="min-w-0">
-                    <CardTitle>What this account can do right now</CardTitle>
-                    <CardDescription>
-                      Each state is computed on the server from your own declarations and from what
-                      the capability declares it needs. Availability and readiness are separate
-                      claims, so a capability that is not built says so instead of asking you for
-                      inputs it could not use.
-                    </CardDescription>
+                    <CardTitle>{msg('evaluation.whatThisAccountCanDoRight')}</CardTitle>
+                    <CardDescription>{msg('evaluation.eachStateIsComputedOnThe')}</CardDescription>
                   </div>
                   <Badge tone="outline">
-                    {capabilities.capabilities.length} declared · {capabilities.modules.length}{' '}
-                    modules
+                    {capabilities.capabilities.length} {msg('evaluation.declared')}{' '}
+                    {capabilities.modules.length} {msg('evaluation.modules')}
                   </Badge>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -333,8 +350,8 @@ export function EvaluationPage() {
               </Card>
 
               <Section
-                title="Capabilities"
-                description="Each one declares the inputs it is gated by, the operation the role table decides, the engine that computes its figures, and what it claims — including what it does not."
+                title={msg('evaluation.capabilities')}
+                description={msg('evaluationPage.eachOneDeclaresTheInputsItIsGated')}
               >
                 <Grid columns={2}>
                   {capabilities.capabilities.map((capability) => (
@@ -344,8 +361,8 @@ export function EvaluationPage() {
               </Section>
 
               <Section
-                title="Readiness per analysis"
-                description="The gate's verdict for every declared analysis type, from your own context. Nothing here is decided by a model."
+                title={msg('evaluation.readinessPerAnalysis')}
+                description={msg('evaluationPage.theGateSVerdictForEveryDeclaredAnalysisType')}
               >
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {capabilities.readiness.map((decision) => (
@@ -367,8 +384,9 @@ export function EvaluationPage() {
                         {/* Both layers are visible: inputs can be ready for a capability that is
                             not built, and saying only one of those would mislead. */}
                         <p className="text-caption text-text-muted">
-                          Inputs: {decision.classification ?? 'nothing to assess'} · decided by{' '}
-                          {decision.decidedBy}
+                          {msg('evaluation.inputs')}{' '}
+                          {decision.classification ?? 'nothing to assess'}{' '}
+                          {msg('evaluation.decidedBy')} {decision.decidedBy}
                         </p>
                         <ul className="list-disc space-y-1 pl-5">
                           {decision.limitations.slice(0, 4).map((limitation) => (
@@ -392,21 +410,17 @@ export function EvaluationPage() {
                     <CardTitle>
                       <span className="inline-flex items-center gap-2">
                         <Layers size={16} aria-hidden />
-                        What is deliberately absent
+                        {msg('evaluation.whatIsDeliberatelyAbsent')}
                       </span>
                     </CardTitle>
                     <CardDescription>
-                      No capability here places an order, connects a broker or runs live. There is
-                      no operation for one, no plan includes one, and the engine has no tool behind
-                      one.
+                      {msg('evaluation.noCapabilityHerePlacesAnOrder')}
                     </CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-caption text-text-muted">
-                    A request naming a capability nobody declared is refused at resolution, before
-                    any input is read — capabilities are deny-by-default, so an undeclared id has no
-                    implementation to reach.
+                    {msg('evaluation.aRequestNamingACapabilityNobody')}
                   </p>
                 </CardContent>
               </Card>

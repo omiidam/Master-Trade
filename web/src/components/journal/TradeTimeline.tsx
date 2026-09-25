@@ -14,6 +14,7 @@ import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
 import { TRADE_EVENT_LABEL } from '../../mock/journal';
 import type { TradeEvent, TradeEventKind } from '../../mock/journal';
+import { msg } from '../../i18n/index.js';
 
 const ICONS: Record<TradeEventKind, ReactNode> = {
   recorded: <Flag size={13} aria-hidden />,
@@ -63,13 +64,11 @@ export function TradeTimeline({
   const ordered = [...events].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
 
   return (
-    <Card as="section" aria-label="Trade history" className={className}>
+    <Card as="section" aria-label={msg('journal.tradeHistory')} className={className}>
       <CardHeader divider>
         <div className="min-w-0">
-          <CardTitle>Record history</CardTitle>
-          <CardDescription>
-            Appended in order. Nothing here is overwritten, so an earlier reading stays available.
-          </CardDescription>
+          <CardTitle>{msg('journal.recordHistory')}</CardTitle>
+          <CardDescription>{msg('journal.appendedInOrderNothingHereIs')}</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -95,7 +94,9 @@ export function TradeTimeline({
                   <p className="num text-caption text-text-faint">{formatTimestamp(event.at)}</p>
                 </div>
                 <p className="mt-0.5 text-caption text-text-muted">{event.detail}</p>
-                <p className="mt-0.5 text-caption text-text-faint">source: {event.actor}</p>
+                <p className="mt-0.5 text-caption text-text-faint">
+                  {msg('journal.source')} {event.actor}
+                </p>
               </div>
             </li>
           ))}

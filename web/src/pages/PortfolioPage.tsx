@@ -25,6 +25,7 @@ import {
 import { Grid, Workspace } from '../app/Workspace';
 import { usePortfolioStore } from '../store/portfolio';
 import { useQualityStore } from '../store/quality';
+import { msg } from '../i18n/index.js';
 
 /**
  * Portfolio: what is declared, what it is worth, and what cannot be said about it.
@@ -49,17 +50,54 @@ import { useQualityStore } from '../store/quality';
  */
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: <Gauge size={14} aria-hidden /> },
-  { id: 'holdings', label: 'Holdings', icon: <Layers size={14} aria-hidden /> },
-  { id: 'allocation', label: 'Allocation', icon: <Coins size={14} aria-hidden /> },
-  { id: 'insights', label: 'Observations', icon: <Sparkles size={14} aria-hidden /> },
-  { id: 'quality', label: 'Quality', icon: <ListChecks size={14} aria-hidden /> },
-  { id: 'declare', label: 'Declare', icon: <PencilLine size={14} aria-hidden /> },
+  {
+    id: 'overview',
+    get label(): string {
+      return msg('dashboardPage.overview');
+    },
+    icon: <Gauge size={14} aria-hidden />,
+  },
+  {
+    id: 'holdings',
+    get label(): string {
+      return msg('portfolioPage.holdings');
+    },
+    icon: <Layers size={14} aria-hidden />,
+  },
+  {
+    id: 'allocation',
+    get label(): string {
+      return msg('portfolioPage.allocation');
+    },
+    icon: <Coins size={14} aria-hidden />,
+  },
+  {
+    id: 'insights',
+    get label(): string {
+      return msg('decisions.observations');
+    },
+    icon: <Sparkles size={14} aria-hidden />,
+  },
+  {
+    id: 'quality',
+    get label(): string {
+      return msg('portfolioPage.quality');
+    },
+    icon: <ListChecks size={14} aria-hidden />,
+  },
+  {
+    id: 'declare',
+    get label(): string {
+      return msg('portfolioPage.declare');
+    },
+    icon: <PencilLine size={14} aria-hidden />,
+  },
 ] as const;
 
 const TITLE = 'Portfolio';
-const DESCRIPTION =
-  'The composition you have declared, valued by deterministic code — with every gap named rather than filled.';
+function description(): string {
+  return msg('portfolio.description');
+}
 
 export function PortfolioPage() {
   const status = usePortfolioStore((state) => state.status);
@@ -93,7 +131,7 @@ export function PortfolioPage() {
 
   if (status === 'idle' || status === 'loading') {
     return (
-      <Workspace title={TITLE} description={DESCRIPTION}>
+      <Workspace title={TITLE} description={description()}>
         <Grid columns={3}>
           {[0, 1, 2].map((index) => (
             <Card key={index}>
@@ -111,10 +149,10 @@ export function PortfolioPage() {
 
   if (status === 'unavailable') {
     return (
-      <Workspace title={TITLE} description={DESCRIPTION}>
+      <Workspace title={TITLE} description={description()}>
         <ErrorState
           severity="info"
-          title="No portfolio to show"
+          title={msg('portfolio.noPortfolioToShow')}
           description={`${unavailableReason ?? 'The portfolio service could not be reached.'} Nothing is displayed in its place: a holding is a fact about your account, so an illustrative one would be worse than an empty page.`}
         />
       </Workspace>
@@ -123,9 +161,9 @@ export function PortfolioPage() {
 
   if (status === 'error' || view === null) {
     return (
-      <Workspace title={TITLE} description={DESCRIPTION}>
+      <Workspace title={TITLE} description={description()}>
         <ErrorState
-          title="Could not read the portfolio"
+          title={msg('portfolio.couldNotReadThePortfolio')}
           description={error?.message ?? 'The request failed without a reason.'}
           code={error?.code}
           action={
@@ -141,45 +179,56 @@ export function PortfolioPage() {
   const blocked = view.readiness.filter((decision) => decision.readiness === 'BLOCKED');
 
   return (
-    <Workspace title={TITLE} description={DESCRIPTION}>
+    <Workspace title={TITLE} description={description()}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={view.declared ? 'primary' : 'info'}>
           {view.declared ? `declared · version ${view.version}` : 'not declared yet'}
         </Badge>
         <Badge tone="neutral">
-          {view.metrics.coverage.positions} position
+          {view.metrics.coverage.positions} {msg('portfolio.position')}
           {view.metrics.coverage.positions === 1 ? '' : 's'}
         </Badge>
         <Badge tone={view.metrics.valuationComplete ? 'success' : 'warning'}>
           {view.metrics.valuationComplete ? 'fully valued' : 'partial valuation'}
         </Badge>
-        {blocked.length > 0 ? <Badge tone="danger">{blocked.length} scope(s) blocked</Badge> : null}
+        {blocked.length > 0 ? (
+          <Badge tone="danger">
+            {blocked.length} {msg('portfolio.scopeSBlocked')}
+          </Badge>
+        ) : null}
         {view.insights.length > 0 ? (
-          <Badge tone="outline">{view.insights.length} observation(s)</Badge>
+          <Badge tone="outline">
+            {view.insights.length} {msg('portfolio.observationS')}
+          </Badge>
         ) : null}
       </div>
 
       {saveStatus === 'saved' ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-primary/40 bg-primary-soft px-3 py-2">
           <p className="text-body text-text">
-            The declaration was stored as version {view.version}. Every earlier version is kept and
-            was not rewritten.
+            {msg('portfolio.theDeclarationWasStoredAsVersion')} {view.version}
+            {msg('portfolio.everyEarlierVersionIsKeptAnd')}
           </p>
           <Button size="sm" variant="ghost" onClick={clearSave}>
-            Dismiss
+            {msg('portfolio.dismiss')}
           </Button>
         </div>
       ) : null}
 
       {saveStatus === 'failed' ? (
         <ErrorState
-          title="The declaration was not stored"
+          title={msg('portfolio.theDeclarationWasNotStored')}
           description={saveError?.message ?? 'The request failed without a reason.'}
           code={saveError?.code}
         />
       ) : null}
 
-      <Tabs items={TABS} value={tab} onValueChange={setTab} aria-label="Portfolio sections">
+      <Tabs
+        items={TABS}
+        value={tab}
+        onValueChange={setTab}
+        aria-label={msg('portfolio.portfolioSections')}
+      >
         <TabPanel value="overview">
           <div className="space-y-4">
             <PortfolioOverview view={view} />
@@ -192,8 +241,8 @@ export function PortfolioPage() {
           <div className="space-y-4">
             {view.metrics.positions.length === 0 ? (
               <EmptyState
-                title="No positions declared"
-                description="Nothing has been declared for this account, so there is nothing to value. Open the Declare tab to describe the composition — a quantity, a price, a declared share, or any combination of the three."
+                title={msg('portfolio.noPositionsDeclared')}
+                description={msg('portfolioPage.nothingHasBeenDeclaredForThisAccountSo')}
                 action={
                   <Button size="sm" onClick={() => setTab('declare')}>
                     Declare a composition
@@ -205,11 +254,9 @@ export function PortfolioPage() {
                 <Card>
                   <CardHeader divider>
                     <div className="min-w-0">
-                      <CardTitle>Positions</CardTitle>
+                      <CardTitle>{msg('portfolio.positions')}</CardTitle>
                       <CardDescription>
-                        Every figure was computed on the server from what you declared. An em dash
-                        is a figure that does not exist, and the Findings column says which kind of
-                        absence it was.
+                        {msg('portfolio.everyFigureWasComputedOnThe')}
                       </CardDescription>
                     </div>
                   </CardHeader>
@@ -260,8 +307,7 @@ export function PortfolioPage() {
             {assessment === null ? null : (
               <div className="space-y-3">
                 <p className="text-caption text-text-faint">
-                  The two layers of the same verdict, shown separately: what your declared context
-                  allows, and what the document supports.
+                  {msg('portfolio.theTwoLayersOfTheSame')}
                 </p>
                 {assessment.decisions
                   .filter(
@@ -298,8 +344,8 @@ export function PortfolioPage() {
               <MissingHoldingData gaps={view.metrics.gaps} />
             ) : (
               <EmptyState
-                title="Nothing is stored yet"
-                description="Saving here creates version 1 of the declaration. Every later save appends a version; none of them rewrites an earlier one."
+                title={msg('portfolio.nothingIsStoredYet')}
+                description={msg('portfolioPage.savingHereCreatesVersion1OfTheDeclaration')}
               />
             )}
           </div>

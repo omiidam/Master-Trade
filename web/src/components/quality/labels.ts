@@ -1,5 +1,6 @@
 import { FIELD_LABELS, type FieldKey } from '@shared/profile/model';
 import type { InputRef, QualityDimension } from '@shared/quality/model';
+import { liveLabels } from '../../i18n/index.js';
 
 /**
  * Names for the things an assessment talks about.
@@ -21,46 +22,46 @@ export function inputLabel(ref: InputRef): string {
   return FIELD_LABELS[ref as FieldKey] ?? String(ref);
 }
 
-const DIMENSION_LABEL: Readonly<Record<QualityDimension, string>> = {
-  completeness: 'Completeness',
-  validity: 'Validity',
-  consistency: 'Consistency',
-  reliability: 'Reliability',
-  freshness: 'Freshness',
-  relevance: 'Relevance',
-  confidence: 'Confidence',
-  provenance: 'Provenance',
-};
+const DIMENSION_LABEL: Readonly<Record<QualityDimension, string>> = liveLabels({
+  completeness: 'quality.dimension.completeness',
+  validity: 'quality.dimension.validity',
+  consistency: 'quality.dimension.consistency',
+  reliability: 'quality.dimension.reliability',
+  freshness: 'quality.dimension.freshness',
+  relevance: 'quality.dimension.relevance',
+  confidence: 'quality.dimension.confidence',
+  provenance: 'quality.dimension.provenance',
+});
 
 export function dimensionLabel(dimension: QualityDimension): string {
   return DIMENSION_LABEL[dimension] ?? String(dimension);
 }
 
 /** Stable, human-readable names for the technical codes a finding carries. */
-const CODE_LABEL: Readonly<Record<string, string>> = {
-  'missing-required': 'Required and not provided',
-  'missing-helpful': 'Would sharpen the analysis',
-  'unavailable-input': 'Input not available',
-  'not-a-number': 'Not a number',
-  'non-finite-number': 'Not a finite number',
-  'negative-value': 'Negative value',
-  'out-of-range': 'Outside its range',
-  'unknown-token': 'Not one of the supported values',
-  'malformed-symbol': 'Malformed symbol',
-  'empty-list': 'Empty list',
-  'duplicate-entry': 'Repeated entry',
-  'constraint-is-instruction': 'Written as an instruction rather than a constraint',
-  'unsupported-market': 'Market the system cannot work in',
-  'unsupported-timeframe': 'Timeframe the system cannot work in',
-  'conflicting-declarations': 'Two declarations that cannot both hold',
-  'allocation-exceeds-portfolio': 'Allocation exceeds a whole portfolio',
-  'risk-horizon-tension': 'Risk and horizon point different ways',
-  'stale-value': 'Aged past its freshness window',
-  'assumed-value': 'Not provided — treated as an assumption',
-  'undated-claim': 'Stated with no observation time',
-  'missing-provenance': 'No provenance recorded',
-  'untrusted-provenance': 'Provenance cannot be verified',
-};
+const CODE_LABEL: Readonly<Record<string, string>> = liveLabels({
+  'missing-required': 'quality.code.missing-required',
+  'missing-helpful': 'quality.code.missing-helpful',
+  'unavailable-input': 'quality.code.unavailable-input',
+  'not-a-number': 'quality.code.not-a-number',
+  'non-finite-number': 'quality.code.non-finite-number',
+  'negative-value': 'quality.code.negative-value',
+  'out-of-range': 'quality.code.out-of-range',
+  'unknown-token': 'quality.code.unknown-token',
+  'malformed-symbol': 'quality.code.malformed-symbol',
+  'empty-list': 'quality.code.empty-list',
+  'duplicate-entry': 'quality.code.duplicate-entry',
+  'constraint-is-instruction': 'quality.code.constraint-is-instruction',
+  'unsupported-market': 'quality.code.unsupported-market',
+  'unsupported-timeframe': 'quality.code.unsupported-timeframe',
+  'conflicting-declarations': 'quality.code.conflicting-declarations',
+  'allocation-exceeds-portfolio': 'quality.code.allocation-exceeds-portfolio',
+  'risk-horizon-tension': 'quality.code.risk-horizon-tension',
+  'stale-value': 'quality.code.stale-value',
+  'assumed-value': 'quality.code.assumed-value',
+  'undated-claim': 'quality.code.undated-claim',
+  'missing-provenance': 'quality.code.missing-provenance',
+  'untrusted-provenance': 'quality.code.untrusted-provenance',
+});
 
 /**
  * The finding's own wording for its code.
@@ -74,13 +75,13 @@ export function issueCodeLabel(code: string): string {
 }
 
 /** Why a clarification is being asked, in the vocabulary of the answer. */
-const REASON_LABEL: Readonly<Record<string, string>> = {
-  missing: 'not provided yet',
-  stale: 'out of date',
-  conflicting: 'conflicts with another answer',
-  assumed: 'currently an assumption',
-  'refused-to-say': 'you chose not to say',
-};
+const REASON_LABEL: Readonly<Record<string, string>> = liveLabels({
+  missing: 'quality.reason.missing',
+  stale: 'quality.reason.stale',
+  conflicting: 'quality.reason.conflicting',
+  assumed: 'quality.reason.assumed',
+  'refused-to-say': 'quality.reason.refused-to-say',
+});
 
 export function clarificationReasonLabel(reason: string): string {
   return REASON_LABEL[reason] ?? reason;

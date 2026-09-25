@@ -4,6 +4,7 @@ import type { ProvenanceSource } from '@shared/core/provenance';
 import { cn } from '../../lib/cn';
 import { formatTimestamp } from '../../lib/format';
 import { CardTile } from '../Card';
+import { msg, liveLabels } from '../../i18n/index.js';
 
 const ICON: Record<ProvenanceSource, ReactNode> = {
   tool: <Sparkles size={12} aria-hidden />,
@@ -19,14 +20,14 @@ const ICON: Record<ProvenanceSource, ReactNode> = {
  * as model-authored rather than "AI-generated insight", because the second
  * phrasing invites trust the source has not earned.
  */
-const KIND_LABEL: Record<ProvenanceSource, string> = {
-  tool: 'Deterministic tool',
-  human: 'Human',
-  model: 'Model-authored',
-  'market-data': 'Market data',
-  document: 'Document',
-  synthetic: 'Synthetic',
-};
+const KIND_LABEL: Record<ProvenanceSource, string> = liveLabels({
+  tool: 'memory.kind.tool',
+  human: 'memory.kind.human',
+  model: 'memory.kind.model',
+  'market-data': 'memory.kind.market-data',
+  document: 'memory.kind.document',
+  synthetic: 'memory.kind.synthetic',
+});
 
 export interface SourceIndicatorEntry {
   ref: string;
@@ -61,7 +62,7 @@ export function SourceIndicator({
   if (sources.length === 0) {
     return (
       <p className={cn('text-caption text-text-faint', className)}>
-        No source recorded — an unsourced claim may be retrieved but never presented as fact.
+        {msg('memory.noSourceRecordedAnUnsourcedClaim')}
       </p>
     );
   }
@@ -102,7 +103,7 @@ export function SourceIndicator({
       {note ? <p className="text-caption text-text-muted">{note}</p> : null}
       {recordedAt ? (
         <p className="text-caption text-text-faint">
-          Provenance recorded {formatTimestamp(recordedAt)}
+          {msg('memory.provenanceRecorded')} {formatTimestamp(recordedAt)}
         </p>
       ) : null}
     </div>

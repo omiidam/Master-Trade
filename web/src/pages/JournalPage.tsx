@@ -55,8 +55,8 @@ import { formatTimestamp } from '../lib/format';
 import {
   EMOTIONAL_STATE_LABEL,
   EMPTY_TRADE_FILTERS,
-  JOURNAL_PREVIEW_NOTICE,
-  JOURNAL_STAT_NOTE,
+  previewNotice,
+  statNote,
   RESULT_LABEL,
   REVIEW_STATE_LABEL,
   STATUS_LABEL,
@@ -82,15 +82,58 @@ import type {
   TradeFilters as TradeFilterState,
   TradeRange,
 } from '../mock/journal';
+import { msg } from '../i18n/index.js';
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: <ChartNoAxesCombined size={14} aria-hidden /> },
-  { id: 'history', label: 'Trade history', icon: <ClipboardList size={14} aria-hidden /> },
-  { id: 'add', label: 'Add trade', icon: <Plus size={14} aria-hidden /> },
-  { id: 'details', label: 'Trade details', icon: <Search size={14} aria-hidden /> },
-  { id: 'analytics', label: 'Analytics', icon: <LineChart size={14} aria-hidden /> },
-  { id: 'calendar', label: 'Calendar', icon: <CalendarDays size={14} aria-hidden /> },
-  { id: 'reviews', label: 'Reviews and lessons', icon: <GraduationCap size={14} aria-hidden /> },
+  {
+    id: 'overview',
+    get label(): string {
+      return msg('dashboardPage.overview');
+    },
+    icon: <ChartNoAxesCombined size={14} aria-hidden />,
+  },
+  {
+    id: 'history',
+    get label(): string {
+      return msg('journal.tradeHistory');
+    },
+    icon: <ClipboardList size={14} aria-hidden />,
+  },
+  {
+    id: 'add',
+    get label(): string {
+      return msg('journalPage.addTrade');
+    },
+    icon: <Plus size={14} aria-hidden />,
+  },
+  {
+    id: 'details',
+    get label(): string {
+      return msg('journalPage.tradeDetails');
+    },
+    icon: <Search size={14} aria-hidden />,
+  },
+  {
+    id: 'analytics',
+    get label(): string {
+      return msg('journalPage.analytics');
+    },
+    icon: <LineChart size={14} aria-hidden />,
+  },
+  {
+    id: 'calendar',
+    get label(): string {
+      return msg('journalPage.calendar');
+    },
+    icon: <CalendarDays size={14} aria-hidden />,
+  },
+  {
+    id: 'reviews',
+    get label(): string {
+      return msg('journalPage.reviewsAndLessons');
+    },
+    icon: <GraduationCap size={14} aria-hidden />,
+  },
 ] as const;
 
 function lineSeries(
@@ -146,29 +189,29 @@ export function JournalPage() {
     <ErrorState
       severity="info"
       title={`${action} is not connected in this phase`}
-      description="The journal store and its export pipeline arrive with the API integration. Nothing was written, and no file was created."
+      description={msg('journalPage.theJournalStoreAndItsExportPipelineArrive')}
       code="JOURNAL_STORE_UNAVAILABLE"
     />
   );
 
   return (
     <Workspace
-      title="Trading Journal"
-      description="Every record, its plan, its risk, whether the rules held and what it taught. A journal is a record of decisions, not a scoreboard — so sample size travels with every rate, and a missing value stays missing."
+      title={msg('journal.tradingJournal')}
+      description={msg('journalPage.everyRecordItsPlanItsRiskWhetherThe')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>
             record only — no execution
           </Badge>
-          <Tooltip content={JOURNAL_PREVIEW_NOTICE}>
+          <Tooltip content={previewNotice()}>
             <Badge tone="warning">preview data</Badge>
           </Tooltip>
-          <Tooltip content="Export is not connected in this phase: the action reports that rather than producing an empty file.">
+          <Tooltip content={msg('journalPage.exportIsNotConnectedInThisPhaseThe')}>
             <Button
               variant="secondary"
               size="md"
               onClick={() => setExportNotice(true)}
-              label="Export the current journal view"
+              label={msg('journalPage.exportTheCurrentJournalView')}
               leadingIcon={<Download size={14} aria-hidden />}
             >
               Export
@@ -178,7 +221,7 @@ export function JournalPage() {
             variant="primary"
             size="md"
             onClick={() => setTab('add')}
-            label="Open the add trade form"
+            label={msg('journalPage.openTheAddTradeForm')}
             leadingIcon={<Plus size={14} aria-hidden />}
           >
             Add trade
@@ -186,75 +229,76 @@ export function JournalPage() {
         </>
       }
     >
-      {exportNotice ? notConnected('Export') : null}
+      {exportNotice ? notConnected(msg('journal.export')) : null}
 
       <Grid columns={4}>
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Records by state</CardTitle>
+              <CardTitle className="text-body">{msg('journal.recordsByState')}</CardTitle>
               <CardDescription>
-                {states.scored} scored · {states.total - states.scored} not scored
+                {states.scored} {msg('journal.scored')} {states.total - states.scored}{' '}
+                {msg('journal.notScored')}
               </CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-2 text-caption text-text-muted">
             <p>
-              {states.byResult.win} wins · {states.byResult.loss} losses ·{' '}
-              {states.byResult.breakeven} breakeven · {states.byResult.pending} unscored
+              {states.byResult.win} {msg('journal.wins')} {states.byResult.loss}{' '}
+              {msg('journal.losses')} {states.byResult.breakeven} {msg('journal.breakeven')}{' '}
+              {states.byResult.pending} {msg('journal.unscored')}
             </p>
             <p>
-              {states.byStatus.open} open · {states.byStatus.incomplete} incomplete ·{' '}
-              {states.byStatus.archived} archived
+              {states.byStatus.open} {msg('journal.open')} {states.byStatus.incomplete}{' '}
+              {msg('journal.incomplete')} {states.byStatus.archived} {msg('journal.archived')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Rule adherence</CardTitle>
-              <CardDescription>Assessed separately from the outcome</CardDescription>
+              <CardTitle className="text-body">{msg('journal.ruleAdherence')}</CardTitle>
+              <CardDescription>{msg('journal.assessedSeparatelyFromTheOutcome')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-2 text-caption text-text-muted">
             <p>
-              {states.byCompliance.compliant} compliant · {states.byCompliance.partial} partial ·{' '}
-              {states.byCompliance.violation} broken
+              {states.byCompliance.compliant} {msg('journal.compliant')}{' '}
+              {states.byCompliance.partial} {msg('journal.partial')} {states.byCompliance.violation}{' '}
+              {msg('journal.broken')}
             </p>
             <p className="text-text-faint">
-              {states.byCompliance['not-assessed']} not assessed — excluded from the rate rather
-              than counted as compliant.
+              {states.byCompliance['not-assessed']} {msg('journal.notAssessedExcludedFromTheRate')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Write-ups</CardTitle>
-              <CardDescription>A record with no review cannot be studied</CardDescription>
+              <CardTitle className="text-body">{msg('journal.writeUps')}</CardTitle>
+              <CardDescription>{msg('journal.aRecordWithNoReviewCannot')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-2 text-caption text-text-muted">
             <p>
-              {states.withReview} of {states.total} records carry a written review.
+              {states.withReview} {msg('exams.of')} {states.total}{' '}
+              {msg('journal.recordsCarryAWrittenReview')}
             </p>
             <p className="text-text-faint">
-              {states.withoutWriteUp} have no market context recorded at all.
+              {states.withoutWriteUp} {msg('journal.haveNoMarketContextRecordedAt')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Reviews awaiting you</CardTitle>
-              <CardDescription>Flagged by the record, not by the result</CardDescription>
+              <CardTitle className="text-body">{msg('journal.reviewsAwaitingYou')}</CardTitle>
+              <CardDescription>{msg('journal.flaggedByTheRecordNotBy')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-2 text-caption text-text-muted">
             <p className="num text-metric text-warning">{states.byReviewState.required}</p>
-            <p className="text-text-faint">
-              A rule break and an unscored record both force a review, whatever the outcome was.
-            </p>
+            <p className="text-text-faint">{msg('journal.aRuleBreakAndAnUnscored')}</p>
           </CardContent>
         </Card>
       </Grid>
@@ -263,7 +307,7 @@ export function JournalPage() {
         items={TABS.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
         value={tab}
         onValueChange={setTab}
-        aria-label="Journal sections"
+        aria-label={msg('journal.journalSections')}
       >
         {/* Overview ------------------------------------------------------- */}
         <TabPanel value="overview">
@@ -285,11 +329,11 @@ export function JournalPage() {
             ))}
           </div>
 
-          <p className="text-caption text-text-faint">{JOURNAL_STAT_NOTE}</p>
+          <p className="text-caption text-text-faint">{statNote()}</p>
 
           <Section
-            title="Performance"
-            description="Every chart states its scope, and every one can be expanded to full screen."
+            title={msg('journal.performance')}
+            description={msg('journalPage.everyChartStatesItsScopeAndEveryOne')}
           >
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
               <PerformanceChart
@@ -307,7 +351,7 @@ export function JournalPage() {
                 description={mockDrawdownCurve.description}
                 series={lineSeries(mockDrawdownCurve, 'danger')}
                 unit={mockDrawdownCurve.unit}
-                levels={[{ value: 0, label: 'high-water mark', tone: 'muted' }]}
+                levels={[{ value: 0, label: msg('analyticsPanel.highWaterMark'), tone: 'muted' }]}
                 provenance="synthetic"
                 sourceRef="synthetic-journal-analytics"
               />
@@ -326,7 +370,7 @@ export function JournalPage() {
                 series={[
                   {
                     id: mockWinLossDistribution.id,
-                    label: 'Records',
+                    label: msg('journalPage.records'),
                     tone: 'primary',
                     points: mockWinLossDistribution.points,
                     bars: true,
@@ -340,17 +384,17 @@ export function JournalPage() {
           </Section>
 
           <Section
-            title="Planned versus actual"
-            description="The comparison the journal exists for: what was intended against what happened."
+            title={msg('journal.plannedVersusActual')}
+            description={msg('journalPage.theComparisonTheJournalExistsForWhatWas')}
           >
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <PerformanceChart
-                title="Planned R:R against realised average R"
-                description="Planned reward-to-risk is the dashed reference; the bars are what the records realised, per setup."
+                title={msg('journal.plannedRRAgainstRealisedAverage')}
+                description={msg('journalPage.plannedRewardToRiskIsTheDashedReferenceTheBars')}
                 series={[
                   {
                     id: 'realised',
-                    label: 'Realised average R',
+                    label: msg('journalPage.realisedAverageR'),
                     tone: 'info',
                     points: mockPlannedVsActual.map((row) => ({
                       label: row.label,
@@ -363,15 +407,15 @@ export function JournalPage() {
                 levels={[{ value: 2.5, label: 'planned 2.5:1', tone: 'muted' }]}
                 provenance="synthetic"
                 sourceRef="synthetic-journal-analytics"
-                footnote="A bucket whose realised result sits below the planned level is the gap between plan and execution, not a market opinion."
+                footnote={msg('journalPage.aBucketWhoseRealisedResultSitsBelowThe')}
               />
               <PerformanceChart
-                title="Performance by session"
-                description="The session a setup is taken in is part of the setup's evidence."
+                title={msg('journal.performanceBySession')}
+                description={msg('analyticsPanel.theSessionASetupIsTakenInIs')}
                 series={[
                   {
                     id: 'session',
-                    label: 'Realised average R',
+                    label: msg('journalPage.realisedAverageR'),
                     tone: 'ai',
                     points: mockSessionPerformance.map((row) => ({
                       label: row.label,
@@ -421,36 +465,32 @@ export function JournalPage() {
           <Grid columns={3}>
             <Card tone="sunken">
               <CardHeader divider>
-                <CardTitle className="text-body">Record states</CardTitle>
+                <CardTitle className="text-body">{msg('journal.recordStates')}</CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                A row&rsquo;s left edge carries its result: green for a win, red for a loss, grey
-                for break-even, blue for an open record. An archived row is dimmed rather than
-                hidden, because an archived record is still the reason a later decision was made.
+                {msg('journal.aRowRsquoSLeftEdge')}
               </CardContent>
             </Card>
             <Card tone="sunken">
               <CardHeader divider>
-                <CardTitle className="text-body">Actions on a record</CardTitle>
+                <CardTitle className="text-body">{msg('journal.actionsOnARecord')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1.5 text-caption text-text-muted">
                 <p className="flex items-center gap-2">
                   <ListChecks size={13} aria-hidden className="text-text-faint" />
-                  View, edit, duplicate, archive, delete, review, screenshots.
+                  {msg('journal.viewEditDuplicateArchiveDeleteReview')}
                 </p>
-                <p className="text-text-faint">
-                  There is no row action that places, changes or closes anything. The application
-                  has no such capability and the menu does not imply one.
-                </p>
+                <p className="text-text-faint">{msg('journal.thereIsNoRowActionThat')}</p>
               </CardContent>
             </Card>
             <Card tone="sunken">
               <CardHeader divider>
-                <CardTitle className="text-body">Filtering is how a review starts</CardTitle>
+                <CardTitle className="text-body">
+                  {msg('journal.filteringIsHowAReviewStarts')}
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                Narrowing to one setup, one session or one rule state is the point: a journal that
-                can only be read end to end is a diary.
+                {msg('journal.narrowingToOneSetupOneSession')}
               </CardContent>
             </Card>
           </Grid>
@@ -464,49 +504,49 @@ export function JournalPage() {
               <Card tone="sunken">
                 <CardHeader divider>
                   <div>
-                    <CardTitle className="text-body">No store is connected yet</CardTitle>
-                    <CardDescription>What happens when you submit in this phase</CardDescription>
+                    <CardTitle className="text-body">
+                      {msg('journal.noStoreIsConnectedYet')}
+                    </CardTitle>
+                    <CardDescription>{msg('journal.whatHappensWhenYouSubmitIn')}</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2 text-caption text-text-muted">
+                  <p>{msg('journal.validationIsRealTheFormRefuses')}</p>
                   <p>
-                    Validation is real: the form refuses a record with no symbol, no setup, no
-                    invalidation level, or levels that contradict the direction.
-                  </p>
-                  <p>
-                    The write is not. Submitting reports{' '}
-                    <span className="num text-text-faint">JOURNAL_STORE_UNAVAILABLE</span> and keeps
-                    your values in the form, because a form that says &ldquo;saved&rdquo; when
-                    nothing was stored is the worst possible behaviour for a journal.
+                    {msg('journal.theWriteIsNotSubmittingReports')}{' '}
+                    <span className="num text-text-faint">JOURNAL_STORE_UNAVAILABLE</span>{' '}
+                    {msg('journal.andKeepsYourValuesInThe')}
                   </p>
                 </CardContent>
               </Card>
               <Card tone="sunken">
                 <CardHeader divider>
                   <div>
-                    <CardTitle className="text-body">Risk is not calculated here</CardTitle>
-                    <CardDescription>Where the numbers come from</CardDescription>
+                    <CardTitle className="text-body">
+                      {msg('journal.riskIsNotCalculatedHere')}
+                    </CardTitle>
+                    <CardDescription>{msg('journal.whereTheNumbersComeFrom')}</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
-                  The form records the levels you enter and checks that they agree with the
-                  direction. Position size, R multiples and every statistic are produced by the
-                  deterministic engine in{' '}
-                  <span className="num text-text-faint">packages/trading-engine</span>, never by the
-                  interface and never by the model.
+                  {msg('journal.theFormRecordsTheLevelsYou')}{' '}
+                  <span className="num text-text-faint">
+                    {msg('journal.packagesTradingEngine')}
+                  </span>
+                  {msg('journal.neverByTheInterfaceAndNever')}
                 </CardContent>
               </Card>
               <Card tone="sunken">
                 <CardHeader divider>
                   <div>
-                    <CardTitle className="text-body">Recording is not adopting</CardTitle>
-                    <CardDescription>The safety boundary</CardDescription>
+                    <CardTitle className="text-body">
+                      {msg('journal.recordingIsNotAdopting')}
+                    </CardTitle>
+                    <CardDescription>{msg('journal.theSafetyBoundary')}</CardDescription>
                   </div>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
-                  A record is an append to a journal. It cannot activate a rule, and it cannot reach
-                  a broker. Rule changes need an evaluation and a recorded human approval, which are
-                  separate surfaces.
+                  {msg('journal.aRecordIsAnAppendTo')}
                 </CardContent>
               </Card>
             </div>
@@ -518,14 +558,13 @@ export function JournalPage() {
           <Card>
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Choose a record</CardTitle>
+                <CardTitle className="text-body">{msg('journal.chooseARecord')}</CardTitle>
                 <CardDescription>
-                  {mockTrades.length} records in the preview, including one open and one incomplete
-                  record on purpose.
+                  {mockTrades.length} {msg('journal.recordsInThePreviewIncludingOne')}
                 </CardDescription>
               </div>
               <Badge tone="outline" icon={<ScrollText size={11} aria-hidden />}>
-                read-only
+                {msg('journal.readOnly')}
               </Badge>
             </CardHeader>
             <CardContent>
@@ -560,8 +599,8 @@ export function JournalPage() {
           {selected === undefined ? (
             <ErrorState
               severity="warning"
-              title="That record could not be found"
-              description="The reference does not match a record in the journal view. Nothing was changed."
+              title={msg('journal.thatRecordCouldNotBeFound')}
+              description={msg('journalPage.theReferenceDoesNotMatchARecordIn')}
               code="JOURNAL_RECORD_NOT_FOUND"
             />
           ) : (
@@ -598,28 +637,28 @@ export function JournalPage() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <SummaryCell
-                    label="Realised R"
+                    label={msg('journalPage.realisedR')}
                     value={
                       selected.actual?.actualR == null
                         ? 'not scored'
                         : `${selected.actual.actualR > 0 ? '+' : ''}${selected.actual.actualR.toFixed(2)}R`
                     }
-                    hint="Unscored records show a gap, not a zero."
+                    hint={msg('journalPage.unscoredRecordsShowAGapNotAZero')}
                   />
                   <SummaryCell
-                    label="Planned reward-to-risk"
+                    label={msg('tradeForm.plannedRewardToRisk')}
                     value={`${selected.plan.plannedRr.toFixed(1)} : 1`}
-                    hint="Written before entry."
+                    hint={msg('journalPage.writtenBeforeEntry')}
                   />
                   <SummaryCell
-                    label="Risk committed"
+                    label={msg('journalPage.riskCommitted')}
                     value={selected.plan.riskAmount.toLocaleString('en-US')}
-                    hint="Account risk as planned."
+                    hint={msg('journalPage.accountRiskAsPlanned')}
                   />
                   <SummaryCell
-                    label="Review state"
+                    label={msg('journalPage.reviewState')}
                     value={REVIEW_STATE_LABEL[selected.reviewState]}
-                    hint="A rule break or an unscored record forces a review."
+                    hint={msg('journalPage.aRuleBreakOrAnUnscoredRecordForces')}
                   />
                 </CardContent>
               </Card>
@@ -628,11 +667,11 @@ export function JournalPage() {
 
               <PerformanceChart
                 title={`${selected.ref} — recorded levels`}
-                description="Two points only: the recorded entry and the recorded exit. No intermediate price path is invented."
+                description={msg('journalPage.twoPointsOnlyTheRecordedEntryAndThe')}
                 series={[
                   {
                     id: 'recorded',
-                    label: 'Recorded entry → exit',
+                    label: msg('journalPage.recordedEntryExit'),
                     tone: 'info',
                     points: [
                       { label: 'entry', value: selected.actual?.entry ?? selected.plan.entry },
@@ -647,7 +686,11 @@ export function JournalPage() {
                 levels={[
                   { value: selected.plan.stopLoss, label: 'invalidation', tone: 'danger' },
                   { value: selected.plan.takeProfit, label: 'target', tone: 'primary' },
-                  { value: selected.plan.entry, label: 'planned entry', tone: 'muted' },
+                  {
+                    value: selected.plan.entry,
+                    label: msg('journalPage.plannedEntry'),
+                    tone: 'muted',
+                  },
                 ]}
                 markers={[
                   {
@@ -670,48 +713,58 @@ export function JournalPage() {
                 provenance="synthetic"
                 sourceRef={`journal/${selected.ref}`}
                 updatedAt={selected.updatedAt}
-                footnote="The key zone, market structure and liquidity context are text in the record, so they are shown as text below rather than drawn as lines the data cannot support."
+                footnote={msg('journalPage.theKeyZoneMarketStructureAndLiquidityContext')}
               />
 
               <Grid columns={2}>
                 <Card>
                   <CardHeader divider>
                     <div>
-                      <CardTitle className="text-body">Market analysis</CardTitle>
-                      <CardDescription>Written before the entry, not after</CardDescription>
+                      <CardTitle className="text-body">{msg('journal.marketAnalysis')}</CardTitle>
+                      <CardDescription>
+                        {msg('journal.writtenBeforeTheEntryNotAfter')}
+                      </CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2 text-caption">
                     {selected.context === undefined ? (
                       <p className="text-text-faint">
-                        No market context was recorded for this trade. It is shown as missing rather
-                        than as an empty heading.
+                        {msg('journal.noMarketContextWasRecordedFor')}
                       </p>
                     ) : (
                       <dl className="space-y-1.5">
                         <DetailRow
-                          label="Higher-timeframe bias"
+                          label={msg('tradeForm.higherTimeframeBias')}
                           value={selected.context.higherTimeframeBias}
                         />
                         <DetailRow
-                          label="Market structure"
+                          label={msg('profile.array.market-structure')}
                           value={selected.context.marketStructure}
                         />
                         <DetailRow
-                          label="Liquidity context"
+                          label={msg('tradeForm.liquidityContext')}
                           value={selected.context.liquidityContext}
                         />
-                        <DetailRow label="Key zone" value={selected.context.keyZone} />
                         <DetailRow
-                          label="Entry confirmation"
+                          label={msg('tradeForm.keyZone')}
+                          value={selected.context.keyZone}
+                        />
+                        <DetailRow
+                          label={msg('tradeForm.entryConfirmation')}
                           value={selected.context.entryConfirmation}
                         />
                         <DetailRow
-                          label="Confluences"
+                          label={msg('tradeForm.confluences')}
                           value={selected.context.confluences.join(' · ')}
                         />
-                        <DetailRow label="Volatility" value={selected.context.volatility} />
-                        <DetailRow label="News exposure" value={selected.context.newsExposure} />
+                        <DetailRow
+                          label={msg('journalPage.volatility')}
+                          value={selected.context.volatility}
+                        />
+                        <DetailRow
+                          label={msg('tradeForm.newsExposure')}
+                          value={selected.context.newsExposure}
+                        />
                       </dl>
                     )}
                   </CardContent>
@@ -720,34 +773,43 @@ export function JournalPage() {
                 <Card>
                   <CardHeader divider>
                     <div>
-                      <CardTitle className="text-body">Execution, risk and management</CardTitle>
-                      <CardDescription>
-                        What was planned, and what was actually done
-                      </CardDescription>
+                      <CardTitle className="text-body">
+                        {msg('journal.executionRiskAndManagement')}
+                      </CardTitle>
+                      <CardDescription>{msg('journal.whatWasPlannedAndWhatWas')}</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2 text-caption">
                     {selected.rationale === undefined ? (
-                      <p className="text-text-faint">
-                        No written plan for this record. The levels are still shown above; the
-                        reasoning behind them was not captured.
-                      </p>
+                      <p className="text-text-faint">{msg('journal.noWrittenPlanForThisRecord')}</p>
                     ) : (
                       <dl className="space-y-1.5">
-                        <DetailRow label="Thesis" value={selected.rationale.thesis} />
                         <DetailRow
-                          label="Entry rationale"
+                          label={msg('journalPage.thesis')}
+                          value={selected.rationale.thesis}
+                        />
+                        <DetailRow
+                          label={msg('tradeForm.entryRationale')}
                           value={selected.rationale.entryRationale}
                         />
-                        <DetailRow label="Invalidation" value={selected.rationale.invalidation} />
-                        <DetailRow label="Management" value={selected.rationale.management} />
-                        <DetailRow label="Exit plan" value={selected.rationale.exitPlan} />
                         <DetailRow
-                          label="Checklist"
+                          label={msg('riskSummary.invalidation')}
+                          value={selected.rationale.invalidation}
+                        />
+                        <DetailRow
+                          label={msg('journalPage.management')}
+                          value={selected.rationale.management}
+                        />
+                        <DetailRow
+                          label={msg('tradeForm.exitPlan')}
+                          value={selected.rationale.exitPlan}
+                        />
+                        <DetailRow
+                          label={msg('journalPage.checklist')}
                           value={`${selected.rationale.checklist.length} of 8 items marked`}
                         />
                         <DetailRow
-                          label="Compliance note"
+                          label={msg('journalPage.complianceNote')}
                           value={selected.rationale.complianceNote}
                         />
                       </dl>
@@ -758,41 +820,46 @@ export function JournalPage() {
                 <Card>
                   <CardHeader divider>
                     <div>
-                      <CardTitle className="text-body">Psychology</CardTitle>
-                      <CardDescription>Self-reported at the time</CardDescription>
+                      <CardTitle className="text-body">{msg('journal.psychology')}</CardTitle>
+                      <CardDescription>{msg('journal.selfReportedAtTheTime')}</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3 text-caption">
                     {selected.psychology === undefined ? (
-                      <p className="text-text-faint">No psychology recorded for this trade.</p>
+                      <p className="text-text-faint">
+                        {msg('journal.noPsychologyRecordedForThisTrade')}
+                      </p>
                     ) : (
                       <>
                         <p className="text-text-muted">
-                          {EMOTIONAL_STATE_LABEL[selected.psychology.beforeEntry]} before ·{' '}
-                          {EMOTIONAL_STATE_LABEL[selected.psychology.duringTrade]} during ·{' '}
-                          {EMOTIONAL_STATE_LABEL[selected.psychology.afterExit]} after.
+                          {EMOTIONAL_STATE_LABEL[selected.psychology.beforeEntry]}{' '}
+                          {msg('journal.before')}{' '}
+                          {EMOTIONAL_STATE_LABEL[selected.psychology.duringTrade]}{' '}
+                          {msg('journal.during')}{' '}
+                          {EMOTIONAL_STATE_LABEL[selected.psychology.afterExit]}{' '}
+                          {msg('journal.after')}
                         </p>
                         <div className="space-y-2">
                           <MetricBar
-                            label="Discipline"
+                            label={msg('tradeForm.discipline')}
                             value={`${selected.psychology.discipline}/10`}
                             share={selected.psychology.discipline / 10}
                             tone="primary"
                           />
                           <MetricBar
-                            label="Greed"
+                            label={msg('tradeForm.greed')}
                             value={`${selected.psychology.greed}/10`}
                             share={selected.psychology.greed / 10}
                             tone="warning"
                           />
                           <MetricBar
-                            label="Impulsiveness"
+                            label={msg('tradeForm.impulsiveness')}
                             value={`${selected.psychology.impulsiveness}/10`}
                             share={selected.psychology.impulsiveness / 10}
                             tone="warning"
                           />
                           <MetricBar
-                            label="Fear"
+                            label={msg('tradeForm.fear')}
                             value={`${selected.psychology.fear}/10`}
                             share={selected.psychology.fear / 10}
                             tone="info"
@@ -806,8 +873,10 @@ export function JournalPage() {
                 <Card>
                   <CardHeader divider>
                     <div>
-                      <CardTitle className="text-body">Mistakes and lessons</CardTitle>
-                      <CardDescription>What the record taught</CardDescription>
+                      <CardTitle className="text-body">
+                        {msg('journal.mistakesAndLessons')}
+                      </CardTitle>
+                      <CardDescription>{msg('journal.whatTheRecordTaught')}</CardDescription>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3 text-caption">
@@ -820,7 +889,10 @@ export function JournalPage() {
                     ) : (
                       <>
                         {selected.review.mistakes.length === 0 ? (
-                          <MistakeTag label="nothing recorded as a mistake" positive />
+                          <MistakeTag
+                            label={msg('journalPage.nothingRecordedAsAMistake')}
+                            positive
+                          />
                         ) : (
                           <ul className="flex flex-wrap gap-1.5">
                             {selected.review.mistakes.map((mistake) => (
@@ -831,14 +903,17 @@ export function JournalPage() {
                           </ul>
                         )}
                         <div className="space-y-1.5">
-                          <DetailRow label="Lesson" value={selected.review.lesson} />
-                          <DetailRow label="Adjustment" value={selected.review.adjustment} />
+                          <DetailRow label={msg('journal.lesson')} value={selected.review.lesson} />
                           <DetailRow
-                            label="Went well"
+                            label={msg('usage.ledgerKind.adjustment')}
+                            value={selected.review.adjustment}
+                          />
+                          <DetailRow
+                            label={msg('journalPage.wentWell')}
                             value={selected.review.wentWell.join(' · ')}
                           />
                           <DetailRow
-                            label="Improvements"
+                            label={msg('journalPage.improvements')}
                             value={selected.review.improvements.join(' · ')}
                           />
                         </div>
@@ -897,27 +972,25 @@ export function JournalPage() {
             <Card tone="sunken">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">What a day holds</CardTitle>
-                  <CardDescription>
-                    Trade count, net R, risk, compliance, main setup, emotion
-                  </CardDescription>
+                  <CardTitle className="text-body">{msg('journal.whatADayHolds')}</CardTitle>
+                  <CardDescription>{msg('journal.tradeCountNetRRiskCompliance')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                A day whose records were never scored reports &ldquo;not scored&rdquo; rather than a
-                zero, and a day with no trades is an explicit flat cell rather than a blank one.
+                {msg('journal.aDayWhoseRecordsWereNever')}
               </CardContent>
             </Card>
             <Card tone="sunken">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">The emotional score is self-reported</CardTitle>
-                  <CardDescription>Labelled so it is never read as a measurement</CardDescription>
+                  <CardTitle className="text-body">
+                    {msg('journal.theEmotionalScoreIsSelfReported')}
+                  </CardTitle>
+                  <CardDescription>{msg('journal.labelledSoItIsNeverRead')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="text-caption text-text-muted">
-                It is the trader&rsquo;s own reading of the day, recorded at the time — useful when
-                compared with the same value on a different day, meaningless as a score.
+                {msg('journal.itIsTheTraderRsquoS')}
               </CardContent>
             </Card>
           </Grid>
@@ -929,19 +1002,16 @@ export function JournalPage() {
             <Card>
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Awaiting a review</CardTitle>
-                  <CardDescription>
-                    Flagged by the record: a rule break, an unscored trade or a skipped checklist
-                    item
-                  </CardDescription>
+                  <CardTitle className="text-body">{msg('journal.awaitingAReview')}</CardTitle>
+                  <CardDescription>{msg('journal.flaggedByTheRecordARule')}</CardDescription>
                 </div>
                 <Badge tone="warning">{awaitingReview.length}</Badge>
               </CardHeader>
               <CardContent className="space-y-2">
                 {awaitingReview.length === 0 ? (
                   <EmptyState
-                    title="Nothing is waiting for a review"
-                    description="Every record that required a review has one. This state is reachable — it is not an error."
+                    title={msg('journal.nothingIsWaitingForAReview')}
+                    description={msg('journalPage.everyRecordThatRequiredAReviewHasOne')}
                   />
                 ) : (
                   <ul className="space-y-2">
@@ -958,7 +1028,7 @@ export function JournalPage() {
                           onClick={() => openTrade(trade)}
                           label={`Review ${trade.ref}`}
                         >
-                          Review
+                          {msg('journal.review')}
                         </Button>
                       </CardTile>
                     ))}
@@ -970,9 +1040,9 @@ export function JournalPage() {
             <Card>
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Mistake frequency</CardTitle>
+                  <CardTitle className="text-body">{msg('journal.mistakeFrequency')}</CardTitle>
                   <CardDescription>
-                    Recorded patterns, each with its corrective note
+                    {msg('journal.recordedPatternsEachWithItsCorrective')}
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -988,21 +1058,20 @@ export function JournalPage() {
                   />
                 ))}
                 <p className="text-caption text-text-faint">
-                  Shares are of the recorded occurrences. A pattern that repeated is worth more
-                  attention than a single large loss.
+                  {msg('journal.sharesAreOfTheRecordedOccurrences2')}
                 </p>
               </CardContent>
             </Card>
           </Grid>
 
           <Section
-            title="Lessons"
-            description="One line per reviewed record — the whole reason the journal exists."
+            title={msg('journal.lessons')}
+            description={msg('journalPage.oneLinePerReviewedRecordTheWhole')}
           >
             {reviewedTrades.length === 0 ? (
               <EmptyState
-                title="No reviews written yet"
-                description="A journal with records but no lessons is a log. The lessons appear here as they are written."
+                title={msg('journal.noReviewsWrittenYet')}
+                description={msg('journalPage.aJournalWithRecordsButNoLessonsIs')}
               />
             ) : (
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -1033,7 +1102,7 @@ export function JournalPage() {
                           ))}
                         </ul>
                       ) : (
-                        <MistakeTag label="no mistakes recorded" positive />
+                        <MistakeTag label={msg('journalPage.noMistakesRecorded')} positive />
                       )}
                       <Button
                         variant="ghost"
@@ -1042,7 +1111,7 @@ export function JournalPage() {
                         onClick={() => openTrade(trade)}
                         label={`Open ${trade.ref}`}
                       >
-                        Open the record
+                        {msg('journal.openTheRecord')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -1052,22 +1121,21 @@ export function JournalPage() {
           </Section>
 
           <Section
-            title="Study prompts"
-            description="What the journal is for, and what it refuses to pretend"
+            title={msg('journal.studyPrompts')}
+            description={msg('journalPage.whatTheJournalIsForAndWhatIt')}
           >
             <Grid columns={3}>
               <Card tone="sunken">
                 <CardHeader divider>
                   <CardTitle className="text-body">
                     <span className="inline-flex items-center gap-2">
-                      <NotebookPen size={14} aria-hidden className="text-text-faint" />A record is
-                      not a result
+                      <NotebookPen size={14} aria-hidden className="text-text-faint" />
+                      {msg('journal.aRecordIsNotAResult')}
                     </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
-                  The journal stores what was done. Whether the process is worth repeating is a
-                  question for the research surface, where a claim needs a sample and an approval.
+                  {msg('journal.theJournalStoresWhatWasDone')}
                 </CardContent>
               </Card>
               <Card tone="sunken">
@@ -1075,13 +1143,12 @@ export function JournalPage() {
                   <CardTitle className="text-body">
                     <span className="inline-flex items-center gap-2">
                       <BrainCircuit size={14} aria-hidden className="text-text-faint" />
-                      No model writes a number here
+                      {msg('journal.noModelWritesANumberHere')}
                     </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
-                  Review assistance explains a record. It never produces the figures, never scores
-                  the trade and never changes a rule.
+                  {msg('journal.reviewAssistanceExplainsARecordIt')}
                 </CardContent>
               </Card>
               <Card tone="sunken">
@@ -1089,13 +1156,12 @@ export function JournalPage() {
                   <CardTitle className="text-body">
                     <span className="inline-flex items-center gap-2">
                       <ShieldCheck size={14} aria-hidden className="text-text-faint" />
-                      Recording changes nothing
+                      {msg('journal.recordingChangesNothing')}
                     </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
-                  Writing a record cannot activate a rule, cannot alter risk limits and cannot reach
-                  a broker. It appends history and stops there.
+                  {msg('journal.writingARecordCannotActivateA')}
                 </CardContent>
               </Card>
             </Grid>
@@ -1103,14 +1169,14 @@ export function JournalPage() {
 
           <InterfaceStatesPanel
             states={['loading', 'empty', 'error']}
-            title="Interface states"
-            description="How the journal behaves before records arrive, when a filter selects nothing, and when the store cannot be read."
-            loadingTitle="Reading the journal"
-            loadingDescription="The placeholder matches the table it is standing in for, so the layout does not jump when records arrive."
-            emptyTitle="No records match these filters"
-            emptyDescription="An empty table after filtering is a selected subset that is empty, not an empty journal — and it offers to clear the filters."
-            errorTitle="The journal store could not be read"
-            errorDescription="The failure reports its typed reason. A failed read is never rendered as an empty journal."
+            title={msg('journal.interfaceStates')}
+            description={msg('journalPage.howTheJournalBehavesBeforeRecordsArriveWhen')}
+            loadingTitle={msg('journalPage.readingTheJournal')}
+            loadingDescription={msg('journalPage.thePlaceholderMatchesTheTableItIsStanding')}
+            emptyTitle={msg('journalPage.noRecordsMatchTheseFilters')}
+            emptyDescription={msg('journalPage.anEmptyTableAfterFilteringIsASelected')}
+            errorTitle={msg('journalPage.theJournalStoreCouldNotBeRead')}
+            errorDescription={msg('journalPage.theFailureReportsItsTypedReasonAFailed')}
             errorCode="JOURNAL_STORE_UNAVAILABLE"
             hint={`Selection, sorting and paging run over the ${
               mockTrades.length
@@ -1118,9 +1184,10 @@ export function JournalPage() {
           />
 
           <p className="text-caption text-text-faint">
-            {mockTrades.length} records · {reviewedTrades.length} reviewed · {awaitingReview.length}{' '}
-            awaiting a review · scope {describeRange(analyticsRange, analyticsFrom, analyticsTo)}{' '}
-            for the analytics section above.
+            {mockTrades.length} {msg('journal.records2')} {reviewedTrades.length}{' '}
+            {msg('journal.reviewed')} {awaitingReview.length} {msg('journal.awaitingAReviewScope')}{' '}
+            {describeRange(analyticsRange, analyticsFrom, analyticsTo)}{' '}
+            {msg('journal.forTheAnalyticsSectionAbove')}
           </p>
         </TabPanel>
       </Tabs>

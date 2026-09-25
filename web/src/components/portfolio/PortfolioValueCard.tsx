@@ -3,6 +3,7 @@ import type { PortfolioMetrics } from '@shared/portfolio/model';
 import { Badge } from '../Badge';
 import { Card, CardContent, CardHeader, CardTile, CardTitle } from '../Card';
 import { formatMoney, formatSignedPercent } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * What the composition is worth — and only when it can be said.
@@ -35,7 +36,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
       <CardHeader divider>
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <Coins size={16} aria-hidden className="text-text-muted" />
-          <CardTitle>Portfolio value</CardTitle>
+          <CardTitle>{msg('portfolio.portfolioValue')}</CardTitle>
           <Badge tone={metrics.valuationComplete ? 'success' : 'warning'}>
             {metrics.valuationComplete ? 'every position valued' : 'incomplete valuation'}
           </Badge>
@@ -45,18 +46,16 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
       <CardContent className="space-y-4">
         {priced === 0 ? (
           <CardTile space="roomy">
-            <p className="text-body text-text">
-              No position has both a quantity and a current price, so there is no value to report.
-            </p>
+            <p className="text-body text-text">{msg('portfolio.noPositionHasBothAQuantity')}</p>
             <p className="text-caption text-text-muted">
-              This is not a portfolio worth nothing — it is a composition the product cannot value
-              yet. A zero here would have been a factual claim, which is why none is shown.
+              {msg('portfolio.thisIsNotAPortfolioWorth')}
             </p>
           </CardTile>
         ) : (
           <div className="space-y-1">
             <p className="text-caption text-text-muted">
-              Market value{totals.marketValue === null ? ' by currency' : ''}
+              {msg('portfolio.marketValue')}
+              {totals.marketValue === null ? ' by currency' : ''}
             </p>
             {totals.marketValue === null ? null : (
               <p className="text-h1 font-semibold num text-text">
@@ -73,17 +72,13 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
           <div className="space-y-2">
             <p className="inline-flex items-start gap-1.5 text-body text-warning">
               <TriangleAlert size={14} aria-hidden className="mt-0.5 shrink-0" />
-              <span>
-                The priced positions are not all in one currency, so a single total is not produced.
-                Each currency is reported on its own: converting them would need a rate, and no rate
-                source is wired.
-              </span>
+              <span>{msg('portfolio.thePricedPositionsAreNotAll')}</span>
             </p>
             <ul className="grid gap-2 sm:grid-cols-2" role="list">
               {totals.byCurrency.map((group) => (
                 <CardTile key={group.currency}>
                   <p className="text-caption text-text-muted">
-                    {group.currency} · {group.positions} position
+                    {group.currency} · {group.positions} {msg('portfolio.position')}
                     {group.positions === 1 ? '' : 's'}
                   </p>
                   <p className="text-h3 font-semibold num text-text">
@@ -99,17 +94,17 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
           {(
             [
               [
-                'Cost basis',
+                msg('portfolio.costBasis'),
                 formatMoney(totals.costBasis, metrics.baseCurrency),
                 `${totals.costedPositions} position(s) with an entry price`,
               ],
               [
-                'Unrealised P/L',
+                msg('portfolio.unrealisedPL'),
                 formatMoney(totals.unrealisedPnl, metrics.baseCurrency),
                 `${totals.pnlPositions} position(s) where both sides exist`,
               ],
               [
-                'Unrealised return',
+                msg('portfolioValueCard.unrealisedReturn'),
                 totals.unrealisedReturnPercent === null
                   ? '—'
                   : formatSignedPercent(totals.unrealisedReturnPercent),
@@ -118,11 +113,11 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
                   : 'Some priced positions have no entry price, so this is partial',
               ],
               [
-                'Priced share',
+                msg('portfolioValueCard.pricedShare'),
                 metrics.coverage.pricedShareOfDeclaredWeightPercent === null
                   ? '—'
                   : `${metrics.coverage.pricedShareOfDeclaredWeightPercent.toFixed(1)}%`,
-                'Of the declared weights, how much the priced positions account for',
+                msg('portfolioValueCard.ofTheDeclaredWeightsHowMuchThePriced'),
               ],
             ] as const
           ).map(([label, value, hint]) => (
@@ -136,7 +131,9 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
 
         {metrics.assumptions.length > 0 ? (
           <div className="space-y-1">
-            <h4 className="text-body font-medium text-text">What these figures rest on</h4>
+            <h4 className="text-body font-medium text-text">
+              {msg('portfolio.whatTheseFiguresRestOn')}
+            </h4>
             <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
               {metrics.assumptions.map((assumption) => (
                 <li key={assumption.id}>

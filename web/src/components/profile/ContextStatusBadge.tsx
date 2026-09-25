@@ -1,6 +1,7 @@
 import type { ContextStatus, FactSource } from '@shared/profile/model';
 import { Badge, type BadgeTone } from '../Badge';
 import { Tooltip } from '../Tooltip';
+import { liveLabels } from '../../i18n/index.js';
 
 /**
  * The badge that keeps facts and assumptions visibly apart.
@@ -19,21 +20,21 @@ const STATUS_TONE: Record<ContextStatus, BadgeTone> = {
   missing: 'neutral',
 };
 
-const STATUS_LABEL: Record<ContextStatus, string> = {
-  confirmed: 'Confirmed',
-  derived: 'Derived',
-  stale: 'May be outdated',
-  assumed: 'Assumed',
-  missing: 'Missing',
-};
+const STATUS_LABEL: Record<ContextStatus, string> = liveLabels({
+  confirmed: 'profile.status.confirmed',
+  derived: 'profile.status.derived',
+  stale: 'profile.status.stale',
+  assumed: 'profile.status.assumed',
+  missing: 'profile.status.missing',
+});
 
-const STATUS_EXPLANATION: Record<ContextStatus, string> = {
-  confirmed: 'You told us this, and it is inside its freshness window.',
-  derived: 'Computed from other values you gave us, not stated directly.',
-  stale: 'You told us this, but it has aged past its freshness window for this kind of input.',
-  assumed: 'Not provided by you. It may be used only as an assumption, never as a fact.',
-  missing: 'Not provided. The system will ask rather than fill it in.',
-};
+const STATUS_EXPLANATION: Record<ContextStatus, string> = liveLabels({
+  confirmed: 'profile.status2.confirmed',
+  derived: 'profile.status2.derived',
+  stale: 'profile.status2.stale',
+  assumed: 'profile.status2.assumed',
+  missing: 'profile.status2.missing',
+});
 
 export function ContextStatusBadge({ status }: { status: ContextStatus }) {
   return (
@@ -45,11 +46,11 @@ export function ContextStatusBadge({ status }: { status: ContextStatus }) {
   );
 }
 
-const SOURCE_LABEL: Record<FactSource, string> = {
-  'user-stated': 'You stated this',
-  derived: 'Computed from what you stated',
-  assumed: 'Not stated — assumption only',
-};
+const SOURCE_LABEL: Record<FactSource, string> = liveLabels({
+  'user-stated': 'profile.source.user-stated',
+  derived: 'profile.source.derived',
+  assumed: 'profile.source.assumed',
+});
 
 export function FactSourceBadge({ source }: { source: FactSource }) {
   return (

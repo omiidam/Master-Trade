@@ -1,5 +1,6 @@
 import { cn } from '../../lib/cn';
 import type { JobStatus } from '../../api/client.js';
+import { msg } from '../../i18n/index.js';
 
 export interface JobProgress {
   current: number;
@@ -85,7 +86,9 @@ export function JobProgressIndicator({
         />
       </div>
       {progress?.label && unit && progress.label !== unit ? (
-        <p className="text-caption text-text-faint">Reported unit: {progress.label}</p>
+        <p className="text-caption text-text-faint">
+          {msg('realtime.reportedUnit')} {progress.label}
+        </p>
       ) : null}
     </div>
   );

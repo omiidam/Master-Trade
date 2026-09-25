@@ -5,9 +5,10 @@ import {
   APP_PAGE_IDS,
   NAV_GROUPS,
   NAV_SECTIONS,
-  PREVIEW_NOTICE,
+  previewNotice,
   findNavSection,
 } from '../web/src/config/navigation.js';
+import { translate } from '../web/src/i18n/index.js';
 import {
   ALL_TOKEN_VARIABLES,
   REQUIRED_TOKEN_GROUPS,
@@ -84,17 +85,22 @@ describe('frontend shell', () => {
       'settings',
     ]);
     for (const section of NAV_SECTIONS) {
-      expect(section.label.length).toBeGreaterThan(0);
-      expect(section.description.length).toBeGreaterThan(0);
+      expect(translate('en', section.labelKey).length).toBeGreaterThan(0);
+      expect(translate('en', section.descriptionKey).length).toBeGreaterThan(0);
       expect(NAV_GROUPS.map((group) => group.id)).toContain(section.group);
     }
-    expect(findNavSection('dashboard').label).toBe('Dashboard');
+    expect(translate('en', findNavSection('dashboard').labelKey)).toBe('Dashboard');
     expect(() => findNavSection('nope' as never)).toThrow(/Unknown navigation section/);
   });
 
   it('never labels a navigation item or control with an execution affordance', () => {
     for (const section of NAV_SECTIONS) {
-      expect(() => assertNoExecutionControls([section.label, section.description])).not.toThrow();
+      expect(() =>
+        assertNoExecutionControls([
+          translate('en', section.labelKey),
+          translate('en', section.descriptionKey),
+        ]),
+      ).not.toThrow();
     }
     // Deliberate probe: the guard must actually catch execution vocabulary.
     expect(() => assertNoExecutionControls(['Place order'])).toThrow();
@@ -157,8 +163,8 @@ describe('frontend shell', () => {
   });
 
   it('says plainly that it is a preview and not connected', () => {
-    expect(PREVIEW_NOTICE).toMatch(/preview/i);
-    expect(PREVIEW_NOTICE).toMatch(/mock data/i);
+    expect(previewNotice()).toMatch(/preview/i);
+    expect(previewNotice()).toMatch(/mock data/i);
     const app = readFileSync(join(web, 'src', 'pages', 'AgentWorkspacePage.tsx'), 'utf8');
     expect(app).toMatch(/not connected|no model provider/i);
   });

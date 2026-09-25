@@ -1,4 +1,5 @@
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 /**
  * The Master Trade mark.
@@ -67,10 +68,10 @@ export function BrandLockup({
 }: BrandLockupProps) {
   return (
     <div className={cn('flex min-w-0 items-center gap-2.5', className)}>
-      <BrandMark size={markSize} {...(markOnly ? { label: 'Master Trade' } : {})} />
+      <BrandMark size={markSize} {...(markOnly ? { label: msg('brand.masterTrade') } : {})} />
       {markOnly ? null : (
         <div className="min-w-0">
-          <p className="truncate text-body font-semibold text-text">Master Trade</p>
+          <p className="truncate text-body font-semibold text-text">{msg('brand.masterTrade')}</p>
           {subtitle === 'none' ? null : (
             <p className="truncate text-caption text-text-faint">{subtitle}</p>
           )}

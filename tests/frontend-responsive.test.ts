@@ -184,7 +184,7 @@ describe('navigation on the narrowest screen', () => {
     expect(brand).toMatch(/'aria-hidden': true/);
     expect(brand).toMatch(/alt: label/);
     // And the lockup supplies the name at the one size where the wordmark is gone.
-    expect(brand).toMatch(/markOnly \? \{ label: 'Master Trade' \}/);
+    expect(brand).toMatch(/markOnly \? \{ label: msg\('brand\.masterTrade'\) \}/);
   });
 });
 

@@ -5,13 +5,14 @@ import { Button } from '../Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../Card';
 import { Tooltip } from '../Tooltip';
 import { AnswerOption, type AnswerInputKind, type PostSubmitReview } from './AnswerOption';
+import { msg, liveLabels } from '../../i18n/index.js';
 
-const KIND_LABEL: Record<AnswerInputKind, string> = {
-  'single-choice': 'Single choice',
-  'multi-choice': 'Multiple choice',
-  numeric: 'Numeric',
-  written: 'Written',
-};
+const KIND_LABEL: Record<AnswerInputKind, string> = liveLabels({
+  'single-choice': 'exams.kind.single-choice',
+  'multi-choice': 'exams.kind.multi-choice',
+  numeric: 'exams.kind.numeric',
+  written: 'exams.kind.written',
+});
 
 export interface QuestionPanelChoice {
   id: string;
@@ -86,7 +87,7 @@ export function QuestionPanel({
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">
-            Question {index} of {total}
+            {msg('exams.question')} {index} {msg('exams.of')} {total}
           </CardTitle>
           <p className="mt-1 text-caption text-text-muted">
             {KIND_LABEL[kind]} · {points} {points === 1 ? 'point' : 'points'}
@@ -95,9 +96,9 @@ export function QuestionPanel({
         <div className="flex items-center gap-2">
           <Badge tone="outline">{KIND_LABEL[kind]}</Badge>
           {answerKeyWithheld ? (
-            <Tooltip content="The answer key never reaches the client before submission; grading happens server-side against the rubric.">
+            <Tooltip content={msg('questionPanel.theAnswerKeyNeverReachesTheClientBefore')}>
               <Badge tone="warning" icon={<EyeOff size={12} aria-hidden />}>
-                key withheld
+                {msg('exams.keyWithheld')}
               </Badge>
             </Tooltip>
           ) : null}
@@ -135,7 +136,7 @@ export function QuestionPanel({
 
         <p className="flex items-center gap-1.5 text-caption text-text-faint">
           <ScrollText size={12} aria-hidden />
-          Graded against <span className="num">{rubricRef}</span>
+          {msg('exams.gradedAgainst')} <span className="num">{rubricRef}</span>
         </p>
       </CardContent>
 
@@ -148,10 +149,10 @@ export function QuestionPanel({
         </span>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" disabled>
-            Previous
+            {msg('exams.previous')}
           </Button>
           <Button size="sm" variant="secondary" disabled>
-            Next question
+            {msg('exams.nextQuestion')}
           </Button>
         </div>
       </CardFooter>

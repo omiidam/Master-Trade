@@ -30,6 +30,7 @@ import {
 } from '../components/usage';
 import { Grid, Workspace } from '../app/Workspace';
 import { useUsageStore } from '../store/usage';
+import { msg } from '../i18n/index.js';
 
 /**
  * Usage: the plan, the allowance, what has been consumed, and what is not available.
@@ -54,15 +55,40 @@ import { useUsageStore } from '../store/usage';
  */
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: <Coins size={14} aria-hidden /> },
-  { id: 'features', label: 'Capabilities', icon: <Layers size={14} aria-hidden /> },
-  { id: 'plans', label: 'Plans', icon: <Wallet size={14} aria-hidden /> },
-  { id: 'history', label: 'History', icon: <History size={14} aria-hidden /> },
+  {
+    id: 'overview',
+    get label(): string {
+      return msg('dashboardPage.overview');
+    },
+    icon: <Coins size={14} aria-hidden />,
+  },
+  {
+    id: 'features',
+    get label(): string {
+      return msg('evaluation.capabilities');
+    },
+    icon: <Layers size={14} aria-hidden />,
+  },
+  {
+    id: 'plans',
+    get label(): string {
+      return msg('usage.plans');
+    },
+    icon: <Wallet size={14} aria-hidden />,
+  },
+  {
+    id: 'history',
+    get label(): string {
+      return msg('examsPage.history');
+    },
+    icon: <History size={14} aria-hidden />,
+  },
 ] as const;
 
 const TITLE = 'Usage';
-const DESCRIPTION =
-  'Your plan, your credit allowance, what each capability costs and what has actually been consumed.';
+function description(): string {
+  return msg('usage.description');
+}
 
 export function UsagePage() {
   const status = useUsageStore((state) => state.status);
@@ -91,7 +117,7 @@ export function UsagePage() {
 
   if (status === 'idle' || status === 'loading') {
     return (
-      <Workspace title={TITLE} description={DESCRIPTION}>
+      <Workspace title={TITLE} description={description()}>
         <Grid columns={3}>
           {[0, 1, 2].map((index) => (
             <Card key={index}>
@@ -109,10 +135,10 @@ export function UsagePage() {
 
   if (status === 'unavailable') {
     return (
-      <Workspace title={TITLE} description={DESCRIPTION}>
+      <Workspace title={TITLE} description={description()}>
         <ErrorState
           severity="info"
-          title="No usage to show"
+          title={msg('usage.noUsageToShow')}
           description={`${unavailableReason ?? 'The usage service could not be reached.'} Nothing is displayed in its place: a balance is a fact about your account, so a stand-in figure would be worse than an empty page.`}
         />
       </Workspace>
@@ -121,9 +147,9 @@ export function UsagePage() {
 
   if (status === 'error' || usage === null) {
     return (
-      <Workspace title={TITLE} description={DESCRIPTION}>
+      <Workspace title={TITLE} description={description()}>
         <ErrorState
-          title="Could not read usage"
+          title={msg('usage.couldNotReadUsage')}
           description={error?.message ?? 'The request failed without a reason.'}
           code={error?.code}
           action={
@@ -144,19 +170,23 @@ export function UsagePage() {
   );
 
   return (
-    <Workspace title={TITLE} description={DESCRIPTION}>
+    <Workspace title={TITLE} description={description()}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="primary">{usage.plan.displayName}</Badge>
         <Badge tone={usage.durable ? 'outline' : 'warning'}>
           {usage.durable ? 'Durable ledger' : `${usage.storeKind} store`}
         </Badge>
-        <Badge tone="neutral">{usage.balance} credits left</Badge>
+        <Badge tone="neutral">
+          {usage.balance} {msg('usage.creditsLeft')}
+        </Badge>
         {spendBlocked.length > 0 ? (
-          <Badge tone="warning">{spendBlocked.length} capability(s) unaffordable now</Badge>
+          <Badge tone="warning">
+            {spendBlocked.length} {msg('usage.capabilitySUnaffordableNow')}
+          </Badge>
         ) : null}
       </div>
 
-      <Tabs items={TABS} value={tab} onValueChange={setTab} aria-label="Usage sections">
+      <Tabs items={TABS} value={tab} onValueChange={setTab} aria-label={msg('usage.usageSections')}>
         <TabPanel value="overview">
           <div className="space-y-4">
             <Grid columns={2}>
@@ -167,11 +197,8 @@ export function UsagePage() {
             <Card>
               <CardHeader divider>
                 <div className="min-w-0">
-                  <CardTitle>Consumption this period</CardTitle>
-                  <CardDescription>
-                    Counted from the ledger rather than from a stored counter, so a corrected charge
-                    cannot leave the count wrong.
-                  </CardDescription>
+                  <CardTitle>{msg('usage.consumptionThisPeriod')}</CardTitle>
+                  <CardDescription>{msg('usage.countedFromTheLedgerRatherThan')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -190,8 +217,8 @@ export function UsagePage() {
                 </div>
                 {usage.features.every((feature) => feature.periodLimit === null) ? (
                   <UsageEmptyState
-                    title="No capability is capped separately by this plan"
-                    hint="The credit balance is the only limit, so there is no per-capability usage to report."
+                    title={msg('usage.noCapabilityIsCappedSeparatelyBy')}
+                    hint={msg('usagePage.theCreditBalanceIsTheOnlyLimitSo')}
                   />
                 ) : null}
               </CardContent>
@@ -200,14 +227,26 @@ export function UsagePage() {
             <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {(
                 [
-                  ['Granted', usage.totals.granted, 'Allowances added, including the period grant'],
-                  ['Consumed', usage.totals.consumed, 'Credits kept for completed work'],
                   [
-                    'Returned',
-                    usage.totals.refunded,
-                    'Credits given back when work did not complete',
+                    msg('usagePage.granted'),
+                    usage.totals.granted,
+                    msg('usagePage.allowancesAddedIncludingThePeriodGrant'),
                   ],
-                  ['Expired', usage.totals.expired, 'Unused allowance at the end of a period'],
+                  [
+                    msg('usagePage.consumed'),
+                    usage.totals.consumed,
+                    msg('usagePage.creditsKeptForCompletedWork'),
+                  ],
+                  [
+                    msg('usage.returned'),
+                    usage.totals.refunded,
+                    msg('usagePage.creditsGivenBackWhenWorkDidNotComplete'),
+                  ],
+                  [
+                    msg('usagePage.expired'),
+                    usage.totals.expired,
+                    msg('usagePage.unusedAllowanceAtTheEndOfAPeriod'),
+                  ],
                 ] as const
               ).map(([label, value, hint]) => (
                 <CardTile key={label}>
@@ -229,11 +268,9 @@ export function UsagePage() {
             <Card>
               <CardHeader divider>
                 <div className="min-w-0">
-                  <CardTitle>Declared capabilities</CardTitle>
+                  <CardTitle>{msg('usage.declaredCapabilities')}</CardTitle>
                   <CardDescription>
-                    Every capability the platform declares, whether or not it exists yet. A
-                    capability that is not built and one that is not in your plan are different
-                    answers, and they are never shown with the same words.
+                    {msg('usage.everyCapabilityThePlatformDeclaresWhether')}
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -262,7 +299,7 @@ export function UsagePage() {
 
                       {feature.periodLimit === null ? null : (
                         <UsageProgressBar
-                          label="This period"
+                          label={msg('usageCreditsCard.thisPeriod')}
                           used={feature.usedThisPeriod}
                           limit={feature.periodLimit}
                           unit="uses"
@@ -329,7 +366,7 @@ export function UsagePage() {
 
             {historyStatus === 'error' ? (
               <ErrorState
-                title="Could not read usage history"
+                title={msg('usage.couldNotReadUsageHistory')}
                 description={historyError?.message ?? 'The request failed without a reason.'}
                 code={historyError?.code}
                 action={
@@ -343,8 +380,8 @@ export function UsagePage() {
             {historyStatus === 'unavailable' ? (
               <ErrorState
                 severity="info"
-                title="No history to show"
-                description="No usage store is reachable from this session, so there is no ledger to read. Nothing is shown in its place."
+                title={msg('usage.noHistoryToShow')}
+                description={msg('usagePage.noUsageStoreIsReachableFromThisSession')}
               />
             ) : null}
 
@@ -354,8 +391,8 @@ export function UsagePage() {
 
             {historyStatus === 'idle' ? (
               <UsageEmptyState
-                title="Usage history has not been requested yet"
-                hint="Open this tab to read the movements and attempts behind the balance."
+                title={msg('usage.usageHistoryHasNotBeenRequested')}
+                hint={msg('usagePage.openThisTabToReadTheMovementsAnd')}
               />
             ) : null}
           </div>

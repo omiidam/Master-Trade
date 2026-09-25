@@ -4,6 +4,7 @@ import { Badge } from '../Badge';
 import { Card } from '../Card';
 import { cn } from '../../lib/cn';
 import { inputLabel } from './labels';
+import { liveLabels } from '../../i18n/index.js';
 
 /**
  * One substitution the analysis would have to make, stated before it is made.
@@ -19,10 +20,10 @@ import { inputLabel } from './labels';
  * decision in a component.
  */
 
-const ORIGIN_LABEL: Readonly<Record<AssumptionNoticeView['origin'], string>> = {
-  'user-premise': 'You declared this premise',
-  system: 'System substitution — refused',
-};
+const ORIGIN_LABEL: Readonly<Record<AssumptionNoticeView['origin'], string>> = liveLabels({
+  'user-premise': 'quality.origin.user-premise',
+  system: 'quality.origin.system',
+});
 
 export interface AssumptionNoticeProps {
   notice: AssumptionNoticeView;

@@ -14,6 +14,7 @@ import {
   ledgerStatusLabel,
   usageCategoryLabel,
 } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * The ledger and the metering log, as two lists rather than one.
@@ -71,7 +72,7 @@ export function CreditTransactionItem({ movement, className }: CreditTransaction
             {ledgerKindLabel(movement.kind)}
           </Badge>
           <span className="text-body text-text">{creditReasonLabel(movement.reason)}</span>
-          {returned ? <Badge tone="outline">Returned</Badge> : null}
+          {returned ? <Badge tone="outline">{msg('usage.returned')}</Badge> : null}
         </div>
         <p className="text-caption text-text-muted">{creditReasonMeaning(movement.reason)}</p>
         <p className="font-mono text-caption text-text-faint">
@@ -92,7 +93,9 @@ export function CreditTransactionItem({ movement, className }: CreditTransaction
         >
           {formatDelta(movement.delta)}
         </p>
-        <p className="text-caption num text-text-faint">balance {movement.balanceAfter}</p>
+        <p className="text-caption num text-text-faint">
+          {msg('usage.balance')} {movement.balanceAfter}
+        </p>
         <Tooltip content={ledgerStatusLabel(movement.status)}>
           <span className="text-caption text-text-faint">{movement.status}</span>
         </Tooltip>
@@ -115,15 +118,23 @@ export function UsageHistory({ history, className }: UsageHistoryProps) {
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2">
             <History size={16} aria-hidden className="text-primary" />
-            Usage history
+            {msg('usage.usageHistory')}
           </CardTitle>
           <CardDescription>{history.note}</CardDescription>
         </div>
         <div className="flex flex-wrap justify-end gap-1.5">
-          <Badge tone="outline">granted {totals.granted}</Badge>
-          <Badge tone="outline">consumed {totals.consumed}</Badge>
-          <Badge tone="outline">returned {totals.refunded}</Badge>
-          <Badge tone="outline">expired {totals.expired}</Badge>
+          <Badge tone="outline">
+            {msg('usage.granted')} {totals.granted}
+          </Badge>
+          <Badge tone="outline">
+            {msg('usage.consumed')} {totals.consumed}
+          </Badge>
+          <Badge tone="outline">
+            {msg('usage.returned2')} {totals.refunded}
+          </Badge>
+          <Badge tone="outline">
+            {msg('usage.expired')} {totals.expired}
+          </Badge>
         </div>
       </CardHeader>
 
@@ -136,15 +147,15 @@ export function UsageHistory({ history, className }: UsageHistoryProps) {
       <div className="px-4 pb-2 pt-4">
         <h4 className="flex items-center gap-1.5 text-caption font-semibold text-text-muted uppercase">
           <Receipt size={14} aria-hidden className="text-text-muted" />
-          Movements
+          {msg('usage.movements')}
         </h4>
       </div>
       {movements.length === 0 ? (
         <div className="px-4 pb-4">
           <EmptyState
-            title="No movements yet"
-            description="Nothing has been granted, held, returned or adjusted on this account."
-            hint="The first agent turn of the period grants the allowance, so this fills in as soon as anything metered runs."
+            title={msg('usage.noMovementsYet')}
+            description={msg('usageHistory.nothingHasBeenGrantedHeldReturnedOrAdjusted')}
+            hint={msg('usageHistory.theFirstAgentTurnOfThePeriodGrants')}
           />
         </div>
       ) : (
@@ -156,17 +167,18 @@ export function UsageHistory({ history, className }: UsageHistoryProps) {
       )}
 
       <div className="px-4 pb-2 pt-4">
-        <h4 className="text-caption font-semibold text-text-muted uppercase">Attempts</h4>
+        <h4 className="text-caption font-semibold text-text-muted uppercase">
+          {msg('realtime.attempts')}
+        </h4>
         <p className="text-caption text-text-faint">
-          Every invocation, including the ones that were refused before running and the ones that
-          cost nothing.
+          {msg('usage.everyInvocationIncludingTheOnesThat')}
         </p>
       </div>
       {attempts.length === 0 ? (
         <div className="px-4 pb-4">
           <EmptyState
-            title="No attempts yet"
-            description="No metered capability has been invoked on this account."
+            title={msg('usage.noAttemptsYet')}
+            description={msg('usageHistory.noMeteredCapabilityHasBeenInvokedOnThis')}
           />
         </div>
       ) : (

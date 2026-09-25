@@ -5,6 +5,7 @@ import { cn } from '../../lib/cn';
 import { Badge } from '../Badge';
 import { Button, IconButton } from '../Button';
 import { Tooltip } from '../Tooltip';
+import { msg } from '../../i18n/index.js';
 
 /**
  * One tool in the composer's left cluster.
@@ -160,7 +161,9 @@ export function MessageComposer({
 
       {examples.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1 pt-3.5">
-          <span className="text-micro uppercase tracking-wide text-text-faint">Examples</span>
+          <span className="text-micro uppercase tracking-wide text-text-faint">
+            {msg('agent.examples')}
+          </span>
           {examples.map((example) => (
             <Badge key={example} tone="neutral" shape="tag">
               {example}

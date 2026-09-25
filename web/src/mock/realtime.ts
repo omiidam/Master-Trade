@@ -19,15 +19,19 @@
  */
 
 import type { JobView } from '@shared/jobs/service';
+import { msg } from '../i18n/index.js';
 
-export const ACTIVITY_PREVIEW_NOTICE =
-  'Interface preview — mock data only, no backend or AI connected.';
+export function activityPreviewNotice(): string {
+  return msg('realtime.activityPreviewNotice');
+}
 
-export const REALTIME_PREVIEW_NOTICE =
-  'Preview fixtures: a deterministic sample of what the stream carries, not a live connection.';
+export function previewNotice(): string {
+  return msg('realtime.previewNotice');
+}
 
-export const JOB_PREVIEW_NOTICE =
-  'Preview fixtures: these job records are static samples from the queue schema. No worker is running in this preview.';
+export function jobPreviewNotice(): string {
+  return msg('realtime.jobPreviewNotice');
+}
 
 /** A job as the queue would report it. Static, and labelled as such in the UI. */
 export type JobPreview = JobView;
@@ -108,7 +112,9 @@ export const mockJobs: readonly JobPreview[] = [
     progressPercent: 38,
     progressUnit: 'symbols',
     correlationId: 'cor_preview_4',
-    error: 'PROVIDER_UNAVAILABLE: the synthetic provider fixture is not running.',
+    get error(): string {
+      return msg('realtime.pROVIDERUNAVAILABLETheSyntheticProviderFixtureIsNotR');
+    },
     createdAt: '2026-09-20T07:10:00.000Z',
     updatedAt: '2026-09-20T07:12:31.000Z',
     cancellable: false,
@@ -123,7 +129,9 @@ export const mockJobs: readonly JobPreview[] = [
     progressPercent: null,
     progressUnit: 'sections',
     correlationId: 'cor_preview_5',
-    error: 'cancelled by the user before the first section was written',
+    get error(): string {
+      return msg('realtime.cancelledByTheUserBeforeTheFirstSection');
+    },
     createdAt: '2026-09-20T06:55:00.000Z',
     updatedAt: '2026-09-20T06:56:02.000Z',
     cancellable: false,
@@ -152,7 +160,9 @@ export const mockActivity: readonly ActivityPreview[] = [
     source: 'agent',
     at: '2026-09-20T08:16:02.000Z',
     text: 'Agent moved to `thinking` from `idle`.',
-    detail: 'A lifecycle transition. The turn is not finished until a summary arrives.',
+    get detail(): string {
+      return msg('realtime.aLifecycleTransitionTheTurnIsNotFinished');
+    },
     correlationId: 'cor_preview_7',
   },
   {
@@ -160,8 +170,12 @@ export const mockActivity: readonly ActivityPreview[] = [
     type: 'agent.message',
     source: 'agent',
     at: '2026-09-20T08:16:09.000Z',
-    text: 'Answer: risk per trade follows from the stop distance, not from the position size.',
-    detail: '1 fact, 1 analysis, 1 uncertainty — chain-of-thought is never emitted.',
+    get text(): string {
+      return msg('realtime.answerRiskPerTradeFollowsFromTheStop');
+    },
+    get detail(): string {
+      return msg('realtime.1Fact1Analysis1UncertaintyChainOfThought');
+    },
     correlationId: 'cor_preview_7',
   },
   {
@@ -170,7 +184,9 @@ export const mockActivity: readonly ActivityPreview[] = [
     source: 'job',
     at: '2026-09-20T08:14:36.000Z',
     text: 'memory.index reported 412/1000 records.',
-    detail: 'Progress only; the job is still running.',
+    get detail(): string {
+      return msg('realtime.progressOnlyTheJobIsStillRunning');
+    },
     correlationId: 'cor_preview_1',
   },
   {
@@ -178,7 +194,9 @@ export const mockActivity: readonly ActivityPreview[] = [
     type: 'training.progress',
     source: 'system',
     at: '2026-09-20T08:05:11.000Z',
-    text: 'Lesson 4 of 6 complete in “Position sizing and risk of ruin”.',
+    get text(): string {
+      return msg('realtime.lesson4Of6CompleteInPositionSizing');
+    },
     correlationId: 'cor_preview_8',
   },
   {
@@ -186,8 +204,12 @@ export const mockActivity: readonly ActivityPreview[] = [
     type: 'system.error',
     source: 'system',
     at: '2026-09-20T07:12:31.000Z',
-    text: 'marketData.ingest failed: PROVIDER_UNAVAILABLE.',
-    detail: 'Typed code, no stack trace, no provider payload.',
+    get text(): string {
+      return msg('realtime.marketDataIngestFailedPROVIDERUNAVAILABLE');
+    },
+    get detail(): string {
+      return msg('realtime.typedCodeNoStackTraceNoProviderPayload');
+    },
     correlationId: 'cor_preview_4',
   },
 ];
@@ -196,22 +218,34 @@ export const mockNotifications: readonly NotificationPreview[] = [
   {
     id: 'ntf_preview_1',
     level: 'warning',
-    title: 'A proposed rule is waiting for your decision',
-    body: 'The evaluation finished, but activation needs a recorded human approval. The system cannot adopt its own proposal.',
+    get title(): string {
+      return msg('realtime.aProposedRuleIsWaitingForYourDecision');
+    },
+    get body(): string {
+      return msg('realtime.theEvaluationFinishedButActivationNeedsARecorded');
+    },
     at: '2026-09-20T08:00:00.000Z',
   },
   {
     id: 'ntf_preview_2',
     level: 'info',
-    title: 'Dataset validated',
-    body: '1,284 rows accepted; 12 rejected for a missing timestamp. Rejected rows are listed, never dropped silently.',
+    get title(): string {
+      return msg('realtime.datasetValidated');
+    },
+    get body(): string {
+      return msg('realtime.1284RowsAccepted12RejectedForAMissing');
+    },
     at: '2026-09-20T07:35:00.000Z',
   },
   {
     id: 'ntf_preview_3',
     level: 'danger',
-    title: 'Market-data provider unavailable',
-    body: 'Ingestion is paused and will retry with backoff. No live data is claimed while it is down.',
+    get title(): string {
+      return msg('realtime.marketDataProviderUnavailable');
+    },
+    get body(): string {
+      return msg('realtime.ingestionIsPausedAndWillRetryWithBackoff');
+    },
     at: '2026-09-20T07:12:40.000Z',
   },
 ];
@@ -236,7 +270,9 @@ export function summariseJobs(jobs: readonly JobPreview[] = mockJobs): JobSummar
 /** A fixture connection snapshot, so the status control can be reviewed mid-retry. */
 export const mockRetryingSnapshot = {
   state: 'reconnecting' as const,
-  detail: 'The server is shutting down. Retrying in 0.8s (attempt 2).',
+  get detail(): string {
+    return msg('realtime.theServerIsShuttingDownRetryingIn08s');
+  },
   attempts: 2,
   maxAttempts: 6,
 };

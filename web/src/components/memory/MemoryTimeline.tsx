@@ -5,6 +5,7 @@ import { formatRelative, formatTimestamp } from '../../lib/format';
 import { Badge, type BadgeTone } from '../Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
+import { msg } from '../../i18n/index.js';
 
 export type MemoryEventKind =
   'created' | 'revision' | 'verification-requested' | 'trust-promoted' | 'tombstoned';
@@ -20,19 +21,41 @@ export interface MemoryTimelineEntryInput {
 }
 
 const KIND_META: Record<MemoryEventKind, { label: string; tone: BadgeTone; icon: ReactNode }> = {
-  created: { label: 'Created', tone: 'neutral', icon: <FilePlus2 size={13} aria-hidden /> },
-  revision: { label: 'Revised', tone: 'info', icon: <GitBranch size={13} aria-hidden /> },
+  created: {
+    get label(): string {
+      return msg('memoryTimeline.created');
+    },
+    tone: 'neutral',
+    icon: <FilePlus2 size={13} aria-hidden />,
+  },
+  revision: {
+    get label(): string {
+      return msg('memoryTimeline.revised');
+    },
+    tone: 'info',
+    icon: <GitBranch size={13} aria-hidden />,
+  },
   'verification-requested': {
-    label: 'Verification requested',
+    get label(): string {
+      return msg('memoryTimeline.verificationRequested');
+    },
     tone: 'warning',
     icon: <UserCheck size={13} aria-hidden />,
   },
   'trust-promoted': {
-    label: 'Trust raised',
+    get label(): string {
+      return msg('memoryTimeline.trustRaised');
+    },
     tone: 'primary',
     icon: <ShieldCheck size={13} aria-hidden />,
   },
-  tombstoned: { label: 'Tombstoned', tone: 'outline', icon: <Archive size={13} aria-hidden /> },
+  tombstoned: {
+    get label(): string {
+      return msg('memoryTimeline.tombstoned');
+    },
+    tone: 'outline',
+    icon: <Archive size={13} aria-hidden />,
+  },
 };
 
 export interface MemoryTimelineProps {
@@ -73,13 +96,15 @@ export function MemoryTimeline({
           <CardTitle className="text-body">{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </div>
-        <Badge tone="neutral">{entries.length} events</Badge>
+        <Badge tone="neutral">
+          {entries.length} {msg('memory.events')}
+        </Badge>
       </CardHeader>
       <CardContent>
         {sorted.length === 0 ? (
           <EmptyState
-            title="No history recorded"
-            description="A record with no timeline has never been revised, verified or tombstoned."
+            title={msg('memory.noHistoryRecorded')}
+            description={msg('memoryTimeline.aRecordWithNoTimelineHasNeverBeen')}
           />
         ) : (
           <ol className="space-y-0">
@@ -102,7 +127,10 @@ export function MemoryTimeline({
                   <div className={cn('min-w-0 flex-1 pb-4', index === sorted.length - 1 && 'pb-0')}>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone={meta.tone}>{meta.label}</Badge>
-                      <span className="num text-caption text-text-faint">v{entry.version}</span>
+                      <span className="num text-caption text-text-faint">
+                        {msg('decisions.v')}
+                        {entry.version}
+                      </span>
                       <span className="text-caption text-text-faint">
                         {formatRelative(entry.at)} · {formatTimestamp(entry.at)}
                       </span>

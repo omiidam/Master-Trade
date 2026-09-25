@@ -15,6 +15,7 @@ import {
 import { Tooltip } from '../Tooltip';
 import { ProgressIndicator } from './ProgressIndicator';
 import { EXAM_STATE_LABEL, type ExamDefinition, type ExamRunState } from '../../mock/exams';
+import { msg, liveLabels } from '../../i18n/index.js';
 
 const STATE_TONE: Record<ExamRunState, BadgeTone> = {
   available: 'neutral',
@@ -25,13 +26,13 @@ const STATE_TONE: Record<ExamRunState, BadgeTone> = {
 };
 
 /** Label for the state-appropriate action; every one is inert in this phase. */
-const ACTION_LABEL: Record<ExamRunState, string> = {
-  available: 'Start assessment',
-  'in-progress': 'Resume attempt',
-  completed: 'Review answers',
-  failed: 'Retry assessment',
-  locked: 'Locked',
-};
+const ACTION_LABEL: Record<ExamRunState, string> = liveLabels({
+  available: 'exams.action.available',
+  'in-progress': 'exams.action.in-progress',
+  completed: 'exams.action.completed',
+  failed: 'exams.action.failed',
+  locked: 'exams.action.locked',
+});
 
 export interface ExamCardProps {
   exam: ExamDefinition;
@@ -64,7 +65,7 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
           <CardTitle className="text-body">{exam.title}</CardTitle>
           <CardDescription>
             {categoryLabel ? `${categoryLabel} · ` : ''}
-            Pass at {formatPercent(exam.passScore, 0)} · {exam.attempts}{' '}
+            {msg('exams.passAt')} {formatPercent(exam.passScore, 0)} · {exam.attempts}{' '}
             {exam.attempts === 1 ? 'attempt' : 'attempts'}
           </CardDescription>
         </div>
@@ -83,21 +84,24 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
           <CardTile space="tight">
             <dt className="flex items-center gap-1 text-text-faint">
               <HelpCircle size={12} aria-hidden />
-              Questions
+              {msg('exams.questions')}
             </dt>
             <dd className="num mt-0.5 text-text">{exam.questionCount}</dd>
           </CardTile>
           <CardTile space="tight">
             <dt className="flex items-center gap-1 text-text-faint">
               <Clock size={12} aria-hidden />
-              Time
+              {msg('exams.time')}
             </dt>
-            <dd className="num mt-0.5 text-text">{exam.durationMinutes}m</dd>
+            <dd className="num mt-0.5 text-text">
+              {exam.durationMinutes}
+              {msg('exams.m')}
+            </dd>
           </CardTile>
           <CardTile space="tight">
             <dt className="flex items-center gap-1 text-text-faint">
               <Target size={12} aria-hidden />
-              Best
+              {msg('exams.best')}
             </dt>
             <dd className={cn('num mt-0.5', belowPass ? 'text-danger' : 'text-text')}>
               {exam.bestScore === null ? '—' : formatPercent(exam.bestScore, 0)}
@@ -109,7 +113,7 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
           <ProgressIndicator
             value={progress.value}
             max={progress.max}
-            label="Attempt progress"
+            label={msg('examCard.attemptProgress')}
             tone="info"
             threshold={exam.passScore}
             showValue={false}
@@ -119,7 +123,7 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
         {locked ? (
           <p className="flex items-center gap-1.5 text-caption text-text-faint">
             <Lock size={12} aria-hidden />
-            Unlocks when {exam.prerequisites.join(', ')} is complete.
+            {msg('exams.unlocksWhen')} {exam.prerequisites.join(', ')} {msg('exams.isComplete')}
           </p>
         ) : null}
       </CardContent>
@@ -135,7 +139,7 @@ export function ExamCard({ exam, categoryLabel, progress, onAction, className }:
                 : 'No score recorded yet.'}
         </span>
         {onAction === undefined ? (
-          <Tooltip content="No exam service is connected in this phase, so this action is inert.">
+          <Tooltip content={msg('examCard.noExamServiceIsConnectedInThisPhase')}>
             <span>
               <Button
                 size="sm"

@@ -5,6 +5,7 @@ import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { SkeletonCard } from './Skeleton';
 import { Reveal } from './Reveal';
+import { msg } from '../i18n/index.js';
 
 export type InterfaceStateId = 'loading' | 'empty' | 'error';
 
@@ -29,16 +30,28 @@ export interface InterfaceStatesPanelProps {
 }
 
 const LABEL: Record<InterfaceStateId, string> = {
-  loading: 'Loading',
-  empty: 'Empty',
-  error: 'Error',
+  get loading(): string {
+    return msg('exams.loading');
+  },
+  get empty(): string {
+    return msg('exams.empty');
+  },
+  get error(): string {
+    return msg('exams.error');
+  },
 };
 
 /** One line per state, so the exhibit is readable at a glance. */
 const CAPTION: Record<InterfaceStateId, string> = {
-  loading: 'Before data arrives; the layout is already the right shape.',
-  empty: 'A successful read that found nothing.',
-  error: 'A read that failed, with its typed reason.',
+  get loading(): string {
+    return msg('interfaceStates.beforeDataArrivesTheLayoutIsAlreadyThe');
+  },
+  get empty(): string {
+    return msg('interfaceStates.aSuccessfulReadThatFoundNothing');
+  },
+  get error(): string {
+    return msg('interfaceStates.aReadThatFailedWithItsTypedReason');
+  },
 };
 
 const ICON: Record<InterfaceStateId, ReactNode> = {

@@ -5,6 +5,7 @@ import { Button } from '../Button';
 import { Card } from '../Card';
 import { cn } from '../../lib/cn';
 import { clarificationReasonLabel, inputLabel } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * One question the system is asking instead of guessing.
@@ -59,9 +60,9 @@ export function ClarificationQuestionCard({
         <span className="text-body font-medium text-text">{question.label}</span>
         <Badge tone="neutral">{clarificationReasonLabel(question.reason)}</Badge>
         {question.blocking ? (
-          <Badge tone="danger">Blocking</Badge>
+          <Badge tone="danger">{msg('quality.blocking')}</Badge>
         ) : (
-          <Badge tone="outline">Would sharpen the answer</Badge>
+          <Badge tone="outline">{msg('quality.wouldSharpenTheAnswer')}</Badge>
         )}
       </div>
 

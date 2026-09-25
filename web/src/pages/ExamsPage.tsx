@@ -38,9 +38,9 @@ import { Grid, Workspace } from '../app/Workspace';
 import { formatPercent, formatRelative, formatTimestamp } from '../lib/format';
 import { cn } from '../lib/cn';
 import {
-  EXAM_GRADING_POLICY,
-  EXAM_INTEGRITY_POLICY,
-  EXAM_PREVIEW_NOTICE,
+  examGradingPolicy,
+  examIntegrityPolicy,
+  examPreviewNotice,
   EXAM_STATE_LABEL,
   mockCurrentAssessment,
   mockExamAttempts,
@@ -51,13 +51,44 @@ import {
   mockScoreEvolution,
   summariseExamProgress,
 } from '../mock/exams';
+import { msg } from '../i18n/index.js';
 
 const TABS = [
-  { id: 'overview', label: 'Overview', icon: <Layers size={14} aria-hidden /> },
-  { id: 'current', label: 'Current assessment', icon: <Hourglass size={14} aria-hidden /> },
-  { id: 'history', label: 'History', icon: <History size={14} aria-hidden /> },
-  { id: 'review', label: 'Mistake review', icon: <AlertTriangle size={14} aria-hidden /> },
-  { id: 'states', label: 'State examples', icon: <ClipboardList size={14} aria-hidden /> },
+  {
+    id: 'overview',
+    get label(): string {
+      return msg('dashboardPage.overview');
+    },
+    icon: <Layers size={14} aria-hidden />,
+  },
+  {
+    id: 'current',
+    get label(): string {
+      return msg('exams.currentAssessment');
+    },
+    icon: <Hourglass size={14} aria-hidden />,
+  },
+  {
+    id: 'history',
+    get label(): string {
+      return msg('examsPage.history');
+    },
+    icon: <History size={14} aria-hidden />,
+  },
+  {
+    id: 'review',
+    get label(): string {
+      return msg('examsPage.mistakeReview');
+    },
+    icon: <AlertTriangle size={14} aria-hidden />,
+  },
+  {
+    id: 'states',
+    get label(): string {
+      return msg('dashboardPage.stateExamples');
+    },
+    icon: <ClipboardList size={14} aria-hidden />,
+  },
 ] as const;
 
 const OUTCOME_TONE = { passed: 'primary', failed: 'danger', void: 'outline' } as const;
@@ -94,14 +125,14 @@ export function ExamsPage() {
 
   return (
     <Workspace
-      title="Examinations"
-      description="Assessment, scoring and mistake review across the six-month curriculum. Grading is rubric-based and deterministic; the model explains results but never decides pass or fail."
+      title={msg('exams.examinations')}
+      description={msg('examsPage.assessmentScoringAndMistakeReviewAcrossTheSixMonth')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>
             no runner connected
           </Badge>
-          <Tooltip content={EXAM_PREVIEW_NOTICE}>
+          <Tooltip content={examPreviewNotice()}>
             <Badge tone="warning">preview data</Badge>
           </Tooltip>
         </>
@@ -111,9 +142,10 @@ export function ExamsPage() {
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Assessment progress</CardTitle>
+              <CardTitle className="text-body">{msg('exams.assessmentProgress')}</CardTitle>
               <CardDescription>
-                {progress.passed} passed · {progress.attempted} attempted · {progress.locked} locked
+                {progress.passed} {msg('exams.passed')} {progress.attempted}{' '}
+                {msg('exams.attempted')} {progress.locked} {msg('exams.locked')}
               </CardDescription>
             </div>
           </CardHeader>
@@ -121,16 +153,16 @@ export function ExamsPage() {
             <ProgressIndicator
               value={progress.passed}
               max={mockExamDefinitions.length}
-              label="Examinations passed"
-              hint="Locked examinations are excluded from what is achievable today."
+              label={msg('examsPage.examinationsPassed')}
+              hint={msg('examsPage.lockedExaminationsAreExcludedFromWhatIsAchievable')}
             />
           </CardContent>
         </Card>
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Average best score</CardTitle>
-              <CardDescription>Mean of the best score per examination</CardDescription>
+              <CardTitle className="text-body">{msg('exams.averageBestScore')}</CardTitle>
+              <CardDescription>{msg('exams.meanOfTheBestScorePer')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -141,38 +173,39 @@ export function ExamsPage() {
               <Sparkline values={allScores} width={140} height={24} tone="info" />
             </div>
             <p className="mt-2 text-caption text-text-faint">
-              A mean across different exams is a study signal, not a grade.
+              {msg('exams.aMeanAcrossDifferentExamsIs')}
             </p>
           </CardContent>
         </Card>
         <Card surface="metric">
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">Attempts to pass</CardTitle>
-              <CardDescription>Mean across passed examinations</CardDescription>
+              <CardTitle className="text-body">{msg('exams.attemptsToPass')}</CardTitle>
+              <CardDescription>{msg('exams.meanAcrossPassedExaminations')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <span className="num text-metric text-text">{progress.meanAttemptsToPass ?? '—'}</span>
             <p className="mt-2 text-caption text-text-faint">
-              Retries are kept. A failed attempt is evidence about which lesson to rework, not a
-              penalty.
+              {msg('exams.retriesAreKeptAFailedAttempt')}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader divider>
             <div>
-              <CardTitle className="text-body">How grading works</CardTitle>
-              <CardDescription>What an assessment guarantees</CardDescription>
+              <CardTitle className="text-body">{msg('academy.howGradingWorks')}</CardTitle>
+              <CardDescription>{msg('exams.whatAnAssessmentGuarantees')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-1.5 text-caption text-text-muted">
-            <p>{EXAM_GRADING_POLICY}</p>
-            <p>{EXAM_INTEGRITY_POLICY}</p>
+            <p>{examGradingPolicy()}</p>
+            <p>{examIntegrityPolicy()}</p>
           </CardContent>
           <CardFooter className="text-caption text-text-faint">
-            <span className="num">{progress.attempts} attempts recorded</span>
+            <span className="num">
+              {progress.attempts} {msg('exams.attemptsRecorded')}
+            </span>
           </CardFooter>
         </Card>
       </Grid>
@@ -181,15 +214,15 @@ export function ExamsPage() {
         items={TABS.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
         value={tab}
         onValueChange={setTab}
-        aria-label="Examination sections"
+        aria-label={msg('exams.examinationSections')}
       >
         <TabPanel value="overview" className="space-y-4">
           <Card surface="featured">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Current assessment</CardTitle>
+                <CardTitle className="text-body">{msg('exams.currentAssessment')}</CardTitle>
                 <CardDescription>
-                  {mockCurrentAssessment.title} · attempt{' '}
+                  {mockCurrentAssessment.title} {msg('exams.attempt')}{' '}
                   <span className="num">{mockCurrentAssessment.attemptId}</span>
                 </CardDescription>
               </div>
@@ -199,7 +232,7 @@ export function ExamsPage() {
               <ProgressIndicator
                 value={mockCurrentAssessment.answered}
                 max={mockCurrentAssessment.questionCount}
-                label="Questions answered"
+                label={msg('examsPage.questionsAnswered')}
                 tone="info"
                 hint={`Started ${formatRelative(mockCurrentAssessment.startedAt)}. The last attempt was abandoned part way through and recorded as void — a blank is never scored as zero.`}
               />
@@ -210,16 +243,16 @@ export function ExamsPage() {
               </p>
             </CardContent>
             <CardFooter className="text-caption text-text-faint">
-              <span>Nothing on this screen grades, stores or submits an answer.</span>
+              <span>{msg('exams.nothingOnThisScreenGradesStores')}</span>
               <Button size="sm" variant="secondary" disabled>
-                Resume attempt
+                {msg('exams.resumeAttempt')}
               </Button>
             </CardFooter>
           </Card>
 
           <Section
-            title="Available now"
-            description="Unlocked assessments, ordered by when they became available."
+            title={msg('exams.availableNow')}
+            description={msg('examsPage.unlockedAssessmentsOrderedByWhenTheyBecameAvailable')}
           >
             <Grid columns={2}>
               {openExams.map((exam) => (
@@ -241,8 +274,8 @@ export function ExamsPage() {
           </Section>
 
           <Section
-            title="Exam categories"
-            description="Grouped by the curriculum area they test; the average is illustrative."
+            title={msg('exams.examCategories')}
+            description={msg('examsPage.groupedByTheCurriculumAreaTheyTestThe')}
           >
             <Grid columns={3}>
               {mockExamCategories.map((category) => (
@@ -252,7 +285,9 @@ export function ExamsPage() {
                       <CardTitle className="text-body">{category.label}</CardTitle>
                       <CardDescription>{category.description}</CardDescription>
                     </div>
-                    <Badge tone="outline">{category.examCount} exams</Badge>
+                    <Badge tone="outline">
+                      {category.examCount} {msg('exams.exams')}
+                    </Badge>
                   </CardHeader>
                   <CardContent className="flex items-end justify-between gap-3">
                     <span className="num text-subheading text-text">
@@ -260,7 +295,9 @@ export function ExamsPage() {
                         ? '—'
                         : formatPercent(category.averageScore, 1)}
                     </span>
-                    <span className="text-caption text-text-faint">average best score</span>
+                    <span className="text-caption text-text-faint">
+                      {msg('exams.averageBestScore2')}
+                    </span>
                   </CardContent>
                 </Card>
               ))}
@@ -269,8 +306,8 @@ export function ExamsPage() {
 
           <ErrorState
             severity="info"
-            title="Preview assessment data"
-            description={EXAM_PREVIEW_NOTICE}
+            title={msg('exams.previewAssessmentData')}
+            description={examPreviewNotice()}
             code="PREVIEW_FIXTURE"
             action={
               <span className="text-caption">
@@ -286,41 +323,40 @@ export function ExamsPage() {
             <Card surface="data">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Attempt context</CardTitle>
-                  <CardDescription>What the runner would know about this attempt</CardDescription>
+                  <CardTitle className="text-body">{msg('exams.attemptContext')}</CardTitle>
+                  <CardDescription>{msg('exams.whatTheRunnerWouldKnowAbout')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <ProgressIndicator
                   value={mockCurrentAssessment.answered}
                   max={mockCurrentAssessment.questionCount}
-                  label="Questions answered"
+                  label={msg('examsPage.questionsAnswered')}
                   tone="info"
                   threshold={80}
                 />
                 <dl className="space-y-1 text-caption">
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-text-faint">Exam</dt>
+                    <dt className="text-text-faint">{msg('exams.exam')}</dt>
                     <dd className="num text-text-muted">{mockCurrentAssessment.examId}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-text-faint">Questions</dt>
+                    <dt className="text-text-faint">{msg('exams.questions')}</dt>
                     <dd className="num text-text-muted">{mockCurrentAssessment.questionCount}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-text-faint">Started</dt>
+                    <dt className="text-text-faint">{msg('exams.started')}</dt>
                     <dd className="num text-text-muted">
                       {formatTimestamp(mockCurrentAssessment.startedAt)}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <dt className="text-text-faint">Time limit</dt>
-                    <dd className="num text-text-muted">enforced server-side</dd>
+                    <dt className="text-text-faint">{msg('exams.timeLimit')}</dt>
+                    <dd className="num text-text-muted">{msg('exams.enforcedServerSide')}</dd>
                   </div>
                 </dl>
                 <p className="text-caption text-text-faint">
-                  Timing is enforced by the service, not the client, so closing the window cannot
-                  extend an attempt.
+                  {msg('exams.timingIsEnforcedByTheService')}
                 </p>
               </CardContent>
             </Card>
@@ -328,20 +364,17 @@ export function ExamsPage() {
             <Card>
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Integrity rules</CardTitle>
-                  <CardDescription>The rules this interface follows</CardDescription>
+                  <CardTitle className="text-body">{msg('exams.integrityRules')}</CardTitle>
+                  <CardDescription>{msg('exams.theRulesThisInterfaceFollows')}</CardDescription>
                 </div>
                 <Badge tone="primary" icon={<ShieldCheck size={12} aria-hidden />}>
-                  server-graded
+                  {msg('exams.serverGraded')}
                 </Badge>
               </CardHeader>
               <CardContent className="space-y-1.5 text-caption text-text-muted">
-                <p>{EXAM_INTEGRITY_POLICY}</p>
-                <p>{EXAM_GRADING_POLICY}</p>
-                <p>
-                  Partial credit is expressed per rubric criterion, so a written answer can be
-                  marked partially correct instead of all-or-nothing.
-                </p>
+                <p>{examIntegrityPolicy()}</p>
+                <p>{examGradingPolicy()}</p>
+                <p>{msg('exams.partialCreditIsExpressedPerRubric')}</p>
               </CardContent>
             </Card>
           </Grid>
@@ -364,34 +397,34 @@ export function ExamsPage() {
         <TabPanel value="history" className="space-y-4">
           <Grid columns={2}>
             <ScoreCard
-              title="Risk per trade before reward per trade"
+              title={msg('exams.riskPerTradeBeforeRewardPer')}
               bestScore={91}
               passScore={80}
               attempts={2}
               evolution={evolutionFor('e-risk-01')}
               meanScore={meanFor('e-risk-01')}
-              footnote="improved after rework"
+              footnote={msg('examsPage.improvedAfterRework')}
             />
             <ScoreCard
-              title="Fixed-fractional position sizing"
+              title={msg('exams.fixedFractionalPositionSizing')}
               bestScore={74}
               passScore={80}
               attempts={3}
               evolution={evolutionFor('e-risk-02')}
               meanScore={meanFor('e-risk-02')}
-              footnote="closest attempt: 74%"
+              footnote={msg('examsPage.closestAttempt74')}
             />
           </Grid>
 
           <Card surface="data">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Attempt history</CardTitle>
-                <CardDescription>
-                  Every attempt is retained, including the ones that were void
-                </CardDescription>
+                <CardTitle className="text-body">{msg('exams.attemptHistory')}</CardTitle>
+                <CardDescription>{msg('exams.everyAttemptIsRetainedIncludingThe')}</CardDescription>
               </div>
-              <Badge tone="neutral">{recentAttempts.length} attempts</Badge>
+              <Badge tone="neutral">
+                {recentAttempts.length} {msg('dashboard.attempts')}
+              </Badge>
             </CardHeader>
             <CardContent className="divide-y divide-border">
               {recentAttempts.map((attempt) => (
@@ -426,7 +459,8 @@ export function ExamsPage() {
                       {attempt.outcome === 'void' ? '—' : formatPercent(attempt.score, 0)}
                     </span>
                     <p className="text-caption text-text-faint">
-                      {attempt.durationMinutes}m · {formatTimestamp(attempt.submittedAt)}
+                      {attempt.durationMinutes}
+                      {msg('exams.m2')} {formatTimestamp(attempt.submittedAt)}
                     </p>
                   </div>
                 </div>
@@ -436,7 +470,7 @@ export function ExamsPage() {
 
           <ErrorState
             severity="info"
-            title="Not a stored history"
+            title={msg('exams.notAStoredHistory')}
             description="These attempts are illustrative. The `exam_attempts` table and its repository exist in the backend, but nothing writes to them from this interface yet."
             code="PREVIEW_FIXTURE"
           />
@@ -448,85 +482,76 @@ export function ExamsPage() {
             <Card surface="data">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Post-submission review</CardTitle>
-                  <CardDescription>
-                    How a graded answer is displayed, after the server returns verdicts
-                  </CardDescription>
+                  <CardTitle className="text-body">{msg('exams.postSubmissionReview')}</CardTitle>
+                  <CardDescription>{msg('exams.howAGradedAnswerIsDisplayed')}</CardDescription>
                 </div>
-                <Badge tone="info">example</Badge>
+                <Badge tone="info">{msg('exams.example')}</Badge>
               </CardHeader>
               <CardContent className="space-y-2">
                 <AnswerOption
                   id="a"
                   name="review-example"
-                  label="The number of units, from stop distance and budget"
+                  label={msg('exams.theNumberOfUnitsFromStopDistanceAnd')}
                   state="read-only"
                   review={{
                     verdict: 'correct',
-                    explanation:
-                      'Matches the rubric: the budget and the stop distance set the size.',
+                    explanation: msg('examsPage.matchesTheRubricTheBudgetAndTheStop'),
                   }}
                 />
                 <AnswerOption
                   id="b"
                   name="review-example"
-                  label="The direction of the trade"
+                  label={msg('exams.theDirectionOfTheTrade')}
                   state="read-only"
                   review={{
                     verdict: 'incorrect',
-                    explanation:
-                      'Direction is an input to the setup, not an output of the risk budget.',
+                    explanation: msg('examsPage.directionIsAnInputToTheSetupNot'),
                   }}
                 />
                 <AnswerOption
                   id="c"
                   name="review-example"
-                  label="The reward target"
+                  label={msg('exams.theRewardTarget')}
                   state="read-only"
                   review={{
                     verdict: 'partial',
-                    explanation:
-                      'Partially correct: reward is compared against risk, but it is not what the budget determines first.',
+                    explanation: msg('examsPage.partiallyCorrectRewardIsComparedAgainstRiskBut'),
                   }}
                 />
                 <p className="text-caption text-text-faint">
-                  Verdicts arrive with the server's explanation and are attached to the attempt, so
-                  the same review is reproducible later.
+                  {msg('exams.verdictsArriveWithTheServerS')}
                 </p>
               </CardContent>
             </Card>
           </Grid>
 
           <Section
-            title="What the review is for"
-            description="Grouping by cause turns a score into a lesson."
+            title={msg('exams.whatTheReviewIsFor')}
+            description={msg('examsPage.groupingByCauseTurnsAScoreIntoA')}
           >
             <Grid columns={3}>
               <Card>
                 <CardHeader divider>
-                  <CardTitle className="text-body">By pattern</CardTitle>
+                  <CardTitle className="text-body">{msg('exams.byPattern')}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
-                  Mistakes are grouped by the rule that was broken, not by the question they
-                  appeared in.
+                  {msg('exams.mistakesAreGroupedByTheRule')}
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader divider>
-                  <CardTitle className="text-body">By lesson</CardTitle>
+                  <CardTitle className="text-body">{msg('exams.byLesson')}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
-                  Every pattern points back to the lesson that teaches it, so review has a
-                  destination.
+                  {msg('exams.everyPatternPointsBackToThe')}
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader divider>
-                  <CardTitle className="text-body">By evidence</CardTitle>
+                  <CardTitle className="text-body">{msg('exams.byEvidence')}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-caption text-text-muted">
-                  Shares are computed against the number of incorrect answers, so the denominator is
-                  never hidden.
+                  {msg('exams.sharesAreComputedAgainstTheNumber')}
                 </CardContent>
               </Card>
             </Grid>
@@ -535,8 +560,8 @@ export function ExamsPage() {
 
         <TabPanel value="states" className="space-y-4">
           <Section
-            title="Assessment states"
-            description="Every state the module must render, with the action each one offers."
+            title={msg('exams.assessmentStates')}
+            description={msg('examsPage.everyStateTheModuleMustRenderWithThe')}
           >
             <Grid columns={2}>
               {mockExamDefinitions.map((exam) => (
@@ -552,37 +577,37 @@ export function ExamsPage() {
           <Grid columns={3}>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Loading</CardTitle>
+                <CardTitle className="text-body">{msg('exams.loading')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <SkeletonCard rows={3} />
                 <p className="text-caption text-text-faint">
-                  Skeletons while an attempt is fetched; the pulse respects prefers-reduced-motion.
+                  {msg('exams.skeletonsWhileAnAttemptIsFetched')}
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Empty</CardTitle>
+                <CardTitle className="text-body">{msg('exams.empty')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <EmptyState
                   icon={<GraduationCap size={22} aria-hidden />}
-                  title="No attempts in this category"
-                  description="An untouched category is stated plainly rather than hidden behind a zero."
-                  hint="Failures and blanks are never rendered as zeroes."
+                  title={msg('exams.noAttemptsInThisCategory')}
+                  description={msg('examsPage.anUntouchedCategoryIsStatedPlainlyRatherThan')}
+                  hint={msg('examsPage.failuresAndBlanksAreNeverRenderedAsZeroes')}
                 />
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Error</CardTitle>
+                <CardTitle className="text-body">{msg('exams.error')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ErrorState
                   severity="warning"
-                  title="Grading job has not run"
-                  description="An attempt submitted without a grading job stays pending and is labelled as pending, not scored."
+                  title={msg('exams.gradingJobHasNotRun')}
+                  description={msg('examsPage.anAttemptSubmittedWithoutAGradingJobStays')}
                   code="PROVIDER_UNAVAILABLE"
                 />
               </CardContent>
@@ -592,11 +617,13 @@ export function ExamsPage() {
           <Card>
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Locked examinations</CardTitle>
-                <CardDescription>Locked by prerequisite, with the dependency named</CardDescription>
+                <CardTitle className="text-body">{msg('exams.lockedExaminations')}</CardTitle>
+                <CardDescription>
+                  {msg('exams.lockedByPrerequisiteWithTheDependency')}
+                </CardDescription>
               </div>
               <Badge tone="outline" icon={<Target size={12} aria-hidden />}>
-                {lockedExams.length} locked
+                {lockedExams.length} {msg('exams.locked')}
               </Badge>
             </CardHeader>
             {/*
@@ -617,7 +644,7 @@ export function ExamsPage() {
                   >
                     <span className="text-text">{exam.title}</span>{' '}
                     <span className="num text-text-faint">
-                      requires {exam.prerequisites.join(', ')}
+                      {msg('exams.requires')} {exam.prerequisites.join(', ')}
                     </span>
                   </AgentCardItem>
                 ))}

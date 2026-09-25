@@ -42,11 +42,27 @@ import { memoryStatus, mockKnowledge, mockKnowledgeGrowth } from '../mock/memory
 import { summariseResearch } from '../mock/research';
 import { useUiStore } from '../store/ui';
 import { formatPercent, formatRelative, formatTimestamp } from '../lib/format';
+import { msg } from '../i18n/index.js';
 
 const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'activity', label: 'Activity' },
-  { id: 'states', label: 'State examples' },
+  {
+    id: 'overview',
+    get label(): string {
+      return msg('dashboardPage.overview');
+    },
+  },
+  {
+    id: 'activity',
+    get label(): string {
+      return msg('realtime.activity');
+    },
+  },
+  {
+    id: 'states',
+    get label(): string {
+      return msg('dashboardPage.stateExamples');
+    },
+  },
 ] as const;
 
 export function DashboardPage() {
@@ -74,14 +90,14 @@ export function DashboardPage() {
 
   return (
     <Workspace
-      title="Training dashboard"
-      description="Progress, study metrics and read-only charts. Every figure below is illustrative preview data typed against the backend view models."
+      title={msg('dashboard.trainingDashboard')}
+      description={msg('dashboardPage.progressStudyMetricsAndReadOnlyChartsEveryFigure')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>
             read-only
           </Badge>
-          <Tooltip content="Reloads the layout skeleton. No job is queued in this phase.">
+          <Tooltip content={msg('dashboardPage.reloadsTheLayoutSkeletonNoJobIsQueued')}>
             <Button
               variant="secondary"
               leadingIcon={<RefreshCw size={14} aria-hidden />}
@@ -116,7 +132,7 @@ export function DashboardPage() {
               )}
             </CardContent>
             <CardFooter className="text-caption text-text-faint">
-              <span>vs. previous 30 days</span>
+              <span>{msg('dashboard.vsPrevious30Days')}</span>
               <Sparkline values={mockSeries.slice(0, 12)} width={72} height={20} />
             </CardFooter>
           </Card>
@@ -127,18 +143,18 @@ export function DashboardPage() {
         items={TABS.map((item) => ({ id: item.id, label: item.label }))}
         value={tab}
         onValueChange={setTab}
-        aria-label="Dashboard sections"
+        aria-label={msg('dashboard.dashboardSections')}
       >
         <TabPanel value="overview" className="space-y-4">
           <Card surface="featured">
             <CardHeader divider>
               <div>
-                <CardTitle>Training equity curve</CardTitle>
+                <CardTitle>{msg('dashboard.trainingEquityCurve')}</CardTitle>
                 <CardDescription>
                   {mockDashboard.headings[0]} · {mockDashboard.symbol} · {mockDashboard.timeframe}
                 </CardDescription>
               </div>
-              <Badge tone="info">chart adapter</Badge>
+              <Badge tone="info">{msg('dashboard.chartAdapter')}</Badge>
             </CardHeader>
             <CardContent>
               <ChartAdapter
@@ -157,7 +173,7 @@ export function DashboardPage() {
             <Card>
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Strengths</CardTitle>
+                  <CardTitle className="text-body">{msg('dashboard.strengths')}</CardTitle>
                   <CardDescription>{mockDashboard.headings[1]}</CardDescription>
                 </div>
                 <BookOpen size={16} aria-hidden className="text-text-faint" />
@@ -170,10 +186,10 @@ export function DashboardPage() {
               <CardContent>
                 <AgentCardList>
                   <AgentCardItem badge={<AgentCheck />}>
-                    Consistent review habit: 11 consecutive days with a written session.
+                    {msg('dashboard.consistentReviewHabit11ConsecutiveDays')}
                   </AgentCardItem>
                   <AgentCardItem badge={<AgentCheck />}>
-                    Risk-first framing appears in every journal entry this month.
+                    {msg('dashboard.riskFirstFramingAppearsInEvery')}
                   </AgentCardItem>
                 </AgentCardList>
               </CardContent>
@@ -181,7 +197,7 @@ export function DashboardPage() {
             <Card>
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Watch list</CardTitle>
+                  <CardTitle className="text-body">{msg('dashboard.watchList')}</CardTitle>
                   <CardDescription>{mockDashboard.headings[2]}</CardDescription>
                 </div>
                 <ShieldCheck size={16} aria-hidden className="text-text-faint" />
@@ -190,10 +206,10 @@ export function DashboardPage() {
               <CardContent>
                 <AgentCardList>
                   <AgentCardItem badge={<AgentCheck tone="warning" />}>
-                    Exam average dipped on the second risk module attempt.
+                    {msg('dashboard.examAverageDippedOnTheSecond')}
                   </AgentCardItem>
                   <AgentCardItem badge={<AgentCheck tone="warning" />}>
-                    One journal entry missing an explicit invalidation level.
+                    {msg('dashboard.oneJournalEntryMissingAnExplicit')}
                   </AgentCardItem>
                 </AgentCardList>
               </CardContent>
@@ -201,16 +217,17 @@ export function DashboardPage() {
           </Grid>
 
           <Section
-            title="Knowledge, assessment and research"
-            description="Roll-ups from the product modules. Each figure is illustrative and each card states what it cannot tell you."
+            title={msg('dashboard.knowledgeAssessmentAndResearch')}
+            description={msg('dashboardPage.rollUpsFromTheProductModulesEachFigureIs')}
           >
             <Grid columns={4}>
               <Card surface="metric">
                 <CardHeader divider>
                   <div>
-                    <CardTitle className="text-body">Knowledge mastery</CardTitle>
+                    <CardTitle className="text-body">{msg('dashboard.knowledgeMastery')}</CardTitle>
                     <CardDescription>
-                      {verifiedRecords} of {mockKnowledge.length} records verified
+                      {verifiedRecords} {msg('exams.of')} {mockKnowledge.length}{' '}
+                      {msg('dashboard.recordsVerified')}
                     </CardDescription>
                   </div>
                   <Badge tone="primary">{verifiedShare}</Badge>
@@ -224,9 +241,9 @@ export function DashboardPage() {
                   />
                 </CardContent>
                 <CardFooter className="text-caption text-text-faint">
-                  <span>Verified means a human or tool checked it.</span>
+                  <span>{msg('dashboard.verifiedMeansAHumanOrTool')}</span>
                   <Button size="sm" variant="ghost" onClick={() => setPage('memory')}>
-                    Open memory
+                    {msg('dashboard.openMemory')}
                   </Button>
                 </CardFooter>
               </Card>
@@ -234,12 +251,15 @@ export function DashboardPage() {
               <Card surface="metric">
                 <CardHeader divider>
                   <div>
-                    <CardTitle className="text-body">Exam performance</CardTitle>
+                    <CardTitle className="text-body">{msg('dashboard.examPerformance')}</CardTitle>
                     <CardDescription>
-                      {examProgress.passed} passed of {examProgress.attempted} attempted
+                      {examProgress.passed} {msg('dashboard.passedOf')} {examProgress.attempted}{' '}
+                      {msg('dashboard.attempted')}
                     </CardDescription>
                   </div>
-                  <Badge tone="info">{examProgress.attempts} attempts</Badge>
+                  <Badge tone="info">
+                    {examProgress.attempts} {msg('dashboard.attempts')}
+                  </Badge>
                 </CardHeader>
                 <CardContent className="flex items-end justify-between gap-3">
                   <span className="num text-metric text-text">
@@ -255,9 +275,9 @@ export function DashboardPage() {
                   />
                 </CardContent>
                 <CardFooter className="text-caption text-text-faint">
-                  <span>Rubric-scored, never model-judged.</span>
+                  <span>{msg('dashboard.rubricScoredNeverModelJudged')}</span>
                   <Button size="sm" variant="ghost" onClick={() => setPage('exams')}>
-                    Open exams
+                    {msg('dashboard.openExams')}
                   </Button>
                 </CardFooter>
               </Card>
@@ -265,8 +285,8 @@ export function DashboardPage() {
               <Card surface="metric">
                 <CardHeader divider>
                   <div>
-                    <CardTitle className="text-body">Memory growth</CardTitle>
-                    <CardDescription>Records added in the last month</CardDescription>
+                    <CardTitle className="text-body">{msg('dashboard.memoryGrowth')}</CardTitle>
+                    <CardDescription>{msg('dashboard.recordsAddedInTheLastMonth')}</CardDescription>
                   </div>
                   <Badge tone="neutral">+{addedThisMonth}</Badge>
                 </CardHeader>
@@ -282,9 +302,9 @@ export function DashboardPage() {
                   />
                 </CardContent>
                 <CardFooter className="text-caption text-text-faint">
-                  <span>Growth is not mastery: unverified rows still count.</span>
+                  <span>{msg('dashboard.growthIsNotMasteryUnverifiedRows')}</span>
                   <Button size="sm" variant="ghost" onClick={() => setPage('memory')}>
-                    Open history
+                    {msg('dashboard.openHistory')}
                   </Button>
                 </CardFooter>
               </Card>
@@ -292,23 +312,28 @@ export function DashboardPage() {
               <Card surface="metric">
                 <CardHeader divider>
                   <div>
-                    <CardTitle className="text-body">Research progress</CardTitle>
+                    <CardTitle className="text-body">{msg('dashboard.researchProgress')}</CardTitle>
                     <CardDescription>
-                      {researchProgress.complete} complete · {researchProgress.active} running
+                      {researchProgress.complete} {msg('dashboard.complete')}{' '}
+                      {researchProgress.active} {msg('dashboard.running')}
                     </CardDescription>
                   </div>
-                  <Badge tone="warning">{researchProgress.pendingDecisions} pending</Badge>
+                  <Badge tone="warning">
+                    {researchProgress.pendingDecisions} {msg('dashboard.pending')}
+                  </Badge>
                 </CardHeader>
                 <CardContent className="flex items-end justify-between gap-3">
                   <span className="num text-metric text-text">
                     {researchProgress.evaluatedTrades}
                   </span>
-                  <span className="text-caption text-text-faint">trades evaluated</span>
+                  <span className="text-caption text-text-faint">
+                    {msg('dashboard.tradesEvaluated')}
+                  </span>
                 </CardContent>
                 <CardFooter className="text-caption text-text-faint">
-                  <span>A result never activates a rule by itself.</span>
+                  <span>{msg('dashboard.aResultNeverActivatesARule')}</span>
                   <Button size="sm" variant="ghost" onClick={() => setPage('research')}>
-                    Open research
+                    {msg('dashboard.openResearch')}
                   </Button>
                 </CardFooter>
               </Card>
@@ -317,8 +342,8 @@ export function DashboardPage() {
 
           <ErrorState
             severity="info"
-            title="Preview data"
-            description="This dashboard is not connected to the backend. Progress, metrics and charts are illustrative and typed against the final view models."
+            title={msg('dashboard.previewData')}
+            description={msg('dashboardPage.thisDashboardIsNotConnectedToTheBackend')}
             code="PREVIEW_FIXTURE"
             action={
               <span className="inline-flex items-center gap-1.5 text-caption">
@@ -339,12 +364,12 @@ export function DashboardPage() {
             <Card surface="data">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Recent agent and system events</CardTitle>
-                  <CardDescription>
-                    The shape of the activity log: correlation id, actor, event, evidence
-                  </CardDescription>
+                  <CardTitle className="text-body">
+                    {msg('dashboard.recentAgentAndSystemEvents')}
+                  </CardTitle>
+                  <CardDescription>{msg('dashboard.theShapeOfTheActivityLog')}</CardDescription>
                 </div>
-                <Badge tone="neutral">mock</Badge>
+                <Badge tone="neutral">{msg('dashboard.mock')}</Badge>
               </CardHeader>
               <CardContent className="divide-y divide-border">
                 {mockActivity.map((entry) => (
@@ -378,34 +403,33 @@ export function DashboardPage() {
           <Grid columns={2}>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Loading state</CardTitle>
+                <CardTitle className="text-body">{msg('dashboard.loadingState')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <SkeletonCard rows={3} />
                 <p className="text-caption text-text-faint">
-                  Skeletons are used while a query is in flight; the pulse respects
-                  prefers-reduced-motion.
+                  {msg('dashboard.skeletonsAreUsedWhileAQuery')}
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Empty state</CardTitle>
+                <CardTitle className="text-body">{msg('dashboard.emptyState')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <EmptyState
                   icon={<Clock size={22} aria-hidden />}
-                  title="No sessions recorded yet"
-                  description="Completed lessons and graded exams will appear here as soon as the persistence slice lands."
-                  hint="Empty is a valid state — it is stated, not hidden."
+                  title={msg('dashboard.noSessionsRecordedYet')}
+                  description={msg('dashboardPage.completedLessonsAndGradedExamsWillAppearHere')}
+                  hint={msg('dashboardPage.emptyIsAValidStateItIs')}
                 />
               </CardContent>
             </Card>
           </Grid>
           <ErrorState
             severity="warning"
-            title="Scheduled evaluation has not run"
-            description="The evaluation harness is in place; the scheduler that enqueues it arrives with the durable job queue."
+            title={msg('dashboard.scheduledEvaluationHasNotRun')}
+            description={msg('dashboardPage.theEvaluationHarnessIsInPlaceTheScheduler')}
             code="PROVIDER_UNAVAILABLE"
             action={
               <span className="text-caption">
@@ -417,7 +441,8 @@ export function DashboardPage() {
       </Tabs>
 
       <p className="text-caption text-text-faint">
-        Preview generated {formatRelative(MOCK_GENERATED_AT)} · {formatTimestamp(MOCK_GENERATED_AT)}
+        {msg('dashboard.previewGenerated')} {formatRelative(MOCK_GENERATED_AT)} ·{' '}
+        {formatTimestamp(MOCK_GENERATED_AT)}
       </p>
     </Workspace>
   );

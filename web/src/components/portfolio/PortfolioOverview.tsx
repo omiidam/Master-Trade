@@ -4,6 +4,7 @@ import { Badge } from '../Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { cn } from '../../lib/cn';
 import { formatNumber, scopeLabel } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * What the account has declared, stated before any figure is.
@@ -40,16 +41,16 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
             <Badge tone="neutral">{view.portfolio.baseCurrency}</Badge>
             {view.declared ? (
               <Badge tone="outline" icon={<History size={12} aria-hidden />}>
-                version {view.version}
+                {msg('portfolio.version')} {view.version}
               </Badge>
             ) : (
-              <Badge tone="info">not declared yet</Badge>
+              <Badge tone="info">{msg('portfolio.notDeclaredYet')}</Badge>
             )}
             {worst === null ? (
-              <Badge tone="success">no findings</Badge>
+              <Badge tone="success">{msg('portfolio.noFindings')}</Badge>
             ) : (
               <Badge tone={worst === 'blocking' ? 'danger' : 'warning'}>
-                findings: worst is {worst}
+                {msg('portfolio.findingsWorstIs')} {worst}
               </Badge>
             )}
           </div>
@@ -66,24 +67,24 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
           {(
             [
               [
-                'Positions declared',
+                msg('portfolioOverview.positionsDeclared'),
                 formatNumber(coverage.positions, 0),
-                'Everything in the document, as stored',
+                msg('portfolioOverview.everythingInTheDocumentAsStored'),
               ],
               [
-                'Usable',
+                msg('portfolioOverview.usable'),
                 formatNumber(view.assessment.usable, 0),
-                'Positions a calculation could read at all',
+                msg('portfolioOverview.positionsACalculationCouldReadAtAll'),
               ],
               [
-                'Priced',
+                msg('portfolioOverview.priced'),
                 formatNumber(coverage.priced, 0),
-                'Position with a usable quantity and price',
+                msg('portfolioOverview.positionWithAUsableQuantityAndPrice'),
               ],
               [
-                'Cost basis known',
+                msg('portfolioOverview.costBasisKnown'),
                 formatNumber(coverage.costed, 0),
-                'Position with a quantity and an entry price',
+                msg('portfolioOverview.positionWithAQuantityAndAnEntryPrice'),
               ],
             ] as const
           ).map(([label, value, hint]) => (
@@ -99,7 +100,7 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
           <div className="space-y-1.5">
             <p className="inline-flex items-center gap-1.5 text-caption text-text-muted">
               <Layers size={13} aria-hidden />
-              Currencies in the document
+              {msg('portfolio.currenciesInTheDocument')}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {view.assessment.currencies.map((currency) => (
@@ -113,12 +114,11 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
               ))}
               {view.assessment.currencies.length <= 1 ? (
                 <span className="text-caption text-text-faint">
-                  A single currency, so the priced positions can be summed into one total.
+                  {msg('portfolio.aSingleCurrencySoThePriced')}
                 </span>
               ) : (
                 <span className="text-caption text-text-warning">
-                  More than one currency and no rate source is wired, so the totals are grouped
-                  rather than converted.
+                  {msg('portfolio.moreThanOneCurrencyAndNo')}
                 </span>
               )}
             </div>
@@ -127,7 +127,7 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
           <div className="space-y-1.5">
             <p className="inline-flex items-center gap-1.5 text-caption text-text-muted">
               <FolderTree size={13} aria-hidden />
-              Readiness
+              {msg('decisions.readiness')}
             </p>
             <ul className="space-y-1" role="list">
               {view.readiness.map((decision) => (
@@ -157,8 +157,7 @@ export function PortfolioOverview({ view, className }: PortfolioOverviewProps) {
 
         {view.assessment.truncated ? (
           <p className={cn('text-body text-warning')}>
-            The document declares more positions than the engine reads at once, so only the first
-            ones were used. The rest were not silently included.
+            {msg('portfolio.theDocumentDeclaresMorePositionsThan')}
           </p>
         ) : null}
 

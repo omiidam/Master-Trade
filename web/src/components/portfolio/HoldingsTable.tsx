@@ -21,6 +21,7 @@ import {
   issueTone,
 } from './labels';
 import type { PortfolioMetrics, PositionMetrics } from '@shared/portfolio/model';
+import { msg } from '../../i18n/index.js';
 
 /**
  * Every position, with what could be computed about it and what could not.
@@ -72,7 +73,7 @@ function Row({ position }: { position: PositionMetrics }) {
           <Trend
             value={position.unrealisedPnl}
             format={(value) => formatMoney(value, priceCurrency)}
-            unavailable="not priced"
+            unavailable={msg('holdingsTable.notPriced')}
             size="body"
           />
           {position.unrealisedReturnPercent === null ? null : (
@@ -110,7 +111,7 @@ function Row({ position }: { position: PositionMetrics }) {
       <TableCell>
         <div className="flex flex-col gap-1">
           {position.findings.length === 0 ? (
-            <Badge tone="success">complete</Badge>
+            <Badge tone="success">{msg('portfolio.complete')}</Badge>
           ) : (
             position.findings.map((code) => (
               <Badge key={code} tone={issueTone(code)}>
@@ -120,7 +121,7 @@ function Row({ position }: { position: PositionMetrics }) {
           )}
           {position.priceAgeHours === null ? null : (
             <span className="text-caption text-text-faint">
-              price {describePriceAge(position.priceAgeHours)}
+              {msg('portfolio.price')} {describePriceAge(position.priceAgeHours)}
             </span>
           )}
         </div>
@@ -137,24 +138,24 @@ export function HoldingsTable({ metrics, className }: HoldingsTableProps) {
     <Table
       density="spacious"
       minWidth={896}
-      label="Declared positions with the figures computed from each one"
+      label={msg('holdingsTable.declaredPositionsWithTheFiguresComputedFromEach')}
       className={cn('text-body', className)}
     >
       <TableHead>
-        <TableHeaderCell>Position</TableHeaderCell>
-        <TableHeaderCell numeric>Market value</TableHeaderCell>
-        <TableHeaderCell numeric>Cost basis</TableHeaderCell>
-        <TableHeaderCell>Unrealised P/L</TableHeaderCell>
-        <TableHeaderCell>Weight</TableHeaderCell>
-        <TableHeaderCell>Quantity</TableHeaderCell>
-        <TableHeaderCell>Findings</TableHeaderCell>
+        <TableHeaderCell>{msg('portfolio.position2')}</TableHeaderCell>
+        <TableHeaderCell numeric>{msg('portfolio.marketValue')}</TableHeaderCell>
+        <TableHeaderCell numeric>{msg('portfolio.costBasis')}</TableHeaderCell>
+        <TableHeaderCell>{msg('portfolio.unrealisedPL')}</TableHeaderCell>
+        <TableHeaderCell>{msg('portfolio.weight')}</TableHeaderCell>
+        <TableHeaderCell>{msg('portfolio.quantity')}</TableHeaderCell>
+        <TableHeaderCell>{msg('portfolio.findings')}</TableHeaderCell>
       </TableHead>
       <TableBody>
         {metrics.positions.length === 0 ? (
           <TableEmptyRow
             colSpan={7}
-            title="No positions to show"
-            description="Nothing has been declared for this account yet. Nothing is displayed in place of a holding: an illustrative row would be a factual claim about somebody's money."
+            title={msg('portfolio.noPositionsToShow')}
+            description={msg('holdingsTable.nothingHasBeenDeclaredForThisAccountYet')}
           />
         ) : (
           metrics.positions.map((position) => <Row key={position.id} position={position} />)

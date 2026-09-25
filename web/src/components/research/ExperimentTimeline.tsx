@@ -5,6 +5,7 @@ import { formatRelative, formatTimestamp } from '../../lib/format';
 import { Badge, type BadgeTone } from '../Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
+import { msg } from '../../i18n/index.js';
 
 export type ExperimentEventKind =
   'created' | 'evaluation-attached' | 'status-change' | 'approval-requested' | 'abandoned';
@@ -21,23 +22,41 @@ export interface ExperimentTimelineEntryInput {
 
 const KIND_META: Record<ExperimentEventKind, { label: string; tone: BadgeTone; icon: ReactNode }> =
   {
-    created: { label: 'Created', tone: 'neutral', icon: <CalendarPlus size={13} aria-hidden /> },
+    created: {
+      get label(): string {
+        return msg('memoryTimeline.created');
+      },
+      tone: 'neutral',
+      icon: <CalendarPlus size={13} aria-hidden />,
+    },
     'evaluation-attached': {
-      label: 'Evaluation attached',
+      get label(): string {
+        return msg('experimentTimeline.evaluationAttached');
+      },
       tone: 'info',
       icon: <ClipboardCheck size={13} aria-hidden />,
     },
     'status-change': {
-      label: 'Status change',
+      get label(): string {
+        return msg('experimentTimeline.statusChange');
+      },
       tone: 'neutral',
       icon: <Zap size={13} aria-hidden />,
     },
     'approval-requested': {
-      label: 'Approval requested',
+      get label(): string {
+        return msg('experimentTimeline.approvalRequested');
+      },
       tone: 'warning',
       icon: <ShieldCheck size={13} aria-hidden />,
     },
-    abandoned: { label: 'Abandoned', tone: 'outline', icon: <XCircle size={13} aria-hidden /> },
+    abandoned: {
+      get label(): string {
+        return msg('research.abandoned');
+      },
+      tone: 'outline',
+      icon: <XCircle size={13} aria-hidden />,
+    },
   };
 
 export interface ExperimentTimelineProps {
@@ -75,14 +94,16 @@ export function ExperimentTimeline({
           <CardTitle className="text-body">{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </div>
-        <Badge tone="neutral">{entries.length} events</Badge>
+        <Badge tone="neutral">
+          {entries.length} {msg('memory.events')}
+        </Badge>
       </CardHeader>
       <CardContent>
         {sorted.length === 0 ? (
           <EmptyState
             icon={<Hourglass size={22} aria-hidden />}
-            title="Nothing recorded yet"
-            description="An experiment has no history until a hypothesis is written, so this list starts empty by design."
+            title={msg('research.nothingRecordedYet')}
+            description={msg('experimentTimeline.anExperimentHasNoHistoryUntilAHypothesis')}
           />
         ) : (
           <ol className="space-y-0">
@@ -107,7 +128,7 @@ export function ExperimentTimeline({
                       <Badge tone={meta.tone}>{meta.label}</Badge>
                       {entry.sampleSize === null ? null : (
                         <span className="num text-caption text-text-muted">
-                          n = {entry.sampleSize}
+                          {msg('research.n')} {entry.sampleSize}
                         </span>
                       )}
                       <span className="text-caption text-text-faint">

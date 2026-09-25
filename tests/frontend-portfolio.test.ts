@@ -22,6 +22,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 import { APP_PAGE_IDS, NAV_SECTIONS } from '../web/src/config/navigation.js';
+import { translate } from '../web/src/i18n/index.js';
+import { copyIn, copyOf } from './helpers/source-copy.js';
 
 const read = (path: string): string => readFileSync(path, 'utf8');
 
@@ -43,7 +45,7 @@ describe('the portfolio navigation entry', () => {
 
     const section = NAV_SECTIONS.find((entry) => entry.id === 'portfolio');
     expect(section).toBeDefined();
-    expect(section?.label).toBe('Portfolio');
+    expect(section && translate('en', section.labelKey)).toBe('Portfolio');
     expect(section?.group).toBe('workspace');
 
     // No portfolio subsection is its own navigation entry.
@@ -54,7 +56,9 @@ describe('the portfolio navigation entry', () => {
 
   it('describes a measurement rather than a promise', () => {
     const section = NAV_SECTIONS.find((entry) => entry.id === 'portfolio');
-    const text = `${section?.label ?? ''} ${section?.description ?? ''}`.toLowerCase();
+    const text = section
+      ? `${translate('en', section.labelKey)} ${translate('en', section.descriptionKey)}`.toLowerCase()
+      : '';
     // No execution vocabulary anywhere in the navigation, and no claim about returns.
     for (const word of ['order', 'execute', 'broker', 'buy now', 'profit', 'guarantee']) {
       expect(text).not.toContain(word);
@@ -123,11 +127,8 @@ describe('the portfolio components', () => {
     const visible: string[] = [];
     for (const path of [...COMPONENT_FILES, 'web/src/pages/PortfolioPage.tsx']) {
       const source = read(path);
-      // Literal text the user can read: tab labels, JSX text nodes, and button labels.
-      for (const match of source.matchAll(/label:\s*'([^']+)'/g)) visible.push(match[1] ?? '');
-      for (const match of source.matchAll(/>\s*([A-Z][A-Za-z ,'’-]{3,40})\s*</g)) {
-        visible.push(match[1] ?? '');
-      }
+      // Every string the user can read, resolved from the keys the file names.
+      visible.push(...copyIn(source));
     }
     expect(visible.length).toBeGreaterThan(10);
     expect(() => assertNoExecutionControls(visible)).not.toThrow();
@@ -142,7 +143,7 @@ describe('the portfolio components', () => {
     const labels = read('web/src/components/portfolio/labels.ts');
     expect(labels).toMatch(/if \(value === null\) return '—'/);
     // And the card says out loud why a zero would have been a false claim.
-    expect(value).toContain('A zero here would have been a factual claim');
+    expect(copyOf(value)).toContain('A zero here would have been a factual claim');
   });
 
   it('reports the engine verdict rather than re-deriving a threshold', () => {

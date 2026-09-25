@@ -3,6 +3,7 @@ import { Minimize2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '../Button';
 import { cn } from '../../lib/cn';
+import { msg } from '../../i18n/index.js';
 
 export interface FullscreenChartViewerProps {
   open: boolean;
@@ -74,7 +75,7 @@ export function FullscreenChartViewer({
                     label={closeLabel}
                     leadingIcon={<X size={14} aria-hidden />}
                   >
-                    Close
+                    {msg('journal.close')}
                   </Button>
                 </RadixDialog.Close>
               </div>

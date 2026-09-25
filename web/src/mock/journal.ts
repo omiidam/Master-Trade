@@ -1,3 +1,4 @@
+import { liveLabels, msg } from '../i18n/index.js';
 /**
  * Trading journal — vocabulary, labels and illustrative aggregates.
  *
@@ -20,100 +21,105 @@
  * the shared vocabulary so the two can be imported without a value cycle.
  */
 
-export const JOURNAL_PREVIEW_NOTICE =
-  'Interface preview — illustrative journal data. No journal store is connected in this phase, so the trades, screenshots and statistics below are layout examples, not your records and not measured performance.';
+export function previewNotice(): string {
+  return msg('journal.previewNotice');
+}
 
-export const JOURNAL_METHOD_NOTE =
-  'The journal is a record, not a scoreboard. A rate without its sample size is a rumour, so sample size is shown beside every rate, and an unrecorded trade stays unrecorded.';
+export function methodNote(): string {
+  return msg('journal.methodNote');
+}
 
-export const JOURNAL_STAT_NOTE =
-  'Every headline figure is an illustrative constant laid out by hand. Real values will come from deterministic journal analytics in the trading engine, never from the model.';
+export function statNote(): string {
+  return msg('journal.statNote');
+}
 
-export const JOURNAL_ATTACHMENT_NOTE =
-  'Attachment metadata only — no image files are stored in this phase, so each preview is a placeholder drawn from the record.';
+export function attachmentNote(): string {
+  return msg('journal.attachmentNote');
+}
 
-export const AI_REVIEW_NOTICE =
-  'No model provider is connected to the journal in this phase. These panels show the states the review surface must handle; none of them contains a real review, and the completed state is a labelled layout example.';
+export function aiReviewNotice(): string {
+  return msg('journal.aiReviewNotice');
+}
 
 /* Vocabulary ------------------------------------------------------------- */
 
 export type TradeMarket = 'futures' | 'forex' | 'equities' | 'crypto';
 
-export const MARKET_LABEL: Record<TradeMarket, string> = {
-  futures: 'Futures',
-  forex: 'Forex',
-  equities: 'Equities',
-  crypto: 'Crypto',
-};
+export const MARKET_LABEL: Record<TradeMarket, string> = liveLabels({
+  futures: 'journal.market.futures',
+  forex: 'journal.market.forex',
+  equities: 'journal.market.equities',
+  crypto: 'journal.market.crypto',
+});
 
 export type TradeDirection = 'long' | 'short';
 
-export const DIRECTION_LABEL: Record<TradeDirection, string> = {
-  long: 'Long',
-  short: 'Short',
-};
+export const DIRECTION_LABEL: Record<TradeDirection, string> = liveLabels({
+  long: 'journal.direction.long',
+  short: 'journal.direction.short',
+});
 
 export type TradingSession = 'asia' | 'london' | 'overlap' | 'new-york';
 
-export const SESSION_LABEL: Record<TradingSession, string> = {
-  asia: 'Asia',
-  london: 'London',
-  overlap: 'London / New York overlap',
-  'new-york': 'New York',
-};
+export const SESSION_LABEL: Record<TradingSession, string> = liveLabels({
+  asia: 'journal.session.asia',
+  london: 'journal.session.london',
+  overlap: 'journal.session.overlap',
+  'new-york': 'journal.session.new-york',
+});
 
 export type TradeStatus = 'closed' | 'open' | 'incomplete' | 'archived';
 
-export const STATUS_LABEL: Record<TradeStatus, string> = {
-  closed: 'Closed',
-  open: 'Open',
-  incomplete: 'Incomplete',
-  archived: 'Archived',
-};
+export const STATUS_LABEL: Record<TradeStatus, string> = liveLabels({
+  closed: 'journal.status.closed',
+  open: 'journal.status.open',
+  incomplete: 'journal.status.incomplete',
+  archived: 'journal.status.archived',
+});
 
 /** `pending` is the only honest result for a trade that has not been scored. */
 export type TradeResult = 'win' | 'loss' | 'breakeven' | 'pending';
 
-export const RESULT_LABEL: Record<TradeResult, string> = {
-  win: 'Win',
-  loss: 'Loss',
-  breakeven: 'Breakeven',
-  pending: 'Not scored',
-};
+export const RESULT_LABEL: Record<TradeResult, string> = liveLabels({
+  win: 'journal.result.win',
+  loss: 'journal.result.loss',
+  breakeven: 'journal.result.breakeven',
+  pending: 'journal.result.pending',
+});
 
 export type RuleCompliance = 'compliant' | 'partial' | 'violation' | 'not-assessed';
 
-export const COMPLIANCE_LABEL: Record<RuleCompliance, string> = {
-  compliant: 'Compliant',
-  partial: 'Partial',
-  violation: 'Rule broken',
-  'not-assessed': 'Not assessed',
-};
+export const COMPLIANCE_LABEL: Record<RuleCompliance, string> = liveLabels({
+  compliant: 'journal.compliance.compliant',
+  partial: 'journal.compliance.partial',
+  violation: 'journal.compliance.violation',
+  'not-assessed': 'journal.compliance.not-assessed',
+});
 
-export const COMPLIANCE_EXPLANATION: Record<RuleCompliance, string> = {
-  compliant: 'Every rule on the pre-trade checklist was followed.',
-  partial: 'Some rules were followed; at least one was not.',
-  violation: 'A rule was broken deliberately or the plan was overridden mid-trade.',
-  'not-assessed': 'The trade has not been reviewed against the checklist yet.',
-};
+export const COMPLIANCE_EXPLANATION: Record<RuleCompliance, string> = liveLabels({
+  compliant: 'journal.compliance2.compliant',
+  partial: 'journal.compliance2.partial',
+  violation: 'journal.compliance2.violation',
+  'not-assessed': 'journal.compliance2.not-assessed',
+});
 
 export type ReviewState = 'not-required' | 'required' | 'reviewed';
 
-export const REVIEW_STATE_LABEL: Record<ReviewState, string> = {
-  'not-required': 'Review not required',
-  required: 'Review required',
-  reviewed: 'Reviewed',
-};
+export const REVIEW_STATE_LABEL: Record<ReviewState, string> = liveLabels({
+  'not-required': 'journal.reviewState.not-required',
+  required: 'journal.reviewState.required',
+  reviewed: 'journal.reviewState.reviewed',
+});
 
 export type AiReviewState = 'not-available' | 'pending' | 'processing' | 'completed' | 'failed';
 
-export const AI_REVIEW_STATE_LABEL: Record<AiReviewState, string> = {
-  'not-available': 'Not available',
-  pending: 'Pending',
-  processing: 'Processing',
-  completed: 'Completed',
-  failed: 'Failed',
-};
+export const AI_REVIEW_STATE_LABEL: Record<AiReviewState, string> = liveLabels({
+  'not-available': 'journal.aiReviewState.not-available',
+  pending: 'journal.aiReviewState.pending',
+  processing: 'journal.aiReviewState.processing',
+  completed: 'journal.aiReviewState.completed',
+  failed: 'journal.aiReviewState.failed',
+});
 
 /** Ordered so the state gallery reads as a lifecycle, not an arbitrary list. */
 export const AI_REVIEW_STATE_ORDER: readonly AiReviewState[] = [
@@ -136,18 +142,18 @@ export type EmotionalState =
   | 'frustrated'
   | 'detached';
 
-export const EMOTIONAL_STATE_LABEL: Record<EmotionalState, string> = {
-  calm: 'Calm',
-  focused: 'Focused',
-  confident: 'Confident',
-  anxious: 'Anxious',
-  fearful: 'Fearful',
-  greedy: 'Greedy',
-  impulsive: 'Impulsive',
-  hesitant: 'Hesitant',
-  frustrated: 'Frustrated',
-  detached: 'Detached',
-};
+export const EMOTIONAL_STATE_LABEL: Record<EmotionalState, string> = liveLabels({
+  calm: 'journal.emotionalState.calm',
+  focused: 'journal.emotionalState.focused',
+  confident: 'journal.emotionalState.confident',
+  anxious: 'journal.emotionalState.anxious',
+  fearful: 'journal.emotionalState.fearful',
+  greedy: 'journal.emotionalState.greedy',
+  impulsive: 'journal.emotionalState.impulsive',
+  hesitant: 'journal.emotionalState.hesitant',
+  frustrated: 'journal.emotionalState.frustrated',
+  detached: 'journal.emotionalState.detached',
+});
 
 /** Emotional states that are read as a warning rather than a neutral label. */
 export const EMOTIONAL_STATE_CAUTION: Record<EmotionalState, boolean> = {
@@ -170,11 +176,11 @@ export type TradeTimeframe = (typeof TRADE_TIMEFRAMES)[number];
 
 export type SetupFamily = 'continuation' | 'reversal' | 'range';
 
-export const SETUP_FAMILY_LABEL: Record<SetupFamily, string> = {
-  continuation: 'Continuation',
-  reversal: 'Reversal',
-  range: 'Range',
-};
+export const SETUP_FAMILY_LABEL: Record<SetupFamily, string> = liveLabels({
+  continuation: 'journal.setupFamily.continuation',
+  reversal: 'journal.setupFamily.reversal',
+  range: 'journal.setupFamily.range',
+});
 
 export interface TradeSetup {
   id: string;
@@ -187,39 +193,63 @@ export interface TradeSetup {
 export const TRADE_SETUPS: readonly TradeSetup[] = [
   {
     id: 'breakout-retest',
-    label: 'Breakout retest',
+    get label(): string {
+      return msg('journal.breakoutRetest');
+    },
     family: 'continuation',
-    premise: 'A level breaks, price returns to it, and the retest holds before continuation.',
+    get premise(): string {
+      return msg('journal.aLevelBreaksPriceReturnsToItAnd');
+    },
   },
   {
     id: 'trend-pullback',
-    label: 'Trend pullback',
+    get label(): string {
+      return msg('journal.trendPullback');
+    },
     family: 'continuation',
-    premise: 'An established trend pulls into a zone of prior demand without breaking structure.',
+    get premise(): string {
+      return msg('journal.anEstablishedTrendPullsIntoAZoneOf');
+    },
   },
   {
     id: 'failed-breakout',
-    label: 'Failed breakout',
+    get label(): string {
+      return msg('journal.failedBreakout');
+    },
     family: 'reversal',
-    premise: 'A breakout attempt fails and price re-enters the range it left.',
+    get premise(): string {
+      return msg('journal.aBreakoutAttemptFailsAndPriceReEntersThe');
+    },
   },
   {
     id: 'liquidity-sweep',
-    label: 'Liquidity sweep',
+    get label(): string {
+      return msg('journal.liquiditySweep');
+    },
     family: 'reversal',
-    premise: 'An obvious high or low is taken and reclaimed within the same impulse.',
+    get premise(): string {
+      return msg('journal.anObviousHighOrLowIsTakenAnd');
+    },
   },
   {
     id: 'range-reversal',
-    label: 'Range reversal',
+    get label(): string {
+      return msg('journal.rangeReversal');
+    },
     family: 'range',
-    premise: 'Price reaches the edge of a defined range and rejects it.',
+    get premise(): string {
+      return msg('journal.priceReachesTheEdgeOfADefinedRange');
+    },
   },
   {
     id: 'gap-continuation',
-    label: 'Gap continuation',
+    get label(): string {
+      return msg('journal.gapContinuation');
+    },
     family: 'continuation',
-    premise: 'A gap holds its opening range instead of filling.',
+    get premise(): string {
+      return msg('journal.aGapHoldsItsOpeningRangeInsteadOf');
+    },
   },
 ];
 
@@ -243,14 +273,54 @@ export interface ChecklistItem {
  * against; they are policy data, so they live here rather than in a component.
  */
 export const JOURNAL_RULE_CHECKLIST: readonly ChecklistItem[] = [
-  { id: 'bias', label: 'Higher-timeframe bias written before entry' },
-  { id: 'level', label: 'Trade is taken from a pre-marked level' },
-  { id: 'invalidation', label: 'Invalidation level written down before entry' },
-  { id: 'risk', label: 'Risk is within the daily budget' },
-  { id: 'size', label: 'Position size matches the written risk' },
-  { id: 'session', label: 'The setup is valid for this trading session' },
-  { id: 'news', label: 'No high-impact event inside the holding window' },
-  { id: 'reward', label: 'Planned reward is at least twice the risk' },
+  {
+    id: 'bias',
+    get label(): string {
+      return msg('journal.higherTimeframeBiasWrittenBeforeEntry');
+    },
+  },
+  {
+    id: 'level',
+    get label(): string {
+      return msg('journal.tradeIsTakenFromAPreMarkedLevel');
+    },
+  },
+  {
+    id: 'invalidation',
+    get label(): string {
+      return msg('journal.invalidationLevelWrittenDownBeforeEntry');
+    },
+  },
+  {
+    id: 'risk',
+    get label(): string {
+      return msg('journal.riskIsWithinTheDailyBudget');
+    },
+  },
+  {
+    id: 'size',
+    get label(): string {
+      return msg('journal.positionSizeMatchesTheWrittenRisk');
+    },
+  },
+  {
+    id: 'session',
+    get label(): string {
+      return msg('journal.theSetupIsValidForThisTradingSession');
+    },
+  },
+  {
+    id: 'news',
+    get label(): string {
+      return msg('journal.noHighImpactEventInsideTheHoldingWindow');
+    },
+  },
+  {
+    id: 'reward',
+    get label(): string {
+      return msg('journal.plannedRewardIsAtLeastTwiceTheRisk');
+    },
+  },
 ];
 
 /* Trade record shape ---------------------------------------------------- */
@@ -326,12 +396,12 @@ export interface TradeReview {
 
 export type AttachmentKind = 'entry' | 'exit' | 'markup' | 'analysis';
 
-export const ATTACHMENT_KIND_LABEL: Record<AttachmentKind, string> = {
-  entry: 'Entry screenshot',
-  exit: 'Exit screenshot',
-  markup: 'Chart markup',
-  analysis: 'Analysis image',
-};
+export const ATTACHMENT_KIND_LABEL: Record<AttachmentKind, string> = liveLabels({
+  entry: 'journal.attachmentKind.entry',
+  exit: 'journal.attachmentKind.exit',
+  markup: 'journal.attachmentKind.markup',
+  analysis: 'journal.attachmentKind.analysis',
+});
 
 export interface TradeAttachment {
   id: string;
@@ -376,15 +446,15 @@ export interface JournalTrade {
 export type TradeEventKind =
   'recorded' | 'entry' | 'management' | 'exit' | 'review' | 'edit' | 'assessment';
 
-export const TRADE_EVENT_LABEL: Record<TradeEventKind, string> = {
-  recorded: 'Trade recorded',
-  entry: 'Entry filled',
-  management: 'Plan adjusted',
-  exit: 'Position closed',
-  review: 'Review written',
-  edit: 'Record edited',
-  assessment: 'Compliance assessed',
-};
+export const TRADE_EVENT_LABEL: Record<TradeEventKind, string> = liveLabels({
+  recorded: 'journal.tradeEvent.recorded',
+  entry: 'journal.tradeEvent.entry',
+  management: 'journal.tradeEvent.management',
+  exit: 'journal.tradeEvent.exit',
+  review: 'journal.tradeEvent.review',
+  edit: 'journal.tradeEvent.edit',
+  assessment: 'journal.tradeEvent.assessment',
+});
 
 export interface TradeEvent {
   id: string;
@@ -408,14 +478,14 @@ export const TRADE_RANGES = [
 
 export type TradeRange = (typeof TRADE_RANGES)[number];
 
-export const TRADE_RANGE_LABEL: Record<TradeRange, string> = {
-  today: 'Today',
-  'this-week': 'This week',
-  'this-month': 'This month',
-  'last-30': 'Last 30 days',
-  'last-90': 'Last 90 days',
-  custom: 'Custom range',
-};
+export const TRADE_RANGE_LABEL: Record<TradeRange, string> = liveLabels({
+  today: 'journal.tradeRange.today',
+  'this-week': 'journal.tradeRange.this-week',
+  'this-month': 'journal.tradeRange.this-month',
+  'last-30': 'journal.tradeRange.last-30',
+  'last-90': 'journal.tradeRange.last-90',
+  custom: 'journal.tradeRange.custom',
+});
 
 /**
  * The date the preview treats as "now". A fixed constant, so a range filter and
@@ -690,98 +760,170 @@ export interface JournalStat {
 export const mockJournalStats: readonly JournalStat[] = [
   {
     id: 'total-trades',
-    label: 'Total trades',
+    get label(): string {
+      return msg('journal.totalTrades');
+    },
     value: '16',
     unit: 'trades',
-    comparison: '14 scored · 2 still open',
-    basis: 'All records in the current view',
+    get comparison(): string {
+      return msg('journal.14Scored2StillOpen');
+    },
+    get basis(): string {
+      return msg('journal.allRecordsInTheCurrentView');
+    },
     tone: 'neutral',
-    hint: 'The denominator for every other figure on this page.',
+    get hint(): string {
+      return msg('journal.theDenominatorForEveryOtherFigureOnThis');
+    },
   },
   {
     id: 'win-rate',
-    label: 'Win rate',
+    get label(): string {
+      return msg('journal.winRate');
+    },
     value: '50.0',
     unit: '%',
-    comparison: '+4.2 pts vs previous 14',
-    basis: '7 wins in 14 scored trades',
+    get comparison(): string {
+      return msg('journal.42PtsVsPrevious14');
+    },
+    get basis(): string {
+      return msg('journal.7WinsIn14ScoredTrades');
+    },
     tone: 'positive',
-    hint: 'A rate is only meaningful with its sample attached.',
+    get hint(): string {
+      return msg('journal.aRateIsOnlyMeaningfulWithItsSample');
+    },
   },
   {
     id: 'average-r',
-    label: 'Average R multiple',
+    get label(): string {
+      return msg('journal.averageRMultiple');
+    },
     value: '+0.69',
     unit: 'R',
-    comparison: '+0.21R vs previous 14',
-    basis: '14 scored trades',
+    get comparison(): string {
+      return msg('journal.021RVsPrevious14');
+    },
+    get basis(): string {
+      return msg('journal.14ScoredTrades');
+    },
     tone: 'positive',
   },
   {
     id: 'profit-factor',
-    label: 'Profit factor',
+    get label(): string {
+      return msg('journal.profitFactor');
+    },
     value: '2.67',
-    comparison: '+0.44 vs previous 14',
-    basis: 'Gross win 15.43R ÷ gross loss 5.77R',
+    get comparison(): string {
+      return msg('journal.044VsPrevious14');
+    },
+    get basis(): string {
+      return msg('journal.grossWin1543RGrossLoss577R');
+    },
     tone: 'positive',
   },
   {
     id: 'expectancy',
-    label: 'Expectancy',
+    get label(): string {
+      return msg('data.expectancy');
+    },
     value: '+0.69',
     unit: 'R / trade',
-    comparison: 'Above the 0.25R study threshold',
-    basis: '14 scored trades',
+    get comparison(): string {
+      return msg('journal.aboveThe025RStudyThreshold');
+    },
+    get basis(): string {
+      return msg('journal.14ScoredTrades');
+    },
     tone: 'positive',
-    hint: 'The one figure that survives a small sample best — and it still needs one.',
+    get hint(): string {
+      return msg('journal.theOneFigureThatSurvivesASmallSample');
+    },
   },
   {
     id: 'max-drawdown',
-    label: 'Maximum drawdown',
+    get label(): string {
+      return msg('journal.maximumDrawdown');
+    },
     value: '−1.6',
     unit: 'R',
-    comparison: 'Worst peak-to-trough on the R curve',
-    basis: 'R curve across 14 scored trades',
+    get comparison(): string {
+      return msg('journal.worstPeakToTroughOnTheRCurve');
+    },
+    get basis(): string {
+      return msg('journal.rCurveAcross14ScoredTrades');
+    },
     tone: 'warning',
   },
   {
     id: 'net-performance',
-    label: 'Net performance',
+    get label(): string {
+      return msg('journal.netPerformance');
+    },
     value: '+9.63',
     unit: 'R',
-    comparison: 'Same as the last point on the equity curve',
-    basis: 'Sum of scored R, net of the curve',
+    get comparison(): string {
+      return msg('journal.sameAsTheLastPointOnTheEquity');
+    },
+    get basis(): string {
+      return msg('journal.sumOfScoredRNetOfTheCurve');
+    },
     tone: 'positive',
   },
   {
     id: 'average-risk',
-    label: 'Average risk per trade',
+    get label(): string {
+      return msg('journal.averageRiskPerTrade');
+    },
     value: '861',
     unit: 'per trade',
-    comparison: 'Stated in account currency',
-    basis: '16 records, planned risk',
+    get comparison(): string {
+      return msg('journal.statedInAccountCurrency');
+    },
+    get basis(): string {
+      return msg('journal.16RecordsPlannedRisk');
+    },
     tone: 'neutral',
-    hint: 'Risk consistency matters more than any single result.',
+    get hint(): string {
+      return msg('journal.riskConsistencyMattersMoreThanAnySingleResult');
+    },
   },
   {
     id: 'rule-compliance',
-    label: 'Rule compliance',
+    get label(): string {
+      return msg('journal.ruleCompliance');
+    },
     value: '61.5',
     unit: '%',
-    comparison: '8 compliant of 13 assessed',
-    basis: '3 trades not assessed yet',
+    get comparison(): string {
+      return msg('journal.8CompliantOf13Assessed');
+    },
+    get basis(): string {
+      return msg('journal.3TradesNotAssessedYet');
+    },
     tone: 'warning',
-    hint: 'The 3 unassessed trades are excluded rather than counted as compliant.',
+    get hint(): string {
+      return msg('journal.the3UnassessedTradesAreExcludedRatherThan');
+    },
   },
   {
     id: 'average-rr',
-    label: 'Average reward-to-risk',
+    get label(): string {
+      return msg('journal.averageRewardToRisk');
+    },
     value: '2.5',
     unit: ': 1',
-    comparison: 'Planned, before entry',
-    basis: 'Planned levels of 16 records',
+    get comparison(): string {
+      return msg('journal.plannedBeforeEntry');
+    },
+    get basis(): string {
+      return msg('journal.plannedLevelsOf16Records');
+    },
     tone: 'neutral',
-    hint: 'Planned, not achieved: realised R is reported separately.',
+    get hint(): string {
+      return msg('journal.plannedNotAchievedRealisedRIsReportedSeparately');
+    },
   },
 ];
 
@@ -806,8 +948,12 @@ export interface JournalSeries {
 /** Cumulative R after each scored trade, in chronological order. */
 export const mockEquityCurve: JournalSeries = {
   id: 'equity-curve',
-  title: 'Equity curve',
-  description: 'Cumulative R after each scored trade, oldest first.',
+  get title(): string {
+    return msg('journal.equityCurve');
+  },
+  get description(): string {
+    return msg('journal.cumulativeRAfterEachScoredTradeOldestFirst');
+  },
   points: [
     { label: 'TR-028', value: -1.2 },
     { label: 'TR-029', value: 0.7 },
@@ -830,8 +976,12 @@ export const mockEquityCurve: JournalSeries = {
 /** Running distance below the high-water mark of the R curve. Never positive. */
 export const mockDrawdownCurve: JournalSeries = {
   id: 'drawdown',
-  title: 'Drawdown',
-  description: 'Distance below the high-water mark of the R curve. Zero means a new high.',
+  get title(): string {
+    return msg('journal.drawdown');
+  },
+  get description(): string {
+    return msg('journal.distanceBelowTheHighWaterMarkOfTheR');
+  },
   points: [
     { label: 'TR-028', value: -1.2 },
     { label: 'TR-029', value: 0 },
@@ -853,9 +1003,12 @@ export const mockDrawdownCurve: JournalSeries = {
 
 export const mockCumulativeR: JournalSeries = {
   id: 'cumulative-r',
-  title: 'Cumulative R performance',
-  description:
-    'The same curve as equity, read as one number per trade rather than a running total.',
+  get title(): string {
+    return msg('journal.cumulativeRPerformance');
+  },
+  get description(): string {
+    return msg('journal.theSameCurveAsEquityReadAsOne');
+  },
   points: [
     { label: 'TR-028', value: -1.2 },
     { label: 'TR-029', value: 1.9 },
@@ -877,9 +1030,12 @@ export const mockCumulativeR: JournalSeries = {
 
 export const mockExpectancyOverTime: JournalSeries = {
   id: 'expectancy',
-  title: 'Expectancy over time',
-  description:
-    'Running average R as each new scored trade lands — shown to move, and to be ignored early.',
+  get title(): string {
+    return msg('journal.expectancyOverTime');
+  },
+  get description(): string {
+    return msg('journal.runningAverageRAsEachNewScoredTrade');
+  },
   points: [
     { label: '5', value: 0.2 },
     { label: '6', value: 0.35 },
@@ -897,8 +1053,12 @@ export const mockExpectancyOverTime: JournalSeries = {
 
 export const mockRiskConsistency: JournalSeries = {
   id: 'risk-consistency',
-  title: 'Risk consistency',
-  description: 'Planned risk per trade against the account budget. Flat is the goal, not high.',
+  get title(): string {
+    return msg('journal.riskConsistency');
+  },
+  get description(): string {
+    return msg('journal.plannedRiskPerTradeAgainstTheAccountBudget');
+  },
   points: [
     { label: 'TR-028', value: 900 },
     { label: 'TR-029', value: 1350 },
@@ -920,35 +1080,82 @@ export const mockRiskConsistency: JournalSeries = {
 
 export const mockWinLossDistribution: JournalSeries = {
   id: 'win-loss',
-  title: 'Win / loss distribution',
-  description: 'Every record accounted for, including the two that are not scored yet.',
+  get title(): string {
+    return msg('journal.winLossDistribution');
+  },
+  get description(): string {
+    return msg('journal.everyRecordAccountedForIncludingTheTwoThat');
+  },
   bars: true,
   points: [
-    { label: 'Wins', value: 7 },
-    { label: 'Losses', value: 5 },
-    { label: 'Breakeven', value: 2 },
-    { label: 'Open', value: 1 },
-    { label: 'Incomplete', value: 1 },
+    {
+      get label(): string {
+        return msg('journal.wins2');
+      },
+      value: 7,
+    },
+    {
+      get label(): string {
+        return msg('journal.losses2');
+      },
+      value: 5,
+    },
+    {
+      get label(): string {
+        return msg('journal.result.breakeven');
+      },
+      value: 2,
+    },
+    {
+      get label(): string {
+        return msg('journal.status.open');
+      },
+      value: 1,
+    },
+    {
+      get label(): string {
+        return msg('journal.status.incomplete');
+      },
+      value: 1,
+    },
   ],
   unit: 'trades',
 };
 
 export const mockAverageWinLoss: JournalSeries = {
   id: 'average-win-loss',
-  title: 'Average win vs average loss',
-  description: 'The ratio that makes a below-50% win rate survivable.',
+  get title(): string {
+    return msg('journal.averageWinVsAverageLoss');
+  },
+  get description(): string {
+    return msg('journal.theRatioThatMakesABelow50WinRate');
+  },
   bars: true,
   points: [
-    { label: 'Average win', value: 2.2 },
-    { label: 'Average loss', value: -1.15 },
+    {
+      get label(): string {
+        return msg('journal.averageWin');
+      },
+      value: 2.2,
+    },
+    {
+      get label(): string {
+        return msg('journal.averageLoss');
+      },
+      value: -1.15,
+    },
   ],
   unit: 'R',
 };
 
 export const mockTradeDuration: JournalSeries = {
   id: 'trade-duration',
-  title: 'Trade duration',
-  description: 'Holding time across the 14 scored trades.',
+  get title(): string {
+    return msg('journal.tradeDuration');
+  },
+  get description(): string {
+    return msg('journal.holdingTimeAcrossThe14ScoredTrades');
+  },
   bars: true,
   points: [
     { label: '< 15m', value: 3 },
@@ -974,7 +1181,9 @@ export interface BreakdownRow {
 export const mockPlannedVsActual: readonly BreakdownRow[] = [
   {
     id: 'breakout-retest',
-    label: 'Breakout retest',
+    get label(): string {
+      return msg('journal.breakoutRetest');
+    },
     sample: 2,
     winRatePct: 50.0,
     averageR: 0.5,
@@ -982,7 +1191,9 @@ export const mockPlannedVsActual: readonly BreakdownRow[] = [
   },
   {
     id: 'failed-breakout',
-    label: 'Failed breakout',
+    get label(): string {
+      return msg('journal.failedBreakout');
+    },
     sample: 2,
     winRatePct: 50.0,
     averageR: 0.2,
@@ -990,7 +1201,9 @@ export const mockPlannedVsActual: readonly BreakdownRow[] = [
   },
   {
     id: 'trend-pullback',
-    label: 'Trend pullback',
+    get label(): string {
+      return msg('journal.trendPullback');
+    },
     sample: 3,
     winRatePct: 100.0,
     averageR: 1.97,
@@ -998,7 +1211,9 @@ export const mockPlannedVsActual: readonly BreakdownRow[] = [
   },
   {
     id: 'range-reversal',
-    label: 'Range reversal',
+    get label(): string {
+      return msg('journal.rangeReversal');
+    },
     sample: 2,
     winRatePct: 0.0,
     averageR: -0.95,
@@ -1006,7 +1221,9 @@ export const mockPlannedVsActual: readonly BreakdownRow[] = [
   },
   {
     id: 'gap-continuation',
-    label: 'Gap continuation',
+    get label(): string {
+      return msg('journal.gapContinuation');
+    },
     sample: 2,
     winRatePct: 0.0,
     averageR: -0.04,
@@ -1014,7 +1231,9 @@ export const mockPlannedVsActual: readonly BreakdownRow[] = [
   },
   {
     id: 'liquidity-sweep',
-    label: 'Liquidity sweep',
+    get label(): string {
+      return msg('journal.liquiditySweep');
+    },
     sample: 3,
     winRatePct: 66.7,
     averageR: 1.43,
@@ -1027,34 +1246,94 @@ export const mockSetupPerformance: readonly BreakdownRow[] = mockPlannedVsActual
 export const mockSessionPerformance: readonly BreakdownRow[] = [
   {
     id: 'new-york',
-    label: 'New York',
+    get label(): string {
+      return msg('journal.session.new-york');
+    },
     sample: 5,
     winRatePct: 40.0,
     averageR: 0.59,
     plannedRr: 2.5,
   },
-  { id: 'london', label: 'London', sample: 5, winRatePct: 80.0, averageR: 1.56, plannedRr: 2.5 },
+  {
+    id: 'london',
+    get label(): string {
+      return msg('journal.session.london');
+    },
+    sample: 5,
+    winRatePct: 80.0,
+    averageR: 1.56,
+    plannedRr: 2.5,
+  },
   {
     id: 'overlap',
-    label: 'London / New York overlap',
+    get label(): string {
+      return msg('journal.session.overlap');
+    },
     sample: 2,
     winRatePct: 50.0,
     averageR: 0.4,
     plannedRr: 2.5,
   },
-  { id: 'asia', label: 'Asia', sample: 2, winRatePct: 0.0, averageR: -0.95, plannedRr: 2.5 },
+  {
+    id: 'asia',
+    get label(): string {
+      return msg('journal.session.asia');
+    },
+    sample: 2,
+    winRatePct: 0.0,
+    averageR: -0.95,
+    plannedRr: 2.5,
+  },
 ];
 
 export const mockDirectionPerformance: readonly BreakdownRow[] = [
-  { id: 'long', label: 'Long', sample: 10, winRatePct: 50.0, averageR: 0.46, plannedRr: 2.5 },
-  { id: 'short', label: 'Short', sample: 4, winRatePct: 75.0, averageR: 1.25, plannedRr: 2.5 },
+  {
+    id: 'long',
+    get label(): string {
+      return msg('journal.direction.long');
+    },
+    sample: 10,
+    winRatePct: 50.0,
+    averageR: 0.46,
+    plannedRr: 2.5,
+  },
+  {
+    id: 'short',
+    get label(): string {
+      return msg('journal.direction.short');
+    },
+    sample: 4,
+    winRatePct: 75.0,
+    averageR: 1.25,
+    plannedRr: 2.5,
+  },
 ];
 
 export const mockRuleComplianceBreakdown: readonly JournalSeriesPoint[] = [
-  { label: 'Compliant', value: 8 },
-  { label: 'Partial', value: 3 },
-  { label: 'Rule broken', value: 2 },
-  { label: 'Not assessed', value: 3 },
+  {
+    get label(): string {
+      return msg('journal.compliance.compliant');
+    },
+    value: 8,
+  },
+  {
+    get label(): string {
+      return msg('journal.compliance.partial');
+    },
+    value: 3,
+  },
+  {
+    get label(): string {
+      return msg('journal.compliance.violation');
+    },
+    value: 2,
+  },
+  {
+    get label(): string {
+      return msg('journal.compliance.not-assessed');
+    },
+    value: 3,
+  },
 ];
 
 export interface MistakeFrequency {
@@ -1069,45 +1348,69 @@ export interface MistakeFrequency {
 export const mockMistakeFrequency: readonly MistakeFrequency[] = [
   {
     id: 'no-written-invalidation',
-    label: 'No invalidation level written',
+    get label(): string {
+      return msg('journal.noInvalidationLevelWritten');
+    },
     occurrences: 5,
     share: 5 / 22,
-    lesson: 'Write the level before the entry, not after the drawdown.',
+    get lesson(): string {
+      return msg('journal.writeTheLevelBeforeTheEntryNotAfter');
+    },
   },
   {
     id: 'early-entry',
-    label: 'Entered before the level was reached',
+    get label(): string {
+      return msg('journal.enteredBeforeTheLevelWasReached');
+    },
     occurrences: 6,
     share: 6 / 22,
-    lesson: 'The retest is the trade. Anticipating it is a different, worse trade.',
+    get lesson(): string {
+      return msg('journal.theRetestIsTheTradeAnticipatingItIs');
+    },
   },
   {
     id: 'size-too-large',
-    label: 'Position larger than the written risk',
+    get label(): string {
+      return msg('journal.positionLargerThanTheWrittenRisk');
+    },
     occurrences: 4,
     share: 4 / 22,
-    lesson: 'Size is derived from the stop distance, never from conviction.',
+    get lesson(): string {
+      return msg('journal.sizeIsDerivedFromTheStopDistanceNever');
+    },
   },
   {
     id: 'moved-stop',
-    label: 'Stop moved away from the plan',
+    get label(): string {
+      return msg('journal.stopMovedAwayFromThePlan');
+    },
     occurrences: 3,
     share: 3 / 22,
-    lesson: 'Widening the stop changes the risk, so it changes the trade.',
+    get lesson(): string {
+      return msg('journal.wideningTheStopChangesTheRiskSoIt');
+    },
   },
   {
     id: 'late-exit',
-    label: 'Held past the exit plan',
+    get label(): string {
+      return msg('journal.heldPastTheExitPlan');
+    },
     occurrences: 2,
     share: 2 / 22,
-    lesson: 'The exit plan is part of the plan.',
+    get lesson(): string {
+      return msg('journal.theExitPlanIsPartOfThePlan');
+    },
   },
   {
     id: 'traded-into-news',
-    label: 'Held through a scheduled event',
+    get label(): string {
+      return msg('journal.heldThroughAScheduledEvent');
+    },
     occurrences: 2,
     share: 2 / 22,
-    lesson: 'Event risk is either sized for or avoided.',
+    get lesson(): string {
+      return msg('journal.eventRiskIsEitherSizedForOrAvoided');
+    },
   },
 ];
 
@@ -1129,14 +1432,14 @@ export const mockStreaks: StreakSummary = {
 
 export type CalendarDayState = 'win' | 'loss' | 'breakeven' | 'mixed' | 'open' | 'flat';
 
-export const CALENDAR_DAY_STATE_LABEL: Record<CalendarDayState, string> = {
-  win: 'Winning day',
-  loss: 'Losing day',
-  breakeven: 'Flat day',
-  mixed: 'Mixed day',
-  open: 'Open position',
-  flat: 'No trades',
-};
+export const CALENDAR_DAY_STATE_LABEL: Record<CalendarDayState, string> = liveLabels({
+  win: 'journal.calendarDayState.win',
+  loss: 'journal.calendarDayState.loss',
+  breakeven: 'journal.calendarDayState.breakeven',
+  mixed: 'journal.calendarDayState.mixed',
+  open: 'journal.calendarDayState.open',
+  flat: 'journal.calendarDayState.flat',
+});
 
 export interface JournalCalendarDay {
   /** ISO date, `YYYY-MM-DD`. */
@@ -1170,9 +1473,15 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     compliance: 'partial',
     mainSetupId: 'failed-breakout',
     emotionalScore: 6,
-    mistakes: ['One record still has no exit'],
-    lesson: 'An unclosed record cannot be reviewed, so it cannot teach anything yet.',
-    notes: 'Two positions carried over; one was left incomplete at the end of the session.',
+    get mistakes(): string[] {
+      return [msg('journal.oneRecordStillHasNoExit')];
+    },
+    get lesson(): string {
+      return msg('journal.anUnclosedRecordCannotBeReviewedSoIt');
+    },
+    get notes(): string {
+      return msg('journal.twoPositionsCarriedOverOneWasLeftIncomplete');
+    },
   },
   {
     date: '2026-09-03',
@@ -1183,8 +1492,12 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     compliance: 'not-assessed',
     mainSetupId: 'liquidity-sweep',
     emotionalScore: 5,
-    mistakes: ['Compliance not assessed'],
-    lesson: 'The sweep was real; the entry was early.',
+    get mistakes(): string[] {
+      return [msg('journal.complianceNotAssessed')];
+    },
+    get lesson(): string {
+      return msg('journal.theSweepWasRealTheEntryWasEarly');
+    },
     notes: '',
   },
   {
@@ -1197,8 +1510,12 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     mainSetupId: 'trend-pullback',
     emotionalScore: 7,
     mistakes: [],
-    lesson: 'Waiting for the pullback into the zone gave a stop that made sense.',
-    notes: 'Checklist fully followed.',
+    get lesson(): string {
+      return msg('journal.waitingForThePullbackIntoTheZoneGave');
+    },
+    get notes(): string {
+      return msg('journal.checklistFullyFollowed');
+    },
   },
   {
     date: '2026-09-08',
@@ -1209,8 +1526,12 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     compliance: 'partial',
     mainSetupId: 'gap-continuation',
     emotionalScore: 6,
-    mistakes: ['Exit management drifted'],
-    lesson: 'A flat result after a full stop distance is a managed loss, not a wasted trade.',
+    get mistakes(): string[] {
+      return [msg('journal.exitManagementDrifted')];
+    },
+    get lesson(): string {
+      return msg('journal.aFlatResultAfterAFullStopDistance');
+    },
     notes: '',
   },
   {
@@ -1223,7 +1544,9 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     mainSetupId: 'liquidity-sweep',
     emotionalScore: 8,
     mistakes: [],
-    lesson: 'Reclaim inside the same impulse is the confirmation.',
+    get lesson(): string {
+      return msg('journal.reclaimInsideTheSameImpulseIsTheConfirmation');
+    },
     notes: '',
   },
   {
@@ -1235,9 +1558,18 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     compliance: 'violation',
     mainSetupId: 'range-reversal',
     emotionalScore: 4,
-    mistakes: ['Traded the edge without a rejection', 'Sized above the written risk'],
-    lesson: 'The range edge is a location, not a signal.',
-    notes: 'Marked as a rule break on purpose.',
+    get mistakes(): string[] {
+      return [
+        msg('journal.tradedTheEdgeWithoutARejection'),
+        msg('journal.sizedAboveTheWrittenRisk'),
+      ];
+    },
+    get lesson(): string {
+      return msg('journal.theRangeEdgeIsALocationNotA');
+    },
+    get notes(): string {
+      return msg('journal.markedAsARuleBreakOnPurpose');
+    },
   },
   {
     date: '2026-09-11',
@@ -1249,7 +1581,9 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     mainSetupId: 'failed-breakout',
     emotionalScore: 7,
     mistakes: [],
-    lesson: 'The failed push into the high was the whole trade.',
+    get lesson(): string {
+      return msg('journal.theFailedPushIntoTheHighWasThe');
+    },
     notes: '',
   },
   {
@@ -1262,7 +1596,9 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     mainSetupId: 'liquidity-sweep',
     emotionalScore: 8,
     mistakes: [],
-    lesson: 'Held the runner to the planned level instead of the first reaction.',
+    get lesson(): string {
+      return msg('journal.heldTheRunnerToThePlannedLevelInstead');
+    },
     notes: '',
   },
   {
@@ -1274,9 +1610,15 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     compliance: 'violation',
     mainSetupId: 'breakout-retest',
     emotionalScore: 5,
-    mistakes: ['Stop moved away from the plan', 'Risk exceeded the daily budget'],
-    lesson: 'A widened stop is a second decision that was never planned.',
-    notes: 'The largest single loss on record, and the most instructive.',
+    get mistakes(): string[] {
+      return [msg('journal.stopMovedAwayFromThePlan'), msg('journal.riskExceededTheDailyBudget')];
+    },
+    get lesson(): string {
+      return msg('journal.aWidenedStopIsASecondDecisionThat');
+    },
+    get notes(): string {
+      return msg('journal.theLargestSingleLossOnRecordAndThe');
+    },
   },
   {
     date: '2026-09-16',
@@ -1287,8 +1629,12 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     compliance: 'partial',
     mainSetupId: 'trend-pullback',
     emotionalScore: 7,
-    mistakes: ['Entry was slightly early against the checklist'],
-    lesson: 'The checklist item that was skipped was the one that would have improved the price.',
+    get mistakes(): string[] {
+      return [msg('journal.entryWasSlightlyEarlyAgainstTheChecklist')];
+    },
+    get lesson(): string {
+      return msg('journal.theChecklistItemThatWasSkippedWasThe');
+    },
     notes: '',
   },
   {
@@ -1301,7 +1647,9 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     mainSetupId: 'gap-continuation',
     emotionalScore: 7,
     mistakes: [],
-    lesson: 'Protecting a small gain is a valid decision, and it is not a loss.',
+    get lesson(): string {
+      return msg('journal.protectingASmallGainIsAValidDecision');
+    },
     notes: '',
   },
   {
@@ -1313,9 +1661,12 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     compliance: 'partial',
     mainSetupId: 'range-reversal',
     emotionalScore: 6,
-    mistakes: ['Traded the edge without a rejection'],
-    lesson:
-      'The same setup produced a loss and a win on the same day; the process differed, not the setup.',
+    get mistakes(): string[] {
+      return [msg('journal.tradedTheEdgeWithoutARejection')];
+    },
+    get lesson(): string {
+      return msg('journal.theSameSetupProducedALossAndA');
+    },
     notes: '',
   },
   {
@@ -1328,8 +1679,12 @@ export const mockCalendarDays: readonly JournalCalendarDay[] = [
     mainSetupId: 'failed-breakout',
     emotionalScore: 7,
     mistakes: [],
-    lesson: 'The losing trade was a clean plan executed correctly. It still counts as compliant.',
-    notes: 'Best pair of the month on process, not on outcome.',
+    get lesson(): string {
+      return msg('journal.theLosingTradeWasACleanPlanExecuted');
+    },
+    get notes(): string {
+      return msg('journal.bestPairOfTheMonthOnProcessNot');
+    },
   },
 ];
 

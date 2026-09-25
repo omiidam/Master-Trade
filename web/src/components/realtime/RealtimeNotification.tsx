@@ -3,6 +3,7 @@ import { Badge } from '../Badge';
 import { Alert, type AlertTone } from '../Alert';
 import { cn } from '../../lib/cn';
 import { formatRelative } from '../../lib/format';
+import { msg } from '../../i18n/index.js';
 
 export type NotificationLevel = 'info' | 'warning' | 'danger';
 
@@ -75,7 +76,7 @@ export function RealtimeNotification({
         </>
       }
       {...(onDismiss === undefined ? {} : { onDismiss: () => onDismiss(notification.id) })}
-      dismissLabel="Dismiss this notification"
+      dismissLabel={msg('toast.dismissThisNotification')}
       {...(className === undefined ? {} : { className })}
     />
   );

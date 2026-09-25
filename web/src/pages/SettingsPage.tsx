@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Database,
   KeyRound,
@@ -31,9 +31,10 @@ import { Grid, Workspace } from '../app/Workspace';
 import { THEME } from '../design/tokens';
 import { useShellStatus } from '../desktop/useShellStatus';
 import { mockBudget, mockProviders, mockSystemStatus } from '../mock/data';
-import { LANGUAGE_PREFERENCE_LABELS, LANGUAGE_PREFERENCES } from '../language/preference';
+import { LANGUAGE_PREFERENCES, type LanguagePreference } from '../language/preference';
 import { useUiStore } from '../store/ui';
 import { cn } from '../lib/cn';
+import { msg, type MessageKey } from '../i18n/index.js';
 
 const PROVIDER_TONE = {
   configured: 'primary',
@@ -42,11 +43,28 @@ const PROVIDER_TONE = {
 } as const;
 
 const TABS = [
-  { id: 'appearance', label: 'Appearance', icon: <Palette size={14} aria-hidden /> },
-  { id: 'providers', label: 'AI providers', icon: <Sparkles size={14} aria-hidden /> },
-  { id: 'data', label: 'Data & safety', icon: <ShieldCheck size={14} aria-hidden /> },
-  { id: 'advanced', label: 'Advanced', icon: <Sliders size={14} aria-hidden /> },
-] as const;
+  { id: 'appearance', labelKey: 'settings.appearance', icon: <Palette size={14} aria-hidden /> },
+  { id: 'providers', labelKey: 'settings.aiProviders', icon: <Sparkles size={14} aria-hidden /> },
+  {
+    id: 'data',
+    labelKey: 'settings.dataSafety',
+    icon: <ShieldCheck size={14} aria-hidden />,
+  },
+  { id: 'advanced', labelKey: 'settings.advanced', icon: <Sliders size={14} aria-hidden /> },
+] as const satisfies readonly { id: string; labelKey: MessageKey; icon: ReactNode }[];
+
+/**
+ * The two languages the switch offers, and the automatic option between them.
+ *
+ * The labels are catalogue keys rather than strings, because this is the one control whose own wording has to
+ * change as the result of using it: a switch that stayed in English while the interface became Persian would
+ * be the first thing a Persian reader saw.
+ */
+const LANGUAGE_OPTION_KEYS: Readonly<Record<LanguagePreference, MessageKey>> = {
+  auto: 'settings.languageAutomatic',
+  fa: 'settings.languagePersian',
+  en: 'settings.languageEnglish',
+};
 
 export function SettingsPage() {
   const [tab, setTab] = useState<string>('appearance');
@@ -61,23 +79,27 @@ export function SettingsPage() {
 
   return (
     <Workspace
-      title="Settings"
-      description="Appearance, direction, providers and the safety posture of the workstation. Secrets live in the OS keychain — configuration holds references only."
+      title={msg('settings.settings')}
+      description={msg('settingsPage.appearanceDirectionProvidersAndTheSafetyPostureOf')}
     >
       <Tabs
-        items={TABS.map((item) => ({ id: item.id, label: item.label, icon: item.icon }))}
+        items={TABS.map((item) => ({
+          id: item.id,
+          label: msg(item.labelKey),
+          icon: item.icon,
+        }))}
         value={tab}
         onValueChange={setTab}
-        aria-label="Settings sections"
+        aria-label={msg('settings.settingsSections')}
       >
         <TabPanel value="appearance" className="space-y-4">
           <Grid columns={2}>
             <Card surface="utility">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Writing direction</CardTitle>
+                  <CardTitle className="text-body">{msg('settings.writingDirection')}</CardTitle>
                   <CardDescription>
-                    The layout uses logical properties, so mirroring needs no second stylesheet
+                    {msg('settings.theLayoutUsesLogicalPropertiesSo')}
                   </CardDescription>
                 </div>
                 <Layers size={15} aria-hidden className="text-text-faint" />
@@ -89,19 +111,18 @@ export function SettingsPage() {
                     onClick={() => setDirection('ltr')}
                     aria-pressed={direction === 'ltr'}
                   >
-                    Left to right
+                    {msg('settings.leftToRight')}
                   </Button>
                   <Button
                     variant={direction === 'rtl' ? 'primary' : 'secondary'}
                     onClick={() => setDirection('rtl')}
                     aria-pressed={direction === 'rtl'}
                   >
-                    Right to left
+                    {msg('settings.rightToLeft')}
                   </Button>
                 </div>
                 <p className="text-caption text-text-faint">
-                  Charts and numeric readouts stay LTR on purpose: financial time series are read
-                  left-to-right.
+                  {msg('settings.chartsAndNumericReadoutsStayLTR')}
                 </p>
               </CardContent>
             </Card>
@@ -109,10 +130,8 @@ export function SettingsPage() {
             <Card surface="utility">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Language</CardTitle>
-                  <CardDescription>
-                    The language the agent answers in. Automatic follows the language you write
-                  </CardDescription>
+                  <CardTitle className="text-body">{msg('settings.language')}</CardTitle>
+                  <CardDescription>{msg('settings.theLanguageTheAgentAnswersIn')}</CardDescription>
                 </div>
                 <Languages size={15} aria-hidden className="text-text-faint" />
               </CardHeader>
@@ -125,17 +144,17 @@ export function SettingsPage() {
                       onClick={() => setLanguagePreference(option)}
                       aria-pressed={languagePreference === option}
                     >
-                      {LANGUAGE_PREFERENCE_LABELS[option]}
+                      {msg(LANGUAGE_OPTION_KEYS[option])}
                     </Button>
                   ))}
                 </div>
                 <p className="text-caption text-text-faint">
                   {languagePreference === 'auto'
-                    ? 'Persian and English are both read from the message you send, and the answer follows it. Technical terms stay as they are written in either language.'
-                    : `${LANGUAGE_PREFERENCE_LABELS[languagePreference]} is chosen, so the answer stays in it whatever the message is written in.`}
-                  {languageStorable
-                    ? ''
-                    : ' This session has no writable setting store, so the choice lasts until the app closes.'}
+                    ? msg('settings.languageAutomaticCaption')
+                    : msg('settings.languageChosen', {
+                        language: msg(LANGUAGE_OPTION_KEYS[languagePreference]),
+                      })}
+                  {languageStorable ? '' : msg('settings.languageNotStorable')}
                 </p>
               </CardContent>
             </Card>
@@ -143,8 +162,8 @@ export function SettingsPage() {
             <Card surface="utility">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Density</CardTitle>
-                  <CardDescription>How much of the workspace is used by chrome</CardDescription>
+                  <CardTitle className="text-body">{msg('settings.density')}</CardTitle>
+                  <CardDescription>{msg('settings.howMuchOfTheWorkspaceIs')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -154,18 +173,18 @@ export function SettingsPage() {
                     onClick={() => setDensity('comfortable')}
                     aria-pressed={density === 'comfortable'}
                   >
-                    Comfortable
+                    {msg('settings.comfortable')}
                   </Button>
                   <Button
                     variant={density === 'compact' ? 'primary' : 'secondary'}
                     onClick={() => setDensity('compact')}
                     aria-pressed={density === 'compact'}
                   >
-                    Compact
+                    {msg('settings.compact')}
                   </Button>
                 </div>
                 <p className="text-caption text-text-faint">
-                  Desktop-first: the layout targets 1280px and above and reflows below.
+                  {msg('settings.desktopFirstTheLayoutTargets1280px')}
                 </p>
               </CardContent>
             </Card>
@@ -174,7 +193,7 @@ export function SettingsPage() {
           <Card>
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Theme</CardTitle>
+                <CardTitle className="text-body">{msg('settings.theme')}</CardTitle>
                 <CardDescription>
                   {THEME.name} · {THEME.mode}
                 </CardDescription>
@@ -183,11 +202,11 @@ export function SettingsPage() {
             <CardContent className="space-y-3">
               <div className="flex flex-wrap gap-2">
                 {[
-                  ['--color-primary', 'Primary'],
-                  ['--color-info', 'Info'],
+                  ['--color-primary', msg('shell.navPrimary')],
+                  ['--color-info', msg('settingsPage.info')],
                   ['--color-ai', 'AI'],
-                  ['--color-warning', 'Warning'],
-                  ['--color-danger', 'Danger'],
+                  ['--color-warning', msg('feedbackStates.warning')],
+                  ['--color-danger', msg('settingsPage.danger')],
                 ].map(([token, label]) => (
                   <CardTile space="tight" key={token} className="flex items-center gap-2">
                     <span
@@ -214,7 +233,7 @@ export function SettingsPage() {
           <Card surface="data">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Desktop host</CardTitle>
+                <CardTitle className="text-body">{msg('settings.desktopHost')}</CardTitle>
                 <CardDescription>
                   {shell.loading
                     ? 'Asking the host what it can do…'
@@ -227,7 +246,7 @@ export function SettingsPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <ReadOnlyValue
-                label="Local API"
+                label={msg('settingsPage.localAPI')}
                 value={
                   shell.status?.apiBaseUrl
                     ? `${shell.status.apiBaseUrl} · ${shell.processState}`
@@ -235,28 +254,28 @@ export function SettingsPage() {
                       ? `not running (${shell.processState})`
                       : 'not available in a browser'
                 }
-                hint="The bundled API binds 127.0.0.1 only, on a fixed port, with a per-launch token."
+                hint={msg('settingsPage.theBundledAPIBinds127001OnlyOnA')}
               />
               <ReadOnlyValue
-                label="Credential store"
+                label={msg('settingsPage.credentialStore')}
                 value={
                   shell.inShell
                     ? 'OS keychain'
                     : 'unavailable here — keys can only be entered in the desktop app'
                 }
-                hint="Windows Credential Manager, macOS Keychain or Secret Service. Never a file."
+                hint={msg('settingsPage.windowsCredentialManagerMacOSKeychainOrSecretService')}
               />
               <ReadOnlyValue
-                label="Offline cache"
+                label={msg('settingsPage.offlineCache')}
                 value={
                   shell.inShell
                     ? 'app-data directory, bounded to 4 MB'
                     : 'not available in a browser'
                 }
-                hint="Lesson content and last-known status survive without a network."
+                hint={msg('settingsPage.lessonContentAndLastKnownStatusSurviveWithoutA')}
               />
               <ReadOnlyValue
-                label="Shell protocol"
+                label={msg('settingsPage.shellProtocol')}
                 value={
                   shell.status
                     ? `v${shell.status.protocolVersion} · ${shell.status.capabilities.length} capabilities`
@@ -264,7 +283,7 @@ export function SettingsPage() {
                       ? `host did not answer: ${shell.error}`
                       : 'unknown'
                 }
-                hint="A protocol mismatch is refused rather than guessed at."
+                hint={msg('settingsPage.aProtocolMismatchIsRefusedRatherThanGuessed')}
               />
               {(shell.status?.unavailable.length ?? 0) > 0 && (
                 <ul className="mt-2 space-y-1">
@@ -278,19 +297,15 @@ export function SettingsPage() {
             </CardContent>
             <CardDivider />
             <CardContent className="pt-3 text-caption text-text-faint">
-              The shell grants the interface no filesystem, path, shell or network permission. Every
-              privileged action — the keychain, the cache, exports, the bundled API process — is a
-              typed command implemented in Rust, and the allow-list is verified in CI.
+              {msg('settings.theShellGrantsTheInterfaceNo')}
             </CardContent>
           </Card>
 
           <Card surface="data">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Model providers</CardTitle>
-                <CardDescription>
-                  Provider-specific code lives only in the adapter layer
-                </CardDescription>
+                <CardTitle className="text-body">{msg('settings.modelProviders')}</CardTitle>
+                <CardDescription>{msg('settings.providerSpecificCodeLivesOnlyIn')}</CardDescription>
               </div>
               <KeyRound size={15} aria-hidden className="text-text-faint" />
             </CardHeader>
@@ -310,7 +325,7 @@ export function SettingsPage() {
                     <p className="num mt-0.5 text-caption text-text-faint">{provider.secretRef}</p>
                     <p className="mt-0.5 text-caption text-text-muted">{provider.note}</p>
                   </div>
-                  <Tooltip content="Key entry arrives with the desktop shell (OS keychain), not the web preview.">
+                  <Tooltip content={msg('settingsPage.keyEntryArrivesWithTheDesktopShellOS')}>
                     <span>
                       <Button variant="secondary" size="sm" disabled>
                         {provider.state === 'missing' ? 'Add key' : 'Manage'}
@@ -322,16 +337,14 @@ export function SettingsPage() {
             </CardContent>
             <CardDivider />
             <CardContent className="pt-3 text-caption text-text-faint">
-              The gateway owns fallback order, retries, timeouts and budget refusal. A provider can
-              fail without the permission model changing: the model may request a tool, never run
-              one.
+              {msg('settings.theGatewayOwnsFallbackOrderRetries')}
             </CardContent>
           </Card>
 
           <Card surface="data">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Budget</CardTitle>
+                <CardTitle className="text-body">{msg('settings.budget')}</CardTitle>
                 <CardDescription>
                   ${mockSystemStatus.llmBudgetUsedUsd.toFixed(2)} of $25.00 used this month
                 </CardDescription>
@@ -369,35 +382,35 @@ export function SettingsPage() {
           <Card surface="featured">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Safety posture</CardTitle>
-                <CardDescription>
-                  Enforced in code and covered by tests, not a setting
-                </CardDescription>
+                <CardTitle className="text-body">{msg('shell.safetyPosture')}</CardTitle>
+                <CardDescription>{msg('settings.enforcedInCodeAndCoveredBy')}</CardDescription>
               </div>
               <ShieldCheck size={15} aria-hidden className="text-primary" />
             </CardHeader>
             <CardContent className="space-y-3">
               <Grid columns={2}>
-                <ReadOnlyValue label="Operating mode" value={mockSystemStatus.safety.mode} />
                 <ReadOnlyValue
-                  label="Live trading"
-                  value="disabled by design"
-                  hint="No operation, tool, job kind or config key exists for it."
+                  label={msg('settingsPage.operatingMode')}
+                  value={mockSystemStatus.safety.mode}
                 />
                 <ReadOnlyValue
-                  label="Broker execution"
+                  label={msg('shell.liveTrading')}
                   value="disabled by design"
-                  hint="The type system has no true value for this flag."
+                  hint={msg('settingsPage.noOperationToolJobKindOrConfigKey')}
                 />
                 <ReadOnlyValue
-                  label="Model-direct tool execution"
+                  label={msg('shell.brokerExecution')}
+                  value="disabled by design"
+                  hint={msg('settingsPage.theTypeSystemHasNoTrueValueFor')}
+                />
+                <ReadOnlyValue
+                  label={msg('settingsPage.modelDirectToolExecution')}
                   value="forbidden"
-                  hint="Tool execution always passes through the orchestrator's permission check."
+                  hint={msg('settingsPage.toolExecutionAlwaysPassesThroughTheOrchestratorSPerm')}
                 />
               </Grid>
               <p className="text-caption text-text-faint">
-                These are start-up assertions, not preferences: the process refuses to start if any
-                of them is ever switched on.
+                {msg('settings.theseAreStartUpAssertionsNot')}
               </p>
             </CardContent>
           </Card>
@@ -405,7 +418,7 @@ export function SettingsPage() {
           <Grid columns={2}>
             <Card>
               <CardHeader divider>
-                <CardTitle className="text-body">Data provenance policy</CardTitle>
+                <CardTitle className="text-body">{msg('settings.dataProvenancePolicy')}</CardTitle>
               </CardHeader>
               {/*
                 Three policies, three marks. They are statements the product guarantees rather
@@ -414,13 +427,13 @@ export function SettingsPage() {
               <CardContent>
                 <AgentCardList>
                   <AgentCardItem badge={<AgentCheck />}>
-                    Synthetic training data must be labelled wherever it appears.
+                    {msg('settings.syntheticTrainingDataMustBeLabelled')}
                   </AgentCardItem>
                   <AgentCardItem badge={<AgentCheck />}>
-                    Historical data is stated as historical; live data is not permitted in training.
+                    {msg('settings.historicalDataIsStatedAsHistorical')}
                   </AgentCardItem>
                   <AgentCardItem badge={<AgentCheck />}>
-                    Unverified memory enters context as uncertainty, never as fact.
+                    {msg('settings.unverifiedMemoryEntersContextAsUncertainty')}
                   </AgentCardItem>
                 </AgentCardList>
               </CardContent>
@@ -434,22 +447,22 @@ export function SettingsPage() {
               <CardHeader divider>
                 <div className="flex min-w-0 items-center gap-2">
                   <Database size={15} aria-hidden className="text-text-faint" />
-                  <CardTitle className="text-caption">Local data</CardTitle>
+                  <CardTitle className="text-caption">{msg('settings.localData')}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 <ReadOnlyValue
-                  label="Database"
+                  label={msg('settingsPage.database')}
                   value="data/master-trade.db"
-                  hint="SQLite, WAL mode."
+                  hint={msg('settingsPage.sQLiteWALMode')}
                 />
                 <ReadOnlyValue
-                  label="File storage"
+                  label={msg('settingsPage.fileStorage')}
                   value="data/files"
-                  hint="Content-addressed blobs."
+                  hint={msg('settingsPage.contentAddressedBlobs')}
                 />
                 <p className="text-caption text-text-faint">
-                  Nothing is stored in a browser or sent anywhere in this phase.
+                  {msg('settings.nothingIsStoredInABrowser')}
                 </p>
               </CardContent>
             </Card>
@@ -460,21 +473,19 @@ export function SettingsPage() {
           <Card surface="utility">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Background jobs</CardTitle>
-                <CardDescription>
-                  Queue states. The durable worker loop exists; the Activity page reads the real
-                  queue whenever a session is available, and shows these fixtures only when it is
-                  not.
-                </CardDescription>
+                <CardTitle className="text-body">{msg('settings.backgroundJobs')}</CardTitle>
+                <CardDescription>{msg('settings.queueStatesTheDurableWorkerLoop')}</CardDescription>
               </div>
-              <Badge tone="outline">sample rows</Badge>
+              <Badge tone="outline">{msg('settings.sampleRows')}</Badge>
             </CardHeader>
             <CardContent className="divide-y divide-border">
               {mockSystemStatus.jobs.map((job) => (
                 <div key={job.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                   <span className="num w-14 shrink-0 text-caption text-text-faint">{job.id}</span>
                   <span className="min-w-0 flex-1 truncate text-body text-text">{job.kind}</span>
-                  <span className="num text-caption text-text-faint">attempt {job.attempts}</span>
+                  <span className="num text-caption text-text-faint">
+                    {msg('realtime.attempt')} {job.attempts}
+                  </span>
                   <Badge tone={job.status === 'succeeded' ? 'primary' : 'info'}>{job.status}</Badge>
                 </div>
               ))}
@@ -484,51 +495,51 @@ export function SettingsPage() {
           <Grid columns={2}>
             <Card surface="utility">
               <CardHeader divider>
-                <CardTitle className="text-body">Configuration</CardTitle>
+                <CardTitle className="text-body">{msg('settings.configuration')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <ReadOnlyValue
-                  label="API version"
+                  label={msg('settingsPage.aPIVersion')}
                   value="v1"
-                  hint="Breaking changes add a version."
+                  hint={msg('settingsPage.breakingChangesAddAVersion')}
                 />
                 <ReadOnlyValue
-                  label="Realtime path"
+                  label={msg('settingsPage.realtimePath')}
                   value="/ws"
-                  hint="Authenticated WebSocket, loopback only. The Activity page opens it when a session exists."
+                  hint={msg('settingsPage.authenticatedWebSocketLoopbackOnlyTheActivityPageOpe')}
                 />
-                <ReadOnlyValue label="Audit retention" value="365 days" />
+                <ReadOnlyValue label={msg('settingsPage.auditRetention')} value="365 days" />
               </CardContent>
             </Card>
             <Card surface="utility">
               <CardHeader divider>
-                <CardTitle className="text-body">Secrets</CardTitle>
+                <CardTitle className="text-body">{msg('settings.secrets')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-caption text-text-muted">
-                <p>
-                  Configuration stores references such as keychain:llm.openai, never key values.
-                </p>
-                <p>Logs redact credentials recursively before anything is written.</p>
-                <p>This interface never displays a secret, not even masked.</p>
+                <p>{msg('settings.configurationStoresReferencesSuchAsKeychain')}</p>
+                <p>{msg('settings.logsRedactCredentialsRecursivelyBeforeAnything')}</p>
+                <p>{msg('settings.thisInterfaceNeverDisplaysASecret')}</p>
               </CardContent>
             </Card>
           </Grid>
 
           <InterfaceStatesPanel
             states={['loading', 'empty', 'error']}
-            title="Interface states, all three"
-            description="Every data surface in this workstation owes you these three. They are the real components, shown empty: no placeholder number stands in for a value that has not been read."
-            loadingTitle="Reading configuration"
-            loadingDescription="A skeleton holds the layout while settings are read from disk or from the shell, so nothing jumps when they arrive."
-            emptyTitle="Nothing configured yet"
-            emptyDescription="A fresh install has no providers and no stored references; that is a normal state and says so rather than showing an error."
-            errorTitle="Configuration could not be read"
-            errorDescription="A failed read reports its typed code, and a retry is offered only when retrying can succeed — never for a refused credential."
+            title={msg('settings.interfaceStatesAllThree')}
+            description={msg('settingsPage.everyDataSurfaceInThisWorkstationOwesYou')}
+            loadingTitle={msg('settingsPage.readingConfiguration')}
+            loadingDescription={msg('settingsPage.aSkeletonHoldsTheLayoutWhileSettingsAre')}
+            emptyTitle={msg('settingsPage.nothingConfiguredYet')}
+            emptyDescription={msg('settingsPage.aFreshInstallHasNoProvidersAndNo')}
+            errorTitle={msg('settingsPage.configurationCouldNotBeRead')}
+            errorDescription={msg('settingsPage.aFailedReadReportsItsTypedCodeAnd')}
             errorCode="UNAUTHENTICATED"
-            hint="A state is only shown when a surface can actually reach it; adding a fourth state here would mean adding a behaviour, not a picture."
+            hint={msg('settingsPage.aStateIsOnlyShownWhenASurface')}
           />
 
-          <FeedbackStatesPanel description="The six things this workstation can say back — a report, a confirmation or a decision — and the transient form of the same message. The toasts are real: raise one and it appears with the tone's own lifetime." />
+          <FeedbackStatesPanel
+            description={msg('settingsPage.theSixThingsThisWorkstationCanSayBack')}
+          />
         </TabPanel>
       </Tabs>
     </Workspace>

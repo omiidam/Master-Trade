@@ -3,6 +3,8 @@ import type { EpistemicKind } from '@shared/types';
 import type { DataProvenance } from '@shared/marketdata/provider';
 import { cn } from '../lib/cn';
 import { Tooltip } from './Tooltip';
+import { liveLabels } from '../i18n/index.js';
+import { msg } from '../i18n/index.js';
 
 export type BadgeTone =
   'neutral' | 'primary' | 'info' | 'success' | 'warning' | 'danger' | 'ai' | 'outline';
@@ -82,12 +84,12 @@ const EPISTEMIC_TONE: Record<EpistemicKind, BadgeTone> = {
   uncertainty: 'ai',
 };
 
-const EPISTEMIC_EXPLANATION: Record<EpistemicKind, string> = {
-  fact: 'Taken from a verified source or a deterministic tool result.',
-  analysis: 'Interpretation built on the stated sources.',
-  hypothesis: 'A testable claim that has not been verified.',
-  uncertainty: 'Known limits, missing evidence or an unresolved question.',
-};
+const EPISTEMIC_EXPLANATION: Record<EpistemicKind, string> = liveLabels({
+  fact: 'ui.epistemic.fact',
+  analysis: 'ui.epistemic.analysis',
+  hypothesis: 'ui.epistemic.hypothesis',
+  uncertainty: 'ui.epistemic.uncertainty',
+});
 
 /**
  * Every agent statement carries its epistemic label — the UI side of the
@@ -110,9 +112,15 @@ const PROVENANCE_TONE: Record<DataProvenance, BadgeTone> = {
 };
 
 const PROVENANCE_TEXT: Record<DataProvenance, string> = {
-  synthetic: 'Synthetic',
-  historical: 'Historical',
-  live: 'Live (not enabled)',
+  get synthetic(): string {
+    return msg('memory.kind.synthetic');
+  },
+  get historical(): string {
+    return msg('badge.historical');
+  },
+  get live(): string {
+    return msg('badge.liveNotEnabled');
+  },
 };
 
 /** Market data always states what it is; synthetic never reads as real. */

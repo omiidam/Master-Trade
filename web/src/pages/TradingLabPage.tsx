@@ -19,8 +19,9 @@ import { Reveal } from '../components/Reveal';
 import { TabPanel, Tabs } from '../components/Tabs';
 import { Tooltip } from '../components/Tooltip';
 import { Grid, Workspace } from '../app/Workspace';
-import { MOCK_DATA_NOTICE, mockBars, mockDashboard, mockLabSetups } from '../mock/data';
+import { mockDataNotice, mockBars, mockDashboard, mockLabSetups } from '../mock/data';
 import { cn } from '../lib/cn';
+import { msg } from '../i18n/index.js';
 
 const SETUP_TONE = {
   reviewed: 'primary',
@@ -29,9 +30,24 @@ const SETUP_TONE = {
 } as const;
 
 const TABS = [
-  { id: 'review', label: 'Setup review' },
-  { id: 'risk', label: 'Risk math' },
-  { id: 'rules', label: 'Rule proposals' },
+  {
+    id: 'review',
+    get label(): string {
+      return msg('tradingLabPage.setupReview');
+    },
+  },
+  {
+    id: 'risk',
+    get label(): string {
+      return msg('tradingLabPage.riskMath');
+    },
+  },
+  {
+    id: 'rules',
+    get label(): string {
+      return msg('agent.ruleProposals');
+    },
+  },
 ] as const;
 
 export function TradingLabPage() {
@@ -39,14 +55,14 @@ export function TradingLabPage() {
 
   return (
     <Workspace
-      title="Trading lab"
-      description="A training surface for reviewing practice setups and risk math. Read-only: there is no order entry, no broker connection and no execution path anywhere in this application."
+      title={msg('lab.tradingLab')}
+      description={msg('tradingLabPage.aTrainingSurfaceForReviewingPracticeSetupsAnd')}
       actions={
         <>
           <Badge tone="outline" icon={<Lock size={12} aria-hidden />}>
             read-only
           </Badge>
-          <Tooltip content="No execution capability exists in the system, so nothing here can be armed.">
+          <Tooltip content={msg('tradingLabPage.noExecutionCapabilityExistsInTheSystemSo')}>
             <Badge tone="primary" icon={<ShieldCheck size={12} aria-hidden />}>
               execution impossible
             </Badge>
@@ -58,19 +74,19 @@ export function TradingLabPage() {
         items={TABS.map((item) => ({ id: item.id, label: item.label }))}
         value={tab}
         onValueChange={setTab}
-        aria-label="Trading lab sections"
+        aria-label={msg('lab.tradingLabSections')}
       >
         <TabPanel value="review" className="space-y-4">
           <Card surface="data">
             <CardHeader divider>
               <div>
-                <CardTitle>Practice chart</CardTitle>
+                <CardTitle>{msg('lab.practiceChart')}</CardTitle>
                 <CardDescription>
-                  {mockDashboard.symbol} · {mockDashboard.timeframe} · synthetic series for layout
-                  review
+                  {mockDashboard.symbol} · {mockDashboard.timeframe}{' '}
+                  {msg('lab.syntheticSeriesForLayoutReview')}
                 </CardDescription>
               </div>
-              <Badge tone="info">chart adapter</Badge>
+              <Badge tone="info">{msg('dashboard.chartAdapter')}</Badge>
             </CardHeader>
             <CardContent>
               <ChartAdapter
@@ -132,7 +148,7 @@ export function TradingLabPage() {
               </Reveal>
             ))}
           </Grid>
-          <p className="text-caption text-text-faint">{MOCK_DATA_NOTICE}</p>
+          <p className="text-caption text-text-faint">{mockDataNotice()}</p>
         </TabPanel>
 
         <TabPanel value="risk" className="space-y-4">
@@ -140,32 +156,32 @@ export function TradingLabPage() {
             <Card surface="action">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Position size calculator</CardTitle>
+                  <CardTitle className="text-body">{msg('lab.positionSizeCalculator')}</CardTitle>
                   <CardDescription>
-                    Deterministic tool input — the model never performs this arithmetic
+                    {msg('lab.deterministicToolInputTheModelNever')}
                   </CardDescription>
                 </div>
                 <Calculator size={15} aria-hidden className="text-text-faint" />
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field label="Practice account balance">
+                  <Field label={msg('tradingLabPage.practiceAccountBalance')}>
                     {({ id }) => <Input id={id} disabled placeholder="25,000.00" />}
                   </Field>
-                  <Field label="Risk per trade (%)">
+                  <Field label={msg('tradingLabPage.riskPerTrade')}>
                     {({ id }) => <Input id={id} disabled placeholder="1.00" />}
                   </Field>
-                  <Field label="Entry">
+                  <Field label={msg('evaluationPanels.entry')}>
                     {({ id }) => <Input id={id} disabled placeholder="184.20" />}
                   </Field>
-                  <Field label="Stop">
+                  <Field label={msg('tradeRow.stop')}>
                     {({ id }) => <Input id={id} disabled placeholder="181.90" />}
                   </Field>
                 </div>
                 {/* The reference closes a card whose job ends in one control with a full-width pill.
                     The wrapper is a block so `w-full` resolves against the card's body rather than
                     the inline box a bare `<span>` would give it. */}
-                <Tooltip content="The tool registry and risk math are implemented; this phase only ships the interface, so the panel is inert.">
+                <Tooltip content={msg('tradingLabPage.theToolRegistryAndRiskMathAreImplemented')}>
                   <span className="block">
                     <Button
                       variant="primary"
@@ -174,7 +190,7 @@ export function TradingLabPage() {
                       disabled
                       leadingIcon={<Calculator size={14} aria-hidden />}
                     >
-                      Calculate position size
+                      {msg('lab.calculatePositionSize')}
                     </Button>
                   </span>
                 </Tooltip>
@@ -184,19 +200,17 @@ export function TradingLabPage() {
             <Card surface="metric">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">Tool result</CardTitle>
-                  <CardDescription>
-                    Where a tool result will appear, with provenance
-                  </CardDescription>
+                  <CardTitle className="text-body">{msg('lab.toolResult')}</CardTitle>
+                  <CardDescription>{msg('lab.whereAToolResultWillAppear')}</CardDescription>
                 </div>
                 <Wrench size={15} aria-hidden className="text-text-faint" />
               </CardHeader>
               <CardContent>
                 <EmptyState
                   icon={<Wrench size={22} aria-hidden />}
-                  title="No result yet"
-                  description="The risk tools exist in the backend and are covered by tests, but the interface is not wired to them in this phase."
-                  hint="When wired, the panel shows the tool name, its inputs and a fact label — never a model-authored number."
+                  title={msg('lab.noResultYet')}
+                  description={msg('tradingLabPage.theRiskToolsExistInTheBackendAnd')}
+                  hint={msg('tradingLabPage.whenWiredThePanelShowsTheToolName')}
                 />
               </CardContent>
             </Card>
@@ -204,14 +218,14 @@ export function TradingLabPage() {
 
           <InterfaceStatesPanel
             states={['loading', 'error']}
-            title="States around a tool call"
-            description="A tool call is a round trip. These are the two states that follow it; the empty pre-call state is the panel above."
-            loadingTitle="Running the deterministic tool"
-            loadingDescription="A pending tool shows the tool's name and inputs, never a provisional number — a number that later changes is worse than a spinner."
-            errorTitle="The tool call failed"
-            errorDescription="A refusal or a failure is shown with its typed code: a denied operation and an unavailable tool are different answers and must not read the same."
+            title={msg('lab.statesAroundAToolCall')}
+            description={msg('tradingLabPage.aToolCallIsARoundTripThese')}
+            loadingTitle={msg('tradingLabPage.runningTheDeterministicTool')}
+            loadingDescription={msg('tradingLabPage.aPendingToolShowsTheToolSNameAnd')}
+            errorTitle={msg('tradingLabPage.theToolCallFailed')}
+            errorDescription={msg('tradingLabPage.aRefusalOrAFailureIsShownWith')}
             errorCode="FORBIDDEN"
-            hint="No button on this page can arm anything: the application has no order path, so a risk figure can only ever inform a study decision."
+            hint={msg('tradingLabPage.noButtonOnThisPageCanArmAnything')}
           />
         </TabPanel>
 
@@ -219,23 +233,21 @@ export function TradingLabPage() {
           <Card surface="featured">
             <CardHeader divider>
               <div>
-                <CardTitle className="text-body">Proposed process rule</CardTitle>
-                <CardDescription>
-                  Proposals are drafts until an evaluation and a human approval exist
-                </CardDescription>
+                <CardTitle className="text-body">{msg('lab.proposedProcessRule')}</CardTitle>
+                <CardDescription>{msg('lab.proposalsAreDraftsUntilAnEvaluation')}</CardDescription>
               </div>
               <Badge tone="warning" dot>
-                awaiting approval
+                {msg('lab.awaitingApproval')}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               <CardTile space="roomy">
-                <p className="text-caption text-text-muted">Rule text</p>
+                <p className="text-caption text-text-muted">{msg('lab.ruleText')}</p>
                 <p className="mt-1 text-body text-text">
-                  “Skip any setup where the invalidation level cannot be written before entry.”
+                  {msg('lab.skipAnySetupWhereTheInvalidation')}
                 </p>
                 <p className="mt-2 text-caption text-text-faint">
-                  Status: draft → evaluation attached → awaiting human activation
+                  {msg('lab.statusDraftEvaluationAttachedAwaitingHuman')}
                 </p>
               </CardTile>
               {/*
@@ -251,8 +263,8 @@ export function TradingLabPage() {
                     </AgentBadge>
                   }
                 >
-                  Deterministic evaluation: sample size, expectancy and an explicit
-                  <em> inconclusive </em> verdict when the evidence is thin.
+                  {msg('lab.deterministicEvaluationSampleSizeExpectancyAnd')}
+                  <em> {msg('lab.inconclusive')} </em> {msg('lab.verdictWhenTheEvidenceIsThin')}
                 </AgentCardItem>
                 <AgentCardItem
                   badge={
@@ -261,8 +273,7 @@ export function TradingLabPage() {
                     </AgentBadge>
                   }
                 >
-                  Human decision: only an owner may decide, and the requester cannot approve their
-                  own proposal.
+                  {msg('lab.humanDecisionOnlyAnOwnerMay')}
                 </AgentCardItem>
                 <AgentCardItem
                   badge={
@@ -271,19 +282,21 @@ export function TradingLabPage() {
                     </AgentBadge>
                   }
                 >
-                  Activation: refused without a non-expired approval row referencing this proposal.
+                  {msg('lab.activationRefusedWithoutANonExpired')}
                 </AgentCardItem>
               </AgentCardList>
               <div className="flex flex-wrap gap-2">
-                <Tooltip content="Approval workflow lands with the persistence slice; the gate is already enforced in the backend.">
+                <Tooltip
+                  content={msg('tradingLabPage.approvalWorkflowLandsWithThePersistenceSliceThe')}
+                >
                   <span>
                     <Button variant="primary" disabled>
-                      Request approval
+                      {msg('lab.requestApproval')}
                     </Button>
                   </span>
                 </Tooltip>
                 <Button variant="ghost" disabled>
-                  Reject
+                  {msg('lab.reject')}
                 </Button>
               </div>
             </CardContent>

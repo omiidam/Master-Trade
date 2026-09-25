@@ -13,6 +13,7 @@ import {
 import type { BadgeProps, BadgeTone } from '../Badge';
 import { Badge } from '../Badge';
 import { Tooltip } from '../Tooltip';
+import { msg } from '../../i18n/index.js';
 
 /**
  * One badge for every quality vocabulary the assessment speaks.
@@ -57,71 +58,118 @@ interface Presentation {
  */
 const FRESHNESS: Readonly<Record<string, Presentation>> = {
   current: {
-    label: 'Current',
+    get label(): string {
+      return msg('usage.current');
+    },
     tone: 'success',
-    meaning: 'Inside the freshness window for this kind of input.',
+    get meaning(): string {
+      return msg('dataQualityBadge.insideTheFreshnessWindowForThisKindOf');
+    },
   },
   stale: {
-    label: 'Out of date',
+    get label(): string {
+      return msg('analysisReadinessPanel.outOfDate');
+    },
     tone: 'warning',
-    meaning: 'It was usable and has aged past the window for this kind of input.',
+    get meaning(): string {
+      return msg('dataQualityBadge.itWasUsableAndHasAgedPastThe');
+    },
   },
   undated: {
-    label: 'Undated',
+    get label(): string {
+      return msg('dataQualityBadge.undated');
+    },
     tone: 'outline',
-    meaning:
-      'No observation time, so it cannot be assessed for recency and is treated as an assumption.',
+    get meaning(): string {
+      return msg('dataQualityBadge.noObservationTimeSoItCannotBeAssessed');
+    },
   },
   absent: {
-    label: 'Absent',
+    get label(): string {
+      return msg('dataQualityBadge.absent');
+    },
     tone: 'neutral',
-    meaning: 'Nothing is stored for this input.',
+    get meaning(): string {
+      return msg('dataQualityBadge.nothingIsStoredForThisInput');
+    },
   },
 };
 
 const CONFIDENCE: Readonly<Record<string, Presentation>> = {
   confirmed: {
-    label: 'Confirmed',
+    get label(): string {
+      return msg('decisions.confidence.confirmed');
+    },
     tone: 'success',
-    meaning: 'You gave this value, and it is inside its freshness window.',
+    get meaning(): string {
+      return msg('dataQualityBadge.youGaveThisValueAndItIsInside');
+    },
   },
   derived: {
-    label: 'Derived',
+    get label(): string {
+      return msg('decisions.confidence.derived');
+    },
     tone: 'info',
-    meaning: 'Computed from values you gave, by deterministic code rather than by a model.',
+    get meaning(): string {
+      return msg('dataQualityBadge.computedFromValuesYouGaveByDeterministicCode');
+    },
   },
   assumed: {
-    label: 'Assumed',
+    get label(): string {
+      return msg('decisions.confidence.assumed');
+    },
     tone: 'outline',
-    meaning: 'Not provided. It is never treated as a fact and never pre-filled.',
+    get meaning(): string {
+      return msg('dataQualityBadge.notProvidedItIsNeverTreatedAsA');
+    },
   },
   untrusted: {
-    label: 'Unverified',
+    get label(): string {
+      return msg('memory.memoryStatus.unverified');
+    },
     tone: 'warning',
-    meaning: 'Present, but its provenance is not recorded well enough to weigh it.',
+    get meaning(): string {
+      return msg('dataQualityBadge.presentButItsProvenanceIsNotRecordedWell');
+    },
   },
   missing: {
-    label: 'Missing',
+    get label(): string {
+      return msg('decisions.confidence.missing');
+    },
     tone: 'danger',
-    meaning: 'Nothing is stored for this input, and an analysis that needs it cannot run.',
+    get meaning(): string {
+      return msg('dataQualityBadge.nothingIsStoredForThisInputAndAn');
+    },
   },
 };
 
 const VALIDATION: Readonly<Record<string, Presentation>> = {
   valid: {
-    label: 'Valid',
+    get label(): string {
+      return msg('dataQualityBadge.valid');
+    },
     tone: 'success',
-    meaning: 'The value is a well-formed value of its declared kind.',
+    get meaning(): string {
+      return msg('dataQualityBadge.theValueIsAWellFormedValueOfIts');
+    },
   },
   invalid: {
-    label: 'Invalid',
+    get label(): string {
+      return msg('analysisReadinessPanel.invalid');
+    },
     tone: 'danger',
-    meaning: 'Not a usable value of its declared kind, so it has to be corrected.',
+    get meaning(): string {
+      return msg('dataQualityBadge.notAUsableValueOfItsDeclaredKind');
+    },
   },
   unchecked: {
-    label: 'Unchecked',
+    get label(): string {
+      return msg('dataQualityBadge.unchecked');
+    },
     tone: 'neutral',
-    meaning: 'Nothing was present to check.',
+    get meaning(): string {
+      return msg('dataQualityBadge.nothingWasPresentToCheck');
+    },
   },
 };
 
@@ -206,7 +254,7 @@ export function qualityBadgePresentation(kind: QualityBadgeKind, value: string):
       local[value] ?? {
         label: value,
         tone: 'neutral',
-        meaning: 'This build does not know this token, so it is shown exactly as it was sent.',
+        meaning: msg('dataQualityBadge.thisBuildDoesNotKnowThisTokenSo'),
       }
     );
   }
@@ -216,7 +264,7 @@ export function qualityBadgePresentation(kind: QualityBadgeKind, value: string):
     return {
       label: value,
       tone: 'neutral',
-      meaning: 'This build does not know this token, so it is shown exactly as it was sent.',
+      meaning: msg('dataQualityBadge.thisBuildDoesNotKnowThisTokenSo'),
     };
   }
   return {

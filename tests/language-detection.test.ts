@@ -23,12 +23,12 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { translate } from '../web/src/i18n/index.js';
 import {
   DEFAULT_LANGUAGE_PREFERENCE,
   LANGUAGE_KINDS,
   LANGUAGE_MEMORY_PREFIX,
   LANGUAGE_PREFERENCE_KEY,
-  LANGUAGE_PREFERENCE_LABELS,
   LANGUAGE_PREFERENCES,
   LANGUAGE_PROFILE_FIELDS,
   LANGUAGE_PROFILE_VERSION,
@@ -445,10 +445,19 @@ describe('the language preference (Task 3)', () => {
   it('offers automatic, Persian and English, each with a label to render', () => {
     expect(LANGUAGE_PREFERENCES).toEqual(['auto', 'fa', 'en']);
     expect(DEFAULT_LANGUAGE_PREFERENCE).toBe('auto');
-    for (const option of LANGUAGE_PREFERENCES) {
-      expect(LANGUAGE_PREFERENCE_LABELS[option].length).toBeGreaterThan(0);
+    // The words the switch shows belong to the interface catalogue since Phase 7.5.3.3, because the choice
+    // now decides the language those words are written in: the Persian option is named in Persian.
+    for (const key of [
+      'settings.languageAutomatic',
+      'settings.languagePersian',
+      'settings.languageEnglish',
+    ] as const) {
+      expect(translate('en', key).length).toBeGreaterThan(0);
     }
-    expect(LANGUAGE_PREFERENCE_LABELS.fa).toContain('فارسی');
+    expect(translate('en', 'settings.languagePersian')).toContain('فارسی');
+    expect(translate('fa', 'settings.languageAutomatic')).not.toBe(
+      translate('en', 'settings.languageAutomatic'),
+    );
   });
 
   it('treats anything it cannot understand as automatic rather than as a fourth state', () => {

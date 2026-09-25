@@ -3,6 +3,8 @@ import { ENTITLEMENT_DENIALS, type EntitlementDenial } from '@shared/usage/entit
 import { USAGE_CATEGORY_LABEL } from '@shared/usage/features';
 import { SUBSCRIPTION_STATUS_LABEL, type SubscriptionStatus } from '@shared/usage/plans';
 import type { BadgeTone } from '../Badge';
+import { liveLabels } from '../../i18n/index.js';
+import { msg } from '../../i18n/index.js';
 
 /**
  * Names for the things a credit surface talks about.
@@ -45,13 +47,13 @@ export function usageCategoryLabel(category: string): string {
 }
 
 /** Why a ledger row exists, in a few words. */
-const LEDGER_KIND_LABEL: Readonly<Record<string, string>> = {
-  grant: 'Allowance granted',
-  consume: 'Credit held',
-  refund: 'Credit returned',
-  expire: 'Allowance expired',
-  adjustment: 'Adjustment',
-};
+const LEDGER_KIND_LABEL: Readonly<Record<string, string>> = liveLabels({
+  grant: 'usage.ledgerKind.grant',
+  consume: 'usage.ledgerKind.consume',
+  refund: 'usage.ledgerKind.refund',
+  expire: 'usage.ledgerKind.expire',
+  adjustment: 'usage.ledgerKind.adjustment',
+});
 
 export function ledgerKindLabel(kind: string): string {
   return LEDGER_KIND_LABEL[kind] ?? kind;
@@ -64,22 +66,22 @@ export function ledgerKindLabel(kind: string): string {
  * the credit came back, so a surface that showed it as spent would be reporting a charge
  * that never happened.
  */
-const LEDGER_STATUS_LABEL: Readonly<Record<string, string>> = {
-  reserved: 'Held until the work finishes',
-  settled: 'Final',
-  released: 'Returned — the work did not complete',
-};
+const LEDGER_STATUS_LABEL: Readonly<Record<string, string>> = liveLabels({
+  reserved: 'usage.ledgerStatus.reserved',
+  settled: 'usage.ledgerStatus.settled',
+  released: 'usage.ledgerStatus.released',
+});
 
 export function ledgerStatusLabel(status: string): string {
   return LEDGER_STATUS_LABEL[status] ?? status;
 }
 
-const ATTEMPT_STATUS_LABEL: Readonly<Record<string, string>> = {
-  reserved: 'Held',
-  settled: 'Completed and charged',
-  released: 'Completed nothing — returned',
-  refused: 'Refused before it ran — nothing was charged',
-};
+const ATTEMPT_STATUS_LABEL: Readonly<Record<string, string>> = liveLabels({
+  reserved: 'usage.attemptStatus.reserved',
+  settled: 'usage.attemptStatus.settled',
+  released: 'usage.attemptStatus.released',
+  refused: 'usage.attemptStatus.refused',
+});
 
 export function attemptStatusLabel(status: string): string {
   return ATTEMPT_STATUS_LABEL[status] ?? status;
@@ -116,15 +118,33 @@ export function denialGroup(denial: string): DenialGroup {
 }
 
 const DENIAL_HEADING: Readonly<Record<string, string>> = {
-  'unknown-feature': 'Not a declared capability',
-  'feature-disabled': 'Held for review',
-  'unknown-plan': 'Plan not recognised',
-  'subscription-inactive': 'Subscription not active',
-  'not-in-plan': 'Not included in your plan',
-  'permission-denied': 'Not permitted for your role',
-  'feature-coming-soon': 'Not built yet',
-  'period-limit-reached': 'Period allowance used',
-  'insufficient-credits': 'Not enough credits',
+  get ['unknown-feature'](): string {
+    return msg('labels.notADeclaredCapability');
+  },
+  get ['feature-disabled'](): string {
+    return msg('labels.heldForReview');
+  },
+  get ['unknown-plan'](): string {
+    return msg('labels.planNotRecognised');
+  },
+  get ['subscription-inactive'](): string {
+    return msg('labels.subscriptionNotActive');
+  },
+  get ['not-in-plan'](): string {
+    return msg('labels.notIncludedInYourPlan');
+  },
+  get ['permission-denied'](): string {
+    return msg('usage.notPermittedForYourRole');
+  },
+  get ['feature-coming-soon'](): string {
+    return msg('labels.notBuiltYet');
+  },
+  get ['period-limit-reached'](): string {
+    return msg('labels.periodAllowanceUsed');
+  },
+  get ['insufficient-credits'](): string {
+    return msg('usage.notEnoughCredits');
+  },
 };
 
 export function denialHeading(denial: string): string {

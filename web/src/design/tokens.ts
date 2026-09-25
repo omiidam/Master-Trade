@@ -1,4 +1,4 @@
-/**
+import { msg } from '../i18n/index.js'; /**
  * Design token manifest — the single list of theme variables this UI may use.
  *
  * The values live in `web/src/styles/global.css` (Tailwind v4 `@theme`). This
@@ -30,8 +30,9 @@ export const THEME: ThemeDefinition = {
   id: 'master-trade-dark',
   name: 'Workstation Dark',
   mode: 'dark',
-  notes:
-    'Premium dark fintech theme. Light theme deferred; tokens are semantic so it can be added without touching components.',
+  get notes(): string {
+    return msg('tokens.premiumDarkFintechThemeLightThemeDeferredTokens');
+  },
 };
 
 /**
@@ -65,8 +66,9 @@ export interface TokenGroup {
 export const TOKEN_GROUPS: readonly TokenGroup[] = [
   {
     group: 'color',
-    summary:
-      'Semantic surfaces, text, borders, state colours and their borders (plus provenance/epistemic colours).',
+    get summary(): string {
+      return msg('tokens.semanticSurfacesTextBordersStateColoursAndTheir');
+    },
     variables: [
       '--color-bg',
       '--color-bg-elevated',
@@ -114,8 +116,9 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   },
   {
     group: 'typography',
-    summary:
-      'Interface and numeric font stacks, the weighted type scale, and the weight ladder it draws on.',
+    get summary(): string {
+      return msg('tokens.interfaceAndNumericFontStacksTheWeightedType');
+    },
     variables: [
       '--font-sans',
       '--font-mono',
@@ -157,8 +160,9 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   },
   {
     group: 'breakpoint',
-    summary:
-      'The responsive ladder: phone landscape, tablet, desktop, wide and ultrawide, in that order.',
+    get summary(): string {
+      return msg('tokens.theResponsiveLadderPhoneLandscapeTabletDesktopWide');
+    },
     variables: [
       '--breakpoint-sm',
       '--breakpoint-md',
@@ -169,8 +173,9 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   },
   {
     group: 'radius',
-    summary:
-      'Radii by the kind of surface: mark, inset tile, control, selectable tile, panel, pill.',
+    get summary(): string {
+      return msg('tokens.radiiByTheKindOfSurfaceMarkInset');
+    },
     variables: [
       '--radius-mark',
       '--radius-inset',
@@ -224,7 +229,9 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   },
   {
     group: 'motion',
-    summary: 'Durations and easings; components must honor prefers-reduced-motion.',
+    get summary(): string {
+      return msg('tokens.durationsAndEasingsComponentsMustHonorPrefersReduced');
+    },
     variables: [
       '--duration-fast',
       '--duration-base',
@@ -235,7 +242,9 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   },
   {
     group: 'zIndex',
-    summary: 'Layering for shell chrome, dropdowns, modals, toasts and tooltips.',
+    get summary(): string {
+      return msg('tokens.layeringForShellChromeDropdownsModalsToastsAnd');
+    },
     variables: ['--z-shell', '--z-overlay', '--z-modal', '--z-toast', '--z-tooltip'],
   },
 ];
@@ -348,7 +357,14 @@ export interface Breakpoint {
 }
 
 export const BREAKPOINTS: readonly Breakpoint[] = [
-  { token: 'sm', rem: 40, px: 640, device: 'phone landscape' },
+  {
+    token: 'sm',
+    rem: 40,
+    px: 640,
+    get device(): string {
+      return msg('tokens.phoneLandscape');
+    },
+  },
   { token: 'md', rem: 48, px: 768, device: 'tablet' },
   { token: 'lg', rem: 64, px: 1024, device: 'desktop' },
   { token: 'xl', rem: 80, px: 1280, device: 'wide' },
@@ -378,28 +394,36 @@ export const ELEVATION: readonly ElevationLevel[] = [
     name: 'flat',
     shadow: null,
     surface: '--color-surface-sunken',
-    usage: 'wells and insets: code, log tails, empty panes',
+    get usage(): string {
+      return msg('tokens.wellsAndInsetsCodeLogTailsEmptyPanes');
+    },
   },
   {
     level: 1,
     name: 'panel',
     shadow: '--shadow-panel',
     surface: '--color-surface',
-    usage: 'the default card',
+    get usage(): string {
+      return msg('tokens.theDefaultCard');
+    },
   },
   {
     level: 2,
     name: 'overlay',
     shadow: '--shadow-popover',
     surface: '--color-surface-raised',
-    usage: 'menus, popovers and the modal panel',
+    get usage(): string {
+      return msg('tokens.menusPopoversAndTheModalPanel');
+    },
   },
   {
     level: 3,
     name: 'emphasis',
     shadow: '--shadow-glow',
     surface: '--color-primary-soft',
-    usage: 'the one accent surface on a screen that asks to be acted on',
+    get usage(): string {
+      return msg('tokens.theOneAccentSurfaceOnAScreenThat');
+    },
   },
 ];
 
@@ -609,69 +633,91 @@ export const SEMANTIC_USAGE: readonly SemanticUsage[] = [
     ink: '--color-success',
     fill: '--color-success-soft',
     edge: '--color-success-border',
-    means: 'a gain, a pass, a thing that went the way it was meant to',
+    get means(): string {
+      return msg('tokens.aGainAPassAThingThatWent');
+    },
   },
   {
     state: 'negative',
     ink: '--color-danger',
     fill: '--color-danger-soft',
     edge: '--color-danger-border',
-    means: 'a loss, a fail, a thing that did not',
+    get means(): string {
+      return msg('tokens.aLossAFailAThingThatDid');
+    },
   },
   {
     state: 'neutral',
     ink: '--color-text',
-    means: 'a figure with no direction: a count, a size, a duration',
+    get means(): string {
+      return msg('tokens.aFigureWithNoDirectionACountA');
+    },
   },
   {
     state: 'warning',
     ink: '--color-warning',
     fill: '--color-warning-soft',
     edge: '--color-warning-border',
-    means: 'attention is due, and no outcome has been recorded yet',
+    get means(): string {
+      return msg('tokens.attentionIsDueAndNoOutcomeHasBeen');
+    },
   },
   {
     state: 'information',
     ink: '--color-info',
     fill: '--color-info-soft',
     edge: '--color-info-border',
-    means: 'context: provenance, scope, a stated limitation',
+    get means(): string {
+      return msg('tokens.contextProvenanceScopeAStatedLimitation');
+    },
   },
   {
     state: 'error',
     ink: '--color-danger',
     fill: '--color-danger-soft',
     edge: '--color-danger-border',
-    means: 'something that was asked for could not be done',
+    get means(): string {
+      return msg('tokens.somethingThatWasAskedForCouldNotBe');
+    },
   },
   {
     state: 'active',
     ink: '--color-primary',
-    means: 'the thing currently in view, or the one being acted on',
+    get means(): string {
+      return msg('tokens.theThingCurrentlyInViewOrTheOne');
+    },
   },
   {
     state: 'inactive',
     ink: '--color-text-muted',
-    means: 'present and readable, but not the current thing',
+    get means(): string {
+      return msg('tokens.presentAndReadableButNotTheCurrentThing');
+    },
   },
   {
     state: 'selected',
     ink: '--color-primary',
     fill: '--color-primary-soft',
     edge: '--color-primary-border',
-    means: 'the option the reader has chosen',
+    get means(): string {
+      return msg('tokens.theOptionTheReaderHasChosen');
+    },
   },
   {
     state: 'unselected',
     ink: '--color-text-muted',
     edge: '--color-border',
-    means: 'an option that is offered and not chosen',
+    get means(): string {
+      return msg('tokens.anOptionThatIsOfferedAndNotChosen');
+    },
   },
   {
     state: 'unavailable',
     ink: '--color-text-faint',
     edge: '--color-border',
-    means: 'not offered in this state, by permission or by plan — not broken',
+    get means(): string {
+      return msg('tokens.notOfferedInThisStateByPermissionOr');
+    },
   },
 ];
 
@@ -696,62 +742,122 @@ export interface ContrastRule {
 }
 
 export const CONTRAST_RULES: readonly ContrastRule[] = [
-  { subject: 'body text on the page', ink: '--color-text', ground: '--color-bg', min: 7 },
-  { subject: 'body text on a card', ink: '--color-text', ground: '--color-surface', min: 7 },
   {
-    subject: 'body text on a raised card',
+    get subject(): string {
+      return msg('tokens.bodyTextOnThePage');
+    },
+    ink: '--color-text',
+    ground: '--color-bg',
+    min: 7,
+  },
+  {
+    get subject(): string {
+      return msg('tokens.bodyTextOnACard');
+    },
+    ink: '--color-text',
+    ground: '--color-surface',
+    min: 7,
+  },
+  {
+    get subject(): string {
+      return msg('tokens.bodyTextOnARaisedCard');
+    },
     ink: '--color-text',
     ground: '--color-surface-raised',
     min: 7,
   },
-  { subject: 'secondary text', ink: '--color-text-muted', ground: '--color-surface', min: 4.5 },
   {
-    subject: 'secondary text on a raised card',
+    get subject(): string {
+      return msg('tokens.secondaryText');
+    },
+    ink: '--color-text-muted',
+    ground: '--color-surface',
+    min: 4.5,
+  },
+  {
+    get subject(): string {
+      return msg('tokens.secondaryTextOnARaisedCard');
+    },
     ink: '--color-text-muted',
     ground: '--color-surface-raised',
     min: 4.5,
   },
-  { subject: 'annotation text', ink: '--color-text-faint', ground: '--color-surface', min: 4.5 },
   {
-    subject: 'annotation text on a raised card',
+    get subject(): string {
+      return msg('tokens.annotationText');
+    },
+    ink: '--color-text-faint',
+    ground: '--color-surface',
+    min: 4.5,
+  },
+  {
+    get subject(): string {
+      return msg('tokens.annotationTextOnARaisedCard');
+    },
     ink: '--color-text-faint',
     ground: '--color-surface-raised',
     min: 4.5,
   },
   {
-    subject: 'annotation text in a well',
+    get subject(): string {
+      return msg('tokens.annotationTextInAWell');
+    },
     ink: '--color-text-faint',
     ground: '--color-surface-sunken',
     min: 4.5,
   },
-  { subject: 'brand text on a card', ink: '--color-primary', ground: '--color-surface', min: 4.5 },
   {
-    subject: 'ink on a filled accent control',
+    get subject(): string {
+      return msg('tokens.brandTextOnACard');
+    },
+    ink: '--color-primary',
+    ground: '--color-surface',
+    min: 4.5,
+  },
+  {
+    get subject(): string {
+      return msg('tokens.inkOnAFilledAccentControl');
+    },
     ink: '--color-primary-fg',
     ground: '--color-primary-strong',
     min: 4.5,
   },
   {
-    subject: 'ink on a filled destructive control',
+    get subject(): string {
+      return msg('tokens.inkOnAFilledDestructiveControl');
+    },
     ink: '--color-danger-fg',
     ground: '--color-danger-strong',
     min: 4.5,
   },
   {
-    subject: 'unavailable text',
+    get subject(): string {
+      return msg('tokens.unavailableText');
+    },
     ink: '--color-text-faint',
     ground: '--color-surface-raised',
     min: 3,
   },
-  { subject: 'the focus ring', ink: '--color-focus', ground: '--color-surface', min: 3 },
   {
-    subject: 'a card edge',
+    get subject(): string {
+      return msg('tokens.theFocusRing');
+    },
+    ink: '--color-focus',
+    ground: '--color-surface',
+    min: 3,
+  },
+  {
+    get subject(): string {
+      return msg('tokens.aCardEdge');
+    },
     ink: '--color-border',
     ground: '--color-surface',
     min: 1.15,
   },
   {
-    subject: 'a strong edge',
+    get subject(): string {
+      return msg('tokens.aStrongEdge');
+    },
     ink: '--color-border-strong',
     ground: '--color-surface',
     min: 1.4,

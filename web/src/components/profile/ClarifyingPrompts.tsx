@@ -3,6 +3,7 @@ import type { ClarifyingPrompt, ContextIssue } from '@shared/profile/model';
 import { Badge } from '../Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTile, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
+import { msg, liveLabels } from '../../i18n/index.js';
 
 /**
  * What the system still needs, and why it is asking.
@@ -13,11 +14,11 @@ import { EmptyState } from '../EmptyState';
  * forgotten an answer the user already gave.
  */
 
-const REASON_LABEL: Record<ClarifyingPrompt['reason'], string> = {
-  missing: 'Not provided',
-  assumed: 'Assumed, not stated',
-  stale: 'May be out of date',
-};
+const REASON_LABEL: Record<ClarifyingPrompt['reason'], string> = liveLabels({
+  missing: 'profile.reason.missing',
+  assumed: 'profile.reason.assumed',
+  stale: 'profile.reason.stale',
+});
 
 const REASON_TONE = {
   missing: 'neutral',
@@ -39,18 +40,15 @@ export function ClarifyingPrompts({ prompts, questions = [], onAnswer }: Clarify
   return (
     <Card>
       <CardHeader divider>
-        <CardTitle>What I still need from you</CardTitle>
-        <CardDescription>
-          These are asked rather than defaulted. If you would rather not answer, the analysis stays
-          limited and says which input it is missing.
-        </CardDescription>
+        <CardTitle>{msg('profile.whatIStillNeedFromYou')}</CardTitle>
+        <CardDescription>{msg('profile.theseAreAskedRatherThanDefaulted')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {empty ? (
           <EmptyState
             icon={<MessageCircleQuestion size={18} aria-hidden />}
-            title="Nothing outstanding"
-            description="Every required field has a value you gave us, and none has aged out yet."
+            title={msg('profile.nothingOutstanding')}
+            description={msg('clarifyingPrompts.everyRequiredFieldHasAValueYouGave')}
           />
         ) : (
           <>
@@ -73,7 +71,7 @@ export function ClarifyingPrompts({ prompts, questions = [], onAnswer }: Clarify
                         onClick={() => onAnswer(prompt.key)}
                         className="text-caption font-medium text-primary underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                       >
-                        Answer
+                        {msg('profile.answer')}
                       </button>
                     ) : null}
                   </div>
@@ -84,7 +82,7 @@ export function ClarifyingPrompts({ prompts, questions = [], onAnswer }: Clarify
             {questions.length > 0 ? (
               <CardTile className="space-y-2">
                 <p className="text-caption font-medium text-warning">
-                  Declarations that do not fit together
+                  {msg('profile.declarationsThatDoNotFitTogether')}
                 </p>
                 <ul className="space-y-1">
                   {questions.map((issue) => (
@@ -97,7 +95,7 @@ export function ClarifyingPrompts({ prompts, questions = [], onAnswer }: Clarify
                   ))}
                 </ul>
                 <p className="text-caption text-text-faint">
-                  These are surfaced as questions, not resolved by choosing one side for you.
+                  {msg('profile.theseAreSurfacedAsQuestionsNot')}
                 </p>
               </CardTile>
             ) : null}

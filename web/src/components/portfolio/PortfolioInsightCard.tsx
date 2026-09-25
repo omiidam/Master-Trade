@@ -8,6 +8,7 @@ import {
   insightTypeLabel,
   insightTypeMeaning,
 } from './labels';
+import { msg } from '../../i18n/index.js';
 
 /**
  * One observation about the composition, with everything needed to weigh it.
@@ -69,7 +70,7 @@ export function PortfolioInsightCard({ insight, className }: PortfolioInsightCar
 
         {insight.assumptions.length > 0 ? (
           <div className="space-y-1">
-            <h4 className="text-body font-medium text-text">What this rests on</h4>
+            <h4 className="text-body font-medium text-text">{msg('portfolio.whatThisRestsOn')}</h4>
             <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
               {insight.assumptions.map((assumption, index) => (
                 <li key={index}>{assumption}</li>
@@ -80,7 +81,7 @@ export function PortfolioInsightCard({ insight, className }: PortfolioInsightCar
 
         {insight.limitations.length > 0 ? (
           <div className="space-y-1">
-            <h4 className="text-body font-medium text-text">Limitations</h4>
+            <h4 className="text-body font-medium text-text">{msg('portfolio.limitations')}</h4>
             <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
               {insight.limitations.map((limitation, index) => (
                 <li key={index}>{limitation}</li>
@@ -96,7 +97,9 @@ export function PortfolioInsightCard({ insight, className }: PortfolioInsightCar
               <span className="font-mono text-text-faint">{source.ref}</span>
             </Badge>
           ))}
-          <span className="text-caption text-text-faint">observed {insight.observedAt}</span>
+          <span className="text-caption text-text-faint">
+            {msg('portfolio.observed')} {insight.observedAt}
+          </span>
         </div>
       </CardContent>
     </Card>
@@ -120,13 +123,11 @@ export function PortfolioInsightsList({ insights, className }: PortfolioInsights
     return (
       <Card className={className}>
         <CardHeader divider>
-          <CardTitle className="text-body">No observations</CardTitle>
+          <CardTitle className="text-body">{msg('portfolio.noObservations')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
           <p className="text-body text-text-muted">
-            The engine produced no insight for this composition. That is not a clean bill of health:
-            it means there was nothing it could observe — most often because too little was declared
-            for a figure to exist at all. The gaps panel says which figures those are.
+            {msg('portfolio.theEngineProducedNoInsightFor')}
           </p>
         </CardContent>
       </Card>

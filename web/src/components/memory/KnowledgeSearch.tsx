@@ -6,6 +6,7 @@ import { Button, IconButton } from '../Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
 import { Input } from '../Input';
 import { Tooltip } from '../Tooltip';
+import { msg } from '../../i18n/index.js';
 
 export interface SearchFacet {
   id: string;
@@ -93,14 +94,14 @@ export function KnowledgeSearch({
             <Input
               value={value}
               onChange={(event) => onValueChange(event.target.value)}
-              placeholder="Search by title, tag, source reference"
-              aria-label="Search knowledge records"
+              placeholder={msg('memory.searchByTitleTagSourceReference')}
+              aria-label={msg('memory.searchKnowledgeRecords')}
               className="ps-8"
             />
             {value.length > 0 ? (
               <span className="absolute inset-y-0 end-1.5 flex items-center">
                 <IconButton
-                  label="Clear search"
+                  label={msg('knowledgeSearch.clearSearch')}
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
@@ -141,8 +142,7 @@ export function KnowledgeSearch({
         ) : null}
 
         <p className="text-caption text-text-faint">
-          Preview filter: substring matching only. Semantic retrieval (embeddings, ranking,
-          trust-filtered recall) is implemented in the backend but is not connected here.
+          {msg('memory.previewFilterSubstringMatchingOnlySemantic')}
           {showInput
             ? ''
             : ' This group narrows the same filter set — there is one search field on purpose.'}
@@ -162,7 +162,7 @@ export function ClearFiltersButton({
 }) {
   return (
     <Button size="sm" variant="ghost" onClick={onClear} disabled={disabled} className={cn('px-0')}>
-      Reset filters
+      {msg('memory.resetFilters')}
     </Button>
   );
 }

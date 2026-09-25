@@ -652,6 +652,44 @@ preferences — answers it, so `resolveLanguage` now reads the request first, `r
 over. A request for a _term_ is not a request for a language, and that distinction is now a rule of its own
 (see below), because the two are one word apart in Persian.
 
+## Phase 7.5.3.3 — the interface in Persian, and the line this phase had to draw
+
+This is the first sub-phase whose Persian is _read by a person_ rather than _held as knowledge_. Everything
+above is a store an agent consults; 7.5.3.3 is the words on the screen, 2,440 of them, in
+`web/src/i18n/messages.fa.ts`. The layer and its one boundary are `docs/ui-language.md`; §24 of
+`docs/frontend-foundation.md` is the phase summary.
+
+The boundary is the part that belongs in this file, because it is a claim about _this_ knowledge system. The
+agent's language layer and the interface share exactly one thing — the setting 7.5.3.1 persisted — and the
+interface layer only ever reads it. So a message the agent reads as Persian cannot move the interface into
+Persian, and a person who picks Persian in Settings has not taught the agent anything about their vocabulary.
+The suite asserts both directions by import rather than by discipline: nothing under `web/src/i18n` may reach
+the knowledge store, and nothing under `web/src/language` may reach the catalogue.
+
+### The glossary decided the interface's wording, and the suite ties the two together
+
+Phase 7.5.2.2 called this out as the risk worth designing against — _a glossary that disagrees with itself_
+— and the translation is where the disagreement would actually appear, because it is written against a
+different file. So the navigation is not merely _consistent_ with the terminology record: the Persian label
+of every page and group **is** the record's preferred form for that concept, and a case in
+`tests/persian-terminology.test.ts` reads the sidebar's wording out of the catalogue and compares it to
+`preferredTerm`. If a later phase renames `academy` in the glossary and not in the interface, or the reverse,
+a test fails rather than a reader noticing.
+
+The rest of the terminology follows the same record: `پوزیشن`, `مواجهه`, `دفتر معاملات`, `تایمفریم`,
+`حد سود`, `حد ضرر`, `کارمزد`, `بهای تمام‌شده`, `مضرب R`. Where a term has no Persian counterpart the product
+uses — `R`, `R:R`, `XAUUSD`, a provider name, a package path — the two catalogues hold the same value, and
+the suite names those nine rather than allowing a share of them quietly.
+
+### One decision about Persian itself: which digits
+
+The interface writes figures with the Persian digits the rest of the product uses (`formatFaNumber`, Phase
+7.5.2.x), and keeps Latin digits inside a _catalogue entry_ where the number is part of a sentence a person
+reads as text — a sample size, a percentage, a level (`5858`, `1.5R`, `46.5%`). The reason is not
+consistency but comprehension: a Persian reader of a trading interface parses `1.5R` and `21290` at a glance
+and a re-typed Persian figure is one more thing to translate back in the head. Figures the _code_ formats go
+through the Persian formatters as before; this phase did not touch them.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -666,6 +704,34 @@ malformed code is still shown as itself so the mistake stays visible. Regression
 
 The English path is untouched by this: `labels.ts#formatMoney` is a different function with a different
 caller contract, and its behaviour is asserted unchanged by the same suite.
+
+### 7.5.3.3: the migration believing it knew better, seven times
+
+Six of the seven defects this phase found were the codemod's fault rather than the wording's, and they are
+worth recording because four of them are the same mistake: a pass that rewrites source code has to be able
+to say _why_ a string is copy, and where it could not, it guessed.
+
+1. **The first pass was a regex and it corrupted seventy-one files**, reaching into template literals. It was
+   caught by reading the diff, reverted, and replaced with a pass over the TypeScript AST — which cannot
+   rewrite a node it has not classified. This is the same lesson 7.5.2.3 learned about a rule whose data had
+   lost an invisible character: a broad pattern does not fail, it acts.
+2. **A getter cannot be named by a quoted string.** `{ 'not-available': … }` became `get not-available()`,
+   which is a syntax error; a record keyed by a discriminant needs `get ['not-available']()`. The key is data
+   and only the value is wording.
+3. **`msg` was assumed to be imported.** A file that imported `liveLabels` from the catalogue and not `msg`
+   was left without it, because the guard asked whether the file imported _from the module_ rather than
+   whether it imported the symbol.
+4. **An SVG path reached the Persian catalogue.** `M32 0H0V32` has a capital letter and a space, which was
+   all the sentence test asked for; a rule requiring a lower-case letter somewhere rules out a path, a
+   constant and a record reference at once.
+5. **The browser driver navigated by a landmark's English name**, so it stopped being able to open Settings
+   the moment the switch worked — the phase's own success broke the test that measured it. It finds the
+   navigation by shape now, and the shell's cases read the name from the catalogue.
+6. **`localStorage` belongs to an origin.** The browser case wrote the stored choice into a document that had
+   not loaded the application yet, which is a `SecurityError` rather than a preference.
+7. **Seven test files asserted on English sentences that had moved into the catalogue.** They read through
+   `tests/helpers/source-copy.ts`, which resolves the keys a file mentions into the English it renders, so
+   each one still asserts what the surface _says_ rather than which id it says it with.
 
 ### 7.5.3.2: six defects, and the pattern in them
 
@@ -782,6 +848,17 @@ one-engine check that the grammar stage _is_ `runRules` over the grammar catalog
 correction-replay reconstruction, determinism and idempotence, the English corpus, the pending →
 promote → runs path, the deprecate → stops path, `approveForm` and its refusal, the agent-proposal
 parking path, and a snapshot round trip that keeps all three decisions.
+
+Phase 7.5.3.3 adds `tests/ui-language.test.ts` — 22 tests over the interface layer. Which languages exist
+and how a stored preference becomes one; that the Persian catalogue is complete and that English did not
+change by a byte; the nine values that are the same in both catalogues, named rather than thresholded; the
+fallback chain (`locale → English → the key itself`) and interpolation with an unknown placeholder left as
+written; the subscription that makes a switch repaint the application, read through a label map because a
+map is read while rendering; the two vocabularies kept apart, asserted by import in both directions and by
+failing if any file imports `memo`; and the switch's own wording, which has to survive its own effect.
+
+Phase 7.5.2.2's `tests/persian-terminology.test.ts` gained one case for the same reason: the sidebar's
+Persian label has to _be_ the glossary's preferred form for that concept, not a second translation of it.
 
 Phase 7.5.3.2 adds `tests/language-context.test.ts` — 22 tests over the interaction rather than over a
 single message. The context: the register reading asserted to be 7.5.3.1's own, work against small talk

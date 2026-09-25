@@ -3,6 +3,7 @@ import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
 import { APP_PAGE_IDS, NAV_SECTIONS } from '../web/src/config/navigation.js';
+import { translate } from '../web/src/i18n/index.js';
 import {
   buildTradeTimeline,
   findTrade,
@@ -15,7 +16,7 @@ import {
   CALENDAR_DAY_STATE_LABEL,
   COMPLIANCE_LABEL,
   EMPTY_TRADE_FILTERS,
-  JOURNAL_PREVIEW_NOTICE,
+  previewNotice,
   JOURNAL_RULE_CHECKLIST,
   RESULT_LABEL,
   REVIEW_STATES,
@@ -135,12 +136,19 @@ describe('trading journal module', () => {
     expect(APP_PAGE_IDS.filter((id) => id === 'journal')).toHaveLength(1);
     // No sub-section leaks into the sidebar as its own category.
     expect(NAV_SECTIONS.filter((section) => section.id.startsWith('journal-'))).toHaveLength(0);
-    const navLabels = NAV_SECTIONS.map((section) => section.label.toLowerCase());
+    const navLabels = NAV_SECTIONS.map((section) =>
+      translate('en', section.labelKey).toLowerCase(),
+    );
     for (const label of ['trade history', 'add trade', 'trade details', 'reviews and lessons']) {
       expect(navLabels, `${label} leaked into the sidebar`).not.toContain(label);
     }
     for (const section of NAV_SECTIONS) {
-      expect(() => assertNoExecutionControls([section.label, section.description])).not.toThrow();
+      expect(() =>
+        assertNoExecutionControls([
+          translate('en', section.labelKey),
+          translate('en', section.descriptionKey),
+        ]),
+      ).not.toThrow();
     }
   });
 
@@ -228,9 +236,9 @@ describe('trading journal module', () => {
   });
 
   it('states on the page that the data is a preview', () => {
-    expect(JOURNAL_PREVIEW_NOTICE).toMatch(/preview/i);
+    expect(previewNotice()).toMatch(/preview/i);
     const page = readFileSync(join(web, 'src', 'pages', 'JournalPage.tsx'), 'utf8');
-    expect(page).toMatch(/\bJOURNAL_PREVIEW_NOTICE\b/);
+    expect(page).toMatch(/\bpreviewNotice\b/);
     expect(page).toMatch(/preview/i);
     // Every internal section is rendered from the page rather than from the sidebar.
     for (const section of JOURNAL_SECTIONS) {
