@@ -165,6 +165,11 @@ export type { FieldProps, SelectDensity, SelectProps } from './Input';
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
 
+// A menu of commands that hangs from its own trigger and is drawn outside the box that holds it,
+// so a table's scroll container cannot clip it — see `AnchoredMenu`.
+export { AnchoredMenu, MenuItem } from './AnchoredMenu';
+export type { AnchoredMenuProps, MenuItemProps } from './AnchoredMenu';
+
 export { Skeleton, SkeletonCard } from './Skeleton';
 export type { SkeletonProps, SkeletonShape } from './Skeleton';
 

@@ -74,7 +74,6 @@ const DECORATIVE_FIXED_WIDTHS: Readonly<Record<string, string>> = {
     'a fixed-size thumbnail inside a wrapping row',
   'web/src/components/journal/TradeFilters.tsx':
     'a minimum for a field that carries flex-1 and wraps with its siblings',
-  'web/src/components/journal/TradeRow.tsx': 'a 2px accent bar',
   'web/src/components/journal/TradeTimeline.tsx': 'a 27px marker dot',
   'web/src/components/quality/ProvenanceIndicator.tsx':
     'a popover; 18rem fits the narrowest supported viewport',

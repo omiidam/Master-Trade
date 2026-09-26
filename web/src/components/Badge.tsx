@@ -66,6 +66,18 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   shape?: BadgeShape;
   icon?: ReactNode;
   dot?: boolean;
+  /**
+   * Whether the label may take a second line. True everywhere by default.
+   *
+   * False is for a badge that is a *cell* in a dense table, where a wrapped chip is a chip that has
+   * lost its shape and — worse — a row whose height depends on which vocabulary word a record
+   * happens to carry. Measured on the journal's trade history before this existed: nine rows at 63px
+   * and one at 83, because the Persian words for *rule broken* needed three lines where the Persian
+   * word for *compliant* needed one. (Both are looked up in the catalogue, which is the only place
+   * this product's Persian lives — which is also why this comment describes them instead of
+   * quoting them.)
+   */
+  wrap?: boolean;
 }
 
 export function Badge({
@@ -73,6 +85,7 @@ export function Badge({
   shape = 'pill',
   icon,
   dot,
+  wrap = true,
   className,
   children,
   ...rest
@@ -90,8 +103,8 @@ export function Badge({
         // keeps a pill on one line wherever it fits and lets it take two lines where it does not,
         // instead of widening the page — and `WRAPPING` above is the half of that which has to
         // differ between a label and an identifier, because only one of the two has spaces.
-        'text-caption font-medium leading-5 whitespace-normal',
-        WRAPPING[shape],
+        'text-caption font-medium leading-5',
+        wrap ? cn('whitespace-normal', WRAPPING[shape]) : 'whitespace-nowrap',
         TONES[tone],
         className,
       )}

@@ -23,19 +23,26 @@ const FAMILY_ICON: Record<SetupFamily, ReactNode> = {
  * not the same evidence. The badge always carries the setup *premise* in its
  * tooltip, so the label cannot drift away from what the setup actually means.
  */
-export function SetupBadge({ setupId }: { setupId: string }) {
+export function SetupBadge({
+  setupId,
+  wrap,
+}: {
+  setupId: string;
+  /** False in a table cell, where a chip is one line — see `BadgeProps.wrap`. */
+  wrap?: boolean;
+}) {
   const setup = setupById(setupId);
   const label = setup ? setup.label : setupLabel(setupId);
   if (!setup) {
     return (
-      <Badge tone="outline" icon={<Layers size={11} aria-hidden />}>
+      <Badge tone="outline" icon={<Layers size={11} aria-hidden />} wrap={wrap}>
         {label}
       </Badge>
     );
   }
   return (
     <Tooltip content={`${SETUP_FAMILY_LABEL[setup.family]} — ${setup.premise}`}>
-      <Badge tone={FAMILY_TONE[setup.family]} icon={FAMILY_ICON[setup.family]}>
+      <Badge tone={FAMILY_TONE[setup.family]} icon={FAMILY_ICON[setup.family]} wrap={wrap}>
         {label}
       </Badge>
     </Tooltip>

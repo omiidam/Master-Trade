@@ -36,6 +36,9 @@ import { EmptyState } from './EmptyState';
  *   3. **A row's outcome is on its edge.** `accent` paints a 2px rule down the row's start edge —
  *      the same construction the journal already used — so a win, a loss and a flat are separable
  *      before any figure is read, and it works in a dense table where a badge per row would not.
+ *      The rule is drawn by the row's *first cell* rather than by the row, which is a correctness
+ *      requirement rather than a preference: `ROW_ACCENT` below records what a pseudo-element on a
+ *      `<tr>` does to the column grid.
  */
 
 /** How much air a row gets. `compact` is the default: this is a dense-data product. */
@@ -51,9 +54,11 @@ export type TableCellTone =
  * The outcome a row is marked with, on its start edge.
  *
  * `none` is the ordinary row and the default: a table of reference data has no outcome, and marking
- * every row would make the marking meaningless.
+ * every row would make the marking meaningless. It is *not* how a table says "this outcome is
+ * unremarkable" — a row whose outcome is known states it as `neutral`, because a rule that is
+ * sometimes absent cannot be told from a rule that failed to render.
  */
-export type TableRowAccent = 'none' | 'success' | 'danger' | 'warning' | 'info';
+export type TableRowAccent = 'none' | 'neutral' | 'success' | 'danger' | 'warning' | 'info';
 
 interface DensityScale {
   /** A header cell. */
@@ -117,11 +122,43 @@ const CELL_TONE: Record<TableCellTone, string> = {
 
 const ROW_ACCENT: Record<TableRowAccent, string> = {
   none: '',
-  success: 'before:bg-success',
-  danger: 'before:bg-danger',
-  warning: 'before:bg-warning',
-  info: 'before:bg-info',
+  // A flat outcome, in the quietest ink that is still a designed value: `text-faint` is the one
+  // step of the ladder that clears 4.5:1 against every surface it can sit on. A bar rather than a
+  // tint, because a grey wash is indistinguishable from a row that is merely not the current one.
+  neutral: '[&>:first-child]:before:bg-text-faint',
+  success: '[&>:first-child]:before:bg-success',
+  danger: '[&>:first-child]:before:bg-danger',
+  warning: '[&>:first-child]:before:bg-warning',
+  info: '[&>:first-child]:before:bg-info',
 };
+
+/**
+ * Where the accent is drawn, and the bug that decided it.
+ *
+ * The rule is painted on the row's **first cell**, not on the row, and the difference is not a style
+ * preference — painting it on the row is a defect that only shows up in a table wider than its
+ * box. A `::before` pseudo-element on a `<tr>` is a child box of a table-row, and a table-row may
+ * only contain table cells, so the browser wraps the pseudo in an **anonymous table cell** that
+ * takes the first column and pushes the row's real cells one column along.
+ *
+ * The consequence is the failure this was found as. Rows whose outcome had an accent were laid out
+ * one column to the right of rows whose outcome had none — a break-even used to be `accent: 'none'`
+ * — so a single table held two different column grids: the header lined up with the unaccented rows,
+ * the accented ones sat 72px adrift with their last column where the header had none, and at a width
+ * where the table scrolls sideways that put the actions menu inside the visible area for exactly
+ * the rows that were misaligned. Measured on the journal at 1024px: nine rows at x=185, one at
+ * x=113; with this pseudo moved to the cell, all ten sit at x=113 and the header with them. (That
+ * break-even now carries the `neutral` accent is a second fix, made in the journal, for the reason
+ * `TableRowAccent` gives.)
+ *
+ * A cell may hold anything, so a pseudo inside the first cell costs the row no column and needs no
+ * anonymous box. It is also the more logical construction of the two: `inset-inline-start` puts the
+ * rule on the row's start edge in either writing direction, which is what the accent means.
+ */
+const ROW_ACCENT_STRUCTURE =
+  '[&>:first-child]:relative [&>:first-child]:before:absolute ' +
+  '[&>:first-child]:before:inset-y-0 [&>:first-child]:before:start-0 ' +
+  '[&>:first-child]:before:w-0.5';
 
 export interface TableSortState {
   /**
@@ -237,11 +274,10 @@ export function TableRow({
     <tr
       className={cn(
         'border-b border-border transition-colors duration-[var(--duration-fast)] last:border-b-0',
-        // The accent is a pseudo-element, so marking a row costs it no width and cannot shift the
-        // columns when a row's outcome changes.
-        accent === 'none'
-          ? ''
-          : 'relative before:absolute before:inset-y-0 before:start-0 before:w-0.5',
+        // The accent is a pseudo-element on the row's first cell, so marking a row costs it no width
+        // and cannot shift the columns when a row's outcome changes — see `ROW_ACCENT` above for
+        // why the cell and not the row.
+        accent === 'none' ? '' : ROW_ACCENT_STRUCTURE,
         ROW_ACCENT[accent],
         muted && 'opacity-60',
         interactive && 'hover:bg-surface-raised/50',

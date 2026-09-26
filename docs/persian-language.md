@@ -1214,7 +1214,24 @@ direction, so its final full stop paints at the start of the line. That is a con
 copy rather than of the direction, and the fix is the migration the i18n layer owns \u2014 inventing Persian
 wording for a sentence about somebody's holdings is a reviewed decision, not a side effect of a layout phase.
 The gap is worth naming for the i18n suite rather than for this one: that suite forbids a Persian character
-outside the catalogue, and an English sentence outside it passes.
+outside the catalogue, and an English sentence outside it passes. (`TradeRow`'s menu button belongs to the
+same family: it is labelled `Actions for TR-041` in English on a Persian screen, which is why the browser
+case added for the row menu finds that button by its position in the row rather than by its name.)
+
+**Found in the same region, and deliberately not fixed with it.** Radix's `Tabs.Root` resolves a writing
+direction for itself — from `dir`, from a `DirectionProvider`, or from `'ltr'` — and stamps it on its own
+element. Left unset it stamps `dir="ltr"` on _every_ tab panel of _every_ page, and because a `dir`
+attribute starts a new bidi paragraph, the panel is laid out left-to-right inside a mirrored document: the
+journal's trade history kept its columns unmirrored, its `text-start` cells on the left and its row actions
+on the right while the page around it turned over. Passing the resolved direction to `Tabs` repairs it —
+measured, the panel's `dir` goes from `ltr` to `rtl` and the table's first cell moves from the left edge to
+the right — and it is held back for one reason: it is not free. Turning those panels around puts five
+signed figures back under the bidi algorithm in an un-isolated form — three on the journal's overview
+(`JournalStatCard`'s comparison line, `+4.2 units against …`, painted with its sign _after_ the digits) and
+two on the second examinations tab — which is what §16 of `docs/frontend-foundation.md` forbids and what
+the browser suite already checks for on every page. The panel's own `dir="ltr"` had been hiding them.
+Isolating a figure inside a translated sentence is a copy change, in both catalogues, so it belongs with the
+migration above rather than in a layout fix.
 
 ### 7.5.3.4.1: two defects, both of them a chain that had one more link than expected
 

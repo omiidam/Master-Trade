@@ -409,6 +409,52 @@ describe('Task 3 — feedback and overlays', () => {
     expect(modal).toMatch(/max-h-\[55vh\][^']*sm:max-h-\[62vh\]/);
     expect(modal).toMatch(/SIZES = \{ sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl' \}/);
   });
+
+  it('hangs a menu outside the box that holds its trigger, and inside the window', () => {
+    const menu = component('AnchoredMenu');
+    // Portalled, because the box a menu hangs over is usually a scroller. `overflow-x: auto`
+    // computes `overflow-y` to `auto`, so a table's sideways scroll container clips its own rows
+    // *vertically*: the panel was cut off at the container's bottom edge, and the container — which
+    // has no vertical content — grew a scrollbar to reach the part of the menu it was hiding.
+    // Nothing about the table is loosened to make room; the menu leaves instead.
+    expect(menu).toMatch(/createPortal/);
+    expect(menu).toMatch(/,\s*document\.body,/);
+    expect(menu).toMatch(/'fixed z-\[var\(--z-modal\)\]/);
+    // Placed from the trigger's own box, measured after the panel is in the DOM and before the
+    // browser paints, so it is never drawn at a guessed position and then moved.
+    expect(menu).toMatch(/useLayoutEffect/);
+    expect(menu).toMatch(/anchor\.getBoundingClientRect\(\)/);
+    expect(menu).toMatch(/panel\.getBoundingClientRect\(\)/);
+    expect(menu).toMatch(/visibility: 'hidden'/);
+    // The trigger's *end* edge, resolved rather than assumed — the same menu in either writing
+    // direction — and the window's margin where that edge would take the panel off screen.
+    expect(menu).toMatch(/getComputedStyle\(anchor\)\.direction === 'rtl'/);
+    expect(menu).toMatch(/clamp\(left, VIEWPORT_MARGIN/);
+    expect(menu).toMatch(/clamp\(top, VIEWPORT_MARGIN/);
+    // And it opens upwards where downwards would leave the window, so the last row of a table
+    // needs no special case.
+    expect(menu).toMatch(/trigger\.top - height - TRIGGER_GAP/);
+    // The anchor scrolls with the table it is in, so the panel is re-placed from the row's live box
+    // rather than left behind — and the menu is dismissed only once that row has left the window.
+    // Closing on the first scroll would be simpler, and it is the version that flashes and vanishes:
+    // a scroll event from the interaction before the press arrives after the panel opens.
+    expect(menu).toMatch(/addEventListener\('scroll', follow, true\)/);
+    expect(menu).toMatch(/addEventListener\('resize', follow\)/);
+    expect(menu).toMatch(/const onScreen =/);
+    expect(menu).toMatch(/if \(!onScreen\) \{\s*closeRef\.current\(\);/);
+    expect(menu).not.toMatch(/addEventListener\('scroll', close, true\)/);
+  });
+
+  it('keeps the journal’s row menu out of its own row', () => {
+    const row = read(join('web', 'src', 'components', 'journal', 'TradeRow.tsx'));
+    // The defect, asserted against coming back: the panel was an `absolute` child of the row.
+    expect(row).not.toMatch(/absolute end-0 top-8/);
+    expect(row).toMatch(/<AnchoredMenu/);
+    // The trigger is the control that was pressed, so the panel is placed against the button
+    // rather than against the cell — which is far wider than the button is.
+    expect(row).toMatch(/setMenuAnchor\(event\.currentTarget\)/);
+    expect(row).toMatch(/aria-haspopup="menu"/);
+  });
 });
 
 /* ------------------------------------------------------------------------ */

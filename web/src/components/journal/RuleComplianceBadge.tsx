@@ -15,10 +15,19 @@ const TONE = {
  * trade can still be a rule break, and a clean loss can still be compliant. The
  * tooltip states what each state means so the badge is never read as a grade.
  */
-export function RuleComplianceBadge({ compliance }: { compliance: RuleCompliance }) {
+export function RuleComplianceBadge({
+  compliance,
+  wrap,
+}: {
+  compliance: RuleCompliance;
+  /** False in a table cell, where a chip is one line — see `BadgeProps.wrap`. */
+  wrap?: boolean;
+}) {
   return (
     <Tooltip content={COMPLIANCE_EXPLANATION[compliance]}>
-      <Badge tone={TONE[compliance]}>{COMPLIANCE_LABEL[compliance]}</Badge>
+      <Badge tone={TONE[compliance]} wrap={wrap}>
+        {COMPLIANCE_LABEL[compliance]}
+      </Badge>
     </Tooltip>
   );
 }

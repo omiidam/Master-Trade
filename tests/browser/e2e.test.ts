@@ -1801,4 +1801,373 @@ suite('the Product Foundation in a real browser', () => {
       await startIn(null);
     });
   });
+
+  /* ---------------------------------------------------------------------- */
+  /* The journal's trade history, measured as the reader reads it             */
+  /* ---------------------------------------------------------------------- */
+
+  describe('the trade history, in a browser', () => {
+    /** The tab the row table lives on, in the language the interface is being read in. */
+    const openHistory = async (locale: UiLocale): Promise<void> => {
+      // The navigation is a client-rendered application behind a static document, so it is only there
+      // once it has mounted — and this case reaches the page immediately after a language change. The
+      // wait is on the entry the click is about to look for, which is the same signal `clickNav` uses.
+      const entry = translate(locale, 'shell.nav.journal.label');
+      await session.waitFor(
+        `[...document.querySelectorAll('nav button')].some(
+           (item) => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim() === ${JSON.stringify(entry)},
+         )`,
+        `the ${locale} navigation to be rendered`,
+      );
+      await visitIn(locale, 'journal');
+      const label = translate(locale, 'journal.tradeHistory');
+      // Radix activates a tab on `mousedown`, and silently ignores a synthetic `.click()`.
+      expect(
+        await session.evaluate<boolean>(`
+          (() => {
+            const tab = [...document.querySelectorAll('main [role="tab"]')].find(
+              (item) => (item.textContent ?? '').trim() === ${JSON.stringify(label)},
+            );
+            if (!tab) return false;
+            tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+            return true;
+          })()
+        `),
+        `the "${label}" tab was not on the journal page`,
+      ).toBe(true);
+      await session.waitFor(
+        `document.querySelectorAll('main [role="tabpanel"] table tbody tr').length > 1`,
+        `the trade history table to render its rows`,
+      );
+    };
+
+    /** What each row states on its start edge, and where that edge is. */
+    interface RowReport {
+      ref: string;
+      accent: string;
+      accentWidth: string;
+      height: number;
+      headStart: number;
+      headEnd: number;
+      cellStart: number;
+      cellEnd: number;
+    }
+
+    const rows = (): Promise<RowReport[]> =>
+      session.evaluateJson<RowReport[]>(`
+        (() => {
+          const table = document.querySelector('main [role="tabpanel"] table');
+          const headBox = table?.querySelector('thead tr th')?.getBoundingClientRect();
+          return JSON.stringify(
+            [...(table?.querySelectorAll('tbody tr') ?? [])].map((row) => {
+              const cell = row.firstElementChild;
+              const box = cell.getBoundingClientRect();
+              const drawn = getComputedStyle(cell, '::before');
+              return {
+                ref: (cell.textContent ?? '').trim(),
+                accent: drawn.backgroundColor,
+                accentWidth: drawn.width,
+                height: Math.round(row.getBoundingClientRect().height),
+                headStart: Math.round(headBox ? headBox.left : -1),
+                headEnd: Math.round(headBox ? headBox.right : -1),
+                cellStart: Math.round(box.left),
+                cellEnd: Math.round(box.right),
+              };
+            }),
+          );
+        })()
+      `);
+
+    /**
+     * A row's own menu button, in the last cell of the row — found by position rather than by the
+     * accessible name it carries, because that name is still English on a Persian screen.
+     *
+     * `row` is an index, and a negative one counts back from the end, so "the bottom row" is the same
+     * expression in a table the reader has sorted.
+     */
+    const menuButton = (row: number): string => `
+      [...document.querySelectorAll('main [role="tabpanel"] table tbody tr')]
+        .at(${row})?.lastElementChild?.querySelector('button')
+    `;
+
+    /**
+     * Bring that button into the window, and let the scroll it starts settle before it is pressed.
+     *
+     * Two calls rather than one, because the menu dismisses itself on a scroll — it is anchored to a
+     * row, and a row that has moved leaves it pointing at nothing. So the scroll is finished with
+     * before the press, which is also the order a person does it in.
+     */
+    const reveal = (row: number): Promise<boolean> =>
+      session.evaluate<boolean>(`
+        (() => {
+          const button = ${menuButton(row)};
+          if (!button) return false;
+          button.scrollIntoView({ block: 'center', inline: 'nearest' });
+          return true;
+        })()
+      `);
+
+    const press = (row: number): Promise<boolean> =>
+      session.evaluate<boolean>(`
+        (() => {
+          const button = ${menuButton(row)};
+          if (!button) return false;
+          button.click();
+          return true;
+        })()
+      `);
+
+    /** Press a row's menu button once it is on screen, and hand back what opened. */
+    const openMenu = async (row: number): Promise<MenuReport | null> => {
+      expect(await reveal(row), 'the row has no menu button').toBe(true);
+      await session.waitFor(
+        `(() => {
+           const box = ${menuButton(row)}?.getBoundingClientRect();
+           if (!box) return false;
+           return (
+             box.top >= 0 &&
+             box.bottom <= document.documentElement.clientHeight &&
+             box.left >= 0 &&
+             box.right <= document.documentElement.clientWidth
+           );
+         })()`,
+        `row ${row} to be scrolled into the window`,
+      );
+      expect(await press(row), 'the row menu button could not be pressed').toBe(true);
+      await session.waitFor(
+        `document.querySelectorAll('[role="menu"]').length > 0`,
+        `the menu for row ${row} to open`,
+      );
+      return lastRowMenu();
+    };
+
+    /**
+     * Scroll the table's own container to the end of its rows, where the menu button lives.
+     *
+     * A mirrored scroll container starts at its *right* edge, so the actions column of a right-to-left
+     * table is reached with the opposite number — which is the whole point of measuring it here.
+     */
+    const scrollTableToEnd = (): Promise<boolean> =>
+      session.evaluate<boolean>(`
+        (() => {
+          const wrapper = document.querySelector('main [role="tabpanel"] table')?.parentElement;
+          if (!wrapper) return false;
+          wrapper.scrollLeft =
+            getComputedStyle(document.documentElement).direction === 'rtl'
+              ? -wrapper.scrollWidth
+              : wrapper.scrollWidth;
+          return true;
+        })()
+      `);
+
+    interface MenuReport {
+      panels: number;
+      parent: string;
+      position: string;
+      visibility: string;
+      left: number;
+      top: number;
+      right: number;
+      bottom: number;
+      triggerStart: number;
+      triggerEnd: number;
+      triggerTop: number;
+      triggerBottom: number;
+      triggerDirection: string;
+      containerGainedScroll: boolean;
+      viewportWidth: number;
+      viewportHeight: number;
+    }
+
+    /** What the open menu of the *last* row is, and where it sits against that row's button. */
+    const lastRowMenu = (): Promise<MenuReport | null> =>
+      session.evaluateJson<MenuReport | null>(`
+        (() => {
+          const panels = [...document.querySelectorAll('[role="menu"]')];
+          const panel = panels[panels.length - 1];
+          const wrapper = document.querySelector('main [role="tabpanel"] table')?.parentElement;
+          const rows = [...document.querySelectorAll('main [role="tabpanel"] table tbody tr')];
+          const button = rows[rows.length - 1]?.lastElementChild?.querySelector('button');
+          if (!panel || !wrapper || !button) return JSON.stringify(null);
+          const box = panel.getBoundingClientRect();
+          const trigger = button.getBoundingClientRect();
+          const style = getComputedStyle(panel);
+          return JSON.stringify({
+            panels: panels.length,
+            parent: panel.parentElement?.tagName ?? '',
+            position: style.position,
+            visibility: style.visibility,
+            left: Math.round(box.left),
+            top: Math.round(box.top),
+            right: Math.round(box.right),
+            bottom: Math.round(box.bottom),
+            triggerStart: Math.round(trigger.left),
+            triggerEnd: Math.round(trigger.right),
+            triggerTop: Math.round(trigger.top),
+            triggerBottom: Math.round(trigger.bottom),
+            triggerDirection: getComputedStyle(button).direction,
+            containerGainedScroll: wrapper.scrollHeight > wrapper.clientHeight,
+            viewportWidth: document.documentElement.clientWidth,
+            viewportHeight: document.documentElement.clientHeight,
+          });
+        })()
+      `);
+
+    /**
+     * The menu is open, drawn, and inside the window — the four facts that make it usable.
+     *
+     * The edge it hangs from is read from the trigger's *own* resolved direction rather than from the
+     * document's, because that is the direction the control was actually laid out in — and the two can
+     * differ, as they do today on a tab panel.
+     */
+    const expectUsableMenu = async (report: MenuReport | null): Promise<MenuReport> => {
+      expect(report, 'the row menu did not open').not.toBeNull();
+      const open = report as MenuReport;
+      expect(open.panels, 'more than one menu is open at once').toBe(1);
+      // It is not inside the row it covers: portalled to the body, which is what takes the table's
+      // own scroll container — `overflow-x: auto`, and therefore `overflow-y: auto` — out of the
+      // panel's ancestry and so out of its clip.
+      expect(open.parent).toBe('BODY');
+      expect(open.position).toBe('fixed');
+      expect(open.visibility).toBe('visible');
+      expect(open.left).toBeGreaterThanOrEqual(0);
+      expect(open.top).toBeGreaterThanOrEqual(0);
+      expect(open.right).toBeLessThanOrEqual(open.viewportWidth);
+      expect(open.bottom).toBeLessThanOrEqual(open.viewportHeight);
+      // And the table did not grow a scrollbar to reach the part of the menu the container used to
+      // cut off: it has no vertical content, so a vertical scroll on it is a defect in itself.
+      expect(open.containerGainedScroll).toBe(false);
+      // Hung from the control's end edge — the right one where the control is left-to-right, the left
+      // where it is not — and clear of that control rather than covering it. The panel is wider than
+      // the button, so the separation is vertical: above the button or below it.
+      if (open.triggerDirection === 'rtl') {
+        expect(open.triggerStart, 'the menu is not hung from the trigger’s start edge').toBe(
+          open.left,
+        );
+      } else {
+        expect(open.triggerEnd, 'the menu is not hung from the trigger’s end edge').toBe(
+          open.right,
+        );
+      }
+      expect(
+        open.bottom <= open.triggerTop || open.top >= open.triggerBottom,
+        'the menu covers the button that opened it',
+      ).toBe(true);
+      return open;
+    };
+
+    it('marks every trade on its start edge, and keeps the row menu inside the window', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('en');
+      await openHistory('en');
+
+      const english = await rows();
+      expect(english.length, 'the table rendered too few rows to be a table').toBeGreaterThan(5);
+      for (const row of english) {
+        // The claim, in the terms the reader made it: no row is missing its rule. A flat trade is a
+        // *result*, so it wears the accent's quietest step rather than none at all — an absent mark
+        // is indistinguishable from a row that failed to render.
+        expect(row.accent, `${row.ref} draws no rule on its edge`).not.toBe('rgba(0, 0, 0, 0)');
+        expect(row.accent, `${row.ref} draws no rule on its edge`).not.toBe('transparent');
+        expect(row.accentWidth, `${row.ref} draws a rule that is not 2px`).toBe('2px');
+        expect(row.cellStart, `${row.ref} does not line up with the head`).toBe(row.headStart);
+        expect(row.cellEnd, `${row.ref} is a different width from the head`).toBe(row.headEnd);
+      }
+      // One column grid: every row is the same height, whatever vocabulary its chips happen to hold.
+      expect(new Set(english.map((row) => row.height)).size).toBe(1);
+      // More than one colour, so "every row is marked" is not "every row is marked the same".
+      expect(new Set(english.map((row) => row.accent)).size).toBeGreaterThan(1);
+
+      // The last row of the page, which is where a menu that hangs downwards runs out of table.
+      const last = await expectUsableMenu(await openMenu(-1));
+      expect(last.triggerDirection).toBe('ltr');
+
+      // And it holds on to that row while the page moves under it. A scroll event that belongs to
+      // the interaction *before* the press arrives just after the panel opens, so a menu that closed
+      // on the first scroll was one a reader could watch flash and vanish; this is the other half of
+      // "it opens cleanly", and the reason the panel is re-placed rather than dismissed. Scrolling
+      // *up* here because the last row of the table is at the end of the document already.
+      await session.evaluate(`window.scrollBy(0, -40)`);
+      // Waited on the *relationship* rather than on the panel existing: the panel was there before the
+      // scroll too, and a query for it would race the scroll event that re-places it.
+      await session.waitFor(
+        `(() => {
+           const button = ${menuButton(-1)};
+           const panel = document.querySelector('[role="menu"]');
+           if (!button || !panel) return false;
+           const box = button.getBoundingClientRect();
+           const panelBox = panel.getBoundingClientRect();
+           return panelBox.bottom <= box.top || panelBox.top >= box.bottom;
+         })()`,
+        'the menu to come back to the row it belongs to as the page scrolls under it',
+      );
+      const followed = await expectUsableMenu(await lastRowMenu());
+      expect(
+        followed.triggerTop,
+        'the page did not actually scroll, so the check below would pass vacuously',
+      ).toBeGreaterThan(last.triggerTop);
+      // The panel kept its distance from the row it belongs to, rather than staying where it was.
+      expect(
+        Math.abs(followed.top - followed.triggerTop - (last.top - last.triggerTop)),
+      ).toBeLessThanOrEqual(1);
+
+      await session.pressKey('Escape');
+      await session.waitFor(
+        `document.querySelectorAll('[role="menu"]').length === 0`,
+        'the row menu to close',
+      );
+
+      await startIn(null);
+    }, 120_000);
+
+    /**
+     * The same two claims in the interface's other language, and at a phone width.
+     *
+     * What this case deliberately does *not* assert is which edge the panel hangs from: it reads the
+     * trigger's own resolved direction and holds the menu to that (see `expectUsableMenu`), so it stays
+     * a statement about the menu rather than about the direction a tab panel happens to be laid out in.
+     */
+    it('keeps the mark and the menu on the row in Persian, at desktop and phone widths', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+      await openHistory('fa');
+
+      expect(await session.evaluate<string>('document.documentElement.dir')).toBe('rtl');
+      const persian = await rows();
+      expect(persian.length).toBeGreaterThan(5);
+      // One column grid in the other language too: every row's first cell is the head's first cell,
+      // on both edges, so "the row's rule is against the same edge as the header" holds without this
+      // case having to say which edge that is.
+      for (const row of persian) {
+        expect(row.cellStart, `${row.ref} does not line up with the head`).toBe(row.headStart);
+        expect(row.cellEnd, `${row.ref} is a different width from the head`).toBe(row.headEnd);
+        expect(row.accent, `${row.ref} draws no rule on its edge`).not.toBe('rgba(0, 0, 0, 0)');
+      }
+      expect(new Set(persian.map((row) => row.height)).size).toBe(1);
+
+      await expectUsableMenu(await openMenu(-1));
+
+      await session.pressKey('Escape');
+      await session.waitFor(
+        `document.querySelectorAll('[role="menu"]').length === 0`,
+        'the row menu to close',
+      );
+
+      // A phone, where the table scrolls sideways inside its own box and the actions column is only
+      // reachable at the end of that scroll. The menu is the widest thing this row opens, and it is
+      // opened here with 390px of window to fit into.
+      // A phone width is a different emulation mode, and the driver blanks the document to change it —
+      // so the interface is opened again here rather than measured in the blank document it left.
+      await session.setViewport(390, 844);
+      await startIn('fa');
+      await openHistory('fa');
+      expect(await scrollTableToEnd()).toBe(true);
+      const phone = await expectUsableMenu(await openMenu(-1));
+      expect(phone.viewportWidth).toBe(390);
+      // Every command is reachable, rather than a panel that was cut down to its first line.
+      expect(phone.bottom - phone.top).toBeGreaterThan(100);
+
+      await startIn(null);
+    }, 120_000);
+  });
 });

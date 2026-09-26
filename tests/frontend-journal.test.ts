@@ -203,6 +203,35 @@ describe('trading journal module', () => {
     }
   });
 
+  it('lays an outcome on the start edge of every trade, the flat one included', () => {
+    // Two rows were reported as *missing* their border rather than as break-even, and that is the
+    // whole failure mode of an absent mark: "this trade came out flat" and "this row failed to
+    // render" look identical, and the difference is only visible in a badge ten columns away. The
+    // page's own copy has always claimed the grey rule — `journal.aRowRsquoSLeftEdge` reads "green
+    // for a win, red for a loss, grey for break-even, blue for an open record" — so this holds the
+    // code to the sentence the interface prints beside it.
+    const row = readFileSync(join(journalDir, 'TradeRow.tsx'), 'utf8');
+    const accent = row.slice(row.indexOf('const ROW_ACCENT'), row.indexOf('const ROW_TINT'));
+    // Two halves, and both are load-bearing: a `Record` over the result cannot miss a result, and
+    // `Exclude<…, 'none'>` says that "no rule" is not an outcome this table may state.
+    expect(accent, 'the row accent is not exhaustive over the results').toMatch(
+      /Record<TradeResult, Exclude<TableRowAccent, 'none'>>/,
+    );
+    for (const result of ['win', 'loss', 'breakeven', 'pending']) {
+      expect(accent, `a ${result} draws no rule`).toMatch(new RegExp(`\\b${result}: '[a-z]+'`));
+    }
+
+    // And the table system paints the flat one, rather than the journal reaching for a raw colour.
+    const table = readFileSync(join(web, 'src', 'components', 'Table.tsx'), 'utf8');
+    expect(table).toMatch(/TableRowAccent = 'none' \| 'neutral'/);
+    expect(table).toMatch(/neutral: '\[&>:first-child\]:before:bg-text-faint'/);
+    // Drawn by the row's *first cell* and never by the row: a `::before` on a `<tr>` is wrapped in
+    // an anonymous table cell, which takes the first column and pushes that row's cells one column
+    // along — the misalignment that put one row 72px adrift of the header it is read against.
+    expect(table).toMatch(/\[&>:first-child\]:before:start-0/);
+    expect(table).not.toMatch(/'relative before:absolute before:inset-y-0 before:start-0/);
+  });
+
   it('never labels a journal control with an execution affordance', () => {
     const sources = [
       ...journalFiles('.tsx').map((file) => readFileSync(join(journalDir, file), 'utf8')),
