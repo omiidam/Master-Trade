@@ -46,6 +46,11 @@
  *                   Persian text, reported by axis with the characters each finding is about, and
  *                   written so that it asks the store nothing and changes nothing. The one module here
  *                   that is a reading of a text rather than a decision about it.
+ *   - `naturalness.ts` — Phase 7.5.3.5.3: the same reading, judged as an *answer* — is this Persian
+ *                   natural in the tone and the terminology the turn was resolved to. It re-reads
+ *                   `evaluation.ts`'s findings against the context rather than checking the text a
+ *                   second time, reads six shapes of its own that are about an answer and not about
+ *                   spelling, and offers no replacement: a verdict, a confidence and a reason.
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
  *
  * Nothing here renders. This is the layer that reads what a person wrote and decides how the answer to it
@@ -374,6 +379,28 @@ export type {
   QualityInput,
   QualityMatch,
 } from './evaluation.js';
+
+export {
+  NATURALNESS_ASPECTS,
+  NATURALNESS_CHECKS,
+  NATURALNESS_CONFIDENCES,
+  NATURALNESS_LIMITS,
+  NATURALNESS_STANCES,
+  NATURALNESS_THRESHOLDS,
+  evaluatePersianNaturalness,
+  isNaturalnessContext,
+  naturalnessCheckIds,
+} from './naturalness.js';
+export type {
+  NaturalnessAspect,
+  NaturalnessCheck,
+  NaturalnessConfidence,
+  NaturalnessContext,
+  NaturalnessOptions,
+  NaturalnessReport,
+  NaturalnessStance,
+  NaturalnessVerdict,
+} from './naturalness.js';
 
 export {
   LANGUAGE_QA_FAMILIES,

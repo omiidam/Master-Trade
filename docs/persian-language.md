@@ -1479,6 +1479,104 @@ Nothing about 7.5.3.5.1's local-mark / census-language split changed, and the gr
 third reading: a rule already asks about the characters it is about, through the same `RuleInput` the
 pipeline hands it. What the phase did find is that the _mark_ half had a hole: the ellipsis, above.
 
+## Phase 7.5.3.5.3 — naturalness and context, and the answer as the thing being judged
+
+The two layers before this one answer _is this Persian written correctly_. This phase answers the question
+a reader actually asks of an answer: **is this Persian natural here** — in the tone the turn was resolved
+to, with the terminology it was resolved to, for a message mixed the way this one was. That question is a
+judgement rather than a rule, and the design of `naturalness.ts` is what follows from taking that
+seriously.
+
+### The context is two vocabularies the product already has, read rather than re-declared
+
+Three fields, and not one of them is computed here:
+
+| Field         | Where it comes from                                                                     |
+| ------------- | --------------------------------------------------------------------------------------- |
+| `tone`        | the response-style contract (`@shared/language/guidance`), 7.5.3.4.2                    |
+| `terminology` | the same contract — the product's own forms, English, or both                           |
+| `mixing`      | 7.5.3.2's reading of the message: the one that says whether English is the reader's own |
+
+They arrive as **types** from those modules. This layer computes no reading of a message and touches no
+store: the suite walks its value imports transitively and requires exactly the quality layer and the closed
+tables behind it, so "usable where no store is" — the property 7.5.3.5.1 was built for — is inherited
+rather than restated. All three are required, because a naturalness verdict with no context is a verdict
+about the wrong thing and a default would let a caller produce one without noticing.
+
+### One call, then a stance — not a second checker
+
+"Do not create a duplicate language-quality system" is a shape here rather than a promise. The text is
+scanned **once**, by `evaluatePersianQuality`, and every finding it produces is re-read through a _total_
+`Record<LanguageQualityReading, (context) => Stance>` — a record rather than a chain of conditionals
+because a sixth reading in `evaluation.ts` must fail the build here, and whoever adds it then decides what
+it means for an answer instead of having it fall through to a default nobody chose. The layer's own six
+checks are the shapes a quality layer cannot see: they are about the answer as an answer.
+
+### The five stances, which are the phase's requirement written down
+
+The brief asks the evaluator to tell a genuine problem from acceptable conversational Persian, intentional
+technical English, a person's own terminology and a stylistic choice. Those are the stances, and every
+verdict carries one, a confidence, and the two-sentence reason it decided from — the check's own sentence
+first, because it explains the defect, and the context's second, because it explains the verdict:
+
+- **`problem`** — wrong, or wrong _for the guidance the answer was given_. The only list a surface acts on.
+- **`acceptable`** — a register the answer was asked for. `میشه` in an answer resolved as conversational
+  is the instruction being followed, and the quality layer's finding is re-read as exactly that.
+- **`technical-english`** — a term, a symbol, an identifier, or English the answer was asked to keep.
+- **`user-wording`** — the writer's phrasing, which no tone and no terminology style gets a say in.
+- **`style`** — worth showing a writer and not worth calling wrong: repetition, sentences opening alike, an
+  address that changes mid-answer.
+
+So one sentence gets two verdicts in two contexts, and the suite asserts both halves rather than one:
+`stop loss` in a Persian answer is `technical-english` when the terms were asked for in English and a note
+when the product's own forms were; `trend` is the same finding either way and a different stance; `میشه` is
+`acceptable` under a conversational tone and `style` under a formal one; `میباشد` is the writer's own
+wording in **every** context; and an error the quality layer calls an error stays a `problem` in all five
+contexts, because no tone makes `۳ معاملات` right.
+
+### The six shapes this layer reads for itself
+
+| Check                           | What it reads                                                                                                                | Stance            |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `naturalness.literal-frame`     | a construction carried over from English word for word (`حائز اهمیت است`, `قادر به`, `مورد استفاده قرار`, `لازم به ذکر است`) | `problem`, medium |
+| `naturalness.repeated-sentence` | the same sentence written twice, at four words or more                                                                       | `problem`, high   |
+| `naturalness.repeated-word`     | one word used four times or more                                                                                             | `style`, low      |
+| `naturalness.shared-opener`     | three sentences opening with the same word                                                                                   | `style`, low      |
+| `naturalness.address-drift`     | one answer addressing the reader as both `تو` and `شما`                                                                      | `style`, medium   |
+| `naturalness.english-run`       | three or more lower-case English words in a row — English prose, where a term is one word                                    | `problem`, medium |
+
+The two tables are the delicate part. The literal frames are deliberately **not** 7.5.3.5.1's
+`BOOKISH_PHRASES`, and the difference is a question rather than a preference: `در خصوص` is a bookish _word_ —
+Persian, and correct, in a register this product's copy does not use, which is why the quality layer files it
+as the writer's own — while `حائز اهمیت است` is an English _frame_ wearing Persian words. The suite asserts
+the split in both directions, so the day a phrase is claimed by both layers is the day somebody has to
+decide which one owns it rather than the day a text is reported twice.
+
+### No replacement, ever
+
+A quality finding carries an `instead`, because the product has an opinion about `میباشد`. A naturalness
+verdict has no field for one — not a rule that says it will not, a type that cannot. The phase's first
+requirement is that the response is not rewritten, and a report that hands over a rewrite is a rewrite
+waiting to be applied; the suite asserts the field's absence where it would have been written.
+
+### Confidence, and the order it decides
+
+Every verdict carries `high`, `medium` or `low`, and `problems` is sorted by it, so the first thing a surface
+shows is the thing the layer is surest about. `high` is a shape no reader defends (a sentence written twice,
+a slip the quality layer called an error); `medium` is a pattern somebody may have written on purpose (a
+translation frame, a phrase in English); `low` is a **count**, which is why the three counting checks are
+notes: `NATURALNESS_THRESHOLDS` is exported data, so the numbers a count was measured against are in the
+report's own module rather than in a comment.
+
+### What it cannot judge
+
+The limits list is disjoint from the quality layer's and says so as a test: meaning — whether the answer says
+what the turn asked and keeps what the tools returned — is not readable by a rule at all, and neither is a
+collocation, a metaphor, or a word used in the wrong sense. Two limits are about this layer's own honesty:
+the repetition it deliberately accepts, and the rule quality it inherits — the findings it re-reads are as
+good as the rule that produced them, and running this layer over the product's own Persian copy found where
+one of them is not good enough (below).
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -1786,6 +1884,33 @@ of these would have spent some.
    produced somewhere, by a check or by a recognition, so a value nobody can reach fails rather than
    sitting in a union looking used.
 
+### 7.5.3.5.3: two grammar rules that report the product's own correct Persian
+
+This phase's layer is the first reader of 7.5.3.5.1–5.2 outside the suites, and running it over the corpus
+the product has already written — the **1153** Persian values in `messages.fa.ts` long enough to be prose —
+found where the reuse is only as good as the rules being reused. **22** of the catalogue's values are
+reported as `problem`s by the quality layer and are correct Persian, across two rules:
+
+1. **`grammar.verb-number-agreement`, 21 values.** The rule recognises its subject by a `ها`/`های` ending
+   and nothing else, so `نمودار خالی واقعیتی درباره داده‌ها است` is reported: the `ها` noun is inside the
+   predicate and the real subject is `نمودار خالی`. Its own `notes` already say it cannot tell a plural
+   from a word that ends in those letters, and its own `value` sentence contradicts its `notes` about
+   `پوزیشن‌ها بسته شد` — the `notes` call that sentence the ordinary one and the `value` calls it wrong.
+   The Persian rule the detector is reaching for is _animacy_ (an inanimate plural takes the singular verb),
+   and telling animacy from a `ها` ending needs a lexicon this project does not have.
+2. **`grammar.pronoun-agreement`, 1 value.** `شما` may be a possessive — `قابلیتی که در طرح شما نیست` —
+   and the rule reads the pronoun as the subject. Telling the two apart means looking at the word before the
+   pronoun, which is a clause-level decision the grammar catalogue deliberately has none of.
+
+Neither rule was changed here, and the reason is the phase's own boundary: this layer **re-reads** rules it
+does not own, and narrowing a detector changes what the pipeline reports to a writer — a decision that
+belongs to the grammar catalogue and its 7.5.2.3 record, with its own suite asserting today's behaviour.
+What this phase does instead is the honest half of it: both shapes are named in `NATURALNESS_LIMITS`, with
+the count and the sentences, so a reader of a report knows that a `problem` from those two checks is a rule
+reaching past its evidence rather than a defect in the answer. A report that names the noise in it is worth
+more than one that hides it — and this is the second time a phase has found something in the layer it was
+built to read.
+
 ### 7.5.3.4.5: a control that resolved its own direction, and the five figures it was hiding
 
 1. **The tab strip resolved its own direction, and the resolution was `ltr`.** `Tabs.tsx` rendered Radix's
@@ -1988,6 +2113,23 @@ formal one, a conditional, a heading, a two-point note and a plan — asserted t
 Plus the two documented non-detections, asserted as misses rather than left silent: the broken plural the
 verb-agreement rule cannot see, and the digits inside a technical token.
 
+Phase 7.5.3.5.3 adds `tests/persian-naturalness.test.ts` — 33 tests over an answer judged against the
+context it was written for. The separation first: the value imports are an allow-list of the quality layer and
+its tables, the export surface is an allow-list with no writer in it, and the module contains no `instead`
+field for a replacement to travel in. Then the phase's subject — one text, two verdicts: `stop loss` a note
+where the product's own forms were asked for and the instruction where English was, `trend` the same finding
+in two stances, `میشه` `acceptable` in a conversational answer and a note in a formal one, `میباشد` the
+writer's own wording in all five contexts, and `۳ معاملات` a problem in all five. Then the six shapes, each
+with the case that must fire and the sentence beside it that must not — a sentence twice against a heading
+over its own sentence, four uses of a word against three, three shared openers against two, a run of three
+English words against `stop loss` and against a single `ATR`, and an address that changes against one used
+consistently. Then the false positives: four natural answers in two registers, a symbol and a price, a code
+span, a URL, a protected literal, and a command written as prose, which the layer notices and the quality
+layer names as two words — a boundary both layers draw the same way. And the corpus case, which is the one
+that would catch a future table getting too eager: every Persian value in `messages.fa.ts` long enough to be
+prose — more than a thousand of them — produces **no** `problem` from this layer's own six checks, with a
+floor on the scan and a ceiling on how many notes it may find.
+
 Phase 7.5.3.5.1 adds `tests/persian-evaluation.test.ts` — 37 tests over the reading rather than over the
 decisions. The completeness guard: every check in the catalogue has a case of its own, every case belongs
 to a check that exists, every check names an axis that exists, and every axis is carried by at least one
@@ -2014,10 +2156,12 @@ confidence that decides whether it is read, and the two paths that refuse to lea
 15 more in `tests/rtl-layout.test.ts`, for the direction derived from the language, the glyphs that read it
 and the free text that does not. The evaluation adds 49 more in `tests/persian-evaluation.test.ts`, for the
 seven axes, the case every check must have, the five readings that keep a report from calling natural
-Persian wrong, and the false positives a quality report must not produce. The strip and the panels behind it
-add 2 more to `tests/frontend-integration.test.ts`, and 1 to the browser suite — which is where the number
-that matters was taken: five signed figures painting their signs after their digits before the fix, none
-after it.
+Persian wrong, and the false positives a quality report must not produce. The naturalness layer adds 33 more
+in `tests/persian-naturalness.test.ts`, for the five stances, the six shapes with their thresholds, the
+corpus the product has already written, and the false positives an answer-level judgement must not produce.
+The strip and the panels behind it add 2 more to `tests/frontend-integration.test.ts`, and 1 to the browser
+suite — which is where the number that matters was taken: five signed figures painting their signs after
+their digits before the fix, none after it.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
@@ -2033,6 +2177,7 @@ npx vitest run tests/adaptive-style.test.ts          # 7.5.3.4.2: how the answer
 npx vitest run tests/language-learning.test.ts       # 7.5.3.4.3: what a person says, and its confidence
 npx vitest run tests/rtl-layout.test.ts              # 7.5.3.4.4: the direction, the glyphs, the free text
 npx vitest run tests/persian-evaluation.test.ts      # 7.5.3.5.1-2: the evaluation, grammar and the readings
+npx vitest run tests/persian-naturalness.test.ts     # 7.5.3.5.3: the answer, judged against its context
 npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```

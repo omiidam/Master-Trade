@@ -2474,3 +2474,79 @@ which SVG text has no pair for. A source rule can see a class name and not a gly
 - `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**, unchanged. No new dependency, no catalogue key,
   and no change to any series, scale or tick — the data and the arithmetic are the same, and only the text and the
   band it needs are different.
+
+## 33. Phase 7.5.3.5.3 — naturalness and context, or the answer as the thing being judged
+
+§29 and §30 built a layer that answers _is this Persian written correctly_, and this section is the one that asks the
+question a reader asks of an answer: **is this Persian natural here**. "Here" is the part that makes it a phase
+rather than a style guide — the tone the turn was resolved to, the terminology it was resolved to, and how the message
+mixed the two languages — and it is read from the product's own vocabularies rather than declared: `tone` and
+`terminology` are the response-style contract's (`@shared/language/guidance`, §26), `mixing` is §24's reading of the
+message, and all three arrive as types. The module computes no reading, touches no store, and imports exactly the
+quality layer and the closed tables behind it — the property §29 was built for, inherited rather than restated.
+
+### One call, then a stance — the reuse, and the line against a second system
+
+The brief forbids a duplicate quality layer, and the code is the answer rather than a comment: the text is scanned
+once, by `evaluatePersianQuality`, and each of its findings is re-read through a **total** `Record<LanguageQualityReading,
+(context) => Stance>`. A record rather than a chain of conditionals, because a sixth reading in §29's module has to
+fail the build here, and whoever adds it then decides what it means for an answer. Six readings become five stances:
+`problem` (wrong, or wrong _for the guidance the answer was given_ — the only list a surface acts on), `acceptable` (a
+register the answer was asked for), `technical-english`, `user-wording`, and `style` (worth showing a writer, not worth
+calling wrong).
+
+The same sentence therefore gets two verdicts in two contexts, and the suite asserts both halves: `stop loss` is a note
+where the product's own forms were asked for and `technical-english` where English was; `میشه` is `acceptable` in a
+conversational answer and a `style` note in a formal one; `میباشد` is the writer's own wording in all five contexts;
+and `۳ معاملات` is a problem in all five, because no tone makes a slip right.
+
+### The six shapes a quality layer cannot see
+
+| Check               | What it reads                                                      | Stance            |
+| ------------------- | ------------------------------------------------------------------ | ----------------- |
+| `literal-frame`     | English scaffolding in Persian words (`حائز اهمیت است`, `قادر به`) | `problem`, medium |
+| `repeated-sentence` | the same sentence twice, four words or more                        | `problem`, high   |
+| `repeated-word`     | one word used four times or more                                   | `style`, low      |
+| `shared-opener`     | three sentences opening with the same word                         | `style`, low      |
+| `address-drift`     | one answer saying both `تو` and `شما` to the reader                | `style`, medium   |
+| `english-run`       | three lower-case English words in a row — prose, not a term        | `problem`, medium |
+
+The thresholds are exported data (`NATURALNESS_THRESHOLDS`), and one of them was calibrated by measurement rather
+than by taste: two English words are how a two-word term is written, so the layer run over the product's own Persian
+copy is what lowered a pair to a note and left three words as the problem.
+
+### No replacement, ever — and the confidence that decides the order
+
+§29's findings carry an `instead`, because the product has an opinion about `میباشد`. A naturalness verdict has no
+field for one: the phase's first requirement is that the response is not rewritten, and a report that hands over a
+rewrite is a rewrite waiting to be applied. Confidence travels with every verdict, and `problems` is sorted by it, so
+the first thing a surface shows is the thing the layer is surest about — `high` for a shape no reader defends, `medium`
+for a pattern somebody may have written on purpose, `low` for a count.
+
+### The pieces
+
+| Piece                                       | Where                                                      |
+| ------------------------------------------- | ---------------------------------------------------------- |
+| The layer: stances, context, six checks     | `web/src/language/naturalness.ts`                          |
+| The reading it re-reads rather than repeats | `web/src/language/evaluation.ts` (§29–30)                  |
+| The vocabularies it judges against          | `@shared/language/guidance`, `web/src/language/context.ts` |
+| The suite, including the corpus case        | `tests/persian-naturalness.test.ts` (33 tests)             |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1717** unit tests across **83** files (1684/82 before): the 33 new cases in `tests/persian-naturalness.test.ts`
+  cover the five stances, the six shapes with the sentence beside each that must not fire, the reuse (the import and
+  export allow-lists, and that the two phrase tables share no phrase), and the false positives — four natural answers
+  in two registers, a symbol, a price, a code span, a URL, and a protected literal.
+- The corpus case is the one that would catch a table getting too eager: every Persian value in `messages.fa.ts` long
+  enough to be prose — **1153** of them — produces no `problem` from this layer's own checks, with a floor on the scan
+  and a ceiling on how many notes it may find.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**, unchanged. No new dependency, no new catalogue
+  key, and nothing rewired: like §29's layer, this one is a library and its suite — the first _reader_ of §29–30, and
+  the thing that found what is recorded below.
+- Running it over the product's own copy found where the reuse is only as good as the rules reused: 21 values reported
+  by `grammar.verb-number-agreement` and one by `grammar.pronoun-agreement` are correct Persian (a `ها` noun inside a
+  predicate, and `شما` as a possessive). Both are named in the layer's own limits with the count and the sentences, so
+  a `problem` from those two checks is readable as a rule reaching past its evidence; neither rule was narrowed here,
+  because that changes what the pipeline reports to a writer and belongs to the grammar catalogue's own phase.
