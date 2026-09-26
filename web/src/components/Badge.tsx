@@ -36,6 +36,31 @@ const SHAPES: Record<BadgeShape, string> = {
   tag: 'rounded-[var(--radius-mark)] px-1.5 py-0.5',
 };
 
+/**
+ * How a badge wraps, which is not the same question for the two shapes.
+ *
+ * A `pill` holds a *label* — words — so it breaks between them and only falls back to breaking a word
+ * when one cannot fit: `break-word`.
+ *
+ * A `tag` holds an *identifier* — a code such as `JOURNAL_STORE_UNAVAILABLE` — and an identifier has no
+ * spaces to break at. `break-word` is not enough for it, and the reason is a CSS detail worth writing
+ * down: it lets a word break when the line cannot fit it, but it does **not** lower the run's
+ * *min-content* width. A flex item's `min-width: auto` measures itself against exactly that, so the
+ * identifier stayed a floor — for the badge, and through the cap below for the box it sat in:
+ * `max-w-full` held the badge at its container's width while the text inside it kept its own, and the
+ * text spilled out of the badge. Measured on this component at a 150px row, the token overflowed its
+ * own box by 46px and never wrapped at all.
+ *
+ * `overflow-wrap: anywhere` is the one value that also lowers min-content, so the flex item can shrink
+ * and the identifier breaks across lines instead of escaping the box. It is scoped to the tag shape on
+ * purpose: lowering a *pill's* min-content would let a row of labels squeeze a pill until it broke a
+ * word it had no need to break.
+ */
+const WRAPPING: Record<BadgeShape, string> = {
+  pill: 'break-words',
+  tag: 'wrap-anywhere',
+};
+
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: BadgeTone;
   shape?: BadgeShape;
@@ -57,14 +82,16 @@ export function Badge({
       className={cn(
         'inline-flex max-w-full items-center gap-1.5 border',
         SHAPES[shape],
-        // A pill must fit the box it is in, whatever its label is. `whitespace-nowrap` made the
+        // A badge must fit the box it is in, whatever its label is. `whitespace-nowrap` made the
         // label an unbreakable run, so one long one (a source id such as
         // "risk.positionSize (not yet connected)") became a *minimum width* for every ancestor:
         // the row could not wrap it, the card could not shrink past it, and a page column that
         // sized its track from content carried that minimum to the document. Wrapping the label
-        // (and breaking a token that cannot fit) keeps a pill on one line wherever it fits and
-        // lets it take two lines where it does not, instead of widening the page.
-        'text-caption font-medium leading-5 whitespace-normal break-words',
+        // keeps a pill on one line wherever it fits and lets it take two lines where it does not,
+        // instead of widening the page — and `WRAPPING` above is the half of that which has to
+        // differ between a label and an identifier, because only one of the two has spaces.
+        'text-caption font-medium leading-5 whitespace-normal',
+        WRAPPING[shape],
         TONES[tone],
         className,
       )}
