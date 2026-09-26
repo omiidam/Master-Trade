@@ -1235,6 +1235,8 @@ suite pins both halves: the form reports nothing, and the report says why.
 
 ### Six axes, and why they are not the pipeline's families
 
+The counts in this section are as of 7.5.3.5.1; 7.5.3.5.2 below adds a seventh axis and eight checks.
+
 The pipeline's families are _what it does_ — normalization, grammar, spelling, terminology. The axes are
 _what a reader notices_: **wording, spelling, punctuation, spacing, the half-space, and mixed script**.
 Two of them deliberately overlap a family, and the overlap is a feature rather than a collision: a
@@ -1284,10 +1286,111 @@ Every report carries the same list, because a report that names only what it che
 take its silence for approval: meaning, idiom beyond the fixed tables, morphology outside them, register
 outside the closed pairs, a technical term with no preferred equivalent (this layer holds no lexicon, so
 it names the shape and not the replacement), whether a figure is _correct_ as against which repertoire
-its digits are in, and the grammar layer's own subject. Two more are data-derived rather than imagined,
+its digits are in, and the grammar layer's own subject — which 7.5.3.5.2 then closed by giving that
+subject its own axis, the first limit this list has lost. Two more are data-derived rather than imagined,
 and the phase measured both: a digit inside a technical token — a ratio written with a slash, a path, a
 code span — is protected as another language's, so a mixed digit repertoire inside one goes unread; and
 the two mixed-script checks are silent about a text whose prose is not clearly one script.
+
+## Phase 7.5.3.5.2 — grammar and punctuation, and the difference between a note and a mistake
+
+The layer of 7.5.3.5.1 could say what was wrong with Persian text and could not say what _kind_ of thing
+was wrong with it, which left the brief's hardest requirement unanswered: an evaluation that reports
+thirty findings about a message somebody typed the way they talk is an evaluation nobody will keep.
+This phase closes that, and adds the axis the pipeline had owned since 7.5.2.3 — sentence structure —
+by **calling the grammar catalogue rather than re-deriving it**.
+
+### The reuse, which is the answer to "do not rebuild the rule"
+
+The brief asks for an external library to be reused wherever one reliably detects a problem. The honest
+answer for this product is that the reliable detector already exists in it: `grammar.ts` holds seven
+rules, each with a citation, a confidence and a sentence about what it deliberately does not cover, and
+7.5.3.5.1's evaluation had none of it. They are now _called_ — the same functions `runRules` calls — and
+the only thing that differs is the thing that should: the pipeline asks the store whether a rule's key is
+trusted before running it, and this layer does not, because a reading is about the text and not about
+what we have decided to correct. A deprecated rule therefore still reaches a report here, which is the
+point of having a report at all.
+
+Everything else follows from calling them: the rule's own `describe` sentence is the finding's reason,
+its `detect` suggestion is the `instead`, an insertion (`found` empty) is where a missing boundary is, and
+`enforcement: 'correct'` becomes `deterministic: true` — the pipeline's own distinction between a rule
+with one answer and a rule a person confirms, carried into the report rather than invented beside it. No
+rule text is retyped, so a grammar rule cannot be written twice, and the suite requires a check for every
+rule in the catalogue so a new rule cannot arrive without a case.
+
+**The external libraries, for the third phase running.** `@persian-tools/persian-tools` is TypeScript
+and therefore _could_ be a dependency, so it was re-read for the question rather than dismissed by
+category. Its feature list is numbers, national IDs, phone numbers, cards, IBAN, plates, bill parsing,
+places, time, slugify, plus three text utilities: `halfSpace` (a rewrite, rejected on provenance in
+7.5.1), `removeArabicCharacters` (a rewrite of the same folds `fa.ts` already owns, cited to Unicode),
+and `isPersian` (a boolean, where `detect.ts` already counts). Nothing in it returns _what is wrong_, and
+nothing in it parses a Persian sentence. The four Python repositories were already settled in this file,
+and this phase adds no new question to them: a grammar checker is not what any of them ships either.
+
+### Five readings, so that "not wrong" can be said
+
+Every check now declares a `reading` from a closed list, and the list is the phase:
+
+- **`error`** — wrong in a way no reader would defend. The mechanical slips, the spelling slips, and the
+  grammar shapes whose own notes say the shape has no legitimate reading.
+- **`conversational`** — spoken Persian. `میشه` is how the word is said; the finding says which written
+  form the product uses, and the report files it as a register note rather than a mistake.
+- **`terminology`** — the product's own kind of term: a symbol (`XAUUSD`), a code (`ATR`), a technology
+  under its own name (`TypeScript`). These are _recognised_ rather than reported.
+- **`intentional-english`** — a Latin word the writer meant to write, where the finding is about how it
+  sits in the sentence; and, as a recognition, a literal (a path, a code span, an identifier) nobody should
+  be asked to translate.
+- **`user-wording`** — the writer's own phrasing, which may be deliberate: a bookish construction, a
+  heading that ends in `را`, `خوبها` being the _noun_ "the good ones", a Persian term quoted inside an
+  English sentence, and anything the caller protected by hand.
+
+The report gained the two lists that make the distinction usable rather than decorative: `errors` — the
+`error` subset, and the only list a surface should act on — and `recognised`, one entry per kind, naming
+the forms it saw and chose not to flag. The consequence is measured in a case rather than promised: a
+conversational message produces findings and **zero** errors, and five ordinary Persian sentences — a
+formal one, a conditional, a heading, a two-point note and a plan — produce no findings at all.
+
+### Sentence structure, and the two shapes the rules themselves call legitimate
+
+The seven grammar rules are checks now, with one table deciding what each means. Five are errors: two
+scripts written without a boundary, a separated ezafe `ی`, a numeral with a plural noun, a plural subject
+with a singular verb, a plural pronoun with the wrong conjugation. Two are not, and the table takes the
+rule's own note as its reason: `grammar.object-marker-before-verb` says in as many words that "a heading or
+a fragment is still a legitimate use", so a heading is reported as the writer's wording rather than as a
+mistake; and `grammar.adjective-invariant` says `خوبها` is also a legitimate _noun_, which is why it reports
+rather than corrects. A rule added to the catalogue cannot arrive without an entry, because the suite
+requires a reading for every rule id.
+
+### Punctuation that is missing as well as repeated
+
+`punctuation.doubled` already caught a mark written twice. Missing punctuation is harder, and the phase
+added exactly the part of it that has evidence: **`punctuation.missing-question-mark`**, for a sentence
+that opens with a word which can only open a question — `آیا`, `چگونه`, `چطور`, `چقدر`, `کدام`, `کجا` — and
+does not end with `؟`. The list is closed and `چرا` is deliberately absent even though it is the commonest
+of them, because it is also the word for _pasture_. A comma does not start a sentence, so a question after
+one is not this check's business, and the finding names the evidence and offers no replacement: the mark
+belongs at the end of that sentence, and a heading, a fragment and a question somebody asked on purpose
+all look the same from here.
+
+A missing separator after a terminal mark was the other half, and it was closed by extending the mark set
+rather than adding a check: `بله.خوب` is two sentences run together and the reader sees one word. The full
+stop is now in the set of marks that separate — and _not_ in the set that collapse as a pair, because `..`
+and `...` are a slip and an ellipsis told apart by count. Two guards keep the ellipsis out of the report,
+both from one shared predicate rather than two written guards: a spaced ellipsis (`صبر کن ... بعد`) is how
+that mark is written, and a run of periods is not three sentence endings.
+
+The limits list lost its grammar line and gained three honest ones: sentence structure beyond the seven
+shapes the catalogue holds, punctuation that is missing _without_ evidence (an absent comma between two
+independent clauses, a paragraph with no final full stop), and a term this product writes differently —
+the terminology lexicon is where that comparison lives, it reaches the language store through `memory.ts`,
+and so this layer does not read it. The shape of a technical token is read instead, and named in
+`recognised`.
+
+### The two readings underneath, unchanged — and the one that was wrong
+
+Nothing about 7.5.3.5.1's local-mark / census-language split changed, and the grammar axis did not need a
+third reading: a rule already asks about the characters it is about, through the same `RuleInput` the
+pipeline hands it. What the phase did find is that the _mark_ half had a hole: the ellipsis, above.
 
 ## What verification found
 
@@ -1565,6 +1668,30 @@ importance:
 The lesson in all three is the phase's own subject: a quality report's currency is trust, and every one
 of these would have spent some.
 
+### 7.5.3.5.2: the ellipsis, and a rule whose own sentence promised more than it can see
+
+1. **A spaced ellipsis was reported twice.** The full stop joined the two spacing checks and one of them
+   got the guard that keeps a run of periods out of it — the check that reads the space _after_ a mark —
+   while the check that reads the space _before_ one did not. Found by running the layer over real copy:
+   `صبر کن ... بعد وارد شو` produced "a space before a mark" against the first of three periods, which is
+   exactly how an ellipsis is written. Both checks now ask one shared predicate, because two written guards
+   is how one of them eventually stops agreeing with the other.
+2. **A grammar rule's documentation is wider than its detector.** `grammar.verb-number-agreement`
+   announces itself as "a plural subject followed by a singular verb" and its `value` sentence holds up
+   `معاملات خوب بودند`, not `معاملات خوب بود` — but the rule recognises a plural subject by the `ها`/`های`
+   ending and by nothing else, so the sentence it names as wrong is one it cannot see. Its own notes say
+   why `ان` and `ات` are absent (telling a plural from a word that merely ends in those letters needs a
+   lexicon), so the narrowing is deliberate and the _sentence_ is what overstates. This phase did not
+   change the rule: it wrote the boundary down as a case that asserts the miss, and put the `ها` shape the
+   rule can see beside it as the positive. A report that names a gap is worth more than one that hides it
+   — and this is the first thing the evaluation has found in the layer it was built to read.
+3. **The recognition vocabulary had a value nothing could produce.** The first shape of the five readings
+   gave `terminology` to a check, and no check can honestly claim it without the lexicon this layer does
+   not read: a _term_ preference is the one comparison that lives in `terminology.ts`. It is a recognition
+   kind instead — the tokens a shape rule exempts — and the suite now requires every reading to be
+   produced somewhere, by a check or by a recognition, so a value nobody can reach fails rather than
+   sitting in a union looking used.
+
 ## Verification
 
 The contract suite is `tests/persian-language.test.ts` — 46 tests over the store's separation and its
@@ -1711,6 +1838,19 @@ The browser suite's `the language switch, in a browser` section adds the two thi
 cannot make: that choosing Persian **survives a reload** of the running application while the document
 stays English, and that all three options fit 375 px without panning the page.
 
+Phase 7.5.3.5.2 extends `tests/persian-evaluation.test.ts` to 49 — twelve cases for the grammar axis and
+the five readings. The grammar half asks the catalogue rather than a paraphrase of it: one check per rule
+with the rule's own `describe` and its own `enforcement`, the rule's `detect` suggestion carried through
+as the finding's `instead`, an insertion's empty `found` asserted as the honest shape of "a boundary is
+missing here", and then the pair every rule's documentation already contains — the sentence it names as
+wrong, which must fire, and the sentence beside it, which must not. The readings half is the phase: a
+spoken message that produces findings and zero errors, a bookish phrase and a Latin word filed as
+non-errors, the mechanical and grammar slips filed as errors, the symbols and technology names recognised
+as terminology, a caller's literal recognised as its own wording, and five ordinary Persian sentences — a
+formal one, a conditional, a heading, a two-point note and a plan — asserted to produce no errors at all.
+Plus the two documented non-detections, asserted as misses rather than left silent: the broken plural the
+verb-agreement rule cannot see, and the digits inside a technical token.
+
 Phase 7.5.3.5.1 adds `tests/persian-evaluation.test.ts` — 37 tests over the reading rather than over the
 decisions. The completeness guard: every check in the catalogue has a case of its own, every case belongs
 to a check that exists, every check names an axis that exists, and every axis is carried by at least one
@@ -1735,8 +1875,9 @@ and the prompt they reach, 12 in `tests/adaptive-style.test.ts` for how the answ
 language is settled, and 24 in `tests/language-learning.test.ts` for what a person says outright, the
 confidence that decides whether it is read, and the two paths that refuse to learn from it. The layout adds
 15 more in `tests/rtl-layout.test.ts`, for the direction derived from the language, the glyphs that read it
-and the free text that does not. The evaluation adds 37 more in `tests/persian-evaluation.test.ts`, for the
-six axes, the case every check must have, and the false positives a quality report must not produce.
+and the free text that does not. The evaluation adds 49 more in `tests/persian-evaluation.test.ts`, for the
+seven axes, the case every check must have, the five readings that keep a report from calling natural
+Persian wrong, and the false positives a quality report must not produce.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
@@ -1751,7 +1892,7 @@ npx vitest run tests/response-language.test.ts       # 7.5.3.4.1: the answer's l
 npx vitest run tests/adaptive-style.test.ts          # 7.5.3.4.2: how the answer is worded
 npx vitest run tests/language-learning.test.ts       # 7.5.3.4.3: what a person says, and its confidence
 npx vitest run tests/rtl-layout.test.ts              # 7.5.3.4.4: the direction, the glyphs, the free text
-npx vitest run tests/persian-evaluation.test.ts      # 7.5.3.5.1: the language-quality evaluation
+npx vitest run tests/persian-evaluation.test.ts      # 7.5.3.5.1-2: the evaluation, grammar and the readings
 npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```

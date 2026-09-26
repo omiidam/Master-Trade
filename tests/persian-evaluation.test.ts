@@ -22,13 +22,16 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   COMPOUND_PAIRS,
+  GRAMMAR_RULES,
   LANGUAGE_QUALITY_AXES,
   LANGUAGE_QUALITY_CHECKS,
   LANGUAGE_QUALITY_LIMITS,
+  LANGUAGE_QUALITY_READINGS,
+  LANGUAGE_QUALITY_RECOGNITION_KINDS,
   PERSIAN_DIGITS,
   PERSIAN_PUNCTUATION,
   REGISTER_FORMS,
@@ -37,6 +40,7 @@ import {
   languageQualityChecksByAxis,
   normalizePersianText,
   type LanguageQualityFinding,
+  type LanguageQualityReading,
   type LanguageQualityReport,
 } from '../web/src/language/index.js';
 // The half-space clitic inventory lives in the rule catalogue rather than on the barrel: it is data a
@@ -56,8 +60,24 @@ const [SPOKEN, WRITTEN] = REGISTER_FORMS[0] as readonly [string, string];
 /** The bare list of check ids, for the completeness claim below. */
 const CHECK_IDS = LANGUAGE_QUALITY_CHECKS.map((check) => check.id);
 
-/** One text that must produce a finding from each check. */
+/**
+ * One text that must produce a finding from each check.
+ *
+ * The grammar entries are the catalogue's own mistakes rather than invented ones: each rule's `value`
+ * sentences state the pair — `۳ معامله`, not `۳ معاملات` — so the case that must fire comes from the
+ * documentation the rule already carries, and the case that must *not* fire is the sentence beside it.
+ */
 const CASE_FOR: Readonly<Record<string, string>> = {
+  'grammar.mixed-script-boundary': 'نمادETF رشد کرد',
+  'grammar.ezafe-yeh': 'خانه ی من بزرگ است',
+  'grammar.plural-after-numeral': '۳ معاملات بسته شد',
+  // The rule recognises a plural subject by its `ها`/`های` ending and by nothing else — its own notes
+  // say why `ات` is absent — so the case has to use the ending it can see.
+  'grammar.verb-number-agreement': `پوزیشن${ZWNJ}ها بسته شد`,
+  'grammar.pronoun-agreement': 'ما است',
+  'grammar.object-marker-before-verb': 'این معامله را.',
+  'grammar.adjective-invariant': 'معاملات خوبها',
+  'punctuation.missing-question-mark': 'آیا این معامله بسته شد.',
   'wording.bookish-phrase': 'این مورد میباشد',
   'wording.informal': SPOKEN,
   'wording.register-switch': `${SPOKEN} گفت این خوب ${WRITTEN}`,
@@ -98,14 +118,48 @@ function soleFinding(text: string, check: string): LanguageQualityFinding {
 describe('the evaluation is a reading, not a decision', () => {
   const SOURCE = readFileSync(join('web', 'src', 'language', 'evaluation.ts'), 'utf8');
 
-  it('imports nothing but the language layer’s own closed tables', () => {
+  /**
+   * The value imports of one file, resolved to the file they name.
+   *
+   * `import type` and `export type` are skipped, because a type is erased and cannot pull a store into
+   * a running program — which is exactly how `rules.ts` reaches `model.ts` without reaching storage.
+   * Everything else is followed, because a value import is a module the evaluation *can* call.
+   */
+  function valueImports(file: string): string[] {
+    const source = readFileSync(file, 'utf8');
+    const imports: string[] = [];
+    for (const match of source.matchAll(
+      /(?:^|\n)\s*(?:import|export)\s+(type\s+)?[^;]*?from\s*'([^']+)'/g,
+    )) {
+      if (match[1] !== undefined) continue;
+      const specifier = match[2] ?? '';
+      if (!specifier.startsWith('.')) continue;
+      imports.push(join(dirname(file), specifier.replace(/\.js$/, '.ts')).split('\\').join('/'));
+    }
+    return imports;
+  }
+
+  it('imports nothing but the language layer’s own closed tables, transitively', () => {
     // The separation from Agent Memory, Language Memory, the i18n catalogue and Secrets is a shape
-    // rather than a promise: there is no import here that could reach any of them. A new specifier in
-    // this list is a new dependency of the evaluation, and it has to be argued for in this test.
-    const specifiers = [...SOURCE.matchAll(/(?:from|import)\s*\(?\s*['"]([^'"]+)['"]/g)].map(
-      (match) => match[1] ?? '',
-    );
-    expect([...specifiers].sort()).toEqual(['./fa.js', './rules.js', './spelling.js']);
+    // rather than a promise, and the shape is the *reachable set*: every value import of every file
+    // this one imports, all the way down. It is the strongest form of the claim the file makes, and it
+    // is why the grammar catalogue can be reused while the terminology lexicon — which reaches the
+    // store through `memory.ts` — is read by nobody here.
+    const reachable = new Set<string>();
+    const queue = ['web/src/language/evaluation.ts'];
+    while (queue.length > 0) {
+      const file = queue.pop() as string;
+      if (reachable.has(file)) continue;
+      reachable.add(file);
+      queue.push(...valueImports(file));
+    }
+    expect([...reachable].sort()).toEqual([
+      'web/src/language/evaluation.ts',
+      'web/src/language/fa.ts',
+      'web/src/language/grammar.ts',
+      'web/src/language/rules.ts',
+      'web/src/language/spelling.ts',
+    ]);
   });
 
   it('exports readings and a catalogue, and nothing that could write', () => {
@@ -115,6 +169,8 @@ describe('the evaluation is a reading, not a decision', () => {
       'LANGUAGE_QUALITY_AXES',
       'LANGUAGE_QUALITY_CHECKS',
       'LANGUAGE_QUALITY_LIMITS',
+      'LANGUAGE_QUALITY_READINGS',
+      'LANGUAGE_QUALITY_RECOGNITION_KINDS',
       'evaluatePersianQuality',
       'languageQualityChecksByAxis',
     ]);
@@ -139,11 +195,30 @@ describe('the evaluation is a reading, not a decision', () => {
     );
   });
 
-  it('gives every check an id, an axis, and a case of its own', () => {
+  it('gives every check an id, an axis, a reading and a case of its own', () => {
     expect(new Set(CHECK_IDS).size).toBe(CHECK_IDS.length);
     for (const check of LANGUAGE_QUALITY_CHECKS) {
       expect(LANGUAGE_QUALITY_AXES, check.id).toContain(check.axis);
+      // Every check says what its findings mean, in the closed vocabulary. A reading nothing can
+      // produce and a reading nothing needs are both failures of this assertion, in one direction or
+      // the other — which is what keeps the five from decaying into one.
+      expect(LANGUAGE_QUALITY_READINGS, check.id).toContain(check.reading);
       expect(check.describe.length, check.id).toBeGreaterThan(20);
+    }
+    // And every reading is used by the report somewhere — a check declares it, or it is a kind of thing
+    // the report *recognises* rather than reports, which is what `terminology` is: the shape rule's
+    // exempt tokens are not a finding, and a reading nothing can produce is a value nobody can test.
+    const inUse = new Set<string>([
+      ...LANGUAGE_QUALITY_CHECKS.map((check) => check.reading),
+      ...LANGUAGE_QUALITY_RECOGNITION_KINDS,
+    ]);
+    for (const reading of LANGUAGE_QUALITY_READINGS) {
+      expect(inUse, reading).toContain(reading);
+    }
+    // Every grammar rule in the catalogue is a check here: a rule added to `grammar.ts` cannot arrive
+    // without somebody deciding what its findings mean and writing a case for them.
+    for (const rule of GRAMMAR_RULES) {
+      expect(CHECK_IDS, rule.id).toContain(rule.id);
     }
     // Every check is exercised, and every case in the table belongs to a check that exists: a check
     // that stopped firing, or a case for a check that was renamed, both fail here.
@@ -189,6 +264,56 @@ describe('the evaluation is a reading, not a decision', () => {
     expect(findingsOf(text, 'spelling.compound')).toHaveLength(1);
     const report = evaluatePersianQuality(text, { protectedLiterals: [text] });
     expect(report.findings).toEqual([]);
+  });
+});
+
+describe('grammar, reused rather than rebuilt', () => {
+  it('carries one check per rule in the catalogue, with the rule’s own sentence', () => {
+    // Nothing about the rules is retyped here: the check *is* the rule, called directly rather than
+    // through the pipeline's authorisation, so there is no second implementation to drift.
+    for (const rule of GRAMMAR_RULES) {
+      const check = LANGUAGE_QUALITY_CHECKS.find((candidate) => candidate.id === rule.id);
+      expect(check, rule.id).toBeDefined();
+      expect(check?.axis).toBe('grammar');
+      expect(check?.describe).toBe(rule.describe);
+      // A `correct` rule has one answer and it is printed; a `report` rule has a suggestion a person
+      // confirms. That is the difference the pipeline draws, and it survives as `deterministic`.
+      expect(check?.deterministic, rule.id).toBe(rule.enforcement === 'correct');
+    }
+  });
+
+  it('reports what the rule detects, with the rule’s own suggestion', () => {
+    const found = soleFinding('۳ معاملات بسته شد', 'grammar.plural-after-numeral');
+    expect(found.found).toBe('۳ معاملات');
+    expect(found.instead).toBe('۳ معامله');
+    expect(found.axis).toBe('grammar');
+    expect(found.deterministic).toBe(false);
+  });
+
+  it('reports a missing boundary between two scripts at the place it is missing', () => {
+    const found = soleFinding('نمادETF رشد کرد', 'grammar.mixed-script-boundary');
+    // An insertion has nothing to quote, and an empty `found` is what that honestly looks like: the
+    // finding is about the place between two characters rather than about a character.
+    expect(found.found).toBe('');
+    expect(found.instead).toBe(' ');
+    expect(found.deterministic).toBe(true);
+  });
+
+  it('leaves the sentences the rules themselves write alone', () => {
+    // Each pair is one rule's own documentation: what the product writes, and what it does not. These
+    // are the correct half, and a report that flagged one of them would be contradicting `grammar.ts`.
+    const correct: readonly (readonly [string, string])[] = [
+      ['۳ معامله بسته شد', 'grammar.plural-after-numeral'],
+      [`پوزیشن${ZWNJ}ها بسته شدند`, 'grammar.verb-number-agreement'],
+      ['ما هستیم', 'grammar.pronoun-agreement'],
+      ['این معامله را بستم.', 'grammar.object-marker-before-verb'],
+      ['معاملات خوب است', 'grammar.adjective-invariant'],
+      [`خانه${ZWNJ}ی من بزرگ است`, 'grammar.ezafe-yeh'],
+      ['قیمت XAUUSD است', 'grammar.mixed-script-boundary'],
+    ];
+    for (const [text, check] of correct) {
+      expect(findingsOf(text, check), `${check} on ${text}`).toHaveLength(0);
+    }
   });
 });
 
@@ -384,6 +509,111 @@ describe('mixed Persian and English technical text', () => {
   });
 });
 
+describe('what a finding is allowed to mean', () => {
+  it('files a mistake as an error, and a register as a note rather than a mistake', () => {
+    // The phase's rule in one case: a message written the way somebody talks reports findings, and not
+    // one of them is something to correct.
+    const spoken = evaluatePersianQuality(SPOKEN);
+    expect(spoken.findings.length).toBeGreaterThan(0);
+    expect(spoken.findings.every((finding) => finding.reading === 'conversational')).toBe(true);
+    expect(spoken.errors).toEqual([]);
+
+    // A bookish phrase is the writer's phrasing, and a Latin word they meant to write is theirs too:
+    // both are findings, and neither is an error.
+    expect(evaluatePersianQuality('این مورد میباشد').findings.map((f) => f.reading)).toEqual([
+      'user-wording',
+    ]);
+    expect(evaluatePersianQuality('این مورد میباشد').errors).toEqual([]);
+    expect(evaluatePersianQuality('روند trend تغییر کرد').findings.map((f) => f.reading)).toEqual([
+      'intentional-english',
+    ]);
+    expect(evaluatePersianQuality('روند trend تغییر کرد').errors).toEqual([]);
+  });
+
+  it('files a mechanical slip, a spelling slip and a grammar mistake as errors', () => {
+    const errors: readonly (readonly [string, string])[] = [
+      ['این چیست?', 'punctuation.ascii-mark'],
+      ['بله!!', 'punctuation.doubled'],
+      [`سلام ${comma} بله`, 'spacing.before-mark'],
+      [`خوب${ZWNJ} است`, 'zwnj.beside-space'],
+      ['این کار می شود', 'zwnj.prefix-separated'],
+      ['این كتاب خوب است', 'spelling.arabic-repertoire'],
+      [DECIDED?.written ?? '', 'spelling.compound'],
+      ['۳ معاملات بسته شد', 'grammar.plural-after-numeral'],
+      ['ما است', 'grammar.pronoun-agreement'],
+      ['آیا این معامله بسته شد.', 'punctuation.missing-question-mark'],
+    ];
+    for (const [text, check] of errors) {
+      const report = evaluatePersianQuality(text);
+      expect(
+        report.errors.map((finding) => finding.check),
+        `${check} on ${text}`,
+      ).toContain(check);
+      expect(report.findings.length).toBeGreaterThanOrEqual(report.errors.length);
+      expect(report.errors.every((finding) => finding.reading === 'error')).toBe(true);
+    }
+  });
+
+  it('names what it recognised instead of reporting it', () => {
+    // A symbol in Persian prose is terminology: the product's own kind of word, recognised rather than
+    // read as English spelling. This is the distinction the task asks for, made visible.
+    const symbols = evaluatePersianQuality('نماد XAUUSD را بررسی کن');
+    expect(symbols.recognised.find((entry) => entry.kind === 'terminology')?.found).toEqual([
+      'XAUUSD',
+    ]);
+    expect(symbols.errors).toEqual([]);
+    // A technology under its own name is the same kind of thing, and a literal is not terminology:
+    // it is text the writer is meant to type as it stands.
+    expect(
+      evaluatePersianQuality('کد را در TypeScript بنویس و نتیجه را بررسی کن').recognised.find(
+        (entry) => entry.kind === 'terminology',
+      )?.found,
+    ).toEqual(['TypeScript']);
+    expect(
+      evaluatePersianQuality('فایل index.ts را باز کن').recognised.find(
+        (entry) => entry.kind === 'intentional-english',
+      )?.found,
+    ).toEqual(['index.ts']);
+  });
+
+  it('records the caller’s own wording as recognised rather than reported', () => {
+    const text = 'این عبارت بجای همان است';
+    expect(evaluatePersianQuality(text).errors).toHaveLength(1);
+    const protectedReport = evaluatePersianQuality(text, { protectedLiterals: ['بجای'] });
+    expect(protectedReport.errors).toEqual([]);
+    expect(protectedReport.recognised.map((entry) => entry.kind)).toContain('user-wording');
+    expect(
+      protectedReport.recognised.find((entry) => entry.kind === 'user-wording')?.found,
+    ).toEqual(['بجای']);
+  });
+});
+
+describe('natural Persian, which it must not correct', () => {
+  it('leaves written prose, a heading, a fragment and a comment alone', () => {
+    // The sentences below are ordinary Persian — formal, technical, and one of them a heading — and the
+    // claim is narrow and checkable: a reader would defend all five, so none of them is an error.
+    const natural: readonly string[] = [
+      'نسبت ریسک به سود این معامله ۱ به ۳ بود و طبق پلن پیش رفت.',
+      'اگر قیمت به حد ضرر برسد، پوزیشن بسته میشود.',
+      'گزارش معاملات این هفته',
+      'دو نکته: اول اینکه حجم کم بود، دوم اینکه زمان ورود دیر بود.',
+      `پلن ${WRITTEN} و پوزیشن بسته شد.`,
+    ];
+    for (const text of natural) {
+      expect(evaluatePersianQuality(text).errors, text).toEqual([]);
+    }
+  });
+
+  it('reports a register note without calling it an error', () => {
+    // The same text in the two registers: the spoken one is reported as `conversational` and the
+    // written one is reported as nothing at all.
+    const spokenInput = `${SPOKEN} بگی این معامله چیه`;
+    const spoken = evaluatePersianQuality(spokenInput);
+    expect(spoken.errors).toEqual([]);
+    expect(spoken.findings.some((finding) => finding.reading === 'conversational')).toBe(true);
+  });
+});
+
 describe('what it must not report', () => {
   it('says nothing about a compound the product has not decided', () => {
     // The store holds this pair as a candidate: the pipeline may not apply it, and an evaluation that
@@ -409,6 +639,27 @@ describe('what it must not report', () => {
 
   it('says nothing about a quoted literal', () => {
     expect(evaluatePersianQuality('دستور `npm test` را اجرا کن').findings).toEqual([]);
+  });
+
+  it('says nothing about the space in front of an ellipsis', () => {
+    // Three periods are one mark, and a mark written with a space in front of it is how an ellipsis is
+    // written — found by running this layer over real copy, where `صبر کن ... بعد` was reported twice:.
+    expect(findingsOf('صبر کن ... بعد وارد شو', 'spacing.before-mark')).toHaveLength(0);
+    expect(findingsOf('صبر کن ... بعد وارد شو', 'spacing.after-mark')).toHaveLength(0);
+    expect(findingsOf('صبر کن... بعد وارد شو', 'spacing.before-mark')).toHaveLength(0);
+    // A single full stop is still a mark, and the space in front of it is still a slip.
+    expect(findingsOf('او رفت .', 'spacing.before-mark')).toHaveLength(1);
+  });
+
+  it('says nothing about a plural its own rule cannot see, and the report does not pretend', () => {
+    // A documented blind spot rather than a hidden one. `grammar.ts` recognises a plural subject by the
+    // `ها`/`های` ending, and its notes say in as many words that `ان` and `ات` are deliberately absent
+    // because telling a plural from a word that merely ends in those letters needs a lexicon. So the
+    // sentence its own `value` holds up as wrong — `معاملات خوب بود` — is one this layer does *not*
+    // report, and the honest place for that is here rather than in a silence nobody can see.
+    expect(findingsOf('معاملات خوب بود', 'grammar.verb-number-agreement')).toHaveLength(0);
+    // The shape the rule can see is reported, which is what makes the gap a boundary and not a bug.
+    expect(findingsOf(`پوزیشن${ZWNJ}ها بسته شد`, 'grammar.verb-number-agreement')).toHaveLength(1);
   });
 
   it('says nothing about the digits inside a technical token', () => {

@@ -357,6 +357,8 @@ export {
   LANGUAGE_QUALITY_AXES,
   LANGUAGE_QUALITY_CHECKS,
   LANGUAGE_QUALITY_LIMITS,
+  LANGUAGE_QUALITY_READINGS,
+  LANGUAGE_QUALITY_RECOGNITION_KINDS,
   evaluatePersianQuality,
   languageQualityChecksByAxis,
 } from './evaluation.js';
@@ -365,6 +367,9 @@ export type {
   LanguageQualityCheck,
   LanguageQualityFinding,
   LanguageQualityOptions,
+  LanguageQualityReading,
+  LanguageQualityRecognition,
+  LanguageQualityRecognitionKind,
   LanguageQualityReport,
   QualityInput,
   QualityMatch,

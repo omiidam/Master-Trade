@@ -1,5 +1,5 @@
 /**
- * The Persian language-quality evaluation — Phase 7.5.3.5.1.
+ * The Persian language-quality evaluation — Phase 7.5.3.5.1, extended in 7.5.3.5.2.
  *
  * What this file is, and what it deliberately is not
  * --------------------------------------------------
@@ -25,9 +25,11 @@
  *
  * So the checks below read the product's *closed tables* — the compound pairs, the register forms,
  * the half-space clitic inventory, the character folds — because those are the product's spelling
- * decisions written down once, and they ask the store for nothing. `tests/persian-evaluation.test.ts`
- * holds that separation as a rule over this file's import graph and export surface, not as a promise
- * in a comment.
+ * decisions written down once, and they ask the store for nothing. 7.5.3.5.2 added the second kind of
+ * reuse, which is stronger: the seven **grammar rules** of Phase 7.5.2.3 are *called*, not re-derived,
+ * so against the one thing this product already detects reliably there is no second implementation and
+ * nothing to drift. `tests/persian-evaluation.test.ts` holds the separation as a rule over this file's
+ * import graph — walked transitively — and over its export surface, not as a promise in a comment.
  *
  * One consequence is worth stating before it is discovered: a compound pair the store holds as
  * `pending` is **not** asserted here. The product has not decided it, so an evaluation that reported
@@ -37,12 +39,35 @@
  * The axes, and why they are not the pipeline's stages
  * ----------------------------------------------------
  * The pipeline's families are *what it does* (normalization, grammar, spelling, terminology). These
- * are *what a reader notices*: wording, spelling, punctuation, spacing, the half-space, and the one
- * axis that exists only in a bilingual product — Persian prose with English technical text inside it.
- * `spelling` here is wider than the pipeline's family of the same name (it holds the compound pairs
- * *and* the letter repertoire), and two axes deliberately overlap a stage, because a spelling slip is
- * a spelling slip whoever notices it — and because that overlap is what keeps a report honest after a
- * rule has been retired: the evaluation still sees it.
+ * are *what a reader notices*: the sentence's structure, its wording, its spelling, its marks, the
+ * space around them, the half-space, and the one axis that exists only in a bilingual product —
+ * Persian prose with English technical text inside it. `grammar` is the one axis whose name is also a
+ * family's, and it is called that deliberately: sentence structure is both what the layer does and
+ * what a reader notices, and pretending otherwise would leave the reader's word for it unused.
+ * `spelling` is wider here than the family of the same name (it holds the compound pairs *and* the
+ * letter repertoire), and the overlaps are deliberate, because a spelling slip is a spelling slip
+ * whoever notices it — and because that overlap is what keeps a report honest after a rule has been
+ * retired: the evaluation still sees it.
+ *
+ * What a finding is allowed to mean
+ * ---------------------------------
+ * A report that can only say "wrong" is a report that will be argued with, because Persian text is
+ * full of shapes that are right for one register and one purpose and wrong for another. So every
+ * check declares a `reading` from a closed list of five, and the list is the answer to *do not correct
+ * natural Persian*:
+ *
+ *   - **`error`** — wrong in a way no reader would defend;
+ *   - **`conversational`** — honest spoken Persian: a register note, and never an error;
+ *   - **`terminology`** — the product's own kind of term (a symbol, a code, a technology name), which
+ *     is *recognised* rather than reported;
+ *   - **`intentional-english`** — a Latin word or literal the writer meant to write, where the finding
+ *     is about how it sits in the sentence rather than about the word;
+ *   - **`user-wording`** — the writer's own phrasing, which may be deliberate, including anything the
+ *     caller protected by hand and anything a reviewer protected in the store.
+ *
+ * `report.errors` is the one list a surface should act on, and it is deliberately the smallest: the
+ * rest is a reading of the text, and `report.recognised` names what the layer saw and *chose* not to
+ * report so that a distinction the report makes is visible rather than silent.
  *
  * Two rules every check obeys
  * ---------------------------
@@ -65,6 +90,7 @@
  */
 
 import { ARABIC_INDIC_DIGITS, PERSIAN_DIGITS, PERSIAN_PUNCTUATION, ZWNJ } from './fa.js';
+import { GRAMMAR_RULES } from './grammar.js';
 import {
   LATIN_LETTERS,
   PERSIAN_LETTERS,
@@ -72,6 +98,9 @@ import {
   findSpans,
   overlapsSpan,
   standaloneMatches,
+  type LanguageRule,
+  type RuleInput,
+  type Span,
   type SpanKind,
 } from './rules.js';
 import { COMPOUND_PAIRS, REGISTER_FORMS } from './spelling.js';
@@ -81,12 +110,14 @@ import { COMPOUND_PAIRS, REGISTER_FORMS } from './spelling.js';
  * ──────────────────────────────────────────────────────────────────────────── */
 
 /**
- * The six axes, in report order.
+ * The seven axes, in report order.
  *
- * Roughly the order a reader notices them: the sentence itself, then its words, then its marks, then
- * the space around those marks, then the half-space, then the other script inside it.
+ * Roughly the order a reader notices them: the sentence's structure, then its words, then its
+ * spelling, then its marks, then the space around those marks, then the half-space, then the other
+ * script inside it.
  */
 export const LANGUAGE_QUALITY_AXES = [
+  'grammar',
   'wording',
   'spelling',
   'punctuation',
@@ -95,6 +126,21 @@ export const LANGUAGE_QUALITY_AXES = [
   'script',
 ] as const;
 export type LanguageQualityAxis = (typeof LANGUAGE_QUALITY_AXES)[number];
+
+/**
+ * What a finding is allowed to mean, in the order severity runs.
+ *
+ * The vocabulary is closed and every check declares one: it is what keeps a quality layer from
+ * telling a Persian writer that their own sentence is wrong. See the header for the five in full.
+ */
+export const LANGUAGE_QUALITY_READINGS = [
+  'error',
+  'conversational',
+  'terminology',
+  'intentional-english',
+  'user-wording',
+] as const;
+export type LanguageQualityReading = (typeof LANGUAGE_QUALITY_READINGS)[number];
 
 /**
  * What this layer cannot judge, named once and carried by every report.
@@ -113,7 +159,9 @@ export const LANGUAGE_QUALITY_LIMITS: readonly string[] = [
   'whether a figure is correct — only which repertoire its digits are written in',
   'a digit inside a technical token: a ratio written as a slash token, a path and a code span are all protected as another language’s, so a mixed digit repertoire inside one goes unread (the same protection that keeps `BTC/USDT` intact also keeps `۳٣٤٥/۲۰` out of the report)',
   'the language of a text whose prose is not clearly one script — the script ahead has to hold at least twice the letters of the other, so a two-word message of one Persian and one English word is read as neither and neither mixed-script check reports anything about it',
-  'agreement, the ezafe and the object marker, which are the grammar layer’s subject rather than a quality axis',
+  'sentence structure beyond the seven shapes the grammar catalogue holds — a parse, a clause boundary and a relative clause are the grammar layer’s business and it deliberately has none of them',
+  'punctuation that is missing without evidence: an absent comma between two independent clauses, or a full stop a paragraph ends without, because a heading, a list item and a fragment are all legitimate and none of them is distinguishable from prose by a rule',
+  'a term this product writes differently — the comparison lives in the terminology lexicon (`terminology.ts`), which reaches the language store and is therefore not read here; the shape of a technical token is read instead, and named in `recognised`',
 ];
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -136,14 +184,20 @@ export interface QualityMatch {
 /** What every check is handed. */
 export interface QualityInput {
   readonly text: string;
+  /** The protected spans themselves, which a rule from `rules.ts` is handed as part of its input. */
+  readonly spans: readonly Span[];
   /**
    * True when any part of `[start, end)` lies inside a protected span.
    *
-   * A range, where `RuleInput` in `rules.ts` takes a single index, because a check is about the
-   * characters it reports rather than about one insertion point: a comma it names must be *entirely*
-   * outside a URL for the finding to be about prose.
+   * A range, because a check is about the characters it reports rather than about one insertion
+   * point: a comma it names must be *entirely* outside a URL for the finding to be about prose.
    */
   readonly protects: (start: number, end: number, kinds?: readonly SpanKind[]) => boolean;
+  /**
+   * The same question about one character — the shape a rule in `rules.ts` asks through its own
+   * `RuleInput`, which is why the bridge to those rules needs it.
+   */
+  readonly protectsCharacter: (index: number, kinds?: readonly SpanKind[]) => boolean;
 }
 
 /** A check: one question, asked of the whole text, without touching a store. */
@@ -155,6 +209,8 @@ export interface LanguageQualityCheck {
   readonly describe: string;
   /** True when the answer is decided rather than judged. */
   readonly deterministic: boolean;
+  /** What a finding from this check means about the text — its place in the five readings. */
+  readonly reading: LanguageQualityReading;
   readonly run: (input: QualityInput) => readonly QualityMatch[];
 }
 
@@ -164,6 +220,38 @@ export interface LanguageQualityFinding extends QualityMatch {
   readonly check: string;
   readonly length: number;
   readonly deterministic: boolean;
+  readonly reading: LanguageQualityReading;
+}
+
+/**
+ * The readings a report *recognises* instead of reporting: what it saw and chose not to flag.
+ *
+ * The other two readings are not here and the absence is the design. An `error` is reported by
+ * definition, and a `conversational` register is reported too — a writer benefits from seeing that a
+ * form is spoken rather than written, which is a note and not a silence.
+ */
+export const LANGUAGE_QUALITY_RECOGNITION_KINDS = [
+  'terminology',
+  'intentional-english',
+  'user-wording',
+] as const;
+export type LanguageQualityRecognitionKind = (typeof LANGUAGE_QUALITY_RECOGNITION_KINDS)[number];
+
+/**
+ * Something the evaluation saw and deliberately did not report.
+ *
+ * The distinction the five readings draw is only worth making if it is visible, so a report names the
+ * other side of it too: the terms it recognised, the literals it left alone and the caller's own
+ * wording. `found` is capped — `more` says how many forms were not listed — because this is a summary
+ * of a stance and not an inventory of a document.
+ */
+export interface LanguageQualityRecognition {
+  readonly kind: LanguageQualityRecognitionKind;
+  /** The distinct forms recognised, in the order they appear in the text. */
+  readonly found: readonly string[];
+  /** How many further forms this kind recognised and did not list. */
+  readonly more: number;
+  readonly reason: string;
 }
 
 export interface LanguageQualityReport {
@@ -172,6 +260,10 @@ export interface LanguageQualityReport {
   readonly text: string;
   /** In text order; at one index, in axis order. */
   readonly findings: readonly LanguageQualityFinding[];
+  /** The real errors: the `error` subset, and the only list a surface should act on. */
+  readonly errors: readonly LanguageQualityFinding[];
+  /** What was recognised and not reported, one entry per kind, with the forms that produced it. */
+  readonly recognised: readonly LanguageQualityRecognition[];
   readonly counts: Readonly<Record<LanguageQualityAxis, number>>;
   /** The checks that ran, in order. */
   readonly checks: readonly string[];
@@ -332,6 +424,93 @@ function escaped(character: string): string {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
+ * Grammar: the one thing this product already detects, called rather than rebuilt
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * What each grammar rule means for a reader.
+ *
+ * Two of the seven say in their own notes that the shape they detect has a legitimate reading — a
+ * clause the object marker ends may be a heading or a fragment, and `خوبها` may be the *noun* "the good
+ * ones" — so those are the writer's wording and not errors. The other five are mistakes no reader
+ * would defend: a numeral takes a singular noun, a plural subject takes a plural verb, two scripts
+ * written without a boundary read as one word.
+ *
+ * The table is keyed by rule id and the suite requires a reading for every rule in the catalogue, so a
+ * grammar rule cannot arrive without somebody deciding what its findings mean — which is the whole
+ * question this phase is about.
+ */
+const GRAMMAR_READINGS: Readonly<Record<string, LanguageQualityReading>> = {
+  'grammar.mixed-script-boundary': 'error',
+  'grammar.ezafe-yeh': 'error',
+  'grammar.plural-after-numeral': 'error',
+  'grammar.verb-number-agreement': 'error',
+  'grammar.pronoun-agreement': 'error',
+  // "A heading or a fragment is still a legitimate use, so it reports." — `grammar.ts`
+  'grammar.object-marker-before-verb': 'user-wording',
+  // "`خوبها` is also a legitimate *noun* … A reviewer, who can see whether the word modifies a noun,
+  // is the one who decides." — `grammar.ts`
+  'grammar.adjective-invariant': 'user-wording',
+};
+
+/**
+ * A grammar check, derived from the catalogue's own rule rather than written again here.
+ *
+ * The rule's `correct` edits and its `detect` findings are both findings here, and the difference
+ * between them survives as `deterministic`: a `correct` rule has one answer and it is printed, a
+ * `report` rule has a suggestion a person confirms. The reason is the rule's own sentence wherever the
+ * rule does not carry a better one, so the text a reviewer reads in a report is the text the rule
+ * already documents itself with.
+ *
+ * Nothing about authorisation changes: the rule functions are pure and this layer calls them directly,
+ * where the pipeline would first ask the store whether the rule's key is trusted. That is the
+ * difference between the two layers in one line of code, and it is the reason a rule whose store entry
+ * has been deprecated still reaches a report here — a reading is about the text, not about what we have
+ * decided to correct.
+ */
+function grammarCheck(rule: LanguageRule): LanguageQualityCheck {
+  return {
+    id: rule.id,
+    axis: 'grammar',
+    describe: rule.describe,
+    deterministic: rule.enforcement === 'correct',
+    reading: GRAMMAR_READINGS[rule.id] ?? 'error',
+    run: (input) => {
+      const ruleInput: RuleInput = {
+        text: input.text,
+        spans: input.spans,
+        // The kinds are the rule's own, exactly as the pipeline hands them to it: a rule that protects
+        // figures asks about figures, and one that does not is free to read them.
+        protects: (index) => input.protectsCharacter(index, rule.protectedKinds),
+      };
+      const matches: QualityMatch[] = [];
+      for (const edit of rule.correct?.(ruleInput) ?? []) {
+        matches.push({
+          index: edit.start,
+          // An insertion has nothing to quote, and that is honest rather than empty: `found` is the
+          // characters the finding is about, and this one is about the place between two of them.
+          found: input.text.slice(edit.start, edit.end),
+          instead: edit.after,
+          reason: rule.describe,
+        });
+      }
+      for (const finding of rule.detect?.(ruleInput) ?? []) {
+        matches.push({
+          index: finding.index,
+          found: finding.match,
+          instead: finding.suggestion,
+          reason: finding.reason,
+        });
+      }
+      return matches;
+    },
+  };
+}
+
+/** The grammar axis, one check per rule in the catalogue. */
+const GRAMMAR_CHECKS: readonly LanguageQualityCheck[] = GRAMMAR_RULES.map(grammarCheck);
+
+/* ────────────────────────────────────────────────────────────────────────────
  * The half-space
  * ──────────────────────────────────────────────────────────────────────────── */
 
@@ -367,6 +546,7 @@ const ZWNJ_CHECKS: readonly LanguageQualityCheck[] = [
     describe:
       'A plural with a clitic after it is written with a space: the half-space joins them into one word.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const found: QualityMatch[] = [];
       for (const form of CLITIC_FORMS) {
@@ -395,6 +575,7 @@ const ZWNJ_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'zwnj',
     describe: 'A half-space sits at an edge, or next to a space, where there is nothing to join.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const found: QualityMatch[] = [];
       for (let index = 0; index < input.text.length; index += 1) {
@@ -428,6 +609,7 @@ const ZWNJ_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'zwnj',
     describe: 'Two or more half-spaces in a row: one of them is always invisible and always wrong.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const found: QualityMatch[] = [];
       const pattern = new RegExp(`${ZWNJ}{2,}`, 'gu');
@@ -449,6 +631,7 @@ const ZWNJ_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'zwnj',
     describe: 'A half-space inside a run of Latin letters or digits, where it breaks the token.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const found: QualityMatch[] = [];
       const token = new RegExp(`[${LATIN_LETTERS}0-9]`, 'u');
@@ -475,6 +658,7 @@ const ZWNJ_CHECKS: readonly LanguageQualityCheck[] = [
     describe:
       'A `می` or `نمی` prefix written with a space before one of the light verbs this product conjugates.',
     deterministic: false,
+    reading: 'error',
     run: (input) => {
       const found: QualityMatch[] = [];
       const verbs = LIGHT_VERBS.join('|');
@@ -515,8 +699,39 @@ const ZWNJ_CHECKS: readonly LanguageQualityCheck[] = [
  */
 const HUGGING_MARKS = `${PERSIAN_PUNCTUATION.comma}${PERSIAN_PUNCTUATION.semicolon}${PERSIAN_PUNCTUATION.questionMark}!${PERSIAN_PUNCTUATION.percent}.\u00BB)]`;
 
-/** The marks a following word is separated from by a space. */
-const SEPARATING_MARKS = `${PERSIAN_PUNCTUATION.comma}${PERSIAN_PUNCTUATION.semicolon}${PERSIAN_PUNCTUATION.questionMark}`;
+/**
+ * True when the full stop at `index` is one of a run of periods.
+ *
+ * A run of periods is an ellipsis, and an ellipsis is a mark with a space in front of it in ordinary
+ * writing (`صبر کن ... بعد`) — so both of the checks that look at the space around a mark have to be
+ * able to tell the two apart. One shared predicate rather than two guards, because two guards is how
+ * one of them eventually stops agreeing with the other; the spaced ellipsis below is the case that
+ * proves it.
+ */
+function isEllipsisPeriod(text: string, index: number): boolean {
+  return text[index] === '.' && (text[index - 1] === '.' || text[index + 1] === '.');
+}
+
+/**
+ * The marks a following word is separated from by a space.
+ *
+ * The full stop is here for the same reason it is in the hugging set: `بله.خوب` is two sentences run
+ * together, and the reader sees one word. It is not in the *doubled* check, which is a deliberate
+ * asymmetry — `..` and `...` are an ellipsis and a slip told apart by count, and a rule that collapsed
+ * a run of periods would eat the ellipsis. That check's own guard states the same thing from its side.
+ */
+const SEPARATING_MARKS = `${PERSIAN_PUNCTUATION.comma}${PERSIAN_PUNCTUATION.semicolon}${PERSIAN_PUNCTUATION.questionMark}.`;
+
+/**
+ * The particles that can only begin a question.
+ *
+ * A closed list, and the closing is the point: `چه` and `کی` are also words of their own, so a
+ * sentence beginning with one of them is not evidence of anything. These five cannot start a sentence
+ * that is not asking. `چرا` is deliberately absent even though it is the commonest of them, because it
+ * is also the word for *pasture*, and a report that called a sentence about grazing a missing question
+ * mark would be exactly the noise this layer exists not to make.
+ */
+const INTERROGATIVE_OPENERS: readonly string[] = ['آیا', 'چگونه', 'چطور', 'چقدر', 'کدام', 'کجا'];
 
 /**
  * The paired marks, which come in twos or not at all.
@@ -553,6 +768,7 @@ const PUNCTUATION_CHECKS: readonly LanguageQualityCheck[] = [
     describe:
       'An ASCII comma, semicolon or question mark inside Persian prose, where Persian has its own mark.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const folds: readonly (readonly [string, string])[] = [
         [',', PERSIAN_PUNCTUATION.comma],
@@ -584,6 +800,7 @@ const PUNCTUATION_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'punctuation',
     describe: 'Two marks in a row where one is meant, in the same group or in two.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const characters = MARK_GROUPS.map(([group]) => group).join('');
       const pattern = new RegExp(`[${escaped(characters)}]{2,}`, 'gu');
@@ -612,6 +829,7 @@ const PUNCTUATION_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'punctuation',
     describe: 'A quotation or a bracket opened and not closed, or closed and not opened.',
     deterministic: false,
+    reading: 'error',
     run: (input) => {
       const found: QualityMatch[] = [];
       for (const [opener, closer] of MARK_PAIRS) {
@@ -630,6 +848,62 @@ const PUNCTUATION_CHECKS: readonly LanguageQualityCheck[] = [
       return found;
     },
   },
+  {
+    id: 'punctuation.missing-question-mark',
+    axis: 'punctuation',
+    describe:
+      'A sentence that opens with a word which can only ask a question, and does not end with the question mark.',
+    // Reported rather than decided: the missing mark is punctuation, but what this rule sees is an
+    // opening word, and a heading, a quoted question and a question somebody asked on purpose all look
+    // the same to it.
+    deterministic: false,
+    reading: 'error',
+    run: (input) => {
+      const found: QualityMatch[] = [];
+      const questionMark = PERSIAN_PUNCTUATION.questionMark;
+      const openers = INTERROGATIVE_OPENERS.join('|');
+      // A sentence starts at the beginning of the text, after a newline, or after a terminal mark. A
+      // comma does not start one, which is what keeps `بله، آیا` out of this check.
+      const pattern = new RegExp(
+        `(?:^|[\n.${questionMark}!])\\s*(${openers})(?![${PERSIAN_LETTERS}])`,
+        'gu',
+      );
+      for (const match of input.text.matchAll(pattern)) {
+        if (match.index === undefined) continue;
+        const opener = match[1] as string;
+        const at = match.index + match[0].length - opener.length;
+        if (input.protects(at, at + opener.length)) continue;
+        // Where the sentence ends is the first terminal mark or line break after the opener.
+        let end = input.text.length;
+        for (let index = at + opener.length; index < input.text.length; index += 1) {
+          const character = input.text[index] as string;
+          if (
+            character === '\n' ||
+            character === '.' ||
+            character === questionMark ||
+            character === '!'
+          ) {
+            end = index;
+            break;
+          }
+        }
+        const terminator = input.text[end];
+        if (terminator === questionMark) continue;
+        const opening = `\`${opener}\` can only open a question`;
+        const closing =
+          terminator === undefined || terminator === '\n'
+            ? 'and the sentence it opens ends without a mark'
+            : `and the sentence it opens ends with \`${terminator}\` rather than \`${questionMark}\``;
+        found.push({
+          index: at,
+          found: opener,
+          instead: null,
+          reason: `${opening}, ${closing}. The mark belongs at the end of that sentence, and a heading, a fragment and a question somebody asked on purpose all look the same here, so the finding names the evidence and leaves the placement to the writer.`,
+        });
+      }
+      return found;
+    },
+  },
 ];
 
 /** The spacing checks: the space between a word and a mark, and between two words. */
@@ -639,6 +913,7 @@ const SPACING_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'spacing',
     describe: 'A space before a mark that belongs to the word before it.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const pattern = new RegExp(`[ \\t]+[${escaped(HUGGING_MARKS)}]`, 'gu');
       const found: QualityMatch[] = [];
@@ -646,6 +921,7 @@ const SPACING_CHECKS: readonly LanguageQualityCheck[] = [
         if (match.index === undefined) continue;
         const mark = match[0][match[0].length - 1] as string;
         const markIndex = match.index + match[0].length - 1;
+        if (isEllipsisPeriod(input.text, markIndex)) continue;
         if (proseAround(input, match.index, markIndex + 1) !== 'persian') continue;
         if (input.protects(match.index, markIndex + 1)) continue;
         found.push({
@@ -663,6 +939,7 @@ const SPACING_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'spacing',
     describe: 'A separating mark with the next word run against it, where a space belongs.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const pattern = new RegExp(`[${escaped(SEPARATING_MARKS)}](?=[^\\s])`, 'gu');
       const found: QualityMatch[] = [];
@@ -670,6 +947,8 @@ const SPACING_CHECKS: readonly LanguageQualityCheck[] = [
         if (match.index === undefined) continue;
         const index = match.index;
         const mark = match[0] as string;
+        // A run of periods is an ellipsis, and one period of it is not a sentence ending.
+        if (isEllipsisPeriod(input.text, index)) continue;
         // A mark at the end of its line needs nothing after it; only a following *letter* is a word
         // run against the mark.
         const after = input.text[index + 1] as string;
@@ -691,6 +970,7 @@ const SPACING_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'spacing',
     describe: 'Two or more spaces between two Persian words.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const pattern = new RegExp(
         `(?<=[${PERSIAN_LETTERS}])[ \\t]{2,}(?=[${PERSIAN_LETTERS}])`,
@@ -737,6 +1017,7 @@ const SPELLING_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'spelling',
     describe: 'A compound the product writes in two words, written as one.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const found: QualityMatch[] = [];
       for (const pair of COMPOUND_PAIRS) {
@@ -762,6 +1043,7 @@ const SPELLING_CHECKS: readonly LanguageQualityCheck[] = [
     describe:
       'A letter or a digit from the Arabic repertoire where Persian has its own — including inside a figure, where the pipeline may not rewrite but a reader still sees it.',
     deterministic: true,
+    reading: 'error',
     run: (input) => {
       const found: QualityMatch[] = [];
       // Only structural spans are respected here, and the figure deliberately is not. A wrong digit
@@ -868,6 +1150,8 @@ const WORDING_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'wording',
     describe: 'A bookish construction where the product’s copy writes the plain word.',
     deterministic: false,
+    // A written register may legitimately keep `در خصوص`; the product's copy does not write it.
+    reading: 'user-wording',
     run: (input) => {
       const found: QualityMatch[] = [];
       for (const phrase of BOOKISH_PHRASES) {
@@ -889,6 +1173,9 @@ const WORDING_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'wording',
     describe: 'A spoken form where the product writes the written one.',
     deterministic: false,
+    // Spoken Persian is not a mistake: this is a register note, and the suite holds that a message
+    // written the way somebody talks produces no `error` at all.
+    reading: 'conversational',
     run: (input) => {
       const found: QualityMatch[] = [];
       for (const [spoken, written] of REGISTER_FORMS) {
@@ -910,6 +1197,7 @@ const WORDING_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'wording',
     describe: 'One text using both the spoken and the written form of the same word.',
     deterministic: false,
+    reading: 'conversational',
     run: (input) => {
       const found: QualityMatch[] = [];
       for (const [spoken, written] of REGISTER_FORMS) {
@@ -960,6 +1248,15 @@ const WORDING_CHECKS: readonly LanguageQualityCheck[] = [
  */
 const LATIN_WORD = new RegExp(`\\b[a-z][a-z0-9]*\\b`, 'gu');
 
+/**
+ * Any Latin token, for the recognition scan.
+ *
+ * The same shape as `LATIN_WORD` apart from case, and the case is the whole distinction: a lower-case
+ * token is the finding, while an all-capitals or capitalised one is the terminology the report
+ * *recognises* instead — see `recognisedText` below.
+ */
+const LATIN_TOKEN = new RegExp(`\\b[A-Za-z][A-Za-z0-9]*\\b`, 'gu');
+
 /** A run of Persian words, so a quoted Persian phrase is one finding rather than one per word. */
 const PERSIAN_RUN = new RegExp(
   `[${PERSIAN_LETTERS}][${PERSIAN_LETTERS}${ZWNJ} \\t]*[${PERSIAN_LETTERS}]|[${PERSIAN_LETTERS}]`,
@@ -973,6 +1270,9 @@ const SCRIPT_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'script',
     describe: 'A lower-case Latin word in a text whose prose is Persian.',
     deterministic: false,
+    // The word is deliberate — it is the *placement* this check is about, and the suite asserts that
+    // a text with one in it produces no `error`.
+    reading: 'intentional-english',
     run: (input) => {
       // Read the text first: a lower-case Latin word is a finding in Persian prose and the ordinary
       // way to write in English, and the census is what tells the two apart.
@@ -998,6 +1298,8 @@ const SCRIPT_CHECKS: readonly LanguageQualityCheck[] = [
     axis: 'script',
     describe: 'A Persian phrase in a text whose prose is written in another language.',
     deterministic: false,
+    // A term being named or a phrase being quoted is the writer's own wording, not a slip.
+    reading: 'user-wording',
     run: (input) => {
       if (dominantProse(input) !== 'latin') return [];
       const found: QualityMatch[] = [];
@@ -1024,6 +1326,7 @@ const SCRIPT_CHECKS: readonly LanguageQualityCheck[] = [
 
 /** Every check, in axis order. Exported as data, so a test can require a case for each one. */
 export const LANGUAGE_QUALITY_CHECKS: readonly LanguageQualityCheck[] = [
+  ...GRAMMAR_CHECKS,
   ...WORDING_CHECKS,
   ...SPELLING_CHECKS,
   ...PUNCTUATION_CHECKS,
@@ -1032,25 +1335,95 @@ export const LANGUAGE_QUALITY_CHECKS: readonly LanguageQualityCheck[] = [
   ...SCRIPT_CHECKS,
 ];
 
-/** Every axis this layer reports on, each with the checks that carry it. */
+/**
+ * Every axis this layer reports on, each with the checks that carry it.
+ *
+ * Built from the axes rather than written out, because the written-out version was a second list of
+ * them: adding one meant remembering this function, and a missing key would have been a `undefined`
+ * push rather than a failing test.
+ */
 export function languageQualityChecksByAxis(): Readonly<
   Record<LanguageQualityAxis, readonly LanguageQualityCheck[]>
 > {
-  const byAxis = {
-    wording: [],
-    spelling: [],
-    punctuation: [],
-    spacing: [],
-    zwnj: [],
-    script: [],
-  } as Record<LanguageQualityAxis, LanguageQualityCheck[]>;
+  const byAxis = emptyAxisRecord<LanguageQualityCheck[]>();
+  for (const axis of LANGUAGE_QUALITY_AXES) byAxis[axis] = [];
   for (const check of LANGUAGE_QUALITY_CHECKS) byAxis[check.axis].push(check);
   return byAxis;
+}
+
+/** A record with one entry per axis, so no axis can be forgotten and none can arrive untyped. */
+function emptyAxisRecord<Value>(): Record<LanguageQualityAxis, Value> {
+  return {} as Record<LanguageQualityAxis, Value>;
 }
 
 /** The compounds the product has not decided, named for a report rather than dropped in silence. */
 function pendingCompounds(): string[] {
   return COMPOUND_PAIRS.filter((pair) => pair.proposed === true).map((pair) => pair.written);
+}
+
+/** How many forms of one kind a report names, before it says how many more it recognised. */
+const RECOGNISED_FORMS = 8;
+
+/** What each recognition means, in a sentence. The record is total, so a kind cannot lack one. */
+const RECOGNITION_REASONS: Readonly<Record<LanguageQualityRecognitionKind, string>> = {
+  terminology:
+    'Written the way this product writes a symbol, a code or a technology name: capitals for a symbol, a capital for a name. Terminology rather than Persian prose, so it is not read as English spelling.',
+  'intentional-english':
+    'A literal the writer is meant to type as it is — a URL, a path, a dotted identifier or a code span — protected from every check, and not read as Persian.',
+  'user-wording':
+    'Text the caller marked as its own, or that a reviewer protected in the language store: nothing inside it is reported, by construction.',
+};
+
+/**
+ * What the evaluation saw and deliberately did not report.
+ *
+ * A spoken form is *not* here, and that is the distinction rather than an omission: it is reported, as a
+ * finding with the `conversational` reading, because a register is worth showing a writer. What is here
+ * is the other side of the coin — the things a quality check would otherwise be expected to flag and
+ * has decided not to, named so that the decision is visible in the report instead of silent in the code.
+ */
+function recognisedText(input: QualityInput): LanguageQualityRecognition[] {
+  const kinds = new Map<LanguageQualityRecognitionKind, { found: string[]; more: number }>();
+  const remember = (kind: LanguageQualityRecognitionKind, form: string): void => {
+    const entry = kinds.get(kind) ?? { found: [], more: 0 };
+    if (!entry.found.includes(form)) {
+      if (entry.found.length < RECOGNISED_FORMS) entry.found.push(form);
+      else entry.more += 1;
+    }
+    kinds.set(kind, entry);
+  };
+
+  // A symbol, a code or a name in Persian prose: the tokens the shape rule exempts by construction.
+  if (dominantProse(input) === 'persian') {
+    for (const match of input.text.matchAll(LATIN_TOKEN)) {
+      if (match.index === undefined) continue;
+      const token = match[0];
+      // A lower-case word is the finding this check is for, not a recognition.
+      if (token === token.toLowerCase()) continue;
+      if (input.protects(match.index, match.index + token.length)) continue;
+      remember('terminology', token);
+    }
+  }
+
+  // The protected spans are already computed, so both remaining kinds are read rather than scanned:
+  // a technical span is a literal the writer types as it is, and an exception span is somebody's own
+  // text — the caller's, or a reviewer's in the store.
+  for (const span of input.spans) {
+    const form = input.text.slice(span.start, span.end);
+    if (span.kind === 'technical') remember('intentional-english', form);
+    else if (span.kind === 'exception') remember('user-wording', form);
+  }
+
+  const recognised: LanguageQualityRecognition[] = [];
+  for (const [kind, entry] of kinds) {
+    recognised.push({
+      kind,
+      found: entry.found,
+      more: entry.more,
+      reason: RECOGNITION_REASONS[kind],
+    });
+  }
+  return recognised;
 }
 
 /**
@@ -1071,7 +1444,9 @@ export function evaluatePersianQuality(
     end: number,
     kinds: readonly SpanKind[] = ['technical', 'numeric', 'exception'],
   ): boolean => overlapsSpan(spans, start, end, kinds);
-  const input: QualityInput = { text, protects };
+  const protectsCharacter = (index: number, kinds?: readonly SpanKind[]): boolean =>
+    protects(index, index + 1, kinds);
+  const input: QualityInput = { text, spans, protects, protectsCharacter };
 
   const checks: string[] = [];
   const skippedChecks: string[] = [];
@@ -1092,6 +1467,7 @@ export function evaluatePersianQuality(
         instead: match.instead,
         reason: match.reason,
         deterministic: check.deterministic,
+        reading: check.reading,
       });
     }
   }
@@ -1105,14 +1481,8 @@ export function evaluatePersianQuality(
     );
   });
 
-  const counts = {
-    wording: 0,
-    spelling: 0,
-    punctuation: 0,
-    spacing: 0,
-    zwnj: 0,
-    script: 0,
-  } as Record<LanguageQualityAxis, number>;
+  const counts = emptyAxisRecord<number>();
+  for (const axis of LANGUAGE_QUALITY_AXES) counts[axis] = 0;
   for (const finding of findings) counts[finding.axis] += 1;
 
   const pending = pendingCompounds();
@@ -1120,6 +1490,9 @@ export function evaluatePersianQuality(
     input: text,
     text,
     findings,
+    // The actionable subset, and the only list a surface should act on.
+    errors: findings.filter((finding) => finding.reading === 'error'),
+    recognised: recognisedText(input),
     counts,
     checks,
     skippedChecks,

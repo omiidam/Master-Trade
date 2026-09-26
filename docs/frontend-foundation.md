@@ -2201,6 +2201,8 @@ those pairs in `notEvaluated` and the suite pins that they produce no finding.
 
 ### Six axes, and the two readings underneath them
 
+The counts in this section are as of 7.5.3.5.1; §30 adds the seventh axis and the eighth group of checks.
+
 The axes are what a reader notices rather than what the pipeline does: **wording, spelling, punctuation,
 spacing, the half-space, and mixed script**, carried by eighteen checks. Each check is either
 **mechanical** — one answer, printed with the characters it replaces — or **a judgement**, which carries
@@ -2245,3 +2247,59 @@ for itself twice.
   is unchanged by this phase, which renders nothing.
 - No new dependency, and nothing added to `src/`: the layer is web-side data and the report crosses no
   process boundary yet.
+
+## 30. Phase 7.5.3.5.2 — grammar and punctuation, and the difference between a note and a mistake
+
+The evaluation of §29 could say what was wrong with Persian text and not what _kind_ of thing was wrong
+with it, which left the hardest requirement of the brief unanswered: a report that files thirty findings
+against a message somebody typed the way they talk is a report nobody keeps. This phase gives every check
+a **reading** from a closed list of five, and adds the axis the pipeline had owned since 7.5.2.3 — sentence
+structure — by calling the grammar catalogue rather than re-deriving it. The language record, including the
+ellipsis the inspection found, is `docs/persian-language.md`.
+
+### The rules are called, not rebuilt
+
+`grammar.ts` holds seven rules, each citing what it decided and what it deliberately does not cover. They
+are now a check each, calling the same `correct`/`detect` functions the pipeline calls — the only thing
+that differs is the thing that should: `runRules` asks the store whether a rule's key is trusted first, and
+an evaluation does not, because a reading is about the text rather than about what we have decided to
+correct. The rule's own `describe` is the finding's reason, its suggestion is the `instead`, and
+`enforcement: 'correct'` becomes `deterministic: true`. Nothing is retyped, so nothing can drift, and the
+suite requires a check for every rule in the catalogue.
+
+### Five readings, and the two lists that make them usable
+
+`error` (no reader would defend it), `conversational` (spoken Persian, a register note), `terminology` (the
+product's own kind of term, recognised), `intentional-english` (a deliberate Latin word, or a literal
+nobody should translate), `user-wording` (the writer's phrasing, which may be deliberate). The report
+carries `errors` — the only list a surface should act on — and `recognised`, one entry per kind naming what
+it saw and chose not to flag. A conversational message produces findings and zero errors; five ordinary
+Persian sentences produce no findings at all.
+
+### Punctuation that is missing, and the ellipsis
+
+`punctuation.missing-question-mark` reports a sentence opening with a word that can only open a question
+(`آیا`, `چگونه`, `چطور`, `چقدر`, `کدام`, `کجا` — not `چرا`, which is also _pasture_) and not ending with
+`؟`. A missing separator after a terminal mark was closed by extending the mark set: `بله.خوب` is two
+sentences run together. The full stop is deliberately _not_ in the pair table, because `..` and `...` are
+told apart by count, and one shared predicate keeps an ellipsis out of both spacing checks.
+
+### The pieces
+
+| Piece                                            | Where                                         |
+| ------------------------------------------------ | --------------------------------------------- |
+| The `grammar` axis, one check per catalogue rule | `web/src/language/evaluation.ts`              |
+| The five readings, `errors` and `recognised`     | `web/src/language/evaluation.ts`              |
+| `punctuation.missing-question-mark`              | `web/src/language/evaluation.ts`              |
+| The contract suite                               | `tests/persian-evaluation.test.ts` (49 tests) |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1680** unit tests across **82** files (1668/82 before), the twelve new ones for the grammar axis and
+  the readings.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**; the browser suite is **42** cases and
+  is unchanged, because this phase renders nothing.
+- No new dependency: `@persian-tools/persian-tools` was re-read for this question and ships no detector,
+  and the layer's import graph is still an allow-list walked transitively — `memory.ts` and `seed.ts` are
+  not reachable from it, which is why the terminology lexicon is not read.
