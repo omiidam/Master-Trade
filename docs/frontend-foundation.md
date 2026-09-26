@@ -2088,3 +2088,89 @@ one existed. Both directions are asserted.
   cases, because nothing here renders.
 - No new dependency and no new memory: one more shape in the language memory's own namespace, read by the
   same seam, and the traffic it changes is the two fields the request already carried.
+
+## 28. Phase 7.5.3.4.4 — the interface turns over, because the language did
+
+7.5.3.3 gave the interface a language and left its direction alone, on the argument that doing half of RTL
+here would change the layout the design system owns. This phase is the other half: the writing direction is
+derived from the interface language, so choosing Persian mirrors the interface with no second control.
+
+### The direction is derived, not chosen separately
+
+`web/src/i18n/direction.ts` is the whole decision: three preferences (`auto`, `ltr`, `rtl`) and
+`directionOf(preference, locale)`. `auto` reads the **resolved locale**, not the preference's name — `fa`
+resolves to `rtl` and everything else to `ltr` — so the mirror follows the language the interface is
+actually in rather than the label the person picked. The pins exist so "Persian, laid out like English"
+remains expressible, and they are the only reason a second control is needed at all.
+
+### One writer, and it is the language writer
+
+`<html lang>` and `<html dir>` are written by **one** function, `useDocumentLanguage` in
+`web/src/i18n/useTranslation.ts`, beside `applyDocumentLocale`, which does the same once in `main.tsx`
+before the first paint. `App.tsx` used to set `dir` from the UI store and no longer does; its direction
+effect is gone and a comment names where the write moved. The suite enforces the single writer rather than
+trusting it: exactly one file under `web/src` is allowed to contain `documentElement.dir =` or
+`documentElement.lang =`, and it is that one.
+
+The UI store's `direction` is now `auto` by default and `toggleDirection()` flips the _resolved_ direction
+via `directionOf`, so the Topbar's existing affordance keeps working and lands on the opposite of what is
+on screen.
+
+### `dir="auto"` on free text, never `rtl`
+
+Three surfaces hold text nobody wrote for this product: the agent's turn body in
+`pages/AgentWorkspacePage.tsx`, the `MessageComposer` textarea, and `Alert`'s title and description (which
+toasts and `RealtimeNotification` both reuse). Each gets **`dir="auto"`** — the browser reads the first
+strong character — rather than inheriting `rtl`. That is what keeps a turn that is mostly Persian but opens
+with `XAUUSD` reading correctly, and a mostly-English turn inside the Persian interface from being
+mirrored into nonsense. The suite forbids a literal `dir="ltr"` or `dir="rtl"` in any component.
+
+### Directional glyphs are components that read the direction
+
+`web/src/components/Directional.tsx` holds `BackIcon`, `ForwardIcon` and `PanelStartIcon`. Each reads the
+resolved direction through `useTextDirection()` and picks the chevron that means it, and the module's own
+doc lists what is deliberately **not** there: `Send`, the market-direction arrows (`Trend.tsx`,
+`DirectionBadge.tsx`), the sort arrows in `Table.tsx`, the disclosure chevrons in `Input.tsx` and
+`FormSection.tsx`. Those encode a meaning, not a reading order, so mirroring them would reverse what they
+say. Nothing is mirrored with CSS `scaleX(-1)`: a transform is invisible to a test and mirrors meaning
+along with the glyph. The four call sites are `journal/ScreenshotGallery.tsx`, `journal/TradeTable.tsx`,
+`journal/JournalCalendar.tsx` and `app/Sidebar.tsx`.
+
+### The spacing sweep, and what it refused to change
+
+Spacing was almost entirely logical already (`ms-*`, `ps-*`, `pe-*`, `inset-inline`, `border-e`), so the
+sweep was small: 13 `pl-5` → `ps-5`, three `text-right` → `text-end`, one `text-left` → `text-start`, a
+handful of `pr-*` and two `border-r` in prose. Four physical properties are **kept and allow-listed**, each
+because the geometry is genuinely not mirrored: `Modal.tsx`'s `left-1/2 … -translate-x-1/2` centres a
+dialog; `journal/PerformanceChart.tsx`'s `-translate-x-1/2` and `style={{ left }}` sit inside a frame that
+pins `direction: 'ltr'`; `.composer-frame::after`'s `left: -10px` is a light source that does not move with
+the text; and `.agent-ring-active::before`'s `left: 50%` is a centred ring. Charts and figures pin LTR in
+`ChartAdapter.tsx`, `ChartFrame.tsx`, `Sparkline.tsx`, `PerformanceChart.tsx` and `ScreenshotGallery.tsx`,
+and `.num` already gives a figure `direction: ltr; unicode-bidi: isolate; tabular-nums`.
+
+### The pieces
+
+| Piece                                                        | Where                                                                                          |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `directionOf`, `DIRECTION_PREFERENCES`, `isRtlLocale`        | `web/src/i18n/direction.ts` (new)                                                              |
+| `useTextDirection`, `applyDocumentLocale`, the single writer | `web/src/i18n/useTranslation.ts`                                                               |
+| `auto` default, resolved `toggleDirection`                   | `web/src/store/ui.ts`                                                                          |
+| Pre-paint application                                        | `web/src/main.tsx`                                                                             |
+| The write it no longer makes                                 | `web/src/App.tsx`                                                                              |
+| The three direction controls                                 | `app/Topbar.tsx`, `pages/SettingsPage.tsx`, `app/Sidebar.tsx`                                  |
+| Directional icons                                            | `web/src/components/Directional.tsx` (new)                                                     |
+| The free-text surfaces                                       | `components/Alert.tsx`, `components/agent/MessageComposer.tsx`, `pages/AgentWorkspacePage.tsx` |
+| The contract suite                                           | `tests/rtl-layout.test.ts` (new, 15 tests)                                                     |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1628** unit tests across **81** files (1612/80 before): 15 in the new `tests/rtl-layout.test.ts` and the
+  rewritten document-direction case in `tests/frontend-integration.test.ts`, which now asserts the write
+  lives in the language module, that `App.tsx` does not contain it, and that the Topbar reads
+  `useTextDirection()`.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**; the browser suite is **32** cases.
+- No new dependency. Four keys joined each catalogue (`settings.directionAutomatic`,
+  `settings.directionFollowsTheLanguage`, `topbar.switchToLeftToRightLayout`,
+  `topbar.switchToRightToLeftLayout`), because a control that is only reachable in English is a control
+  the Persian interface does not have.

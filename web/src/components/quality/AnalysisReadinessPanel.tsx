@@ -160,7 +160,7 @@ export function AnalysisReadinessPanel({
                 {msg('quality.limitationsThisAnswerWouldCarry')}
               </h4>
             </div>
-            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
+            <ul className="list-disc space-y-1 ps-5 text-body text-text-muted" role="list">
               {decision.limitations.map((limitation, index) => (
                 <li key={index}>{limitation}</li>
               ))}
@@ -208,7 +208,7 @@ export function AnalysisReadinessPanel({
                 {msg('quality.whatCanStillBeAnalysed')}
               </h4>
             </div>
-            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
+            <ul className="list-disc space-y-1 ps-5 text-body text-text-muted" role="list">
               {decision.analysable.map((topic, index) => (
                 <li key={index}>{topic}</li>
               ))}

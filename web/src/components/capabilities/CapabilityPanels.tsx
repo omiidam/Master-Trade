@@ -145,7 +145,7 @@ export function CapabilityCard({ capability }: { capability: CapabilityView }) {
           <p className="text-caption font-medium text-text">
             {msg('capabilities.whatThisClaimsAndWhatIt')}
           </p>
-          <ul className="list-disc space-y-1 pl-5">
+          <ul className="list-disc space-y-1 ps-5">
             {capability.claims.map((claim) => (
               <li key={claim} className="text-caption text-text-muted">
                 {claim}

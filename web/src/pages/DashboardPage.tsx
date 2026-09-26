@@ -117,7 +117,14 @@ export function DashboardPage() {
                 <CardTitle className="text-body">{metric.label}</CardTitle>
                 <CardDescription>{metric.hint}</CardDescription>
               </div>
-              <Badge tone={metric.trend === 'up' ? 'primary' : 'warning'}>{metric.delta}</Badge>
+              {/*
+                The delta is a signed figure, so it carries `.num`: a leading `+` is a *neutral* to the bidi
+                algorithm, and in a right-to-left paragraph that paints `+3` as `3+` — a different number
+                wearing the same characters. `.num` gives the figure its own left-to-right context.
+              */}
+              <Badge tone={metric.trend === 'up' ? 'primary' : 'warning'}>
+                <span className="num">{metric.delta}</span>
+              </Badge>
             </CardHeader>
             <CardContent className="flex items-end justify-between gap-3">
               <span className="num text-metric text-text">{metric.value}</span>
@@ -288,7 +295,9 @@ export function DashboardPage() {
                     <CardTitle className="text-body">{msg('dashboard.memoryGrowth')}</CardTitle>
                     <CardDescription>{msg('dashboard.recordsAddedInTheLastMonth')}</CardDescription>
                   </div>
-                  <Badge tone="neutral">+{addedThisMonth}</Badge>
+                  <Badge tone="neutral">
+                    <span className="num">+{addedThisMonth}</span>
+                  </Badge>
                 </CardHeader>
                 <CardContent className="flex items-end justify-between gap-3">
                   <span className="num text-metric text-text">{latestGrowth}</span>

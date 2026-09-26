@@ -196,11 +196,22 @@ describe('a figure stays a figure in every direction', () => {
 
   it('drives the document direction from the product’s own control', () => {
     // The toggle is the reason the two rules above matter; if it ever stops setting the root
-    // attribute, the RTL contract becomes untestable rather than satisfied.
+    // attribute, the RTL contract becomes untestable rather than satisfied. Since Phase 7.5.3.4.4 it
+    // is written *once* — by the hook the shell calls, which owns `lang` and `dir` together, and by
+    // `main.tsx` before the first paint — so this case asserts the write and the single writer.
+    const hooks = code('web/src/i18n/useTranslation.ts');
+    expect(hooks).toMatch(/documentElement\.dir = direction/);
+    const shell = code('web/src/app/AppShell.tsx');
+    expect(shell).toMatch(/useDocumentLanguage\(\)/);
     const app = code('web/src/App.tsx');
-    expect(app).toMatch(/document\.documentElement\.dir = direction/);
+    expect(app).not.toMatch(/documentElement\.dir/);
+
     const topbar = code('web/src/app/Topbar.tsx');
     expect(topbar).toMatch(/label=\{msg\('topbar\.toggleWritingDirection'\)\}/);
+    // The pressed state is the *resolved* direction, not the stored preference: `auto` is a
+    // preference, and a control that claims "right-to-left" while the interface is left-to-right is
+    // a control nobody can predict.
     expect(topbar).toMatch(/aria-pressed=\{direction === 'rtl'\}/);
+    expect(topbar).toMatch(/const direction = useTextDirection\(\)/);
   });
 });

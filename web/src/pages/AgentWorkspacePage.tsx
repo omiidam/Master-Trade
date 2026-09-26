@@ -160,7 +160,15 @@ export function AgentWorkspacePage() {
                           {formatTimestamp(message.createdAt)}
                         </span>
                       </header>
-                      <p className="mt-2 text-body leading-relaxed text-text">{message.text}</p>
+                      {/*
+                        `dir="auto"` on the body: a turn is written in the language whoever wrote it chose,
+                        which is not always the language the interface is being read in. The transcript keeps
+                        its own order either way — the bubble stays where the flow puts it — and only the
+                        paragraph's *internal* direction follows its first strong character.
+                      */}
+                      <p dir="auto" className="mt-2 text-body leading-relaxed text-text">
+                        {message.text}
+                      </p>
                       {message.sources.length > 0 ? (
                         <footer className="mt-2 flex flex-wrap items-center gap-1.5">
                           <span className="text-caption text-text-faint">

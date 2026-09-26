@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Columns3, Download, Inbox, RotateCcw } from 'lucide-react';
+import { Columns3, Download, Inbox, RotateCcw } from 'lucide-react';
+import { BackIcon, ForwardIcon } from '../Directional';
 import { Badge } from '../Badge';
 import { Card } from '../Card';
 import { Button } from '../Button';
@@ -363,7 +364,7 @@ export function TradeTable({
                 disabled={currentPage <= 1}
                 onClick={() => setPage(currentPage - 1)}
                 label={msg('tradeTable.previousPageOfTrades')}
-                leadingIcon={<ChevronLeft size={14} aria-hidden />}
+                leadingIcon={<BackIcon size={14} />}
               >
                 {msg('exams.previous')}
               </Button>
@@ -376,7 +377,7 @@ export function TradeTable({
                 disabled={currentPage >= pageCount}
                 onClick={() => setPage(currentPage + 1)}
                 label={msg('tradeTable.nextPageOfTrades')}
-                trailingIcon={<ChevronRight size={14} aria-hidden />}
+                trailingIcon={<ForwardIcon size={14} />}
               >
                 {msg('journal.next')}
               </Button>

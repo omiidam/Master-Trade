@@ -45,6 +45,7 @@ import {
   ACCESSIBILITY_PROBE,
   CLIPPING_PROBE,
   OVERFLOW_PROBE,
+  SIGNED_FIGURE_PROBE,
   TARGET_PROBE,
   findBrowser,
   openSession,
@@ -110,6 +111,39 @@ const EXPECTED_HEADINGS: Record<string, string> = {
   settings: 'Settings',
 };
 
+/**
+ * The *key* each page is titled from, so the same contract can be checked in either language.
+ *
+ * `EXPECTED_HEADINGS` above is a snapshot of the English copy and stays one — it is what fails if a page's
+ * wording drifts. This map is the other half of the same contract: it says *where* that word comes from, so
+ * the suite can also ask the Persian interface whether the page it opens is headed by the word the entry
+ * that opened it shows. Which is a different question, and the one that caught three pages declaring
+ * `const TITLE = 'Evaluation'` while the sidebar beside them said «ارزیابی».
+ */
+const HEADING_KEYS = {
+  dashboard: 'dashboard.trainingDashboard',
+  agent: 'agent.aIWorkspace',
+  memory: 'memory.knowledgeMemory',
+  research: 'research.research',
+  journal: 'journal.tradingJournal',
+  portfolio: 'shell.nav.portfolio.label',
+  evaluation: 'shell.nav.evaluation.label',
+  academy: 'academy.academy',
+  exams: 'exams.examinations',
+  lab: 'lab.tradingLab',
+  activity: 'realtime.activity',
+  usage: 'shell.nav.usage.label',
+  profile: 'profile.profile',
+  settings: 'settings.settings',
+} as const satisfies Record<string, MessageKey>;
+
+/** The heading a page must carry, in the language the interface is being read in. */
+function headingFor(locale: UiLocale, id: string): string {
+  const key = (HEADING_KEYS as Record<string, MessageKey>)[id];
+  if (!key) throw new Error(`no heading key recorded for ${id}`);
+  return translate(locale, key);
+}
+
 /** The assets the browser identities in `index.html` depend on. */
 const BRAND_ASSETS = [
   'favicon.ico',
@@ -152,6 +186,18 @@ interface ClippingReport {
   sample: { tag: string; text: string; overBy: number; truncate: boolean }[];
 }
 
+interface SignedFigureReport {
+  total: number;
+  findings: {
+    figure: string;
+    tag: string;
+    detail: string;
+    signLeft: number;
+    digitLeft: number;
+    isolated: boolean;
+  }[];
+}
+
 suite('the Product Foundation in a real browser', () => {
   let session: PageSession;
   let server: StaticServer;
@@ -186,21 +232,67 @@ suite('the Product Foundation in a real browser', () => {
    * file. Waiting for the header text means the assertions below describe the page that
    * was requested.
    */
-  async function visit(id: string): Promise<void> {
+  async function visitIn(locale: UiLocale, id: string): Promise<void> {
     const section = NAV_SECTIONS.find((item) => item.id === id);
     if (!section) throw new Error(`no navigation entry with id ${id}`);
-    const expected = EXPECTED_HEADINGS[id];
-    if (!expected) throw new Error(`no expected heading recorded for ${id}`);
+    const expected = headingFor(locale, id);
 
-    await session.clickNav(translate('en', section.labelKey));
+    await session.clickNav(translate(locale, section.labelKey));
     await session.waitFor(
       `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(expected)}`,
-      `the ${translate('en', section.labelKey)} page (heading "${expected}") to be rendered`,
+      `the ${translate(locale, section.labelKey)} page (heading "${expected}") to be rendered`,
     );
+  }
+
+  /** The same page, in the language most of this file reads the interface in. */
+  async function visit(id: string): Promise<void> {
+    await visitIn('en', id);
+  }
+
+  /**
+   * Start a case from a known stored language choice, so it reads the chrome it means to read.
+   *
+   * The app is loaded first, because `localStorage` belongs to the page's origin and a document that has not
+   * loaded the app yet has none — writing the choice into an opaque document is a `SecurityError`, not a
+   * preference. The second load is what reads it back.
+   *
+   * This was a helper of the language-switch block until the direction block needed it too, which is telling:
+   * both blocks are about the same setting. `null` clears it, so a case can hand the suite back an interface
+   * whose language it did not choose.
+   */
+  async function startIn(preference: string | null): Promise<void> {
+    await session.goto(`${server.origin}/`);
+    await session.evaluate(
+      preference === null
+        ? `localStorage.removeItem(${JSON.stringify(LANGUAGE_PREFERENCE_KEY)})`
+        : `localStorage.setItem(${JSON.stringify(LANGUAGE_PREFERENCE_KEY)}, ${JSON.stringify(preference)})`,
+    );
+    await session.goto(`${server.origin}/`);
   }
 
   const heading = (): Promise<string> =>
     session.evaluate<string>(`document.querySelector('main h2')?.textContent?.trim() ?? ''`);
+
+  /**
+   * Press the shell's own writing-direction control, by the name it gives itself in `locale`.
+   *
+   * Found by its accessible name rather than by position, so it stays findable at every width (the topbar
+   * wraps rather than hiding it) and in either language — and a miss names the control rather than a selector.
+   */
+  async function toggleWritingDirection(locale: UiLocale): Promise<boolean> {
+    return session.evaluate<boolean>(`
+      (() => {
+        const button = [...document.querySelectorAll('button')].find(
+          (item) => item.getAttribute('aria-label') === ${JSON.stringify(
+            translate(locale, 'topbar.toggleWritingDirection'),
+          )},
+        );
+        if (!button) return false;
+        button.click();
+        return true;
+      })()
+    `);
+  }
 
   /* ---------------------------------------------------------------------- */
   /* A. Application boot                                                     */
@@ -321,6 +413,19 @@ suite('the Product Foundation in a real browser', () => {
       expect(observed).toEqual(EXPECTED_HEADINGS);
     });
 
+    it('reads every page title from the catalogue, in both languages', async () => {
+      // The other half of the contract above: the English snapshot says what the words *are*, this says where
+      // they *come from* — and that the Persian interface has a word of its own for every one of them. Three
+      // pages used to declare `const TITLE = 'Evaluation'`, which is a heading the language switch cannot
+      // reach, so the sidebar said «ارزیابی» and the page it opened was headed "Evaluation".
+      for (const section of NAV_SECTIONS) {
+        expect(headingFor('en', section.id), section.id).toBe(EXPECTED_HEADINGS[section.id]);
+        expect(headingFor('fa', section.id), `${section.id} is not translated`).not.toBe(
+          headingFor('en', section.id),
+        );
+      }
+    });
+
     it('has a sidebar entry for every page and a page for every entry', async () => {
       const entries = await session.evaluateJson<string[]>(
         `JSON.stringify([...document.querySelectorAll('nav')[0].querySelectorAll('button')].map(
@@ -407,11 +512,16 @@ suite('the Product Foundation in a real browser', () => {
       expect(tooSmall).toEqual([]);
     });
 
-    it('survives a right-to-left mirror without overflowing', async () => {
-      // Direction is a document-level property in this product, so the whole layout
-      // mirrors from logical spacing properties. A mirror is where fixed left/right
-      // spacing shows up as overflow, which is why it is measured rather than assumed.
-      const mirrored = ['dashboard', 'portfolio', 'evaluation'];
+    it('survives the right-to-left layout the direction control turns on', async () => {
+      // Direction is a document-level property in this product, so the whole layout mirrors from logical
+      // spacing properties. A mirror is where fixed left/right spacing shows up as overflow, which is why it
+      // is measured rather than assumed.
+      //
+      // This case used to write `document.documentElement.dir = 'rtl'` by hand, which measured a state the
+      // product cannot be in — and would have kept passing if the direction control had stopped working
+      // entirely. It now asks the shell for the mirror: the topbar's toggle pins right-to-left, and it is not
+      // persisted, so a later case's page load is the reset.
+      const mirrored = ['dashboard', 'portfolio', 'evaluation', 'journal', 'agent'];
       await session.setViewport(390, 844);
       await session.goto(`${server.origin}/`);
 
@@ -421,20 +531,28 @@ suite('the Product Foundation in a real browser', () => {
           (finding) => `<${finding.tag}> "${finding.detail}" +${finding.right}px`,
         );
 
-      for (const id of mirrored) {
-        await visit(id);
-        const report = await session.evaluateJson<OverflowReport>(OVERFLOW_PROBE);
-        expect(offendersIn(report), `${id} overflows in the default direction`).toEqual([]);
-      }
+      const toggle = (): Promise<boolean> => toggleWritingDirection('en');
 
-      await session.evaluate(`document.documentElement.dir = 'rtl'; true`);
+      expect(await session.evaluate<string>('document.documentElement.dir')).toBe('ltr');
+      expect(await toggle()).toBe(true);
+      await session.waitFor(
+        `document.documentElement.dir === 'rtl'`,
+        'the shell to mirror the document',
+      );
+
       for (const id of mirrored) {
         await visit(id);
         const report = await session.evaluateJson<OverflowReport>(OVERFLOW_PROBE);
         expect(offendersIn(report), `${id} overflows when mirrored to RTL`).toEqual([]);
         expect(report.documentScrollWidth).toBeLessThanOrEqual(report.limit);
       }
-      await session.evaluate(`document.documentElement.dir = 'ltr'; true`);
+
+      // And the control is a toggle rather than a one-way door: the same press un-mirrors the shell.
+      expect(await toggle()).toBe(true);
+      await session.waitFor(
+        `document.documentElement.dir === 'ltr'`,
+        'the shell to un-mirror the document',
+      );
     });
 
     it('does not clip rendered text at phone widths', async () => {
@@ -907,23 +1025,6 @@ suite('the Product Foundation in a real browser', () => {
     const english = inLanguage('en');
     const persian = inLanguage('fa');
 
-    /**
-     * Start a case from a known stored choice, so it reads the chrome it means to read.
-     *
-     * The app is loaded first, because `localStorage` belongs to the page's origin and a document that has
-     * not loaded the app yet has none — writing the choice into an opaque document is a `SecurityError`, not
-     * a preference. The second load is what reads it back.
-     */
-    const startIn = async (preference: string | null): Promise<void> => {
-      await session.goto(`${server.origin}/`);
-      await session.evaluate(
-        preference === null
-          ? `localStorage.removeItem(${JSON.stringify(LANGUAGE_PREFERENCE_KEY)})`
-          : `localStorage.setItem(${JSON.stringify(LANGUAGE_PREFERENCE_KEY)}, ${JSON.stringify(preference)})`,
-      );
-      await session.goto(`${server.origin}/`);
-    };
-
     const readSwitch = (labels: readonly string[]): Promise<SwitchState> =>
       session.evaluateJson<SwitchState>(`
         (() => {
@@ -1078,6 +1179,626 @@ suite('the Product Foundation in a real browser', () => {
         persianLayout.overflow,
         'the Persian switch panned the phone layout',
       ).toBeLessThanOrEqual(0);
+    });
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* I. The writing direction (Phase 7.5.3.4.4)                             */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Phase 7.5.3.3 translated the interface. This phase is what makes the translation *readable*, by giving the
+   * writing direction the shape the language already has: a default that follows the language, and two pins for
+   * somebody who wants the words without the mirror.
+   *
+   * Every claim below is measured off a rendered box rather than asserted against the stylesheet, because a
+   * mirror is a statement about a layout engine. Four questions, none of which a source scan can answer:
+   *
+   *   - did the rail actually move to the other side of the window, and does a Persian heading hug the other
+   *     edge — or is it a Latin sentence left-aligned inside a Persian page?
+   *   - does the interface hold together once mirrored, at 1440, 768 and 390?
+   *   - did any component's *box* change size while the interface turned around? That is the whole difference
+   *     between logical spacing and physical spacing: a mirror moves things and resizes nothing.
+   *   - does a Latin sentence inside the Persian page stay left-to-right, in the same transcript?
+   */
+  describe('the writing direction, in a browser', () => {
+    /** The three choices, named the way the interface names them in whichever language is on screen. */
+    const DIRECTION_OPTION_KEYS = {
+      auto: 'settings.directionAutomatic',
+      ltr: 'settings.leftToRight',
+      rtl: 'settings.rightToLeft',
+    } as const satisfies Record<string, MessageKey>;
+
+    const option = (locale: UiLocale, choice: keyof typeof DIRECTION_OPTION_KEYS): string =>
+      translate(locale, DIRECTION_OPTION_KEYS[choice]);
+
+    const directionLabels = (locale: UiLocale): readonly string[] => [
+      option(locale, 'auto'),
+      option(locale, 'ltr'),
+      option(locale, 'rtl'),
+    ];
+
+    /** Open Settings in this language, and wait for the direction switch to be on screen. */
+    const openDirectionSwitch = async (locale: UiLocale): Promise<void> => {
+      await session.clickNav(translate(locale, 'shell.nav.settings.label'));
+      await session.waitFor(
+        `[...document.querySelectorAll('main button')].some(
+           (item) => ${JSON.stringify(directionLabels(locale))}.includes((item.textContent ?? '').trim()))`,
+        'the direction switch to be rendered',
+      );
+    };
+
+    /**
+     * Press one of the three direction options, by the word it shows.
+     *
+     * Refuses to press the option that is already selected: a click on the current choice changes nothing, and
+     * a case that measured "the pin worked" after such a click would be measuring the state it started in.
+     */
+    const chooseDirection = (label: string): Promise<boolean> =>
+      session.evaluate<boolean>(`
+        (() => {
+          const button = [...document.querySelectorAll('main button')].find(
+            (item) => (item.textContent ?? '').trim() === ${JSON.stringify(label)},
+          );
+          if (!button || button.getAttribute('aria-pressed') === 'true') return false;
+          button.click();
+          return true;
+        })()
+      `);
+
+    /** What the document says about itself, and which side of the window the shell's rail is on. */
+    interface ShellReport {
+      dir: string;
+      lang: string;
+      computed: string;
+      railLeft: number;
+      railRight: number;
+      viewport: number;
+    }
+
+    const shell = (): Promise<ShellReport> =>
+      session.evaluateJson<ShellReport>(`
+        (() => {
+          const rail = document.querySelector('aside');
+          const box = rail ? rail.getBoundingClientRect() : null;
+          return JSON.stringify({
+            dir: document.documentElement.dir,
+            lang: document.documentElement.lang,
+            computed: getComputedStyle(document.documentElement).direction,
+            railLeft: box ? Math.round(box.left) : -1,
+            railRight: box ? Math.round(box.right) : -1,
+            viewport: window.innerWidth,
+          });
+        })()
+      `);
+
+    /**
+     * Where the first thing in the selected navigation entry — its icon — sits inside that entry.
+     *
+     * A row that follows the flow puts its icon at the inline start, which is one edge in English and the other
+     * in Persian. Measured from both edges at once, so it says which side it hugged rather than only that it
+     * moved: the entry is a full-width button, so there is always room between the two numbers.
+     */
+    interface RowReport {
+      label: string;
+      fromLeft: number;
+      fromRight: number;
+    }
+
+    const activeRow = (): Promise<RowReport | null> =>
+      session.evaluateJson<RowReport | null>(`
+        (() => {
+          const button = document.querySelector('nav button[aria-current="page"]');
+          const icon = button?.firstElementChild;
+          if (!button || !icon) return JSON.stringify(null);
+          const box = button.getBoundingClientRect();
+          const iconBox = icon.getBoundingClientRect();
+          return JSON.stringify({
+            label: (button.textContent ?? '').trim(),
+            fromLeft: Math.round(iconBox.left - box.left),
+            fromRight: Math.round(box.right - iconBox.right),
+          });
+        })()
+      `);
+
+    /**
+     * The page heading's *painted* extent, against the box that holds it.
+     *
+     * `text-align: start` is the rule; the measurement is where the glyphs actually went. A box wider than its
+     * own text has slack on one side, and which side it is on is the difference between a mirrored page and a
+     * translated string left-aligned inside an English one. A `Range` over the heading's contents reports the
+     * advance box of the text rather than the block it sits in, which is what makes the comparison meaningful.
+     */
+    interface HeadingReport {
+      text: string;
+      direction: string;
+      textAlign: string;
+      slackLeft: number;
+      slackRight: number;
+    }
+
+    const pageHeading = (): Promise<HeadingReport | null> =>
+      session.evaluateJson<HeadingReport | null>(`
+        (() => {
+          const heading = document.querySelector('main h2');
+          if (!heading) return JSON.stringify(null);
+          const range = document.createRange();
+          range.selectNodeContents(heading);
+          const painted = range.getBoundingClientRect();
+          const box = heading.getBoundingClientRect();
+          const style = getComputedStyle(heading);
+          return JSON.stringify({
+            text: (heading.textContent ?? '').trim(),
+            direction: style.direction,
+            textAlign: style.textAlign,
+            slackLeft: Math.round(painted.left - box.left),
+            slackRight: Math.round(box.right - painted.right),
+          });
+        })()
+      `);
+
+    /**
+     * Every box in the workspace, as the layout engine currently has it.
+     *
+     * Size and not position: moving is what mirroring is for, and resizing is the thing it must never do. DOM
+     * order is stable under `dir`, so the two readings line up element by element with no keys to match.
+     */
+    interface Box {
+      tag: string;
+      cls: string;
+      width: number;
+      height: number;
+    }
+
+    const BOXES = `JSON.stringify([...document.querySelectorAll('main *')].map((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        tag: element.tagName.toLowerCase(),
+        cls: String(element.className ?? '').split(' ').slice(0, 2).join('.'),
+        width: Math.round(box.width * 10) / 10,
+        height: Math.round(box.height * 10) / 10,
+      };
+    }))`;
+
+    /**
+     * Read a probe twice, until two consecutive readings agree.
+     *
+     * Condition-based rather than a pause: the pages animate in and a tab swap re-renders its panel, so a
+     * measurement taken mid-flight would report whatever frame it happened to catch. That is the kind of flake
+     * that makes a parity case worse than no case at all.
+     */
+    const settled = async <T>(probe: string, description: string): Promise<T> => {
+      await session.waitFor(
+        `(() => { const now = ${probe}; if (window.__mtProbe === now) return true; window.__mtProbe = now; return false; })()`,
+        description,
+      );
+      return session.evaluateJson<T>(probe);
+    }; /** The boxes of everything in the workspace, once the layout has stopped moving. */
+    const boxes = (): Promise<Box[]> =>
+      settled<Box[]>(BOXES, 'the workspace layout to stop moving');
+
+    /** How many tabs the page that is open renders, and whether one of them is the selected one. */
+    const tabCount = (): Promise<number> =>
+      session.evaluate<number>(`document.querySelectorAll('main [role="tab"]').length`);
+
+    const tabSelected = (index: number): Promise<boolean> =>
+      session.evaluate<boolean>(
+        `document.querySelectorAll('main [role="tab"]')[${index}]?.getAttribute('aria-selected') === 'true'`,
+      );
+
+    /**
+     * Select a tab by position, with a real `mousedown`.
+     *
+     * Radix activates a tab on `mousedown`, so a synthetic `.click()` is silently ignored — a trap this suite
+     * sprang on its first run, and the reason the loop below waits for `aria-selected` rather than assuming the
+     * click landed.
+     */
+    const selectTab = async (index: number, where: string): Promise<void> => {
+      await session.evaluate(`
+        (() => {
+          const tab = document.querySelectorAll('main [role="tab"]')[${index}];
+          if (!tab) return false;
+          tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+          return true;
+        })()
+      `);
+      await session.waitFor(
+        `document.querySelectorAll('main [role="tab"]')[${index}]?.getAttribute('aria-selected') === 'true'`,
+        `tab ${index} of ${where} to be selected`,
+      );
+    };
+
+    /** How many tab panels the walk below actually opened, so a vacuous one cannot pass as coverage. */
+    let panelsOpened = 0;
+
+    it('mirrors the shell and the page from the interface language alone', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('en');
+      await visitIn('en', 'dashboard');
+      const english = await shell();
+      const englishRow = await activeRow();
+      const englishHeading = await pageHeading();
+
+      // English is left-to-right: the document says so, the rail is against the left edge, and the selected
+      // entry's icon starts there too.
+      expect(english.dir).toBe('ltr');
+      expect(english.computed).toBe('ltr');
+      expect(english.lang).toBe('en');
+      expect(english.railLeft).toBeLessThan(english.viewport / 2);
+      expect(englishRow?.label).toBe(translate('en', 'shell.nav.dashboard.label'));
+      expect(englishRow?.fromLeft).toBeLessThan(englishRow?.fromRight ?? -1);
+      // The heading is aligned to the *start* of the line, which in English is the left edge...
+      expect(englishHeading?.direction).toBe('ltr');
+      expect(englishHeading?.textAlign).toBe('start');
+      expect(englishHeading?.slackLeft).toBeLessThanOrEqual(1);
+      // ...and there really is slack on the other side, so the next measurement is about something.
+      expect(englishHeading?.slackRight).toBeGreaterThan(20);
+
+      // Choosing Persian mirrors the whole interface. There is no second control and no reload involved: the
+      // direction is derived from the language, which is the phase's central decision.
+      await startIn('fa');
+      await visitIn('fa', 'dashboard');
+      const persian = await shell();
+      const persianRow = await activeRow();
+      const persianHeading = await pageHeading();
+
+      expect(persian.dir).toBe('rtl');
+      expect(persian.computed).toBe('rtl');
+      expect(persian.lang).toBe('fa-IR');
+      // The rail is the shell's first element and every spacing rule around it is a logical property, so it is
+      // at the *inline start* edge — which in a right-to-left interface is the other side of the window.
+      expect(persian.railLeft).toBeGreaterThan(persian.viewport / 2);
+      // The entry's own name, not the page heading: the sidebar says «داشبورد» and titles the page «داشبورد
+      // آموزش», which is the pair the page-rendering cases above hold every entry to.
+      expect(persianRow?.label).toBe(translate('fa', 'shell.nav.dashboard.label'));
+      expect(persianRow?.fromRight).toBeLessThan(persianRow?.fromLeft ?? -1);
+      // And the heading is still aligned to the start of its line, which is now the right edge.
+      expect(persianHeading?.text).toBe(headingFor('fa', 'dashboard'));
+      expect(persianHeading?.direction).toBe('rtl');
+      expect(persianHeading?.textAlign).toBe('start');
+      expect(persianHeading?.slackRight).toBeLessThanOrEqual(1);
+      expect(persianHeading?.slackLeft).toBeGreaterThan(20);
+
+      // The slack numbers are deliberately not compared between the two languages: the heading's box is sized
+      // by its own copy, so a shorter Persian sentence legitimately leaves more room. What the pair above
+      // states is the direction-shaped half of it — the words sit against the start edge, and the start edge is
+      // the other side. That the box itself does not move when *only* the direction does is the next case.
+
+      // Hand the suite back an interface whose language it did not choose.
+      await startIn(null);
+    });
+
+    it('offers the direction as its own choice, and lets a pin outrank the language', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+      await openDirectionSwitch('fa');
+      expect(await session.evaluate<string>('document.documentElement.dir')).toBe('rtl');
+
+      // A pin is a second opinion about the flow and about nothing else: the words do not change, and the page
+      // keeps the heading the language gave it.
+      expect(await chooseDirection(option('fa', 'ltr'))).toBe(true);
+      await session.waitFor(`document.documentElement.dir === 'ltr'`, 'the left-to-right pin');
+      expect(await session.evaluate<string>('document.documentElement.lang')).toBe('fa-IR');
+      expect(await heading()).toBe(headingFor('fa', 'settings'));
+
+      expect(await chooseDirection(option('fa', 'rtl'))).toBe(true);
+      await session.waitFor(`document.documentElement.dir === 'rtl'`, 'the right-to-left pin');
+
+      // Automatic is the language's own answer, which is the state the case started in.
+      expect(await chooseDirection(option('fa', 'auto'))).toBe(true);
+      await session.waitFor(
+        `document.documentElement.dir === 'rtl'`,
+        'the automatic answer for Persian',
+      );
+
+      // And the other way round, so the pin is proved to be a pin rather than a second language switch:
+      // English, laid out right-to-left.
+      await startIn('en');
+      await openDirectionSwitch('en');
+      expect(await session.evaluate<string>('document.documentElement.dir')).toBe('ltr');
+      expect(await chooseDirection(option('en', 'rtl'))).toBe(true);
+      await session.waitFor(
+        `document.documentElement.dir === 'rtl'`,
+        'the pin over an English interface',
+      );
+      expect(await session.evaluate<string>('document.documentElement.lang')).toBe('en');
+
+      expect(await chooseDirection(option('en', 'auto'))).toBe(true);
+      await session.waitFor(
+        `document.documentElement.dir === 'ltr'`,
+        'the automatic answer for English',
+      );
+
+      // The shell's own control is the same decision, one press away from any page, and it says which way it
+      // will turn the interface the next time it is pressed.
+      const pressed = (): Promise<boolean> =>
+        session.evaluate<boolean>(`
+          [...document.querySelectorAll('button')].some(
+            (item) => item.getAttribute('aria-label') === ${JSON.stringify(
+              translate('en', 'topbar.toggleWritingDirection'),
+            )} && item.getAttribute('aria-pressed') === 'true')
+        `);
+      expect(await pressed()).toBe(false);
+      expect(await toggleWritingDirection('en')).toBe(true);
+      await session.waitFor(
+        `document.documentElement.dir === 'rtl'`,
+        'the topbar toggle to mirror',
+      );
+      expect(await pressed()).toBe(true);
+      expect(await toggleWritingDirection('en')).toBe(true);
+      await session.waitFor(
+        `document.documentElement.dir === 'ltr'`,
+        'the topbar toggle to un-mirror',
+      );
+      expect(await pressed()).toBe(false);
+
+      await startIn(null);
+    });
+
+    /**
+     * The three sizes the phase asks for: a desktop, a portrait tablet, and the narrowest phone the design
+     * still commits to. The phases before this one checked the English layout at all seven; this checks the
+     * *mirrored* one, which is where a physical utility would finally show up as a defect.
+     */
+    const MIRRORED_SIZES: readonly (readonly [number, number])[] = [
+      [1440, 900],
+      [768, 1024],
+      [390, 844],
+    ];
+
+    /**
+     * Everything on the page that is wider than the window or wider than its own box, named rather than counted.
+     *
+     * "The page overflows" is unfixable; "<div> at +212px" is a bug report. The two probes are the ones the
+     * English layout is already held to at every width — this asks the same question of the mirrored one, where
+     * a physical utility finally shows up.
+     */
+    const layoutDefects = async (where: string): Promise<string[]> => {
+      const offenders: string[] = [];
+
+      const overflow = await session.evaluateJson<OverflowReport>(OVERFLOW_PROBE);
+      if (overflow.documentScrollWidth > overflow.limit) {
+        offenders.push(
+          `${where}: the document is ${overflow.documentScrollWidth}px wide in a ${overflow.limit}px viewport`,
+        );
+      }
+      for (const finding of overflow.findings) {
+        offenders.push(
+          `${where}: <${finding.tag}> "${finding.detail}" reaches ${finding.right}px past the edge`,
+        );
+      }
+
+      // ...and Persian text fits the box it was given. A translated sentence is usually longer than the English
+      // one it replaced, so a mirror is where a label that only ever fitted in English is caught.
+      const clipping = await session.evaluateJson<ClippingReport>(CLIPPING_PROBE);
+      for (const item of clipping.sample) {
+        if (!item.truncate) {
+          offenders.push(
+            `${where}: <${item.tag}> "${item.text}" overflows its box by ${item.overBy}px`,
+          );
+        }
+      }
+      return offenders;
+    };
+
+    it('lays every page out right-to-left at desktop, tablet and phone sizes', async () => {
+      const offenders: string[] = [];
+
+      for (const [width, height] of MIRRORED_SIZES) {
+        await session.setViewport(width, height);
+        await startIn('fa');
+        expect(
+          await session.evaluate<string>('document.documentElement.dir'),
+          `the interface is not mirrored at ${width}px`,
+        ).toBe('rtl');
+
+        for (const section of NAV_SECTIONS) {
+          await visitIn('fa', section.id);
+          offenders.push(...(await layoutDefects(`${section.id} @${width}`)));
+
+          // Every tab as well, at the narrowest width: a panel is where a physical utility would hide, and a
+          // phone is where it would show. The other two sizes sweep the page each one opens on.
+          if (width !== 390) continue;
+          const tabs = await tabCount();
+          for (let index = 0; index < tabs; index += 1) {
+            if (await tabSelected(index)) continue;
+            await selectTab(index, section.id);
+            panelsOpened += 1;
+            offenders.push(...(await layoutDefects(`${section.id} tab ${index} @${width}`)));
+          }
+        }
+      }
+
+      // The walk opened panels rather than describing them: a loop that silently found no tabs would look like
+      // a clean result and would be worth nothing.
+      expect(panelsOpened).toBeGreaterThan(20);
+      expect(offenders).toEqual([]);
+
+      await startIn(null);
+    }, 300_000);
+
+    it('turns the interface around without changing a single box', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+      const pages = ['dashboard', 'portfolio', 'evaluation', 'journal', 'settings'] as const;
+
+      const mirrored: Record<string, Box[]> = {};
+      for (const id of pages) {
+        await visitIn('fa', id);
+        mirrored[id] = await boxes();
+      }
+
+      // The same language and the same words, laid out the other way.
+      await openDirectionSwitch('fa');
+      expect(await chooseDirection(option('fa', 'ltr'))).toBe(true);
+      await session.waitFor(
+        `document.documentElement.dir === 'ltr'`,
+        'the pinned left-to-right layout',
+      );
+
+      for (const id of pages) {
+        await visitIn('fa', id);
+        const pinned = await boxes(); // A half-pixel of tolerance, and not more: an inline box that shrinks to its own text is measured from
+        // the advance widths of its runs, and bidi reordering can land the same run on a different sub-pixel
+        // fraction in the other direction. Anything a person could see is a whole pixel and is still caught.
+        const sameSize = (left: number, right: number | undefined): boolean =>
+          right !== undefined && Math.abs(left - right) <= 0.5;
+        const differing = (mirrored[id] ?? [])
+          .map((box, index) => ({ box, other: pinned[index] }))
+          .filter(
+            ({ box, other }) =>
+              !other || !sameSize(box.width, other.width) || !sameSize(box.height, other.height),
+          )
+          .map(
+            ({ box, other }) =>
+              `<${box.tag} class="${box.cls}"> ${box.width}x${box.height} → ${other?.width}x${other?.height}`,
+          );
+        // The count first, because "the same number of elements, differently sized" and "a different tree"
+        // are different bugs and the diff below would be unreadable for the second one.
+        expect({ id, count: pinned.length, differing }).toEqual({
+          id,
+          count: (mirrored[id] ?? []).length,
+          differing: [],
+        });
+      }
+
+      await startIn(null);
+    }, 240_000);
+
+    it('keeps every page title in the language it is being read in', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+
+      // The page-by-page half of the title contract, read from the Persian interface itself: `visitIn` waits
+      // for the heading to equal the word the entry that opens the page shows, so a page whose title was never
+      // translated cannot pass. Three pages used to declare an English `TITLE` beside a translated description.
+      const seen: Record<string, string> = {};
+      for (const section of NAV_SECTIONS) {
+        await visitIn('fa', section.id);
+        seen[section.id] = await heading();
+      }
+      expect(seen).toEqual(
+        Object.fromEntries(
+          NAV_SECTIONS.map((section) => [section.id, headingFor('fa', section.id)]),
+        ),
+      );
+
+      await startIn(null);
+    }, 120_000);
+
+    it('keeps every signed figure sign-first, on every page', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+
+      // The corruption this catches is a *painting* defect: `+3` is a correct string in a right-to-left
+      // paragraph, and it draws as `3+` because a leading sign is a neutral to the bidi algorithm. `.num`
+      // isolates a figure from the sentence it sits in, and the probe reads where the glyphs went.
+      const broken: string[] = [];
+      const inspect = async (where: string): Promise<void> => {
+        const report = await settled<SignedFigureReport>(SIGNED_FIGURE_PROBE, `${where} to settle`);
+        for (const finding of report.findings) {
+          broken.push(
+            `${where}: "${finding.figure}" drew its sign at ${finding.signLeft}px and its first digit at ` +
+              `${finding.digitLeft}px (<${finding.tag} class="${finding.detail}">${finding.isolated ? ', inside .num' : ''})`,
+          );
+        }
+      };
+
+      for (const section of NAV_SECTIONS) {
+        await visitIn('fa', section.id);
+        await inspect(section.id);
+
+        // Every tab as well as the page it opens on. This is where the figures actually are: the journal's
+        // analytics and calendar, the exam scores, the portfolio's holdings — a scan of the default tab of
+        // every page would have looked thorough and missed the row of R-multiples it was written for.
+        const tabs = await tabCount();
+        for (let index = 0; index < tabs; index += 1) {
+          if (await tabSelected(index)) continue;
+          await selectTab(index, section.id);
+          panelsOpened += 1;
+          await inspect(`${section.id} · tab ${index}`);
+        }
+      }
+
+      expect(panelsOpened, 'no tab panel was inspected').toBeGreaterThan(20);
+      expect(broken, 'a signed figure was reversed by the right-to-left layout').toEqual([]);
+
+      await startIn(null);
+    }, 180_000);
+
+    it('lets each turn carry its own direction inside a mirrored transcript', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+      await visitIn('fa', 'agent');
+
+      expect(await session.evaluate<string>('document.documentElement.dir')).toBe('rtl');
+
+      /**
+       * The turns, read from the `article` each one is rather than from every paragraph on the page.
+       *
+       * The page also renders a failure notice above the transcript, whose title is a `dir="auto"` paragraph too
+       * — scoping to the turns keeps "the conversation" and "a notification" as two separate claims instead of
+       * one blurred count.
+       */
+      interface TurnReport {
+        declared: string;
+        computed: string;
+        text: string;
+        top: number;
+      }
+      const turns = await session.evaluateJson<TurnReport[]>(`
+        JSON.stringify(
+          [...document.querySelectorAll('main article')]
+            .map((article) => {
+              const body = article.querySelector('p[dir="auto"]');
+              if (!body) return null;
+              return {
+                declared: body.getAttribute('dir') ?? '',
+                computed: getComputedStyle(body).direction,
+                text: (body.textContent ?? '').slice(0, 32),
+                top: Math.round(article.getBoundingClientRect().top),
+              };
+            })
+            .filter(Boolean),
+        )
+      `);
+
+      // The transcript is the mixed case the phase names: the fixture's first turn is a person's own English
+      // sentence, and the agent's answers are Persian. Each paragraph resolves from its own first strong
+      // character rather than from the interface around it, which is what keeps one readable inside the other —
+      // so a Persian page holds both directions in one column.
+      expect(turns.length).toBeGreaterThan(1);
+      for (const turn of turns) expect(turn.declared).toBe('auto');
+      expect(turns.some((turn) => turn.computed === 'ltr')).toBe(true);
+      expect(turns.some((turn) => turn.computed === 'rtl')).toBe(true);
+
+      // A turn's own direction does not move it in the flow: the transcript is still the order the conversation
+      // happened in, top to bottom, in either language.
+      const tops = turns.map((turn) => turn.top);
+      expect([...tops].sort((left, right) => left - right)).toEqual(tops);
+
+      // And the notice above the conversation is direction-automatic in its own right — the phase's
+      // notifications-and-dialogs surface, rendered as the other kind of free text on this page.
+      const notice = await session.evaluateJson<
+        { tag: string; declared: string; computed: string }[]
+      >(
+        `JSON.stringify(
+           [...document.querySelectorAll('main [dir="auto"]')]
+             .filter((node) => !node.closest('article'))
+             .map((node) => ({
+               tag: node.tagName.toLowerCase(),
+               declared: node.getAttribute('dir') ?? '',
+               computed: getComputedStyle(node).direction,
+             })),
+         )`,
+      );
+      expect(notice.length).toBeGreaterThan(0);
+      for (const node of notice) expect(node.declared).toBe('auto');
+      // In a Persian interface that notice is Persian, so it resolves right-to-left while the English turns in
+      // the transcript beside it do not.
+      expect(notice.some((node) => node.computed === 'rtl')).toBe(true);
+
+      await startIn(null);
     });
   });
 });

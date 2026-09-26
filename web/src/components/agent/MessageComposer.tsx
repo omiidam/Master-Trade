@@ -100,6 +100,11 @@ export function MessageComposer({
           </label>
           <textarea
             id={id}
+            // The one field in the product somebody types a sentence into. `dir="auto"` so the line they are
+            // writing flows the way they are writing it: Persian in a Persian interface, and an English
+            // technical sentence in that same interface instead of a right-to-left line with its punctuation
+            // on the wrong end.
+            dir="auto"
             value={value}
             onChange={(event) => onValueChange(event.target.value)}
             placeholder={placeholder}

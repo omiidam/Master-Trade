@@ -12,7 +12,8 @@
  *     builds the label maps that follow the interface language from those keys.
  *
  * `active.ts` binds the two together for the components — one subscription, one module-level `msg()` — and
- * `useTranslation.ts` is the React-facing pair of hooks.
+ * `useTranslation.ts` is the React-facing hooks. `direction.ts` states the writing direction, which is the
+ * third thing a locale decides: the flow of the text, derived from the language unless a person pins it.
  *
  * Nothing in this layer knows anything about the *agent's* language. The two share a control and nothing
  * else: `docs/ui-language.md` states the boundary, and the suite asserts it — no module under `web/src/i18n`
@@ -31,6 +32,15 @@ export {
 export type { UiLocale } from './locales.js';
 
 export {
+  DEFAULT_DIRECTION_PREFERENCE,
+  DIRECTION_PREFERENCES,
+  TEXT_DIRECTIONS,
+  directionOf,
+  isRtlLocale,
+} from './direction.js';
+export type { DirectionPreference, TextDirection } from './direction.js';
+
+export {
   MESSAGE_KEYS,
   identicalToEnglish,
   interpolate,
@@ -47,5 +57,11 @@ export { activeUiLocale, msg, setActiveLocale } from './active.js';
 
 export { liveLabels } from './live.js';
 
-export { useDocumentLanguage, useTranslation, useUiLocale } from './useTranslation.js';
+export {
+  applyDocumentLocale,
+  useDocumentLanguage,
+  useTextDirection,
+  useTranslation,
+  useUiLocale,
+} from './useTranslation.js';
 export type { Translation } from './useTranslation.js';

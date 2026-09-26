@@ -224,6 +224,25 @@ describe('the subscription that makes the switch work', () => {
     }
   });
 
+  it('gives every page its own name from the catalogue, never from a literal', () => {
+    // A page's name is copy like any other: the sidebar says «ارزیابی» and the page it opens must be headed
+    // the same word. Three pages declared `const TITLE = 'Evaluation'` next to a *function* that read the
+    // description from the catalogue — a plain constant beside a live lookup, which is why nobody noticed the
+    // heading stayed English in the Persian interface.
+    for (const file of walk('web/src/pages')) {
+      expect(read(file), file).not.toMatch(/const TITLE = ['"]/);
+    }
+    // And the three that were affected now read the word the entry that opens them does.
+    for (const [page, key] of [
+      ['EvaluationPage', 'shell.nav.evaluation.label'],
+      ['PortfolioPage', 'shell.nav.portfolio.label'],
+      ['UsagePage', 'shell.nav.usage.label'],
+    ] as const satisfies readonly (readonly [string, MessageKey])[]) {
+      expect(read(`web/src/pages/${page}.tsx`), page).toContain(key);
+      expect(translate('fa', key), `${key} has no Persian word`).not.toBe(translate('en', key));
+    }
+  });
+
   it('keeps the one thing that would break the subscription out of the tree', () => {
     // `msg()` reads a module-level value, so a component wrapped in `memo` can skip the re-render that
     // follows a language change and keep the previous language. Nothing in the application is memoised;

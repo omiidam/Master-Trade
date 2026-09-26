@@ -991,6 +991,69 @@ Settings switch is **not** a recorder: the switch is a setting, and a setting ca
 has to mean "stop deciding from what I said". A statement that survived that would make the automatic option
 untrue.
 
+## Phase 7.5.3.4.4 — the interface turns over, and one writer turns it
+
+7.5.3.3 gave the interface a Persian language and left its direction alone on purpose. This phase derives the
+direction from that language, so choosing Persian mirrors the interface with no second control, and the work
+is the sweep the phase asks for rather than a new subsystem: `directionOf` in `web/src/i18n/direction.ts`,
+one writer for `<html lang>`/`<html dir>`, three named directional glyphs, `dir="auto"` on three free-text
+surfaces, and every physical spacing utility that was still reachable.
+
+### Deriving the direction from the resolved language
+
+`directionOf(preference, locale)` takes three preferences — `auto`, `ltr`, `rtl` — and the **resolved**
+locale, never the preference's name. `auto` is the default and reads the locale: `fa` is `rtl`, everything
+else is `ltr`. That is what makes "choose Persian" mirror the interface without a second switch, and the two
+pins are what keep "Persian, laid out like English" expressible — an RTL layout is not always what a Persian
+reader wants, and a product that cannot say so has made the choice for them.
+
+The preference itself is **not persisted**, and that is deliberate rather than an omission: it is chrome, like
+the density and the collapsed sidebar it sits beside in the same store, and the value that outlives the
+process is the language underneath it. A pinned direction lasts as long as the window does, and `auto` — the
+default — means a reload lands on the language's own direction, which is the one state that is always right.
+Persisting it would also be the first step towards two stored settings that can disagree.
+
+Direction is now the same shape as the language: one vocabulary, one derivation, one place the decision is
+made. `<html lang>` and `<html dir>` have exactly one writer, `useDocumentLanguage` in
+`web/src/i18n/useTranslation.ts`, plus one call to `applyDocumentLocale` in `main.tsx` before the first
+paint so the first frame is already the right direction. `App.tsx` used to write `dir` from the UI store and
+no longer has that effect; the suite asserts that exactly one file under `web/src` contains
+`documentElement.dir =` or `documentElement.lang =`, so a second writer cannot reappear quietly.
+
+### What is mirrored, and the three things that are not
+
+Logical utilities (`ms-*`, `ps-*`, `pe-*`, `inset-inline`, `border-e`) were already the house style, so the
+sweep was small and specific: 13 `pl-5` → `ps-5`, three `text-right` → `text-end`, one `text-left` →
+`text-start`, and two `border-r` in prose. Three categories are deliberately untouched, and each is named
+rather than left to look like an oversight:
+
+- **Meaning, not reading order.** The market arrows (`Trend.tsx`, `journal/DirectionBadge.tsx`), the sort
+  arrows in `Table.tsx`, and the disclosure chevrons in `Input.tsx` and `FormSection.tsx` say something
+  about the data, not about which way the text runs. Mirroring them would reverse their meaning.
+- **Glyphs, read through the direction.** `web/src/components/Directional.tsx` holds `BackIcon`,
+  `ForwardIcon` and `PanelStartIcon`, each reading `useTextDirection()` and choosing the chevron that means
+  it. Never CSS `scaleX(-1)`: a transform is invisible to a source check and mirrors meaning along with the
+  glyph. `Send` is not in the file — it points at the composer in both directions.
+- **Geometry that is genuinely not mirrored.** A centred dialog (`Modal.tsx`), the light on the composer
+  frame (`.composer-frame::after`), the active agent ring, and the chart frame all pin a physical side on
+  purpose; each is allow-listed in `tests/rtl-layout.test.ts` with the reason, so a new physical property
+  fails the suite rather than joining them silently.
+
+### Free text is `dir="auto"`, and that is the bidi fix that matters
+
+The three surfaces that hold text this product did not write — the agent turn body in
+`pages/AgentWorkspacePage.tsx`, the `MessageComposer` textarea, and `Alert`'s title and description (which
+toasts and `RealtimeNotification` reuse) — take **`dir="auto"`**, not `rtl`. The browser reads the first
+strong character and lays the run out in that direction. That is what keeps a turn that is mostly Persian
+but opens with `XAUUSD` reading correctly, and it is what stops a mostly-English turn in the Persian
+interface from being mirrored into nonsense. The suite forbids a literal `dir="ltr"` or `dir="rtl"` in any
+component, so `auto` is not a convention that can be quietly abandoned.
+
+Numbers, prices and symbols were already protected by `.num` (`direction: ltr; unicode-bidi: isolate;
+tabular-nums`) and by the charts pinning `direction: 'ltr'` in their frames; this phase leaves both intact
+and asserts they are still there, because an RTL sweep is exactly the kind of change that would try to
+mirror a figure.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -1005,6 +1068,29 @@ malformed code is still shown as itself so the mistake stays visible. Regression
 
 The English path is untouched by this: `labels.ts#formatMoney` is a different function with a different
 caller contract, and its behaviour is asserted unchanged by the same suite.
+
+### 7.5.3.4.4: one attribute with two writers, and thirteen invisible ones
+
+1. **`dir` had two writers**, and the stale one won. `index.html` shipped `<html dir="ltr">` while
+   `App.tsx` set `document.documentElement.dir` from the UI store — whose default was `'ltr'` — on every
+   render. So the attribute was written twice, from two different sources, and the store's `'ltr'` default
+   meant **choosing Persian mirrored nothing at all**: the toggle flipped a value that no longer decided
+   anything and the interface stayed as it was. The fix is the phase's shape: one writer, deriving the value
+   from the resolved locale, with the suite pinning that no second file may contain the assignment.
+2. **The Topbar's tooltip was a physical string in a component.** `'Switch to right-to-left layout'` was
+   typed into the JSX rather than held in a catalogue, so it could not be translated and it named a
+   direction rather than the state it would produce. It is now two keys
+   (`topbar.switchToLeftToRightLayout` / `topbar.switchToRightToLeftLayout`) in both catalogues — a control
+   that is only reachable in English is a control the Persian interface does not have.
+3. **Thirteen physical spacing utilities were still reachable**, and nothing had ever noticed because
+   nothing had ever actually mirrored. `pl-5` is correct in an LTR layout and wrong the moment the interface
+   turns over; the same is true of three `text-right` and one `text-left`. They are now logical, and the
+   suite scans every `.ts`/`.tsx` file under `web/src` for the physical half of each utility so the next one
+   fails at the gate instead of at the mirror.
+
+The lesson is the file's recurring one, in a new place: a rule that says "direction is one thing" and a code
+path that writes it twice is a rule that is silently false. Two of the three defects were only visible by
+actually mirroring the interface, which is why the phase asks for the visual inspection.
 
 ### 7.5.3.4.1: two defects, both of them a chain that had one more link than expected
 
@@ -1259,6 +1345,33 @@ Reuse: the correction reaching the answer through the same control the response 
 language directive before the style block, the invariants travelling with them, and every verdict in the closed
 feedback list mapping to a value its dimension actually holds.
 
+Phase 7.5.3.4.4 adds `tests/rtl-layout.test.ts` — 15 tests over the layout rather than over the language. The
+direction: `auto` following the locale both ways, the two pins overriding it, an unknown stored value
+degrading to `auto`, and the single-writer assertion that exactly one file under `web/src` may contain
+`documentElement.dir =` or `documentElement.lang =`. The split between flow and geometry: a scan of every
+`.ts`/`.tsx` file for the physical half of each spacing, alignment and border utility with a named
+allow-list, the three meaning-bearing glyph families asserted **absent** from the directional set, and the
+chart and figure frames asserted to still pin `direction: 'ltr'`. The glyphs: the three named components
+asserted from both directions at once, no raw `Chevron(Left|Right)`/`Panel(Left|Right)` left at any call
+site, and a global scan proving none survives outside `Directional.tsx`. The free text: `dir="auto"` on all
+three surfaces, no literal `dir="ltr"`/`dir="rtl"` anywhere in `web/src`, and `.num` plus the `:lang(fa)`
+rule asserted intact. The document-direction case in `tests/frontend-integration.test.ts` was rewritten for
+the same reason and now asserts the write lives in the language module, that `App.tsx` no longer contains it,
+and that the Topbar reads `useTextDirection()`.
+
+The browser suite's `the writing direction, in a browser` section is where all of this is measured with
+Persian actually on the page, because a mirror is a statement about a layout engine rather than about a
+stylesheet. Selecting Persian moves the rail to the other edge and puts the heading against the other one,
+while the heading stays aligned `start`; the rails, the heading and the selected navigation entry are read
+from their painted boxes rather than from the stylesheet. Every page and every tab panel then holds its
+shape when mirrored at **1440 px, 768 px and 390 px** — no overflow, no clipping, and no panel missed
+(`panelsOpened` is asserted, so a walk that found no tabs cannot pass as coverage). Turning the same words
+around without changing the language is proved to resize **nothing**: every box in the tree is read in both
+directions and required to match within half a pixel. Each signed figure on every page and tab still paints
+its sign first. And the transcript holds both directions at once in one column: a Latin turn and a Persian
+turn in the same conversation each resolve from their own first strong character, while the notice above them
+resolves with the interface.
+
 Phase 7.5.2.2's `tests/persian-terminology.test.ts` gained one case for the same reason: the sidebar's
 Persian label has to _be_ the glossary's preferred form for that concept, not a second translation of it.
 
@@ -1310,7 +1423,9 @@ message and the switch, 22 in `tests/language-context.test.ts` for the interacti
 the guidance, 22 in `tests/response-language.test.ts` for the language of the answer, its four signals
 and the prompt they reach, 12 in `tests/adaptive-style.test.ts` for how the answer is worded once the
 language is settled, and 24 in `tests/language-learning.test.ts` for what a person says outright, the
-confidence that decides whether it is read, and the two paths that refuse to learn from it.
+confidence that decides whether it is read, and the two paths that refuse to learn from it. The layout adds
+15 more in `tests/rtl-layout.test.ts`, for the direction derived from the language, the glyphs that read it
+and the free text that does not.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
@@ -1324,6 +1439,7 @@ npx vitest run tests/language-context.test.ts        # 7.5.3.2: the context, the
 npx vitest run tests/response-language.test.ts       # 7.5.3.4.1: the answer's language, and the prompt
 npx vitest run tests/adaptive-style.test.ts          # 7.5.3.4.2: how the answer is worded
 npx vitest run tests/language-learning.test.ts       # 7.5.3.4.3: what a person says, and its confidence
+npx vitest run tests/rtl-layout.test.ts              # 7.5.3.4.4: the direction, the glyphs, the free text
 npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```

@@ -71,7 +71,7 @@ export function PortfolioInsightCard({ insight, className }: PortfolioInsightCar
         {insight.assumptions.length > 0 ? (
           <div className="space-y-1">
             <h4 className="text-body font-medium text-text">{msg('portfolio.whatThisRestsOn')}</h4>
-            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
+            <ul className="list-disc space-y-1 ps-5 text-body text-text-muted" role="list">
               {insight.assumptions.map((assumption, index) => (
                 <li key={index}>{assumption}</li>
               ))}
@@ -82,7 +82,7 @@ export function PortfolioInsightCard({ insight, className }: PortfolioInsightCar
         {insight.limitations.length > 0 ? (
           <div className="space-y-1">
             <h4 className="text-body font-medium text-text">{msg('portfolio.limitations')}</h4>
-            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
+            <ul className="list-disc space-y-1 ps-5 text-body text-text-muted" role="list">
               {insight.limitations.map((limitation, index) => (
                 <li key={index}>{limitation}</li>
               ))}

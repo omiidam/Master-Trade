@@ -65,7 +65,17 @@ import { useCapabilitiesStore } from '../store/capabilities';
 import { useDecisionsStore } from '../store/decisions';
 import { msg } from '../i18n/index.js';
 
-const TITLE = 'Evaluation';
+/**
+ * The page's own name, read from the catalogue like its description is.
+ *
+ * This was a literal English string beside a `description()` that went through `msg()`, which is exactly how
+ * the odd one out went unnoticed: the sidebar said the Persian word for "evaluation" and the page it opened
+ * was headed "Evaluation". `shell.nav.evaluation.label` is the same word the entry that opens this page uses,
+ * which is the contract the browser suite already holds every page to.
+ */
+function title(): string {
+  return msg('shell.nav.evaluation.label');
+}
 function description(): string {
   return msg('evaluation.description');
 }
@@ -121,7 +131,7 @@ export function EvaluationPage() {
   const selectedId = view?.decision.id ?? null;
 
   return (
-    <Workspace title={TITLE} description={description()}>
+    <Workspace title={title()} description={description()}>
       <Tabs
         items={TABS}
         value={tab}
@@ -388,7 +398,7 @@ export function EvaluationPage() {
                           {decision.classification ?? 'nothing to assess'}{' '}
                           {msg('evaluation.decidedBy')} {decision.decidedBy}
                         </p>
-                        <ul className="list-disc space-y-1 pl-5">
+                        <ul className="list-disc space-y-1 ps-5">
                           {decision.limitations.slice(0, 4).map((limitation) => (
                             <li key={limitation} className="text-caption text-text-muted">
                               {limitation}

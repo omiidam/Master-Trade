@@ -2740,6 +2740,9 @@ export const EN_MESSAGES = {
   'settings.dataProvenancePolicy': 'Data provenance policy',
   'settings.dataSafety': 'Data & safety',
   'settings.density': 'Density',
+  'settings.directionAutomatic': 'Automatic (follow the language)',
+  'settings.directionFollowsTheLanguage':
+    'Automatic mirrors the interface when the language is right-to-left. The choice below it pins one direction whatever the language is.',
   'settings.desktopFirstTheLayoutTargets1280px':
     'Desktop-first: the layout targets 1280px and above and reflows below.',
   'settings.desktopHost': 'Desktop host',
@@ -2983,6 +2986,8 @@ export const EN_MESSAGES = {
   'tokens.wellsAndInsetsCodeLogTailsEmptyPanes': 'wells and insets: code, log tails, empty panes',
   // topbar ──────────────────────────────────────────────────────
   'topbar.notificationsAndBackgroundTasks': 'Notifications and background tasks',
+  'topbar.switchToLeftToRightLayout': 'Switch to left-to-right layout',
+  'topbar.switchToRightToLeftLayout': 'Switch to right-to-left layout',
   'topbar.toggleWritingDirection': 'Toggle writing direction',
   // tradeFilters ────────────────────────────────────────────────
   'tradeFilters.clearAllTradeFilters': 'Clear all trade filters',

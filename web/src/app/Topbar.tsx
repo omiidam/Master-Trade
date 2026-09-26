@@ -9,7 +9,7 @@ import { useShellStatus } from '../desktop/useShellStatus';
 import { PROCESS_STATE_LABEL } from '@shared/desktop/process';
 import { useRealtimeStore } from '../realtime/store.js';
 import { useUiStore } from '../store/ui';
-import { msg } from '../i18n/index.js';
+import { msg, useTextDirection } from '../i18n/index.js';
 
 /**
  * Topbar: context, honesty about connectivity, and global affordances.
@@ -20,7 +20,9 @@ import { msg } from '../i18n/index.js';
  */
 export function Topbar() {
   const page = useUiStore((state) => state.page);
-  const direction = useUiStore((state) => state.direction);
+  // What is on screen, not what is stored: the stored value may be `auto`, and a control that says "switch
+  // to right-to-left" while the interface is already right-to-left is a control nobody can predict.
+  const direction = useTextDirection();
   const toggleDirection = useUiStore((state) => state.toggleDirection);
   const openSafety = useUiStore((state) => state.setSafetyDialogOpen);
   const openAbout = useUiStore((state) => state.setAboutDialogOpen);
@@ -118,8 +120,8 @@ export function Topbar() {
         <Tooltip
           content={
             direction === 'ltr'
-              ? 'Switch to right-to-left layout'
-              : 'Switch to left-to-right layout'
+              ? msg('topbar.switchToRightToLeftLayout')
+              : msg('topbar.switchToLeftToRightLayout')
           }
         >
           <IconButton

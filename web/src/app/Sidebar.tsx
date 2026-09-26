@@ -9,7 +9,6 @@ import {
   GraduationCap,
   Microscope,
   NotebookPen,
-  PanelLeft,
   PieChart,
   Settings as SettingsIcon,
   ShieldCheck,
@@ -21,13 +20,14 @@ import { NAV_GROUPS, NAV_SECTIONS, navAriaLabel } from '../config/navigation';
 import type { NavIconName } from '../config/navigation';
 import { Badge } from '../components/Badge';
 import { BrandLockup } from '../components/brand';
+import { PanelStartIcon } from '../components/Directional';
 import { Button, IconButton } from '../components/Button';
 import { Tooltip } from '../components/Tooltip';
 import { cn } from '../lib/cn';
 import { COMPACT_SHELL_QUERY, useMediaQuery } from '../lib/useMediaQuery';
 import { useUiStore } from '../store/ui';
 import { CardTile } from '../components/Card';
-import { msg } from '../i18n/index.js';
+import { msg, useTextDirection } from '../i18n/index.js';
 
 const ICONS: Record<NavIconName, ReactNode> = {
   gauge: <Gauge size={17} aria-hidden />,
@@ -58,6 +58,17 @@ export function Sidebar() {
   // workspace keeps its width, regardless of the user's saved preference.
   const compactShell = useMediaQuery(COMPACT_SHELL_QUERY);
   const collapsed = userCollapsed || compactShell;
+  const direction = useTextDirection();
+  /**
+   * Which side the rail's tooltips open on, as a *side* and not an alignment.
+   *
+   * The rail sits at the inline-start edge, which is the left in a left-to-right interface and the right in
+   * a right-to-left one, so the popover has to open away from it and toward the workspace. Stated here
+   * rather than left to the popper's collision avoidance: that rescue depends on where the rail happens to
+   * be and on how wide the popover is, and a tooltip whose side is "whatever fits" also drags its arrow and
+   * its offset along with it.
+   */
+  const railSide = direction === 'rtl' ? 'left' : 'right';
 
   return (
     <aside
@@ -80,7 +91,7 @@ export function Sidebar() {
             className="ms-auto"
             onClick={toggleSidebar}
           >
-            <PanelLeft size={16} aria-hidden />
+            <PanelStartIcon size={16} />
           </IconButton>
         )}
       </div>
@@ -133,7 +144,7 @@ export function Sidebar() {
                   return (
                     <li key={section.id}>
                       {collapsed ? (
-                        <Tooltip content={msg(section.labelKey)} side="right">
+                        <Tooltip content={msg(section.labelKey)} side={railSide}>
                           {button}
                         </Tooltip>
                       ) : (
@@ -152,7 +163,7 @@ export function Sidebar() {
         {collapsed ? (
           <Tooltip
             content={msg('sidebar.safetyLiveTradingAndBrokerExecutionDisabledBy')}
-            side="right"
+            side={railSide}
           >
             <Button
               variant="ghost"

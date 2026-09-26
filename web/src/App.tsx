@@ -58,18 +58,18 @@ function renderPage(page: AppPageId) {
 /**
  * Root component.
  *
- * It owns exactly one side effect — mirroring the chosen writing direction onto
- * <html dir> — because RTL must be a document-level property for logical
- * properties, native form controls and screen readers to behave correctly.
+ * It owns exactly one side effect — resolving the realtime session once, at start-up, so the connection
+ * status in the topbar is honest on every page. That resolves credentials and nothing else: the socket
+ * itself is opened by the Activity page, and only there.
+ *
+ * The document's locale is *not* here. `<html lang>` and `<html dir>` are one decision made in one place —
+ * `useDocumentLanguage`, which the shell calls — because both are derived from the language setting, and two
+ * effects writing the same element is how the two end up disagreeing. `main.tsx` applies the same rule once
+ * before the first paint, so a Persian reader never sees a left-to-right frame.
  */
 export function App() {
   const page = useUiStore((state) => state.page);
-  const direction = useUiStore((state) => state.direction);
   const initializeRealtime = useRealtimeStore((state) => state.initialize);
-
-  useEffect(() => {
-    document.documentElement.dir = direction;
-  }, [direction]);
 
   // Resolve the realtime session once, at start-up, so the connection status in the
   // topbar is honest on every page. This resolves credentials and nothing else: the

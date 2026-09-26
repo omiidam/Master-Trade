@@ -2710,6 +2710,9 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'settings.dataProvenancePolicy': 'سیاست منشأ داده',
   'settings.dataSafety': 'داده و ایمنی',
   'settings.density': 'تراکم',
+  'settings.directionAutomatic': 'خودکار (پیرو زبان)',
+  'settings.directionFollowsTheLanguage':
+    'حالت خودکار وقتی زبان راست‌به‌چپ است، چیدمان را آینه می‌کند. گزینه‌های زیر آن، یک جهت را مستقل از زبان تثبیت می‌کنند.',
   'settings.desktopFirstTheLayoutTargets1280px':
     'دسکتاپ‌محور: چیدمان برای ۱۲۸۰ پیکسل و بالاتر طراحی شده و در پایین‌تر بازچینش می‌شود.',
   'settings.desktopHost': 'میزبان دسکتاپ',
@@ -2947,6 +2950,8 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'tokens.wellsAndInsetsCodeLogTailsEmptyPanes': 'چاه‌ها و تودرتوها: کد، دنباله لاگ، پنل‌های خالی',
   // topbar ──────────────────────────────────────────────────────
   'topbar.notificationsAndBackgroundTasks': 'اعلان‌ها و کارهای پس‌زمینه',
+  'topbar.switchToLeftToRightLayout': 'تغییر چیدمان به چپ‌به‌راست',
+  'topbar.switchToRightToLeftLayout': 'تغییر چیدمان به راست‌به‌چپ',
   'topbar.toggleWritingDirection': 'تغییر جهت نوشتار',
   // tradeFilters ────────────────────────────────────────────────
   'tradeFilters.clearAllTradeFilters': 'پاک کردن همه فیلترهای معاملات',

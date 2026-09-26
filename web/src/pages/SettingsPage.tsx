@@ -34,7 +34,12 @@ import { mockBudget, mockProviders, mockSystemStatus } from '../mock/data';
 import { LANGUAGE_PREFERENCES, type LanguagePreference } from '../language/preference';
 import { useUiStore } from '../store/ui';
 import { cn } from '../lib/cn';
-import { msg, type MessageKey } from '../i18n/index.js';
+import {
+  DIRECTION_PREFERENCES,
+  msg,
+  type DirectionPreference,
+  type MessageKey,
+} from '../i18n/index.js';
 
 const PROVIDER_TONE = {
   configured: 'primary',
@@ -64,6 +69,22 @@ const LANGUAGE_OPTION_KEYS: Readonly<Record<LanguagePreference, MessageKey>> = {
   auto: 'settings.languageAutomatic',
   fa: 'settings.languagePersian',
   en: 'settings.languageEnglish',
+};
+
+/**
+ * The three directions, and the same reasoning as the language switch above: automatic first, and the two
+ * pins after it.
+ *
+ * `auto` is the one a first run has, and it is what makes choosing Persian mirror the interface — the
+ * phase's requirement, and not something a person should have to find a second control for. The pins exist
+ * because "Persian, but laid out like the English interface" is a real preference (somebody reading a
+ * mostly-English product), and because a control that could only follow the language would make that
+ * preference impossible to express.
+ */
+const DIRECTION_OPTION_KEYS: Readonly<Record<DirectionPreference, MessageKey>> = {
+  auto: 'settings.directionAutomatic',
+  ltr: 'settings.leftToRight',
+  rtl: 'settings.rightToLeft',
 };
 
 export function SettingsPage() {
@@ -105,24 +126,22 @@ export function SettingsPage() {
                 <Layers size={15} aria-hidden className="text-text-faint" />
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex gap-2">
-                  <Button
-                    variant={direction === 'ltr' ? 'primary' : 'secondary'}
-                    onClick={() => setDirection('ltr')}
-                    aria-pressed={direction === 'ltr'}
-                  >
-                    {msg('settings.leftToRight')}
-                  </Button>
-                  <Button
-                    variant={direction === 'rtl' ? 'primary' : 'secondary'}
-                    onClick={() => setDirection('rtl')}
-                    aria-pressed={direction === 'rtl'}
-                  >
-                    {msg('settings.rightToLeft')}
-                  </Button>
+                <div className="flex flex-wrap gap-2">
+                  {DIRECTION_PREFERENCES.map((option) => (
+                    <Button
+                      key={option}
+                      variant={direction === option ? 'primary' : 'secondary'}
+                      onClick={() => setDirection(option)}
+                      aria-pressed={direction === option}
+                    >
+                      {msg(DIRECTION_OPTION_KEYS[option])}
+                    </Button>
+                  ))}
                 </div>
                 <p className="text-caption text-text-faint">
-                  {msg('settings.chartsAndNumericReadoutsStayLTR')}
+                  {direction === 'auto'
+                    ? msg('settings.directionFollowsTheLanguage')
+                    : msg('settings.chartsAndNumericReadoutsStayLTR')}
                 </p>
               </CardContent>
             </Card>

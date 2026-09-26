@@ -18,13 +18,27 @@
 import { create } from 'zustand';
 import type { AppPageId } from '../config/navigation.js';
 import {
+  DEFAULT_DIRECTION_PREFERENCE,
+  directionOf,
+  type DirectionPreference,
+} from '../i18n/direction.js';
+import { uiLocaleOf } from '../i18n/locales.js';
+import {
   readLanguagePreference,
   writeLanguagePreference,
   type LanguagePreference,
 } from '../language/preference.js';
 
-export type Direction = 'ltr' | 'rtl';
 export type Density = 'comfortable' | 'compact';
+
+/**
+ * The writing-direction preference, re-exported under the name this store has used since Phase 3.
+ *
+ * The vocabulary itself is the interface layer's (`web/src/i18n/direction.ts`), because the direction is a
+ * property of the locale rather than of the chrome: `auto` means "whatever the language I am reading in is
+ * written in", which is a fact about the text and not about the sidebar.
+ */
+export type Direction = DirectionPreference;
 
 export interface UiState {
   page: AppPageId;
@@ -39,6 +53,13 @@ export interface UiState {
   languageStorable: boolean;
   setPage: (page: AppPageId) => void;
   setDirection: (direction: Direction) => void;
+  /**
+   * Flip what is on screen, from wherever it is now.
+   *
+   * The shell's quick toggle pins the opposite of the direction being *read* rather than of the stored
+   * preference, because the stored value may be `auto`: pressing "mirror this" in an automatic Persian
+   * interface has to pin left-to-right, not silently stay right-to-left because `auto` is not `'rtl'`.
+   */
   toggleDirection: () => void;
   setDensity: (density: Density) => void;
   setLanguagePreference: (preference: LanguagePreference) => void;
@@ -59,7 +80,9 @@ const storedLanguage = readLanguagePreference();
 
 export const useUiStore = create<UiState>((set) => ({
   page: 'dashboard',
-  direction: 'ltr',
+  // `auto`, so that choosing Persian in Settings mirrors the interface without a second control: the
+  // direction follows the language until somebody says otherwise.
+  direction: DEFAULT_DIRECTION_PREFERENCE,
   density: 'comfortable',
   sidebarCollapsed: false,
   safetyDialogOpen: false,
@@ -68,7 +91,13 @@ export const useUiStore = create<UiState>((set) => ({
   languageStorable: storedLanguage.storable,
   setPage: (page) => set({ page }),
   setDirection: (direction) => set({ direction }),
-  toggleDirection: () => set((state) => ({ direction: state.direction === 'ltr' ? 'rtl' : 'ltr' })),
+  toggleDirection: () =>
+    set((state) => ({
+      direction:
+        directionOf(state.direction, uiLocaleOf(state.languagePreference)) === 'rtl'
+          ? 'ltr'
+          : 'rtl',
+    })),
   setDensity: (density) => set({ density }),
   // The write happens first and its verdict is the new `languageStorable`: the control shows a
   // remembered choice only when it really was remembered.

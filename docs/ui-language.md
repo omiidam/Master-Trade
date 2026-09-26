@@ -75,9 +75,24 @@ where the values are keys and the read sites did not have to change at all.
 - **A parser's reason strings.** `parseServerFrame` reports _why_ a frame was dropped (`frame is not valid
 JSON`); that evidence is quoted into a sentence that _is_ translated (`Dropped an unreadable frame: …`).
   Translating the evidence would make the audit trail unsearchable across languages for no reader's benefit.
-- **The document's writing direction.** `dir` is a separate control on the same page with its own tests.
-  This phase sets `<html lang>` (which is what loads the Persian face) and leaves `dir` alone, because deep
-  RTL is a later phase's work and doing half of it here would change the layout the design system owns.
+- **The document's writing direction.** This phase set `<html lang>` (which is what loads the Persian face)
+  and left `dir` alone, because deep RTL is a later phase's work and doing half of it here would change the
+  layout the design system owns. Phase 7.5.3.4.4 did that work, and the direction is now derived from the
+  language rather than set beside it — see the section below.
+
+## The writing direction follows the language
+
+Phase 7.5.3.4.4 made the direction a consequence of the language rather than a second choice. `directionOf`
+in `web/src/i18n/direction.ts` takes the stored preference (`auto` / `ltr` / `rtl`) and the **resolved**
+locale, and the Persian interface derives `rtl` from it. `auto` reads the locale rather than the preference's
+name, so the mirror follows the language the interface is actually in — which is the whole reason choosing
+Persian needs no second control. The two pins stay expressible so "Persian, laid out like English" does not
+become impossible.
+
+It is still copy's neighbour, not copy: `<html lang>` and `<html dir>` are written by one function,
+`useDocumentLanguage`, and the interface layer is still the only place an interface language comes from. The
+Persian _record_ of what the phase changed — the glyphs, the physical properties that were kept, the
+free-text surfaces — is `docs/persian-language.md`; the summary is §28 of `docs/frontend-foundation.md`.
 
 ## Nine keys are the same in both catalogues, and the suite names them
 

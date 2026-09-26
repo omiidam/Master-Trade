@@ -285,7 +285,9 @@ export function ActivityPage() {
               ))}
               {subscribed.length > 6 ? (
                 <Badge tone="outline">
-                  +{subscribed.length - 6} {msg('activity.more')}
+                  {/* The count is a signed figure, so it is isolated: without `.num` the `+` is a neutral
+                      resolved against the right-to-left paragraph and is painted after the digits. */}
+                  <span className="num">+{subscribed.length - 6}</span> {msg('activity.more')}
                 </Badge>
               ) : null}
             </div>

@@ -134,7 +134,7 @@ export function PortfolioValueCard({ metrics, className }: PortfolioValueCardPro
             <h4 className="text-body font-medium text-text">
               {msg('portfolio.whatTheseFiguresRestOn')}
             </h4>
-            <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
+            <ul className="list-disc space-y-1 ps-5 text-body text-text-muted" role="list">
               {metrics.assumptions.map((assumption) => (
                 <li key={assumption.id}>
                   {assumption.statement}

@@ -132,11 +132,15 @@ export function Alert({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-body font-medium text-text">{title}</p>
+            <p dir="auto" className="text-body font-medium text-text">
+              {title}
+            </p>
             {meta}
           </div>
           {description ? (
-            <div className="mt-0.5 text-caption text-text-muted">{description}</div>
+            <div dir="auto" className="mt-0.5 text-caption text-text-muted">
+              {description}
+            </div>
           ) : null}
           {code ? (
             <Badge shape="tag" tone="outline" className="num mt-2">

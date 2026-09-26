@@ -124,7 +124,7 @@ export function PortfolioReadinessPanel({ decisions, className }: PortfolioReadi
                 <p className="text-caption text-text-muted">
                   {msg('portfolio.limitationsThisAnswerCarries')}
                 </p>
-                <ul className="list-disc space-y-1 pl-5 text-body text-text-muted" role="list">
+                <ul className="list-disc space-y-1 ps-5 text-body text-text-muted" role="list">
                   {decision.limitations.map((limitation, index) => (
                     <li key={index}>{limitation}</li>
                   ))}
@@ -368,7 +368,7 @@ export function MissingHoldingData({ gaps, className }: MissingHoldingDataProps)
               </div>
               <p className="text-body text-text-muted">{gap.detail}</p>
               {gap.remedies.length > 0 ? (
-                <ul className="list-disc space-y-0.5 pl-5 text-caption text-text-faint" role="list">
+                <ul className="list-disc space-y-0.5 ps-5 text-caption text-text-faint" role="list">
                   {gap.remedies.map((remedy, index) => (
                     <li key={index}>{remedy}</li>
                   ))}
@@ -447,7 +447,7 @@ export function PortfolioSnapshotTimeline({
                   {snapshotReasonLabel(snapshot.reason)}
                 </span>
               </div>
-              <div className="text-right">
+              <div className="text-end">
                 <p className="text-caption text-text-muted">{snapshot.createdAt}</p>
                 <p className="text-caption text-text-faint">
                   {msg('portfolio.changedBy')}{' '}

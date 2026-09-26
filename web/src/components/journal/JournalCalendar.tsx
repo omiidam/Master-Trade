@@ -1,4 +1,5 @@
-import { CalendarDays, ChevronLeft, ChevronRight, Rows3 } from 'lucide-react';
+import { CalendarDays, Rows3 } from 'lucide-react';
+import { BackIcon, ForwardIcon } from '../Directional';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
@@ -410,14 +411,14 @@ export function JournalCalendar({
               </div>
 
               <div className="flex items-start gap-2 border-t border-border pt-3">
-                <ChevronRight size={13} aria-hidden className="mt-0.5 shrink-0 text-text-faint" />
+                <ForwardIcon size={13} className="mt-0.5 shrink-0 text-text-faint" />
                 <p className="text-caption text-text-faint">
                   {selectedDay.notes === '' ? 'No notes for the day.' : selectedDay.notes}
                 </p>
               </div>
 
               <div className="flex items-center gap-2 text-caption text-text-faint">
-                <ChevronLeft size={12} aria-hidden />
+                <BackIcon size={12} />
                 {msg('journal.screenshotsForTheseRecordsLiveOn')}
               </div>
             </CardContent>

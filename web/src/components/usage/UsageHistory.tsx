@@ -81,7 +81,7 @@ export function CreditTransactionItem({ movement, className }: CreditTransaction
           {movement.correlationId === null ? '' : ` · ${movement.correlationId}`}
         </p>
       </div>
-      <div className="text-right">
+      <div className="text-end">
         <p
           className={
             returned

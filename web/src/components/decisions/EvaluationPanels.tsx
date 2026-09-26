@@ -369,7 +369,7 @@ export function DecisionReadinessPanel({
             <p className="text-caption font-medium text-text">
               {msg('decisions.whatWouldChangeTheAnswer')}
             </p>
-            <ul className="mt-1.5 list-disc space-y-1 pl-5">
+            <ul className="mt-1.5 list-disc space-y-1 ps-5">
               {readiness.clarifications.map((question) => (
                 <li
                   key={`${question.field}:${question.reason}`}
@@ -417,7 +417,7 @@ export function EvaluationLimitationsPanel({
       </CardHeader>
       <CardContent className="space-y-3">
         {limitations.length > 0 ? (
-          <ul className="list-disc space-y-1 pl-5">
+          <ul className="list-disc space-y-1 ps-5">
             {limitations.map((limitation) => (
               <li key={limitation} className="text-caption text-text-muted">
                 {limitation}
@@ -657,7 +657,7 @@ export function DecisionCard({
       onClick={() => onSelect(decision.id)}
       aria-current={selected ? 'true' : undefined}
       className={cn(
-        'w-full min-w-0 rounded-[var(--radius-tile)] border px-3 py-3 text-left transition-colors',
+        'w-full min-w-0 rounded-[var(--radius-tile)] border px-3 py-3 text-start transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
         selected
           ? 'border-primary bg-primary-soft'

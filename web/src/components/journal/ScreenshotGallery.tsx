@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Eye, ImageOff } from 'lucide-react';
+import { Eye, ImageOff } from 'lucide-react';
+import { BackIcon, ForwardIcon } from '../Directional';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
@@ -163,7 +164,7 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
               size="sm"
               onClick={() => step(-1)}
               label={msg('screenshotGallery.previousAttachment')}
-              leadingIcon={<ChevronLeft size={14} aria-hidden />}
+              leadingIcon={<BackIcon size={14} />}
             >
               {msg('exams.previous')}
             </Button>
@@ -175,7 +176,7 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
               size="sm"
               onClick={() => step(1)}
               label={msg('screenshotGallery.nextAttachment')}
-              trailingIcon={<ChevronRight size={14} aria-hidden />}
+              trailingIcon={<ForwardIcon size={14} />}
             >
               {msg('journal.next')}
             </Button>
@@ -229,7 +230,7 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
                 size="sm"
                 onClick={() => step(-1)}
                 label={msg('screenshotGallery.previousAttachment')}
-                leadingIcon={<ChevronLeft size={14} aria-hidden />}
+                leadingIcon={<BackIcon size={14} />}
               >
                 Previous
               </Button>
@@ -238,7 +239,7 @@ export function ScreenshotGallery({ attachments, tradeRef, className }: Screensh
                 size="sm"
                 onClick={() => step(1)}
                 label={msg('screenshotGallery.nextAttachment')}
-                trailingIcon={<ChevronRight size={14} aria-hidden />}
+                trailingIcon={<ForwardIcon size={14} />}
               >
                 Next
               </Button>

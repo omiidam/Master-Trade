@@ -704,6 +704,93 @@ export const ACCESSIBILITY_PROBE = `
 `;
 
 /**
+ * Find a signed figure whose sign was painted on the wrong side of its digits.
+ *
+ * A leading `+` or `−` is a *neutral* to the Unicode bidi algorithm, so in a right-to-left paragraph it
+ * inherits the paragraph's direction and is painted on the right of the number it belongs to: `+3` draws as
+ * `3+`, and `−1` as `1−`. That is a different value wearing the same characters — the corruption this phase
+ * has to prevent — and it is invisible to every source-level check, because the string in the DOM is correct
+ * and only the painting is wrong.
+ *
+ * `.num` is the product's answer (it gives a figure its own left-to-right context, isolated from the sentence
+ * around it) and this probe is what makes "every figure has it" a measurement instead of a convention.
+ *
+ * Measured per **element** over its whole text rather than per text node, because `+{count}` is two text nodes
+ * in React and neither one looks like a signed figure on its own. The innermost matching element is used, so a
+ * card whose first paragraph happens to open with a number is not reported once per ancestor.
+ */
+export const SIGNED_FIGURE_PROBE = `
+(() => {
+  const root = document.querySelector('main') || document.body;
+  const SIGNED = /^[+\u2212-]\\s?[0-9\u06F0-\u06F9]/;
+  const text = (element) => (element.textContent || '').trim();
+
+  const qualifying = new Set(
+    [...root.querySelectorAll('*')].filter((element) => SIGNED.test(text(element))),
+  );
+
+  const findings = [];
+  for (const element of qualifying) {
+    // The innermost element that opens with a signed figure: an ancestor of one is the same figure.
+    if ([...element.children].some((child) => qualifying.has(child))) continue;
+
+    // Map a character of the figure onto the text node that holds it, so a figure React split into
+    // several text nodes is measured as the one run a reader sees.
+    const pieces = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let piece;
+    while ((piece = walker.nextNode())) pieces.push(piece);
+    const raw = element.textContent || '';
+    const value = text(element);
+    const start = raw.indexOf(value);
+    const locate = (target) => {
+      let counted = 0;
+      for (const node of pieces) {
+        const length = node.textContent.length;
+        if (target < counted + length) return { node, offset: target - counted };
+        counted += length;
+      }
+      return null;
+    };
+
+    const sign = locate(start);
+    const digit = locate(start + value.search(/[0-9\u06F0-\u06F9]/));
+    if (!sign || !digit) continue;
+
+    const box = (spot) => {
+      const range = document.createRange();
+      range.setStart(spot.node, spot.offset);
+      range.setEnd(spot.node, spot.offset + 1);
+      return range.getBoundingClientRect();
+    };
+    const signBox = box(sign);
+    const digitBox = box(digit);
+    // A figure with nothing painted (a hidden control) says nothing about direction.
+    if (signBox.width <= 0 || digitBox.width <= 0) continue;
+
+    // The sign has to be drawn to the *left* of the first digit. Anything else is the bidi algorithm
+    // having resolved the sign against the paragraph instead of against the number.
+    if (signBox.left + 0.5 >= digitBox.left) {
+      findings.push({
+        figure: value.slice(0, 18),
+        tag: element.tagName.toLowerCase(),
+        detail:
+          (element.getAttribute('data-testid') ||
+            (element.className && String(element.className).split(' ').slice(0, 2).join('.')) ||
+            element.parentElement?.tagName.toLowerCase() ||
+            '').toString(),
+        signLeft: Math.round(signBox.left),
+        digitLeft: Math.round(digitBox.left),
+        isolated: element.closest('.num') !== null,
+      });
+    }
+  }
+
+  return JSON.stringify({ findings: findings.slice(0, 8), total: findings.length });
+})()
+`;
+
+/**
  * Report text that is clipped by its own box.
  *
  * A truncated label with no tooltip is a usability defect that only a layout engine can

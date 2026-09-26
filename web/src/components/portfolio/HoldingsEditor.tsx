@@ -436,7 +436,7 @@ export function HoldingsEditor({
             <p className="text-body font-medium text-danger">
               {msg('portfolio.theDeclarationWasRejectedByThe')}
             </p>
-            <ul className="list-disc space-y-0.5 pl-5 text-body text-text" role="list">
+            <ul className="list-disc space-y-0.5 ps-5 text-body text-text" role="list">
               {validationIssues.map((issue) => (
                 <li key={issue}>{issue}</li>
               ))}

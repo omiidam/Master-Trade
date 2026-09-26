@@ -63,7 +63,7 @@ export function SubscriptionPlanCard({
           </CardTitle>
           <CardDescription>{plan.tagline}</CardDescription>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <p className="text-body font-medium num text-text">
             {plan.periodCredits} {msg('usage.credits')}
           </p>
@@ -106,7 +106,7 @@ export function SubscriptionPlanCard({
           <h4 className="text-caption font-semibold text-text-muted uppercase">
             {msg('usage.whatThisPlanMayNotDo')}
           </h4>
-          <ul className="list-disc space-y-1 pl-5" role="list">
+          <ul className="list-disc space-y-1 ps-5" role="list">
             {plan.mayNot.map((line, index) => (
               <li key={index} className="text-caption text-text-faint">
                 {line}
