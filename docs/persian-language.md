@@ -252,7 +252,9 @@ false for digits, and it is now replaced by the honest two-function contract.
 
 Nineteen rules in five kinds — six character folds (including Unicode NFKC **scoped to Arabic script**,
 so the `fi` ligature and full-width digits in English text stay as they are), two digit rules, four
-spacing rules, four ZWNJ rules, two punctuation rules, and two that only report.
+spacing rules, four ZWNJ rules, two punctuation rules, and two that only report. A third reporting rule and
+a fifth ZWNJ rule joined the catalogue later, in the repository evaluation near the end of this file, so the
+catalogue is **twenty rules** today.
 
 - **Character**: the Arabic yeh/alef maksura, the Arabic kaf, the two kaf variants (swash kaf and kaf
   with ring, the one fold here that is a product decision rather than a Unicode mapping), the presentation
@@ -1054,6 +1056,116 @@ tabular-nums`) and by the charts pinning `direction: 'ltr'` in their frames; thi
 and asserts they are still there, because an RTL sweep is exactly the kind of change that would try to
 mirror a figure.
 
+## Five Persian NLP repositories, evaluated
+
+The brief named five projects and asked for them to be evaluated **before** any new rule was written, on the
+principle that a proven capability should be reused rather than rebuilt. The evaluation is per-concern rather
+than per-project, because the five overlap each other heavily and none of them is one thing.
+
+### Two facts decide most of it
+
+**All five are Python packages, and this repository contains no Python at all.** There is no Python runtime,
+no service beside the app, and no place in the build for one: the web bundle ships a 60 kB font and a
+React tree, and the backend is TypeScript. A dependency here is a second runtime, a model download and a
+process to supervise — for the frontend history, a decision about architecture rather than about Persian.
+
+**And the pipeline's contract is deterministic and cited.** Every suggestion is either a mechanical rule
+whose exact replacement is printed, or a pattern a person decides about; there is no score, no probability
+and no model anywhere in the type. That is not a preference about style — it is what `LanguageMemory`
+requires, because an entry that is `trusted` has to be answerable with the characters it replaced. A model's
+suggestion cannot be a trusted entry, which is the test DadmaTools already failed in 7.5.1 and 7.5.2.3, and
+it is the same test applied again here.
+
+### What each one actually is
+
+| Repository                                  | What it is                                                                                                                                                                                                                                                 | Licence    | What overlaps this layer                                                                    |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| **DadmaTools**                              | Python 3.10–3.12 NLP pipeline on spaCy/Transformers/PyTorch: NER, POS, dependency and constituency parsing, chunking, lemma, tokenizer, normalizer, spellchecker, informal→formal, sentiment                                                               | Apache-2.0 | its `Normalizer` (`unify_chars`, `refine_punc_spacing`) and its `itf`/`spellchecker` stages |
+| **Hazm**                                    | Python 3.12+ toolkit: normalization (diacritics, ZWNJ), tokenization, stemming, lemmatization, POS/chunk/dependency parsing, embeddings — models fetched from Hugging Face on demand                                                                       | MIT        | its `Normalizer`, and nothing else: it ships **no** spell checker and **no** formalizer     |
+| **Parsivar**                                | Python preprocessing toolkit (NLTK-based; wapiti/Stanford tagger optional): normalization, half-space correction, tokenizer, stemmer, POS, chunker, dependency parser, spell checker                                                                       | MIT        | the largest overlap, and the only project with a **rule-based** half-space table            |
+| **Persian-text-preprocessing**              | a Python package that _composes_ the two above (pinned `hazm==0.9.4`, `parsivar==0.2.3.1`, `nltk==3.9.1`) into normalize/spell/formal/stopword/lemma/stem pipelines, plus an optional Transformer formalizer (`PardisSzah/PersianTextFormalizer` on torch) | MIT        | nothing of its own beyond the composition                                                   |
+| **Persian-Spell-Correction-using-ParsBERT** | a masked-language-model spell corrector over ParsBERT (transformers + torch)                                                                                                                                                                               | **none**   | a statistical spellchecker                                                                  |
+
+The licence column is checked rather than assumed, and one of them changes a decision on its own:
+DadmaTools is Apache-2.0, Hazm and Parsivar ship the MIT text, Persian-text-preprocessing declares MIT — and
+the ParsBERT spell corrector has **no licence file at all**, so it is not adoptable whatever else were true
+of it.
+
+### By concern, which is the question the brief actually asks
+
+| The concern                     | What already answers it here                                                                                                             | Verdict                                                                                                                                                                                                                        |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Grammar and wording             | `grammar.ts`, seven rules each with a citation                                                                                           | **nothing to add.** Every project's grammar capability is a trained parser, and a parse is a probability                                                                                                                       |
+| Spelling correction             | eight reviewed compound pairs and a closed register list                                                                                 | **rejected from all five.** Four are statistical (DadmaTools' `spellchecker`, ParsBERT, Parsivar's `SpellCheck`, the Transformer spell pipeline) and one has no licence                                                        |
+| Punctuation and its spacing     | 7.5.2.1's four spacing rules and two punctuation rules: no space before a mark, exactly one after, `, ; ?`→`، ؛ ؟`, `%` after its figure | **no addition.** DadmaTools' `refine_punc_spacing` and Hazm's normalizer do the same things, not more                                                                                                                          |
+| ZWNJ and the half-space         | hygiene automated, placement reported — with this product's own affix inventory                                                          | **one real gap, measured and closed.** See below                                                                                                                                                                               |
+| Informal Persian, formalization | `spelling.register`, nine forms, report-only                                                                                             | **rejected.** DadmaTools' `itf` and Persian-text-preprocessing's `formal` are both Transformer models, so neither ships a rule table to adopt; a model that rewrites a person's own words is also a different product decision |
+| Contextual correction           | `detect.ts` reads the message, `profile.ts` the person, `communication.ts` the interaction                                               | **out of scope for all five.** "Contextual" there means a model's context window, which is the thing this layer is built not to be                                                                                             |
+
+### The one thing adopted: the plural's clitic inventory
+
+`zwnj.attach-candidate` reports a space where a half-space belongs, and its inventory was this product's own:
+the verbal prefixes `می`/`نمی` and the endings `ها`, `های`, `تر`, `ترین`. Measured rather than assumed, that
+inventory **missed the plural's clitic forms entirely** — the alternation is followed by a “next character is
+not a letter” guard, so `کتاب هایی`, `کتاب هایم` and `پرسش هایشان` were reported by nothing at all. These are
+among the commonest half-space misses in Persian typing, so it was a real gap rather than a theoretical one.
+
+Parsivar's rule-based half-space pass publishes exactly this as a closed table
+(`normalizer.space_correction`, the `a0`–`a3` patterns). That is a proven capability in the sense the brief
+means: a cited, deterministic affix inventory, MIT-licensed, needing no runtime — **knowledge that can be
+reused without reusing the package.** Seven of its entries were adopted as a new rule,
+`zwnj.clitic-candidate`, with its own seed key `rule.zwnj-clitics` and `confidence: 0.8`.
+
+A second ZWNJ key rather than a wider first one, because what differs is _provenance_ and that is what a key
+is for: `rule.zwnj-placement` is this product writing down its own inventory, and `rule.zwnj-clitics` adopts
+one published elsewhere. Two decisions with two sources belong on two keys, so the adopted one can be retired
+without touching the product's own. `ها` and `های` are deliberately **not** in the new list —
+`zwnj.attach-candidate` already reports those two, and a second rule reporting one span would make one
+mistake read as two.
+
+### Why the rest of that table is not adopted, entry by entry
+
+This is the half the brief's “do not add all repositories blindly” is really about, and each rejection is a
+concrete case rather than a principle:
+
+- **`بی`** (their prefix group, beside `می`/`نمی`) — `بی` is also a preposition governing a whole phrase, so
+  `بی هیچ شک` would be reported as a misspelling. Verified: the rule does not carry `بی`, and that sentence
+  reports nothing.
+- **`شده` / `نشده`** — both are verbs as well as suffixes; `او بزرگ شده است` would be reported. Verified: not
+  reported.
+- **the copulas `بودم … بودند`, `ست`, and `اند`** — verbs, and a space in front of them is ordinary syntax.
+- **`ای`** — a word (the vocative), so `ای دوست` would be reported.
+- **`ان`, `ین`, `انی`, `بان`, `ام`, `ات`, `یم`, `ید`, `اید`** — attached pronouns and plural endings that are
+  normally written closed anyway, so the recall gain is small while each collides with something real.
+- **the derivational heads (`گذار`, `کننده`, `شناسی`, `ساز`, …)** — several of them are words in their own
+  right (`کننده` is “the one who does”), and a rule that reported them would be noisy in exactly the copy
+  this product writes.
+
+Seven forms adopted and the rest of the table considered and accounted for one group at a time — which is what
+“evaluate before adding” produced here, and it is recorded so the next reader does not have to re-derive it.
+
+### Why the four packages are not dependencies, beyond being Python
+
+- **Hazm's normalizer** is covered by 7.5.2.1 — the same folds, the same spacing, and a ZWNJ pass in the same
+  class as `fixHalfSpace`, already rejected on provenance in 7.5.1. Its parser, embedder and lemmatizer have
+  no caller: a language-_quality_ layer does not need a parse, and the pipeline has nowhere to put a score.
+- **Persian-text-preprocessing** is the composition of the two above plus a Transformer. It is the worst ratio
+  of dependency to capability in the list, and a backend concern rather than a frontend one.
+- **ParsBERT spell correction** has no licence file, so it is not adoptable even before the question of a
+  probability entering a store of citations.
+- **DadmaTools** was rejected in 7.5.1 for the frontend and again in 7.5.2.3, and this evaluation changes
+  neither answer. Its one adoptable artefact was an inventory, and the inventory has been adopted.
+
+**Deferred, with its trigger, as before:** a real backend that needs Persian NLP for something this layer
+cannot do mechanically. Nothing about this evaluation moves that line, and nothing was added to `src/`.
+
+### What separation this touched, and what it did not
+
+The adopted change lives entirely in `web/src/language/`: one rule, one seed entry in the **language**
+namespace (`rule.zwnj-clitics` — not an `mem_*` Agent Memory id, not a secret, not interface copy), and one
+regression case. No catalogue gained a key, no i18n module changed, and the suite that asserts the three
+lifetimes are one-way streets still passes unchanged.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -1091,6 +1203,18 @@ caller contract, and its behaviour is asserted unchanged by the same suite.
 The lesson is the file's recurring one, in a new place: a rule that says "direction is one thing" and a code
 path that writes it twice is a rule that is silently false. Two of the three defects were only visible by
 actually mirroring the interface, which is why the phase asks for the visual inspection.
+
+**Found by that inspection and deliberately not fixed here.** The mirror is correct, and what the mirrored
+screens show is a _copy_ defect that 7.5.3.4.4 must not repair: two components still hold English sentences
+in their own source while the Persian catalogue already has the translation. `JournalPage.tsx` renders a
+literal `Add trade` where `journalPage.addTrade` exists (`افزودن معامله`), and `PortfolioPage.tsx` builds a
+description from a template literal holding two English sentences. The second one is only visible _because_
+the interface is now mirrored: an English sentence inside a Persian paragraph takes the paragraph's
+direction, so its final full stop paints at the start of the line. That is a consequence of untranslated
+copy rather than of the direction, and the fix is the migration the i18n layer owns \u2014 inventing Persian
+wording for a sentence about somebody's holdings is a reviewed decision, not a side effect of a layout phase.
+The gap is worth naming for the i18n suite rather than for this one: that suite forbids a Persian character
+outside the catalogue, and an English sentence outside it passes.
 
 ### 7.5.3.4.1: two defects, both of them a chain that had one more link than expected
 
@@ -1400,7 +1524,9 @@ interface store adopting what was stored at creation, writing every later choice
 unwritable choice as unwritable.
 
 Phase 7.5.2.1 adds `tests/persian-normalization.test.ts` — 26 tests whose first case refuses to pass if a
-rule in the catalogue has no regression case of its own. Beyond the per-rule cases: a corpus of English,
+rule in the catalogue has no regression case of its own. That guard is why the repository evaluation later in
+this file could not add a twentieth rule quietly: `zwnj.clitic-candidate` arrived with its case in that table
+and its key in the seeded store, and the same test would have failed without either. Beyond the per-rule cases: a corpus of English,
 symbols, URLs, paths, identifiers and figures comes out byte-identical with an empty change list; the
 whole corpus is normalized twice and asserted idempotent and deterministic; the four governance paths
 above are exercised end to end; and the RTL-safety test keeps an isolated signed figure sign-first and

@@ -290,6 +290,24 @@ export const SEED_LANGUAGE_KNOWLEDGE: readonly LanguageProposal[] = [
     notes:
       'Stated as a report, with the reason it is not a correction: the same letters are also words of their own \u2014 \u0645\u06CC is *wine*, \u062A\u0631 is *wetter* \u2014 and telling a prefix from a noun needs a lexicon this phase does not have and would not want to guess at. So the rule finds the shape of the problem and a reviewer decides. Confidence 0.7 is that uncertainty, recorded rather than hidden. Making it automatic is a schema extension to the entry (a word-level `from \u2192 to` pair) and a reviewed entry per pattern, both of which are named in `docs/persian-language.md` as the next step rather than done here.',
   },
+  {
+    key: 'rule.zwnj-clitics',
+    kind: 'rule',
+    value:
+      'The plural carrying a clitic \u2014 \u0647\u0627\u06CC\u0645\u0627\u0646, \u0647\u0627\u06CC\u062A\u0627\u0646, \u0647\u0627\u06CC\u0634\u0627\u0646, \u0647\u0627\u06CC\u06CC, \u0647\u0627\u06CC\u0645, \u0647\u0627\u06CC\u062A and \u0647\u0627\u06CC\u0634 \u2014 is written with a half-space, never with a space. The pipeline reports it and does not fix it.',
+    origin: 'human-review',
+    reference: PHASE_RECORD,
+    recordedAt: RECORDED_AT,
+    baseVersion: 0,
+    confidence: 0.8,
+    mapping: null,
+    examples: [
+      '\u06A9\u062A\u0627\u0628 \u0647\u0627\u06CC\u06CC \u2192 \u06A9\u062A\u0627\u0628\u200C\u0647\u0627\u06CC\u06CC',
+      '\u067E\u0631\u0633\u0634 \u0647\u0627\u06CC\u0645\u0627\u0646 \u2192 \u067E\u0631\u0633\u0634\u200C\u0647\u0627\u06CC\u0645\u0627\u0646',
+    ],
+    notes:
+      "A second ZWNJ entry rather than a wider first one, because the *provenance* differs and that is what a store key is for: `rule.zwnj-placement` is this product writing down its own affix inventory, and this one adopts an inventory published elsewhere \u2014 the rule-based half-space table in Parsivar (`normalizer.space_correction`). Two decisions with two sources belong on two keys, so the adopted one can be retired without touching the product's own. Confidence 0.8 rather than 0.7: these forms are unambiguous \u2014 every one of them is \u0647\u0627 with a clitic, so none is ever a word of its own \u2014 which is exactly what makes the rule worth adopting where the wider table it came from is not. The parts of that table this entry leaves out (\u0628\u06CC, \u0634\u062F\u0647/\u0646\u0634\u062F\u0647, the copulas, \u0627\u06CC) are named with their reasons in `docs/persian-language.md`.",
+  },
   ...grammarAndSpellingProposals(),
   ...terminologyProposals(TERMINOLOGY_RECORDED_AT, TERMINOLOGY_REFERENCE),
 ];

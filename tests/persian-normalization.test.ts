@@ -115,6 +115,11 @@ const CASES: readonly (readonly [string, string, string])[] = [
   ],
   ['zwnj.attach-candidate', '\u0645\u06CC \u0631\u0648\u062F', '\u0645\u06CC \u0631\u0648\u062F'],
   [
+    'zwnj.clitic-candidate',
+    '\u06A9\u062A\u0627\u0628 \u0647\u0627\u06CC\u06CC',
+    '\u06A9\u062A\u0627\u0628 \u0647\u0627\u06CC\u06CC',
+  ],
+  [
     'digit.persian-digits-in-technical-run',
     'XAUUSD \u06F3\u06F3\u06F4\u06F5',
     'XAUUSD \u06F3\u06F3\u06F4\u06F5',

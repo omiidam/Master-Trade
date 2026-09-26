@@ -470,6 +470,29 @@ const ZWNJ = '\u200C';
 const PERSIAN_MARKS = '\u060C\u061B\u061F\u066A';
 
 /**
+ * The plural plus a pronoun or the indefinite `ی`, which is where the half-space is missed most often.
+ *
+ * Exported because it is a decision with a source rather than a private detail of the rule below. The
+ * inventory is Parsivar's published rule-based half-space table (`normalizer.space_correction`) — the one
+ * project of the five evaluated that publishes its affixes rather than learning them; Hazm and DadmaTools
+ * do the same class of correction but document the capability instead of the table. The evaluation that
+ * adopted it, and what it left out, is recorded in `docs/persian-language.md`. Every entry here is
+ * `ها` with a clitic after it, so none of them is ever a word of its own, which is what makes the rule
+ * that reads it safe to run over text nobody asked about. The list is ordered longest-first so the match
+ * does not depend on backtracking: `ها` alone is deliberately **not** here, because `zwnj.attach-candidate`
+ * already reports it and two rules reporting one span would read as two mistakes.
+ */
+export const ZWNJ_CLITIC_FORMS: readonly string[] = [
+  '\u0647\u0627\u06CC\u0645\u0627\u0646',
+  '\u0647\u0627\u06CC\u062A\u0627\u0646',
+  '\u0647\u0627\u06CC\u0634\u0627\u0646',
+  '\u0647\u0627\u06CC\u06CC',
+  '\u0647\u0627\u06CC\u0645',
+  '\u0647\u0627\u06CC\u062A',
+  '\u0647\u0627\u06CC\u0634',
+];
+
+/**
  * The rules, in the order they run.
  *
  * The order is a contract, not an accident: the character folds happen first so every later rule sees
@@ -772,6 +795,39 @@ export const NORMALIZATION_RULES: readonly NormalizationRule[] = [
           match: match[0],
           suggestion: `${ZWNJ}${match[1]}`,
           reason: reasons,
+        });
+      }
+      return findings;
+    },
+  },
+  {
+    id: 'zwnj.clitic-candidate',
+    version: 1,
+    key: 'rule.zwnj-clitics',
+    kind: 'zwnj',
+    describe:
+      'A space before a clitic of the plural — the plural with a pronoun or the indefinite `ی` after it — is reported.',
+    enforcement: 'report',
+    protectedKinds: ['technical', 'numeric', 'exception'],
+    detect: (input) => {
+      const findings: NormalizationFinding[] = [];
+      // The clitics, longest first. `ها` and `های` are deliberately absent: `zwnj.attach-candidate` above
+      // already reports those two, and a second rule reporting one span would make one mistake read as two.
+      const pattern = new RegExp(
+        `(?<=[${PERSIAN_LETTERS}])[ \\t]+(${ZWNJ_CLITIC_FORMS.join('|')})(?![${PERSIAN_LETTERS}])`,
+        GU,
+      );
+      for (const match of input.text.matchAll(pattern)) {
+        const start = match.index ?? 0;
+        if (input.protects(start)) continue;
+        findings.push({
+          rule: 'zwnj.clitic-candidate',
+          key: 'rule.zwnj-clitics',
+          index: start,
+          match: match[0],
+          suggestion: `${ZWNJ}${match[1]}`,
+          reason:
+            'The plural with a clitic after it is one word in Persian and is written with a half-space (U+200C), never a space. Reported rather than fixed because this phase reports the placement half of the half-space question and corrects only the hygiene half.',
         });
       }
       return findings;
