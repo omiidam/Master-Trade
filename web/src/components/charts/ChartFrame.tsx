@@ -4,6 +4,7 @@ import { EmptyState } from '../EmptyState';
 import { ErrorState } from '../ErrorState';
 import { cn } from '../../lib/cn';
 import { LoadingState } from '../LoadingState';
+import { PLOT_LABEL_GAP, PLOT_LABEL_SIZE } from './axisLabels';
 
 /**
  * The parts every chart in the product is made of.
@@ -103,7 +104,7 @@ export function ChartFrame({
  * The grid, and the axis that labels it.
  *
  * One component for both because they are one reading: a line with no value against it is a
- * decoration, and a value with no line against it is a number in a corner. `format` is optional
+ * decoration, and a value with no line against it is a number in a corner. `labels` is optional
  * rather than required for the charts that draw a grid without values — the practice candles are
  * read by shape, and labelling every gridline would put four numbers on a chart whose whole point is
  * that no price is claimed.
@@ -116,14 +117,21 @@ export interface PlotGridProps {
   /** The grid's left and right edge in view-box units. */
   x1: number;
   x2: number;
-  /** Formats a tick for the axis. Omitted for a grid with no axis labels. */
-  format?: (value: number) => string;
-  /** Where the axis labels sit. Defaults to just inside `x1`. */
+  /**
+   * One label per tick, already formatted by the chart. Omitted for a grid with no axis.
+   *
+   * The strings rather than a `format(value)` callback, and that is the point rather than a
+   * preference: the chart has to know how wide its labels are *before* it can choose the inset they
+   * hang in (`axisLabels`), so a grid that formatted its own would be formatting a second, unmeasured
+   * set of strings and could print one the band was never sized for.
+   */
+  labels?: readonly string[];
+  /** Where a label's right edge is anchored. Defaults to one `PLOT_LABEL_GAP` inside `x1`. */
   labelX?: number;
   strokeWidth?: number;
 }
 
-export function PlotGrid({ ticks, y, x1, x2, format, labelX, strokeWidth = 0.5 }: PlotGridProps) {
+export function PlotGrid({ ticks, y, x1, x2, labels, labelX, strokeWidth = 0.5 }: PlotGridProps) {
   return (
     <>
       {ticks.map((tick, index) => (
@@ -140,15 +148,22 @@ export function PlotGrid({ ticks, y, x1, x2, format, labelX, strokeWidth = 0.5 }
             strokeWidth={strokeWidth}
             strokeDasharray="4 6"
           />
-          {format === undefined ? null : (
+          {labels?.[index] === undefined ? null : (
             <text
-              x={labelX ?? x1 - 6}
+              x={labelX ?? x1 - PLOT_LABEL_GAP}
               y={y(tick) + 3}
               textAnchor="end"
+              /*
+               * `.num`, because a tick label is a figure and that is the product's rule for one:
+               * Latin, tabular and isolated from the bidi algorithm around it. It is also what makes
+               * the band `axisLabels` reserves an exact bound — a monospaced face advances by the
+               * same amount per character, so the width of a label is its length and one number.
+               */
+              className="num"
               fill="var(--color-text-faint)"
-              fontSize={10}
+              fontSize={PLOT_LABEL_SIZE}
             >
-              {format(tick)}
+              {labels[index]}
             </text>
           )}
         </g>

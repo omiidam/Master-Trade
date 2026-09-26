@@ -225,6 +225,17 @@ export interface PageSession {
    */
   evaluateJson<T>(expression: string): Promise<T>;
   clickNav(label: string): Promise<void>;
+  /** How many tabs the page that is open renders. */
+  tabCount(): Promise<number>;
+  /** Whether the tab at this position is the selected one. */
+  tabSelected(index: number): Promise<boolean>;
+  /**
+   * Select a tab by position, and wait for the application to agree that it is selected.
+   *
+   * `where` names the place for the timeout message, so a case that opens twenty tabs across nine
+   * screens says which one never opened rather than only the index.
+   */
+  selectTab(index: number, where?: string): Promise<void>;
   /** Press a real key, so `:focus-visible` and default actions behave as they do for a user. */
   pressKey(key: 'Tab' | 'Enter' | 'Escape' | 'Shift+Tab'): Promise<void>;
   screenshot(): Promise<string>;
@@ -453,6 +464,39 @@ export async function openSession(executablePath: string): Promise<PageSession> 
         })()
       `);
       if (!clicked) throw new Error(`no navigation button is named ${JSON.stringify(label)}`);
+    },
+
+    async tabCount() {
+      return evaluate<number>(`document.querySelectorAll('main [role="tab"]').length`);
+    },
+
+    async tabSelected(index) {
+      return evaluate<boolean>(
+        `document.querySelectorAll('main [role="tab"]')[${index}]?.getAttribute('aria-selected') === 'true'`,
+      );
+    },
+
+    /**
+     * Radix activates a tab on `mousedown`, so a synthetic `.click()` is silently ignored — a trap this
+     * suite sprang on its first run, and the reason the wait is on `aria-selected` rather than on the
+     * event having landed. It lives in the driver rather than in a case, because it is a fact about the
+     * control and the browser rather than about any one screen.
+     */
+    async selectTab(index, where) {
+      await evaluate(`
+        (() => {
+          const tab = document.querySelectorAll('main [role="tab"]')[${index}];
+          if (!tab) return false;
+          tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+          return true;
+        })()
+      `);
+      await session.waitFor(
+        `document.querySelectorAll('main [role="tab"]')[${index}]?.getAttribute('aria-selected') === 'true'`,
+        where === undefined
+          ? `tab ${index} to be selected`
+          : `tab ${index} of ${where} to be selected`,
+      );
     },
 
     async pressKey(key) {

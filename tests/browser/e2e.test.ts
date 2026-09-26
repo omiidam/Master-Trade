@@ -577,7 +577,168 @@ suite('the Product Foundation in a real browser', () => {
   });
 
   /* ---------------------------------------------------------------------- */
-  /* D. Accessibility in the rendered document                               */
+  /* D. The charts, as the browser paints them                               */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Every string a chart draws, in the chart's own coordinates.
+   *
+   * `getBBox()` is the space an `<svg>` lays its content out in, and it is the space a view box clips;
+   * `getBoundingClientRect()` is where the glyphs landed after that box was mapped to the container. So
+   * the clip happens in the first of the two, and comparing a label's box against the view box is the
+   * measurement that says whether a reader can see all of it.
+   */
+  interface ChartReport {
+    charts: {
+      label: string;
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+      text: { value: string; left: number; top: number; right: number; bottom: number }[];
+    }[];
+  }
+
+  const CHART_BOUNDS_PROBE = `
+(() => {
+  const charts = [];
+  for (const svg of document.querySelectorAll('main svg[role="img"]')) {
+    const numbers = (svg.getAttribute('viewBox') || '').trim().split(/[\\s,]+/).map(Number);
+    if (numbers.length !== 4 || numbers.some((value) => !Number.isFinite(value))) continue;
+    const [minX, minY, width, height] = numbers;
+    const text = [];
+    for (const node of svg.querySelectorAll('text')) {
+      const box = node.getBBox();
+      text.push({
+        value: (node.textContent || '').trim(),
+        left: box.x,
+        top: box.y,
+        right: box.x + box.width,
+        bottom: box.y + box.height,
+      });
+    }
+    // A chart with no text is a shape rather than a labelled plot, and there is nothing in it to clip.
+    if (text.length === 0) continue;
+    charts.push({
+      label: svg.getAttribute('aria-label') || '',
+      minX,
+      minY,
+      maxX: minX + width,
+      maxY: minY + height,
+      text,
+    });
+  }
+  return JSON.stringify({ charts });
+})()`;
+
+  describe('the charts, in a browser', () => {
+    /**
+     * A chart draws its labels inside its own frame — every page, every tab, both languages.
+     *
+     * The defect this is about is worth stating here, because nothing else in the suite could see it. The
+     * journal's value axis put each tick label in a band the chart assumed was 26 units wide, `text-anchor:
+     * end` six units inside the grid; the labels are 32–38 units wide, so every one of them began *before*
+     * `x = 0` and the first characters were painted outside the view box. An `<svg>` clips to its view box by
+     * the same rule that makes it a viewport, so the axis read `1.50R`, `.36R`, `.22R`, `.07R`, `.07R` — five
+     * values, all of them missing their sign and leading digit.
+     *
+     * No source rule and no HTML probe could have caught it. The class names were right; the string in the DOM
+     * was whole; `CLIPPING_PROBE` measures `scrollWidth > clientWidth`, and SVG text has no such pair. The
+     * overflow was *painted*, in a coordinate system, which is why this case reads `getBBox()` in that
+     * coordinate system rather than reading the rendered boxes.
+     */
+    it('draws every label inside the frame that draws it, at a precision a reader can use', async () => {
+      const offenders: string[] = [];
+      /** Labels that are placed correctly and still say something a reader cannot use. */
+      const unreadable: string[] = [];
+      let charts = 0;
+      let labels = 0;
+
+      /**
+       * A figure printed past two decimals, or one that is not a number at all.
+       *
+       * Both are what interpolating a raw float into a label produces, and the `trades` axis did exactly
+       * that: a tick arithmetic had left at `2.2600000000000002` was printed in full, so the distribution
+       * chart read `2.2600000000000002 trades` and `5.739999999999999 trades`. The rule being measured here
+       * is the product's own — a figure is `toFixed(2)` at most, which is what `.num` and the formatter's
+       * `default` branch both do — and it is measured rather than read from the source because a source
+       * rule can see the format string and not the number that flows through it.
+       */
+      const UNREADABLE_FIGURE = /\.\d{3,}|[eE][+-]?\d|NaN|Infinity|undefined/;
+
+      /**
+       * Half a unit of tolerance. A run of text is measured from the advances of its glyphs, and a label
+       * sitting flush with a boundary can land a hundredth of a unit outside it. A clipped character is whole
+       * units — the digits that were disappearing were ten units wide — so this cannot hide one.
+       */
+      const TOLERANCE = 0.5;
+
+      const inspect = async (where: string): Promise<void> => {
+        const report = await session.evaluateJson<ChartReport>(CHART_BOUNDS_PROBE);
+        for (const chart of report.charts) {
+          charts += 1;
+          for (const run of chart.text) {
+            labels += 1;
+            const outside: string[] = [];
+            if (run.left < chart.minX - TOLERANCE) {
+              outside.push(`${Math.round((chart.minX - run.left) * 10) / 10} past its left edge`);
+            }
+            if (run.right > chart.maxX + TOLERANCE) {
+              outside.push(`${Math.round((run.right - chart.maxX) * 10) / 10} past its right edge`);
+            }
+            if (run.top < chart.minY - TOLERANCE) {
+              outside.push(`${Math.round((chart.minY - run.top) * 10) / 10} above its top edge`);
+            }
+            if (run.bottom > chart.maxY + TOLERANCE) {
+              outside.push(
+                `${Math.round((run.bottom - chart.maxY) * 10) / 10} below its bottom edge`,
+              );
+            }
+            if (outside.length > 0) {
+              offenders.push(
+                `${where}: "${run.value}" on "${chart.label}" is drawn ${outside.join(' and ')}`,
+              );
+            }
+            if (UNREADABLE_FIGURE.test(run.value)) {
+              unreadable.push(`${where}: "${run.value}" on "${chart.label}"`);
+            }
+          }
+        }
+      };
+
+      // Both languages, because the axis labels are formatted from the same values either way and the font
+      // they are drawn in is not: Persian swaps the type stack for the face the language is read in, which is
+      // exactly the kind of change that moves a glyph's advance.
+      for (const locale of ['en', 'fa'] as const) {
+        await startIn(locale);
+        for (const section of NAV_SECTIONS) {
+          await visitIn(locale, section.id);
+          await inspect(`${locale} ${section.id}`);
+
+          // Every tab as well: the journal keeps three charts on its overview and eight behind its analytics
+          // tab, and a walk of the default tab of every page would have measured the three.
+          const tabs = await session.tabCount();
+          for (let index = 0; index < tabs; index += 1) {
+            if (await session.tabSelected(index)) continue;
+            await session.selectTab(index, `${locale} ${section.id}`);
+            await inspect(`${locale} ${section.id} · tab ${index}`);
+          }
+        }
+      }
+
+      // The walk measured charts, and measured labels inside them, so an empty offender list is a clean
+      // result rather than a walk that never found a chart.
+      expect(charts, 'no labelled chart was measured').toBeGreaterThan(10);
+      expect(labels, 'no chart label was measured').toBeGreaterThan(40);
+      expect(offenders, 'a chart label is painted outside its own frame').toEqual([]);
+      expect(unreadable, 'a chart prints a figure no reader can use').toEqual([]);
+
+      await startIn(null);
+    }, 300_000);
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* E. Accessibility in the rendered document                               */
   /* ---------------------------------------------------------------------- */
 
   describe('accessibility', () => {
@@ -1377,37 +1538,6 @@ suite('the Product Foundation in a real browser', () => {
     const boxes = (): Promise<Box[]> =>
       settled<Box[]>(BOXES, 'the workspace layout to stop moving');
 
-    /** How many tabs the page that is open renders, and whether one of them is the selected one. */
-    const tabCount = (): Promise<number> =>
-      session.evaluate<number>(`document.querySelectorAll('main [role="tab"]').length`);
-
-    const tabSelected = (index: number): Promise<boolean> =>
-      session.evaluate<boolean>(
-        `document.querySelectorAll('main [role="tab"]')[${index}]?.getAttribute('aria-selected') === 'true'`,
-      );
-
-    /**
-     * Select a tab by position, with a real `mousedown`.
-     *
-     * Radix activates a tab on `mousedown`, so a synthetic `.click()` is silently ignored — a trap this suite
-     * sprang on its first run, and the reason the loop below waits for `aria-selected` rather than assuming the
-     * click landed.
-     */
-    const selectTab = async (index: number, where: string): Promise<void> => {
-      await session.evaluate(`
-        (() => {
-          const tab = document.querySelectorAll('main [role="tab"]')[${index}];
-          if (!tab) return false;
-          tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
-          return true;
-        })()
-      `);
-      await session.waitFor(
-        `document.querySelectorAll('main [role="tab"]')[${index}]?.getAttribute('aria-selected') === 'true'`,
-        `tab ${index} of ${where} to be selected`,
-      );
-    };
-
     /** How many tab panels the walk below actually opened, so a vacuous one cannot pass as coverage. */
     let panelsOpened = 0;
 
@@ -1599,10 +1729,10 @@ suite('the Product Foundation in a real browser', () => {
           // Every tab as well, at the narrowest width: a panel is where a physical utility would hide, and a
           // phone is where it would show. The other two sizes sweep the page each one opens on.
           if (width !== 390) continue;
-          const tabs = await tabCount();
+          const tabs = await session.tabCount();
           for (let index = 0; index < tabs; index += 1) {
-            if (await tabSelected(index)) continue;
-            await selectTab(index, section.id);
+            if (await session.tabSelected(index)) continue;
+            await session.selectTab(index, section.id);
             panelsOpened += 1;
             offenders.push(...(await layoutDefects(`${section.id} tab ${index} @${width}`)));
           }
@@ -1852,10 +1982,10 @@ suite('the Product Foundation in a real browser', () => {
         await visitIn('fa', section.id);
         await inspect(section.id);
 
-        const tabs = await tabCount();
+        const tabs = await session.tabCount();
         for (let index = 0; index < tabs; index += 1) {
-          if (await tabSelected(index)) continue;
-          await selectTab(index, section.id);
+          if (await session.tabSelected(index)) continue;
+          await session.selectTab(index, section.id);
           await inspect(`${section.id} · tab ${index}`);
         }
       }
@@ -1991,10 +2121,10 @@ suite('the Product Foundation in a real browser', () => {
         // Every tab as well as the page it opens on. This is where the figures actually are: the journal's
         // analytics and calendar, the exam scores, the portfolio's holdings — a scan of the default tab of
         // every page would have looked thorough and missed the row of R-multiples it was written for.
-        const tabs = await tabCount();
+        const tabs = await session.tabCount();
         for (let index = 0; index < tabs; index += 1) {
-          if (await tabSelected(index)) continue;
-          await selectTab(index, section.id);
+          if (await session.tabSelected(index)) continue;
+          await session.selectTab(index, section.id);
           panelsOpened += 1;
           await inspect(`${section.id} · tab ${index}`);
         }

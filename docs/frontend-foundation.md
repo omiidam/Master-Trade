@@ -2395,3 +2395,82 @@ the left, because a rule that only ever descends would satisfy the Persian half 
   size, and every signed figure sign-first on every page — the case that fails with 5 findings until the figures
   above are isolated.
 - No new dependency, and no new catalogue key: two replaced three.
+
+## 32. Phase 7.3.1 — the value axis, and the two ways a label was unreadable
+
+The journal's equity curve was reported with an axis that read `.50R`, `.36R`, `.22R`, `.07R`, `.07R`. Two of those
+five labels were the same string, which is what gave the defect away: the axis had five ticks, and every one of them
+had lost its sign and leading digit. §16 wrote the chart's contract and §31 mirrored the pages around it; neither
+could see this, because the defect was not in the layout the interface computes but in the space the chart paints in.
+
+### The band was a constant, and it was narrower than the text
+
+The chart used one `PAD = 26` for all four of its insets and drew each tick label with `text-anchor: end` six units
+inside the grid's left edge — so a label extended _leftwards_ from `x = 20`, and every character past `x = 0` was
+painted outside the view box. An `<svg>` clips to its view box by the same rule that makes it a viewport, silently.
+Measured on the built bundle, the labels are 32–38 units wide, so each began eight to seventeen units outside the
+frame: `+10.50R` was drawn as `0.50R` before losing one more character to the frame's edge.
+
+The three insets on the other sides are _padding_, and a constant is right for them: they keep the series off the
+edge, and they are the same on every chart. The left one holds text, so its width belongs to the text. That is the
+whole of the rule, and it is now a module of its own (`web/src/components/charts/axisLabels.ts`): the band is
+`inset + gap + the widest label`, and the chart asks for it before it draws anything.
+
+What makes that a **bound** rather than an estimate is `.num`. A tick label is a figure, and the product's rule for a
+figure is that class — Latin and monospaced — and in a monospace face a character advances by the same amount
+whatever it is. So a label's width is its length and one number, and the number is the widest advance any face in the
+product's `--font-mono` stack uses (0.63em, against JetBrains Mono's 0.60em and Consolas's 0.55em) rather than a
+measurement of the one face loaded on this machine. Measuring the rendered text with `getBBox()` was the exact
+alternative and was rejected for a reason worth keeping: it costs a ref, a layout effect and a second render pass in
+a component that is otherwise pure, and it would make the rule untestable outside a browser.
+
+`PlotGrid` now takes `labels: readonly string[]` instead of a `format(value)` callback, and that is the point rather
+than a tidy-up: the chart has to know how wide its labels are _before_ it can choose the band they hang in, so a grid
+that formatted its own strings would be printing a second, unmeasured set.
+
+### The second defect was in a label that was never truncated
+
+The distribution chart's axis read `2.2600000000000002 trades` and `5.739999999999999 trades`. Every branch of the
+formatter but one printed a figure to two decimals; the `trades` branch interpolated the tick itself, and a tick is
+arithmetic. So the fix is one expression — `figure()`, a whole number or `toFixed(2)` — used by both branches that
+print a plain number, moved into a `.ts` module beside the chart (`web/src/components/journal/chartFormat.ts`) with
+the journal's other pure logic, so a suite can import the rule instead of reading the component for it.
+
+Both defects survived because nothing in the repository reads what a label _says_ or where it is _painted_. The
+class names were right, the string in the DOM was whole, and `CLIPPING_PROBE` measures `scrollWidth > clientWidth`,
+which SVG text has no pair for. A source rule can see a class name and not a glyph's advance.
+
+### The pieces
+
+| Piece                                        | Where                                               |
+| -------------------------------------------- | --------------------------------------------------- |
+| The band, derived from the labels it holds   | `web/src/components/charts/axisLabels.ts`           |
+| The grid that hangs its labels off that band | `web/src/components/charts/ChartFrame.tsx`          |
+| The figure rule, in one expression           | `web/src/components/journal/chartFormat.ts`         |
+| The chart that asks for the band it needs    | `web/src/components/journal/PerformanceChart.tsx`   |
+| The source rules and the two node cases      | `tests/frontend-data-components.test.ts` (29 cases) |
+| The painted-label walk, in both languages    | `tests/browser/e2e.test.ts` (44 cases)              |
+| The tab walk the browser case shares         | `tests/browser/driver.ts`                           |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1684** unit tests across **82** files (1682/82 before): the two new cases in
+  `tests/frontend-data-components.test.ts` — one asserting the widest label of a real axis lands inside the frame's
+  own inset, that the clamp can only widen the band, and that a chart read by shape asks for nothing; one asserting
+  every unit prints a figure of at most two decimals (with four real IEEE-754 artefacts as input) and that the units
+  which carry a word still carry it. The first case replaces an assertion about the `format` prop that the prop's
+  removal had left failing.
+- The browser suite is **44** cases (43 before): the label case now walks every page and every tab in both languages
+  and asserts two things per label — that `getBBox()` puts it inside the view box, and that it does not print more of
+  its number than a reader can use. It measured more than ten charts and more than forty labels, so a clean result
+  is a measurement rather than a walk that found nothing.
+- Measured on the built bundle, in Persian and in English: the equity curve's axis reads `−2.07R`, `+1.07R`, `+4.22R`,
+  `+7.36R`, `+10.50R`, each drawn between 10 and 16 units inside the frame; the distribution chart reads
+  `0.52 trades` … `7.48 trades`. Every label is complete in both languages, because the format is applied to the
+  same numbers before either language is chosen.
+- The precision rule was checked the only way that means anything: with the `trades` branch returned to
+  `${value}`, the new node case fails on `2.2600000000000002 trades` and passes with `figure()` restored.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**, unchanged. No new dependency, no catalogue key,
+  and no change to any series, scale or tick — the data and the arithmetic are the same, and only the text and the
+  band it needs are different.

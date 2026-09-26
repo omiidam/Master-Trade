@@ -23,6 +23,13 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { TREND_INK, TREND_WORD, trendDirection } from '../web/src/design/trend.js';
+import {
+  PLOT_LABEL_GAP,
+  PLOT_LABEL_INSET,
+  axisLabels,
+  labelWidth,
+} from '../web/src/components/charts/axisLabels.js';
+import { formatChartValue } from '../web/src/components/journal/chartFormat.js';
 
 const COMPONENTS = join('web', 'src', 'components');
 
@@ -259,11 +266,72 @@ describe('Task 2 — one plot, one grid, one set of states', () => {
     expect(FRAME).toMatch(/export function PlotGrid/);
     // One component for both, because a line with no value against it is a decoration and a value
     // with no line is a number in a corner. Labelling stays optional for the charts read by shape.
-    expect(FRAME).toMatch(/format\?: \(value: number\) => string/);
+    //
+    // The labels arrive as strings rather than as a `format(value)` callback, and that is the point
+    // rather than a preference: the chart has to know how wide its labels are *before* it can choose the
+    // inset they hang in, so a grid that formatted its own would be formatting a second, unmeasured set
+    // of strings and could print one the band was never sized for. The two cases below measure it.
+    expect(FRAME).toMatch(/labels\?: readonly string\[\]/);
+    expect(FRAME).not.toMatch(/format\?:/);
+    expect(FRAME).toMatch(/x=\{labelX \?\? x1 - PLOT_LABEL_GAP\}/);
+    // A tick label is a figure, so it carries the product's class for one — which is also what makes the
+    // band a bound rather than an estimate, because a monospaced face advances by one amount per
+    // character.
+    expect(FRAME).toMatch(/className="num"/);
     expect(FRAME).toMatch(/strokeDasharray="4 6"/);
     // Keys are indexed rather than valued: two ticks can print the same label at this size, and a
     // React key collision would silently drop a gridline.
     expect(FRAME).toMatch(/key=\{`grid-\$\{index\}`\}/);
+  });
+
+  it('sizes the value axis from the labels it will draw, rather than from a constant', () => {
+    // The defect this is about: the journal's chart used one `PAD = 26` for all four of its insets and
+    // anchored each tick label six units inside the grid's left edge, so a 32–38-unit label began eight
+    // to seventeen units *before* `x = 0` — and an `<svg>` clips to its view box by the same rule that
+    // makes it a viewport. The equity curve's axis therefore read `1.50R`, `.36R`, `.22R`, `.07R`,
+    // `.07R`: five values, every one of them missing its sign and leading digit, painted that way
+    // silently. No source rule can see a glyph's advance and `CLIPPING_PROBE` measures HTML overflow,
+    // which SVG text has no pair for — so the band is derived from the labels, and this is the check.
+    const labels = ['+10.50R', '+3.50R', '−3.50R', '0.00R'];
+    const { inset, anchor } = axisLabels(labels, 26);
+    const widest = Math.max(...labels.map((label) => labelWidth(label)));
+    // A label's *end* is anchored, so its start is `anchor - widest` — and that has to be inside the
+    // frame's own inset for every glyph to be painted inside the view box.
+    expect(anchor - widest).toBeGreaterThanOrEqual(PLOT_LABEL_INSET);
+    expect(anchor).toBe(inset - PLOT_LABEL_GAP);
+    // The clamp can only widen the band: a chart whose labels are short keeps the padding it had.
+    expect(axisLabels(['1R', '2R'], 26).inset).toBe(26);
+    // And a longer label widens it, because the width is derived rather than assumed.
+    expect(axisLabels(['+123.45R'], 26).inset).toBeGreaterThan(inset);
+    // A chart read by shape has no axis at all, and hangs no label off one.
+    expect(axisLabels([], 26).inset).toBe(26);
+  });
+
+  it('prints a figure as far as a reader reads it, in every unit', () => {
+    // `.num` states the product's rule for a figure — a whole number or two decimals — and every branch
+    // of the tick formatter but one followed it. The `trades` branch interpolated the tick itself, and a
+    // tick is arithmetic: the distribution chart's axis read `2.2600000000000002 trades` and
+    // `5.739999999999999 trades`. Nothing caught it, because the string in the DOM was whole and no
+    // check in the repository reads what a label *says*.
+    const noise = [2.2600000000000002, 5.739999999999999, 0.5200000000000001, -0.30000000000000004];
+    for (const value of noise) {
+      for (const unit of ['trades', 'R', '%', 'currency', 'price', undefined]) {
+        const label = formatChartValue(value, unit);
+        expect(label, `${label} prints more of ${value} than a reader can use`).not.toMatch(
+          /\.\d{3,}|[eE][+-]?\d/,
+        );
+      }
+    }
+    // The units that carry a word still carry it, and a whole number stays whole.
+    expect(formatChartValue(4, 'trades')).toBe('4 trades');
+    expect(formatChartValue(1, 'trades')).toBe('1 trade');
+    expect(formatChartValue(2.5, 'trades')).toBe('2.50 trades');
+    expect(formatChartValue(-0.30000000000000004, 'trades')).toBe('-0.30 trades');
+    // Including the signs: a gain is marked and a loss takes U+2212 rather than a hyphen-minus.
+    expect(formatChartValue(1.5, 'R')).toBe('+1.50R');
+    expect(formatChartValue(-1.5, 'R')).toBe('−1.50R');
+    expect(formatChartValue(0, 'R')).toBe('0.00R');
+    expect(formatChartValue(2.26)).toBe('2.26');
   });
 
   it('has exactly one answer to what a chart shows when it has nothing to show', () => {

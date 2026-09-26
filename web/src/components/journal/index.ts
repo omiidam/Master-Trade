@@ -14,7 +14,7 @@
 export { JournalStatCard } from './JournalStatCard';
 export type { JournalStatCardProps } from './JournalStatCard';
 
-export { PerformanceChart, formatChartValue } from './PerformanceChart';
+export { PerformanceChart } from './PerformanceChart';
 export type {
   ChartAnnotation,
   ChartLevel,
@@ -22,6 +22,10 @@ export type {
   ChartSeriesInput,
   PerformanceChartProps,
 } from './PerformanceChart';
+
+// The tick formatter lives in a `.ts` module beside the chart rather than inside it: it is the product's
+// rule for how far a figure is printed, it has no React in it, and a suite can therefore import it.
+export { formatChartValue } from './chartFormat';
 
 export { CHART_TONE_VAR, ChartToolbar } from './ChartToolbar';
 export type { ChartLegendEntry, ChartTone, ChartToolbarProps } from './ChartToolbar';

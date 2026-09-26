@@ -11,6 +11,8 @@ import {
   PlotReferenceLine,
   PlotZeroLine,
 } from '../charts/ChartFrame';
+import { axisLabels } from '../charts/axisLabels';
+import { formatChartValue } from './chartFormat';
 import {
   CHART_TONE_VAR,
   ChartToolbar,
@@ -81,22 +83,14 @@ export interface PerformanceChartProps {
 
 const VIEW_WIDTH = 1000;
 const VIEW_HEIGHT = 320;
+/**
+ * The plot's inset from the frame's top, right and bottom.
+ *
+ * Deliberately not its left: that edge holds the value axis, and the band it needs is derived from the
+ * labels printed in it — `axisLabels` in `./axisLabels`, which is where the rule and the clipped-axis
+ * defect it repairs are written down.
+ */
 const PAD = 26;
-
-export function formatChartValue(value: number, unit?: string): string {
-  switch (unit) {
-    case 'R':
-      return `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toFixed(2)}R`;
-    case '%':
-      return `${value.toFixed(1)}%`;
-    case 'currency':
-      return `$${Math.round(value).toLocaleString('en-US')}`;
-    case 'trades':
-      return `${value} ${Math.abs(value) === 1 ? 'trade' : 'trades'}`;
-    default:
-      return Number.isInteger(value) ? `${value}` : value.toFixed(2);
-  }
-}
 
 function tickValues(min: number, max: number, count = 4): number[] {
   const span = max - min || 1;
@@ -165,14 +159,35 @@ export function PerformanceChart({
     min -= pad;
     max += pad;
 
+    const ticks = tickValues(min, max);
+    /*
+     * The labels are formatted here, once, rather than inside the grid — because the band the plot
+     * reserves for them is the width of the widest one, and a chart that drew a different set of
+     * strings than it measured would be back to clipping them one character at a time.
+     */
+    const labels = ticks.map((tick) => formatChartValue(tick, unit));
+    const axis = axisLabels(labels, PAD);
+
     const longest = Math.max(...visible.map((entry) => entry.points.length), 1);
+    const right = VIEW_WIDTH - PAD;
     const xAt = (index: number) =>
-      PAD + (longest === 1 ? 0.5 : index / (longest - 1)) * (VIEW_WIDTH - PAD * 2);
+      axis.inset + (longest === 1 ? 0.5 : index / (longest - 1)) * (right - axis.inset);
     const yAt = (value: number) =>
       PAD + (1 - (value - min) / (max - min)) * (VIEW_HEIGHT - PAD * 2);
 
-    return { min, max, longest, xAt, yAt, ticks: tickValues(min, max) };
-  }, [visible, levels, markers]);
+    return {
+      min,
+      max,
+      longest,
+      left: axis.inset,
+      right,
+      labelX: axis.anchor,
+      xAt,
+      yAt,
+      ticks,
+      labels,
+    };
+  }, [visible, levels, markers, unit]);
 
   const hasData = geometry !== null;
 
@@ -243,13 +258,12 @@ export function PerformanceChart({
         series={visible}
         index={hoverIndex}
         unit={unit}
-        leftPercent={
-          ((PAD +
-            (geometry.longest === 1 ? 0.5 : hoverIndex / (geometry.longest - 1)) *
-              (VIEW_WIDTH - PAD * 2)) /
-            VIEW_WIDTH) *
-          100
-        }
+        /*
+         * Read from the same `xAt` the marker is drawn at, rather than repeating its arithmetic. The
+         * copy this replaces was written against `PAD` and silently stopped describing the point the
+         * moment the axis band widened the plot's inset.
+         */
+        leftPercent={(geometry.xAt(hoverIndex) / VIEW_WIDTH) * 100}
       />
     );
 
@@ -260,7 +274,6 @@ export function PerformanceChart({
       levels={levels}
       markers={markers}
       annotations={annotations}
-      unit={unit}
       height={height}
       hoverIndex={hoverIndex}
       onHoverChange={setHoverIndex}
@@ -319,9 +332,17 @@ interface Geometry {
   min: number;
   max: number;
   longest: number;
+  /** The plot's left edge: the band the axis labels were measured into, not `PAD`. */
+  left: number;
+  /** The plot's right edge. */
+  right: number;
+  /** Where a tick label's right edge is anchored. */
+  labelX: number;
   xAt: (index: number) => number;
   yAt: (value: number) => number;
   ticks: number[];
+  /** One formatted label per tick, the same strings `axisLabels` sized the left edge for. */
+  labels: string[];
 }
 
 function TooltipPanel({
@@ -378,7 +399,6 @@ function ChartSurface({
   levels,
   markers,
   annotations,
-  unit,
   height,
   hoverIndex,
   onHoverChange,
@@ -389,20 +409,21 @@ function ChartSurface({
   levels?: readonly ChartLevel[];
   markers?: readonly ChartMarker[];
   annotations?: readonly ChartAnnotation[];
-  unit?: string;
   height: number;
   hoverIndex: number | null;
   onHoverChange: (index: number | null) => void;
   onLeave: () => void;
 }) {
   if (geometry === null) return null;
-  const { min, max, longest, xAt, yAt, ticks } = geometry;
+  const { min, max, longest, left, right, labelX, xAt, yAt, ticks, labels } = geometry;
 
   const handleMove = (event: MouseEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     if (rect.width === 0) return;
     const fraction = (event.clientX - rect.left) / rect.width;
-    const plotFraction = (fraction * VIEW_WIDTH - PAD) / (VIEW_WIDTH - PAD * 2);
+    // The plot's own edges, not `PAD`: a pointer over the axis band is at the first point, and a
+    // pointer over the right padding is at the last one.
+    const plotFraction = (fraction * VIEW_WIDTH - left) / (right - left);
     const clamped = Math.min(Math.max(plotFraction, 0), 1);
     onHoverChange(Math.round(clamped * (longest - 1)));
   };
@@ -415,22 +436,16 @@ function ChartSurface({
       onMouseMove={handleMove}
       onMouseLeave={onLeave}
     >
-      <PlotGrid
-        ticks={ticks}
-        y={yAt}
-        x1={PAD}
-        x2={VIEW_WIDTH - PAD}
-        format={(tick) => formatChartValue(tick, unit)}
-      />
+      <PlotGrid ticks={ticks} labels={labels} labelX={labelX} y={yAt} x1={left} x2={right} />
 
-      {min < 0 && max > 0 ? <PlotZeroLine y={yAt(0)} x1={PAD} x2={VIEW_WIDTH - PAD} /> : null}
+      {min < 0 && max > 0 ? <PlotZeroLine y={yAt(0)} x1={left} x2={right} /> : null}
 
       {(levels ?? []).map((level) => (
         <PlotReferenceLine
           key={level.label}
           y={yAt(level.value)}
-          x1={PAD}
-          x2={VIEW_WIDTH - PAD}
+          x1={left}
+          x2={right}
           color={CHART_TONE_VAR[level.tone]}
           label={level.label}
         />
@@ -439,7 +454,7 @@ function ChartSurface({
       {series.map((entry) => {
         const color = CHART_TONE_VAR[entry.tone];
         if (entry.bars) {
-          const slot = (VIEW_WIDTH - PAD * 2) / Math.max(entry.points.length, 1);
+          const slot = (right - left) / Math.max(entry.points.length, 1);
           const baseline = yAt(Math.max(min, 0));
           return (
             <g key={entry.id}>
