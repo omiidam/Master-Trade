@@ -2303,3 +2303,95 @@ told apart by count, and one shared predicate keeps an ellipsis out of both spac
 - No new dependency: `@persian-tools/persian-tools` was re-read for this question and ships no detector,
   and the layer's import graph is still an allow-list walked transitively — `memory.ts` and `seed.ts` are
   not reachable from it, which is why the terminology lexicon is not read.
+
+## 31. Phase 7.5.3.4.5 — the strip and the panels behind it
+
+§28 turned the interface over from the language, and one control kept its own opinion. `Tabs.tsx` is the
+product's only tab strip, and it rendered Radix's `Tabs.Root` without a `dir`. Radix resolves a tab group's
+direction from that prop, from a `DirectionProvider` above it, or, with neither, from the literal `'ltr'` — and it
+**stamps the answer on the element it renders**, which every tab panel is a child of. So a Persian interface had a
+left-to-right strip _and_ left-to-right panels inside a right-to-left document. This is the last paragraph of §28's
+own defect record, closed where that record said it belonged: the figures came out of the copy first, and the
+direction went in after them.
+
+### The direction is stated once, at the shared control
+
+```tsx
+const direction = useTextDirection();
+<RadixTabs.Root dir={direction} …>
+```
+
+One prop, in one file, because that file is the product's only tab strip: thirteen pages and every tab group in all
+nine of the shell's categories follow their page because they all render _this_ component. The value is the same
+hook the shell's other direction-shaped components read — the control's preference resolved against the interface
+language — so the strip agrees with `<html dir>` by construction rather than by coincidence, and an explicit
+left-to-right pin over Persian still lays the strip the way the page around it is laid out.
+
+`DirectionProvider` was the alternative, and it was not taken, for a reason worth writing down: it is Radix's own
+context and it would cover a primitive this product has not installed yet, but it is a dependency on
+`@radix-ui/react-direction`, which is currently only in the tree transitively. Passing `dir` states the direction at
+the seam the product owns, and the file's closing comment says why the _other_ groups need nothing: a plain flex row
+inherits the flow, so a Radix primitive is the one kind of control that has to be told.
+
+### The panels were the larger half
+
+The strip was what a person noticed — the rail listed its tabs from the wrong edge — and the panels were what
+mattered. A `dir` attribute starts a new bidi paragraph, so every panel behind that strip was laid out
+left-to-right inside a mirrored page: headings against the left of their boxes, two-column grids in the opposite
+order, card headers with the action on the wrong side. Measured on the built bundle in Persian, the journal's seven
+panels all computed `direction: ltr` while `<html>` computed `rtl`.
+
+### The five figures, out of the sentences they were hiding in
+
+Turning the panels around put five signed figures back under the bidi algorithm in a form §16 forbids: three on the
+journal's overview (the `JournalStatCard` comparison lines, `+4.2 واحد در برابر …`) and two on the examinations
+history tab (`ScoreCard`'s `+33% در میان تلاشها`). A leading `+` is a neutral, so inside a right-to-left sentence
+it resolves against the paragraph and is painted on the far side of its own digits — a different number wearing the
+same characters. The panel's `dir="ltr"` had been hiding them.
+
+The fix is the one the earlier record named: **the figure is data, and the sentence is copy.** `JournalStat` gained
+an optional `comparisonDelta` and the card draws it in `.num`, so the figure is isolated and the phrase follows the
+page's flow around it. `ScoreCard` splits its delta out of the sentence and isolates that. The three catalogue keys
+whose whole value was a sentence _opening_ with a delta were replaced by two that hold the phrase alone — in both
+languages, because the defect is in the sentence and the Persian is written from the English.
+
+### How the rule is held, and how the case can fail
+
+The browser suite gained a case that walks every page and every tab — the same walk as the sign-first probe, which
+is why the two cases cover the same ground from different ends — and asks each group two questions: which way its
+box resolved, and which way its items were painted. A "group" is found from the layout rather than from a name: a
+container whose children hold a control and share one top edge is a row, and the innermost such container is the
+measurement. That is how the tab strips, the segmented controls, the filter rails and the two-column card pairs are
+all covered without the case naming any of them. The shell's navigation is measured beside them, row by row rather
+than as a group: the rail is a _column_, so what direction decides there is which edge each entry's icon hugs, and
+both distances are read so the answer says which side it moved to rather than only that something moved.
+
+The case is not vacuous, and it was checked the only way that means anything: with the `dir` prop removed and the
+bundle rebuilt, it fails with **284** findings — the strip, the panels, and the groups _inside_ the panels — and
+passes with it restored. It also measures the opposite direction: the same groups in English must be ordered from
+the left, because a rule that only ever descends would satisfy the Persian half on its own.
+
+### The pieces
+
+| Piece                                      | Where                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| The direction the strip is told            | `web/src/components/Tabs.tsx`                                       |
+| The journal's delta as data, isolated      | `web/src/mock/journal.ts`, `components/journal/JournalStatCard.tsx` |
+| The examinations delta, isolated           | `web/src/components/exams/ScoreCard.tsx`                            |
+| The two phrase keys that replaced three    | `web/src/i18n/messages.en.ts`, `web/src/i18n/messages.fa.ts`        |
+| The layout walk, and the LTR half of it    | `tests/browser/e2e.test.ts` (43 cases)                              |
+| The source rules: the strip, the catalogue | `tests/frontend-integration.test.ts` (two new cases)                |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1682** unit tests across **82** files (1680/82 before): the two new cases in
+  `tests/frontend-integration.test.ts` — one asserting the strip is told its direction by `useTextDirection()`, one
+  asserting no catalogue value in either language opens a sentence with a signed figure (with a floor on how many
+  values the scan read, so an empty answer is a clean catalogue rather than a broken matcher).
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**, unchanged.
+- The browser suite is **43** cases (42 before). All of them pass, including the three that touch this area most
+  directly: every page RTL at 1440/768/390 with zero overflow, the interface turned around without a box changing
+  size, and every signed figure sign-first on every page — the case that fails with 5 findings until the figures
+  above are isolated.
+- No new dependency, and no new catalogue key: two replaced three.

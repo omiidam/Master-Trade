@@ -1056,6 +1056,93 @@ tabular-nums`) and by the charts pinning `direction: 'ltr'` in their frames; thi
 and asserts they are still there, because an RTL sweep is exactly the kind of change that would try to
 mirror a figure.
 
+## Phase 7.5.3.4.5 — the strip and the panels behind it
+
+The previous phase turned the interface over from the language, and one control kept its own opinion. It was
+found by the browser verification rather than by a reader: a Persian screenshot whose tab rail listed its
+tabs from the left edge, and whose panels — two state cards, their headings hard against the left of their
+boxes — turned out to be laid out left-to-right behind it. This phase is that defect, closed where the
+previous phase's own record said it belonged: the figures came out of the copy first, and the direction went
+in after them.
+
+### One prop, at the control that owns the decision
+
+`web/src/components/Tabs.tsx` renders Radix's `Tabs.Root` and now passes it `dir={direction}`, read from
+the same `useTextDirection()` the shell's other direction-shaped components use. Radix resolves a tab
+group's direction from that prop, from a `DirectionProvider` above it, or — with neither — from the literal
+`'ltr'`, and it **stamps the answer on the element it renders**, which every panel is a child of. So the
+prop is not a styling detail: unset, it is a `dir` attribute that starts a new bidi paragraph, and a Persian
+interface got a left-to-right island around every panel it had.
+
+That it is one line is the phase's shape rather than a saving. `Tabs` is the product's only tab strip, so
+the direction is stated once for thirteen pages and every tab group in all nine of the shell's categories,
+rather than at thirteen call sites where the next page could forget it. The other groups need nothing:
+`DirectionProvider` was considered and not taken — it would cover a primitive the product has not installed,
+at the price of a direct dependency on `@radix-ui/react-direction`, which is currently only in the tree
+transitively — and the segmented controls, the filters and the navigation are plain elements, which inherit
+the flow. A Radix primitive is the one kind of control that has to be told.
+
+### What the panels were doing, which is what mattered
+
+Measured on the built bundle in Persian, before the prop: the rail put its first tab at 25px — the left edge
+— with the last where the first belongs, and the journal's seven tab panels all computed `direction: ltr`
+inside a document computing `rtl`. The strip was the half a person sees; the panels were the half that
+covers the page. After the prop, the same rail runs 1056px → 407px and all seven panels compute `rtl`.
+
+### The five figures, and the rule they were an exception to
+
+Turning the panels around put five signed figures back under the bidi algorithm in a form §16 forbids — three
+on the journal's overview, which are `JournalStatCard`'s comparison lines (`+4.2 واحد در برابر 14 مورد
+پیشین`), and two on the examinations history tab, which are `ScoreCard`'s delta line (`+33% در میان
+تلاشها`). A leading `+` is a neutral: inside a right-to-left sentence it resolves against the paragraph and
+is painted on the far side of its own digits, and `+4.2` draws as `4.2+`. The panel's `dir="ltr"` had been
+hiding every one of them, which is why the suite that checks for exactly this had been green.
+
+The repair is the one the earlier record named — a figure is not copy — and it is a _structure_, not a wider
+class:
+
+- `JournalStat` gained an optional `comparisonDelta`, and `JournalStatCard` draws it in `.num` beside the
+  phrase instead of inside it. Three of the ten comparisons open with a delta; the other seven stay a
+  sentence, which is why the field is optional rather than the type being rebuilt around it.
+- `ScoreCard` splits its delta out of the phrase the same way, in the two-element shape `Trend.tsx` already
+  uses (`inline-flex items-baseline gap-1`, figure in `.num`).
+- The three catalogue keys whose _whole value_ was a sentence opening with a delta were replaced by two that
+  hold the phrase alone (`journal.pointsAgainstThePrevious14`, `journal.againstThePrevious14`), in both
+  catalogues — the defect is in the sentence, and the Persian is written from the English one.
+
+The rule is held from both ends. A new case in `tests/frontend-integration.test.ts` scans both catalogues and
+refuses a value that opens with a signed figure, with a floor on how many values the scan read so that an
+empty answer means a clean catalogue and not a matcher that matched nothing. And the browser suite's existing
+sign-first probe is the measurement: five findings before this phase, none after.
+
+### The walk that found it, widened to every group
+
+The unit rule says "the strip is told"; the reason to believe it is a browser. A new case walks every page
+and every tab — the same walk the sign-first probe makes, so the two cover the same ground from opposite ends
+— and asks each group two questions: which way its _box_ resolved, and which way its _items were painted_. A
+group is foundfrom the layout rather than from a name: a container whose children hold a control and share one top edge
+is a row, and the innermost such container is the measurement. That is how the tab strips, the segmented
+controls, the filter rails and the two-column card pairs are all covered without the case naming any of them —
+which matters, because the first version of the complaint was about one strip on one page and
+the defect was in all of them. The shell's navigation is measured too, row by row rather than as a group,
+because a navigation rail is a _column_: what direction decides there is which edge each entry's icon hugs,
+and both distances are read so the answer says which side it moved to.
+
+The case is not vacuous, and that was checked the only way that means anything: with the `dir` prop removed
+and the bundle rebuilt it fails with **284** findings, naming the strip, the panels, and the groups inside the
+panels; with it restored it passes. It measures the opposite direction too — the same groups in English must
+be ordered from the left, because a rule that only ever descends would satisfy the Persian half on its own and
+say nothing about the language the interface was written in first.
+
+### What the phase does not change
+
+Nothing about the _meaning_ of direction changed: the pins still outrank the language, the charts still pin
+`direction: 'ltr'` because a time series is read from the oldest candle to the newest in every language this
+product speaks, `.num` still isolates a figure, and the free-text surfaces still take `dir="auto"`. The
+mirrored layout's four allow-listed physical properties are untouched. What changed is that the control at
+the centre of five of those screens is now told what the document already knows — and the two figures the
+suite was written for are isolated at last, in both catalogues.
+
 ## Five Persian NLP repositories, evaluated
 
 The brief named five projects and asked for them to be evaluated **before** any new rule was written, on the
@@ -1459,6 +1546,13 @@ the browser suite already checks for on every page. The panel's own `dir="ltr"` 
 Isolating a figure inside a translated sentence is a copy change, in both catalogues, so it belongs with the
 migration above rather than in a layout fix.
 
+**Closed in 7.5.3.4.5**, in that order, and the record above is left standing because the order was the point: the
+figures came out of the copy first, and the direction went in after them. The three comparison sentences are two
+phrase keys and an optional `comparisonDelta` on `JournalStat` — the figure is data and the card isolates it —
+`ScoreCard` splits its own delta the same way, and the strip passes the resolved direction to `Tabs.Root`. Measured
+in a browser before and after: the seven journal panels went from `direction: ltr` to `rtl`, and the sign-first
+probe went from five findings to none. The phase record is below, in its place in the direction series.
+
 ### 7.5.3.4.1: two defects, both of them a chain that had one more link than expected
 
 1. **The guidance would have described an inferred decision as no decision at all.** `responseGuidance` turns
@@ -1692,6 +1786,38 @@ of these would have spent some.
    produced somewhere, by a check or by a recognition, so a value nobody can reach fails rather than
    sitting in a union looking used.
 
+### 7.5.3.4.5: a control that resolved its own direction, and the five figures it was hiding
+
+1. **The tab strip resolved its own direction, and the resolution was `ltr`.** `Tabs.tsx` rendered Radix's
+   `Tabs.Root` without a `dir`. Radix accepts one from the prop, from a `DirectionProvider` above it, or —
+   with neither — from the literal `'ltr'`, and it stamps the answer on the element it renders. Nothing in
+   `web/src` was wrong: no physical utility, no missing `dir`, no hardcoded direction. The attribute simply
+   arrived from a dependency, in a mirror nobody had looked through. Found by a Persian screenshot whose tab
+   rail ran from the wrong edge; measured, the strip put its first tab at 25px and the journal's **seven**
+   panels computed `direction: ltr` inside a document computing `rtl`. That is the shape of the defect worth
+   remembering: the visible half was one rail, the half that covered the page was every panel behind it.
+2. **A panel's `dir="ltr"` had been hiding five figures from the suite built to find them.** The sign-first
+   probe walks every page and every tab and requires a signed figure to paint its sign first, and it had
+   been green — because a `dir` attribute starts a new bidi paragraph, so inside those panels the figures
+   resolved against a left-to-right paragraph and were painted correctly by accident. Turning the panels
+   around put them back under the algorithm that reorders them. This is the first defect in this document
+   that a _previous_ check would have caught had its subject been reachable, and it argues for the walk
+   being widened rather than for the check being trusted.
+3. **A sentence that opens with a figure cannot be isolated, because the element carrying it carries the
+   prose.** `.num` needs an element, and `'+4.2 واحد در برابر 14 مورد پیشین'` is one string: a class on the
+   paragraph would set `direction: ltr` and a Latin mono face on the Persian half. So the repair is not a
+   class but a shape — the figure moved into the data (`JournalStat.comparisonDelta`) and the phrase stayed
+   in the catalogue — and the same for `ScoreCard`, whose `+33%` was built from a sign and a formatter
+   inside the sentence. Three catalogue keys whose whole value was such a sentence became two that hold the
+   phrase alone, in both languages.
+
+**The order was the finding.** The strip could have been fixed in 7.5.3.4.4 in one line, and that line was
+written and then reverted, because it re-exposed figures the panel's own direction was hiding. "Fix the
+layout" and "keep the figure rule" were not in conflict: the layout fix was _dependent_ on a copy change,
+and the honest sequence was to make the figures data first. A reverted one-line fix with a recorded reason
+was worth more than a green suite that had been arranged around the bug — and the record above is what made
+the second half findable at all.
+
 ## Verification
 
 The contract suite is `tests/persian-language.test.ts` — 46 tests over the store's separation and its
@@ -1777,7 +1903,10 @@ site, and a global scan proving none survives outside `Directional.tsx`. The fre
 three surfaces, no literal `dir="ltr"`/`dir="rtl"` anywhere in `web/src`, and `.num` plus the `:lang(fa)`
 rule asserted intact. The document-direction case in `tests/frontend-integration.test.ts` was rewritten for
 the same reason and now asserts the write lives in the language module, that `App.tsx` no longer contains it,
-and that the Topbar reads `useTextDirection()`.
+and that the Topbar reads `useTextDirection()`. Phase 7.5.3.4.5 adds two cases to the same file — the strip
+asserted to be told its direction by `useTextDirection()`, and both catalogues scanned for a value that
+_opens_ a sentence with a signed figure, with a floor on how many values the scan read so an empty answer
+means a clean catalogue rather than a matcher that matched nothing.
 
 The browser suite's `the writing direction, in a browser` section is where all of this is measured with
 Persian actually on the page, because a mirror is a statement about a layout engine rather than about a
@@ -1791,6 +1920,14 @@ directions and required to match within half a pixel. Each signed figure on ever
 its sign first. And the transcript holds both directions at once in one column: a Latin turn and a Persian
 turn in the same conversation each resolve from their own first strong character, while the notice above them
 resolves with the interface.
+
+Phase 7.5.3.4.5 adds one more case there, and it is the widest of them: every page and every tab, asking
+each group of controls which way its box resolved and which way its items were **painted**. A group is found
+from the layout rather than from a name — a container whose children hold a control and share one top edge
+is a row, and the innermost such container is the measurement — so the tab strips, the segmented controls,
+the filter rails and the two-column card pairs are covered without the case naming any of them. It is
+checked against both directions, because a rule that only ever descends would satisfy the Persian half on
+its own, and against a build with the one-line fix removed, where it fails with **284** findings.
 
 Phase 7.5.2.2's `tests/persian-terminology.test.ts` gained one case for the same reason: the sidebar's
 Persian label has to _be_ the glossary's preferred form for that concept, not a second translation of it.
@@ -1877,7 +2014,10 @@ confidence that decides whether it is read, and the two paths that refuse to lea
 15 more in `tests/rtl-layout.test.ts`, for the direction derived from the language, the glyphs that read it
 and the free text that does not. The evaluation adds 49 more in `tests/persian-evaluation.test.ts`, for the
 seven axes, the case every check must have, the five readings that keep a report from calling natural
-Persian wrong, and the false positives a quality report must not produce.
+Persian wrong, and the false positives a quality report must not produce. The strip and the panels behind it
+add 2 more to `tests/frontend-integration.test.ts`, and 1 to the browser suite — which is where the number
+that matters was taken: five signed figures painting their signs after their digits before the fix, none
+after it.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency

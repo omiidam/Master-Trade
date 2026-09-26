@@ -1,5 +1,6 @@
 import * as RadixTabs from '@radix-ui/react-tabs';
 import type { ReactNode } from 'react';
+import { useTextDirection } from '../i18n/index.js';
 import { cn } from '../lib/cn';
 
 export interface TabItem {
@@ -37,8 +38,33 @@ export function Tabs({
   className,
   'aria-label': ariaLabel,
 }: TabsProps) {
+  /*
+   * The strip's writing direction, stated rather than left to the default.
+   *
+   * Radix resolves a tab group's direction from its own `dir` prop, from a `DirectionProvider` above it, or —
+   * with neither — from the literal `'ltr'`, and it stamps the answer on the element it renders. Every panel
+   * is a child of that element, so an unstated direction did not merely leave the strip unmirrored: it put a
+   * left-to-right island inside a right-to-left page. Measured on the built bundle in Persian, the strip
+   * listed its tabs from the left rather than the right, the first tab sat where the last one belongs, and
+   * every heading, paragraph and card *inside* every panel was aligned to the left of its box —
+   * `direction: ltr`, inherited. The strip was the visible half of it; the panels were the larger half.
+   *
+   * The value comes from the same hook the shell's own direction-shaped components read, so the strip agrees
+   * with `<html dir>` by construction rather than by coincidence: the control's preference, resolved against
+   * the interface language — right-to-left for Persian, and `ltr` under an explicit left-to-right pin, so a
+   * pin over Persian still lays the strip the way the page around it is laid out.
+   *
+   * This is the one place it belongs. `Tabs` is the product's only tab strip, so one prop here is what makes
+   * thirteen pages — and every tab group in all nine of the shell's categories — follow their page instead of
+   * disagreeing with it. The other horizontal groups (the segmented controls, the filters, the navigation)
+   * are plain elements and already inherit the flow; a Radix primitive is the one kind that does not, because
+   * it has to be told.
+   */
+  const direction = useTextDirection();
+
   return (
     <RadixTabs.Root
+      dir={direction}
       value={value}
       onValueChange={onValueChange}
       className={cn('flex flex-col gap-4', className)}

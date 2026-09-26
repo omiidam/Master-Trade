@@ -78,6 +78,22 @@ describe('one control, one implementation', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('tells the shared tab strip which way the page is written', () => {
+    // Radix resolves a tab group's direction from its own `dir` prop, from a `DirectionProvider` above it,
+    // or, with neither, from the literal `'ltr'` — and it stamps the answer on the element it renders. Every
+    // panel is a child of that element, so an unstated direction is not an unmirrored strip: it is a
+    // left-to-right island inside a right-to-left page. Measured in a browser before this was stated, the
+    // Persian strip read from the wrong edge *and* every panel behind it computed `direction: ltr` — the
+    // strip was the visible half of it and the panels were the larger half.
+    //
+    // It is stated here rather than at the thirteen call sites because the strip is the product's only one,
+    // and it is read from the same hook the shell's other direction-shaped components use, so the control
+    // cannot disagree with the page it sits on.
+    const tabs = code('web/src/components/Tabs.tsx');
+    expect(tabs).toMatch(/const direction = useTextDirection\(\)/);
+    expect(tabs).toMatch(/<RadixTabs\.Root\s+dir=\{direction\}/);
+  });
+
   it('no longer exports the journal\u2019s second tab component', () => {
     // The removal is asserted, not assumed: a barrel that still offers it is how a deleted control
     // comes back.
@@ -213,5 +229,37 @@ describe('a figure stays a figure in every direction', () => {
     // a control nobody can predict.
     expect(topbar).toMatch(/aria-pressed=\{direction === 'rtl'\}/);
     expect(topbar).toMatch(/const direction = useTextDirection\(\)/);
+  });
+
+  it('keeps a signed figure out of the copy, so it can be isolated where it is drawn', () => {
+    // A sentence and a figure are different things, and a signed figure written into a catalogue entry is one
+    // nobody can give `.num`: the element that would carry the class also carries the prose. The three journal
+    // comparisons that opened with a delta proved it — the moment their panel was laid out right-to-left, the
+    // sign crossed to the far side of its own digits, which is a different number wearing the same
+    // characters. Those figures are data now, isolated by the card that draws them, and this is the rule that
+    // stops the catalogue taking them back.
+    //
+    // Both catalogues, because the defect is in the *sentence*: a rule that held for Persian alone would leave
+    // the English one free to reintroduce it, and the English sentence is the one the Persian is written
+    // from.
+    // A value sits either on its key's own line or, for a long sentence, on the line below it.
+    const valuesOf = (locale: 'en' | 'fa'): string[] => {
+      const source = readFileSync(join('web', 'src', 'i18n', `messages.${locale}.ts`), 'utf8');
+      return [...source.matchAll(/^(?:  '[^']+': | {4})'([^']*)',$/gm)].map(
+        (match) => match[1] ?? '',
+      );
+    };
+    const opensWithASignedFigure = (value: string): boolean => /^[+\u2212-]\s?[0-9]/.test(value);
+
+    for (const locale of ['en', 'fa'] as const) {
+      const values = valuesOf(locale);
+      // The scan read the catalogue, so the empty answer below is a clean one rather than a matcher that
+      // matched nothing.
+      expect(values.length, `the ${locale} catalogue could not be read`).toBeGreaterThan(2000);
+      expect(
+        values.filter(opensWithASignedFigure),
+        `the ${locale} catalogue opens a sentence with a signed figure`,
+      ).toEqual([]);
+    }
   });
 });

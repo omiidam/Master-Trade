@@ -1617,6 +1617,286 @@ suite('the Product Foundation in a real browser', () => {
       await startIn(null);
     }, 300_000);
 
+    /**
+     * One group a person reads as a *line*: where its items were painted, and which way its box resolved.
+     *
+     * The left edges are the measurement rather than the markup, because a class name cannot state the order:
+     * `flex` says nothing about which edge the first child lands on, and `dir` is an attribute. A row that
+     * reads right-to-left has descending edges, one that reads left-to-right has ascending ones.
+     */
+    interface FlowRow {
+      label: string;
+      direction: string;
+      lefts: number[];
+      /** The index that says it is selected, in source order; `-1` when none does. */
+      selected: number;
+      /** Whether the selected item is drawn inside the row rather than outside it. */
+      activeInside: boolean;
+    }
+
+    interface FlowReport {
+      direction: string;
+      panels: string[];
+      strips: FlowRow[];
+      rows: FlowRow[];
+      navigation: FlowEntry[];
+    }
+
+    /**
+     * One navigation entry, measured from both edges at once.
+     *
+     * The rail is the shell's navigation group and it is a *column*, so it has no reading order to check —
+     * what direction decides there is which side each row's icon sits on. A row that follows the flow puts
+     * its icon at the inline start, which is the other side in Persian, so both distances are read and the
+     * pair says which edge it hugged rather than only that something moved.
+     */
+    interface FlowEntry {
+      label: string;
+      direction: string;
+      fromStart: number;
+      fromEnd: number;
+    }
+
+    /**
+     * The laid-out shape of every group a person reads as a line.
+     *
+     * A "row" is a container whose children hold a control *and* share one top edge — which is what a flex
+     * row and a grid track both are, and is why this finds the segmented controls, the filter rails and the
+     * two-column pairs without naming any of them. The innermost row wins: a container that holds another row
+     * is that row's ancestor, not a second reading of it.
+     */
+    const FLOW_PROBE = `
+(() => {
+  const main = document.querySelector('main');
+  if (!main) return JSON.stringify(null);
+
+  const direction = getComputedStyle(document.documentElement).direction;
+  const lefts = (elements) => elements.map((el) => Math.round(el.getBoundingClientRect().left));
+  const label = (elements) =>
+    (elements[0].textContent || elements[0].getAttribute('aria-label') || elements[0].tagName)
+      .trim()
+      .slice(0, 26);
+  const row = (container, items) => {
+    const selected = items.findIndex((item) => item.getAttribute('aria-selected') === 'true');
+    const painted = lefts(items);
+    return {
+      label: label(items),
+      direction: getComputedStyle(container).direction,
+      lefts: painted,
+      selected,
+      activeInside:
+        selected >= 0 &&
+        items[selected].getBoundingClientRect().width > 0 &&
+        (painted[selected] ?? 0) >= Math.min(...painted) &&
+        (painted[selected] ?? 0) <= Math.max(...painted),
+    };
+  };
+
+  const list = main.querySelector('[role="tablist"]');
+  const tabs = list ? [...list.querySelectorAll('[role="tab"]')] : [];
+  const strips = tabs.length === 0 ? [] : [row(list, tabs)];
+
+  const candidates = [];
+  for (const container of main.querySelectorAll('div, ul, nav, fieldset')) {
+    const items = [...container.children].filter(
+      (child) => child.matches('button, a, input, select') ||
+        child.querySelector('button, a, input, select') !== null,
+    );
+    if (items.length < 2) continue;
+    // One row means one top edge: a column of groups is not a line, and neither is a stack of cards.
+    if (new Set(items.map((item) => Math.round(item.getBoundingClientRect().top))).size !== 1) continue;
+    candidates.push({ container, items });
+  }
+
+  const rows = candidates
+    .filter((candidate) =>
+      !candidates.some((other) => other !== candidate && candidate.container.contains(other.container)),
+    )
+    .map((candidate) => row(candidate.container, candidate.items));
+
+  const navigation = [...document.querySelectorAll('aside nav button')].map((entry) => {
+    const box = entry.getBoundingClientRect();
+    const own = getComputedStyle(entry).direction;
+    const first = entry.firstElementChild;
+    const icon = first === null ? null : first.getBoundingClientRect();
+    return {
+      label: (entry.getAttribute('aria-label') || entry.textContent || '').trim().slice(0, 22),
+      direction: own,
+      fromStart: icon === null ? -1 : Math.round(own === 'rtl' ? box.right - icon.right : icon.left - box.left),
+      fromEnd: icon === null ? -1 : Math.round(own === 'rtl' ? icon.left - box.left : box.right - icon.right),
+    };
+  });
+
+  return JSON.stringify({
+    direction,
+    panels: [...main.querySelectorAll('[role="tabpanel"]')].map(
+      (panel) => getComputedStyle(panel).direction,
+    ),
+    strips,
+    rows,
+    navigation,
+  });
+})()`;
+
+    /**
+     * Every group of controls, read from the edge the page it sits on is written from.
+     *
+     * Three controls share one claim: a tab strip, a segmented control and a navigation rail all put the
+     * source's first item at the start of the line, and the start of the line is the other side in Persian.
+     * Two of the three arrive on their own — a plain flex row follows the flow — but a **Radix** group does
+     * not. Radix resolves a tab group's direction from its own `dir` prop, from a `DirectionProvider` above
+     * it, or, with neither, from the literal `'ltr'`, which it stamps on the element it renders. This product
+     * passed neither of the first two, so a Persian interface had a left-to-right tab strip *and*
+     * left-to-right panels inside a right-to-left document: the strip read from the wrong edge, and every
+     * heading, paragraph and card inside every panel was aligned to the left of its box.
+     *
+     * So this walks the shell the way the other cases do — every page, and every tab of every page — and asks
+     * each group two questions: which way did its box resolve, and which way were its items painted. The
+     * panel's direction is read from `getComputedStyle` rather than from its attributes, so an *inherited*
+     * answer is caught as well as a declared one, which is the whole of the original defect.
+     *
+     * The active item is measured too: exactly one tab is selected, and it is painted inside the strip that
+     * claims it. A marker that has slid off the end of its own row is the shape this bug had when the strip
+     * scrolled the other way.
+     */
+    it('reads every group of controls from the edge its page is written from', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+
+      const offenders: string[] = [];
+      let strips = 0;
+      let rows = 0;
+      let panels = 0;
+      let navigation = 0;
+
+      /**
+       * The order a row was painted in, against the order it is written in.
+       *
+       * `<=` and `>=` rather than a strict comparison: two items whose boxes begin at the same pixel are
+       * stacked rather than sequenced, and reporting that would be reporting a layout nobody can see. The
+       * edges are whole pixels, so the comparison is between positions a person could point at.
+       */
+      const misordered = (group: FlowRow, where: string): string[] => {
+        const descending = group.direction === 'rtl';
+        const found: string[] = [];
+        for (let index = 1; index < group.lefts.length; index += 1) {
+          const previous = group.lefts[index - 1] ?? 0;
+          const current = group.lefts[index] ?? 0;
+          if (descending ? current > previous : current < previous) {
+            found.push(
+              `${where}: "${group.label}" paints item ${index} at ${current}px after item ${index - 1} at ` +
+                `${previous}px in a ${group.direction} group`,
+            );
+          }
+        }
+        return found;
+      };
+
+      const inspect = async (where: string): Promise<void> => {
+        const report = await settled<FlowReport | null>(FLOW_PROBE, `${where} to settle`);
+        expect(report, `${where} has no workspace to measure`).not.toBeNull();
+        if (report === null) return;
+
+        for (const panel of report.panels) {
+          panels += 1;
+          if (panel !== report.direction) {
+            offenders.push(
+              `${where}: a tab panel is laid out ${panel} inside a ${report.direction} page`,
+            );
+          }
+        }
+        for (const strip of report.strips) {
+          strips += 1;
+          if (strip.direction !== report.direction) {
+            offenders.push(
+              `${where}: the tab strip is laid out ${strip.direction} inside a ${report.direction} page`,
+            );
+          }
+          if (strip.selected < 0) offenders.push(`${where}: the tab strip has no selected tab`);
+          if (strip.selected >= 0 && !strip.activeInside) {
+            offenders.push(
+              `${where}: the selected tab is painted outside the strip that claims it`,
+            );
+          }
+          offenders.push(...misordered(strip, where));
+        }
+        for (const group of report.rows) {
+          rows += 1;
+          if (group.direction !== report.direction) {
+            offenders.push(
+              `${where}: a group of controls is laid out ${group.direction} inside a ${report.direction} page`,
+            );
+          }
+          offenders.push(...misordered(group, where));
+        }
+        for (const entry of report.navigation) {
+          navigation += 1;
+          if (entry.direction !== report.direction) {
+            offenders.push(
+              `${where}: the navigation entry "${entry.label}" is laid out ${entry.direction} inside a ${report.direction} page`,
+            );
+          }
+          // The icon hugs the start edge of its row: nearer that edge than the other one, and no further in
+          // than the row's own padding — which is what a nav row that follows the flow looks like in either
+          // direction. The bound is loose on purpose: the exact offset is a spacing token's business.
+          if (entry.fromStart < 0 || entry.fromStart > 24 || entry.fromStart > entry.fromEnd) {
+            offenders.push(
+              `${where}: the navigation entry "${entry.label}" puts its icon ${entry.fromStart}px from the ` +
+                `start edge and ${entry.fromEnd}px from the other`,
+            );
+          }
+        }
+      };
+
+      for (const section of NAV_SECTIONS) {
+        await visitIn('fa', section.id);
+        await inspect(section.id);
+
+        const tabs = await tabCount();
+        for (let index = 0; index < tabs; index += 1) {
+          if (await tabSelected(index)) continue;
+          await selectTab(index, section.id);
+          await inspect(`${section.id} · tab ${index}`);
+        }
+      }
+
+      // The walk measured something, rather than finding no groups and reporting a clean result.
+      expect(strips, 'no tab strip was measured').toBeGreaterThan(8);
+      expect(rows, 'no group of controls was measured').toBeGreaterThan(20);
+      expect(panels, 'no tab panel was measured').toBeGreaterThan(20);
+      expect(navigation, 'no navigation entry was measured').toBeGreaterThan(100);
+      expect(offenders, 'a group of controls does not follow the page it sits on').toEqual([]);
+
+      // And the same groups in English, where the answer is the other way round: the source's first item is
+      // the leftmost one. Measured rather than assumed, because a rule that always *descends* would satisfy
+      // the Persian half on its own and say nothing about the language this interface was written in first.
+      await startIn('en');
+      const ascending: string[] = [];
+      let englishStrips = 0;
+      for (const id of ['dashboard', 'journal', 'exams', 'lab', 'settings'] as const) {
+        await visitIn('en', id);
+        const report = await settled<FlowReport | null>(FLOW_PROBE, `the ${id} page to settle`);
+        expect(report?.direction, `the ${id} page is not left-to-right in English`).toBe('ltr');
+        for (const strip of report?.strips ?? []) {
+          englishStrips += 1;
+          ascending.push(...misordered(strip, `en ${id}`));
+        }
+        for (const group of report?.rows ?? []) ascending.push(...misordered(group, `en ${id}`));
+        for (const entry of report?.navigation ?? []) {
+          if (entry.fromStart < 0 || entry.fromStart > 24 || entry.fromStart > entry.fromEnd) {
+            ascending.push(
+              `en ${id}: the navigation entry "${entry.label}" puts its icon ${entry.fromStart}px from the ` +
+                `start edge and ${entry.fromEnd}px from the other`,
+            );
+          }
+        }
+      }
+      expect(englishStrips, 'no English tab strip was measured').toBeGreaterThan(3);
+      expect(ascending, 'a group of controls does not follow an English page').toEqual([]);
+
+      await startIn(null);
+    }, 300_000);
+
     it('turns the interface around without changing a single box', async () => {
       await session.setViewport(1440, 900);
       await startIn('fa');

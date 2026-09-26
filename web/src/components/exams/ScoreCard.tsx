@@ -91,9 +91,20 @@ export function ScoreCard({
                   <TrendingDown size={14} aria-hidden />
                 </span>
               )}
-              <span>
-                {delta !== null && delta >= 0 ? '+' : ''}
-                {delta === null ? '—' : formatPercent(delta, 0)} {msg('exams.acrossAttempts')}
+              <span className="inline-flex items-baseline gap-1">
+                {/*
+                  The delta is a *signed figure*, so it is separated from the phrase beside it and
+                  isolated in `.num`. A leading `+` is a neutral to the bidi algorithm: left inside
+                  the sentence it resolves against the paragraph, and in a right-to-left one it is
+                  painted on the far side of its own digits — `+33%` drawing as `33%+`, a different
+                  number wearing the same characters. The phrase keeps the page's own flow, which is
+                  why the two are two elements and not one string.
+                */}
+                <span className="num">
+                  {delta !== null && delta >= 0 ? '+' : ''}
+                  {delta === null ? '—' : formatPercent(delta, 0)}
+                </span>
+                <span>{msg('exams.acrossAttempts')}</span>
               </span>
             </div>
             <Sparkline values={values} width={96} height={22} tone={passed ? 'primary' : 'info'} />

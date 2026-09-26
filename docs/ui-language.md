@@ -94,6 +94,14 @@ It is still copy's neighbour, not copy: `<html lang>` and `<html dir>` are writt
 Persian _record_ of what the phase changed — the glyphs, the physical properties that were kept, the
 free-text surfaces — is `docs/persian-language.md`; the summary is §28 of `docs/frontend-foundation.md`.
 
+One consequence of that phase is worth naming for the components rather than for the copy: **a Radix
+primitive does not inherit the flow.** Radix resolves a group's direction from a `dir` prop, from a
+`DirectionProvider` above it, or from the literal `'ltr'`, and stamps the answer on the element it renders,
+so a group left unstated is a left-to-right island inside a right-to-left page. `Tabs.tsx` passes the
+resolved direction for that reason (§31 of `docs/frontend-foundation.md`), and it is the rule to check
+the next time a primitive is added. The product's own segmented controls, filters and navigation are plain
+elements and inherit the flow without being told.
+
 ## Nine keys are the same in both catalogues, and the suite names them
 
 A product name, the two provider names as the industry writes them, a version letter, a package path, the

@@ -747,6 +747,16 @@ export interface JournalStat {
   unit?: string;
   /** The comparison this figure is read against — never omitted. */
   comparison: string;
+  /**
+   * The signed change the comparison opens with, where the line is read as a delta.
+   *
+   * Kept here rather than written into the sentence it precedes, because a figure is not copy: the
+   * card renders it in `.num`, which isolates it from the bidi algorithm. Left inside a
+   * right-to-left sentence a leading `+` is a neutral and is painted on the far side of its own
+   * digits — `+4.2` drawing as `4.2+`. The phrase itself stays in the catalogue, in the language it
+   * is read in, and follows the page's flow around this figure.
+   */
+  comparisonDelta?: string;
   /** Sample or scope the figure was taken over, so a rate has its denominator. */
   basis: string;
   tone: StatTone;
@@ -783,8 +793,9 @@ export const mockJournalStats: readonly JournalStat[] = [
     },
     value: '50.0',
     unit: '%',
+    comparisonDelta: '+4.2',
     get comparison(): string {
-      return msg('journal.42PtsVsPrevious14');
+      return msg('journal.pointsAgainstThePrevious14');
     },
     get basis(): string {
       return msg('journal.7WinsIn14ScoredTrades');
@@ -801,8 +812,9 @@ export const mockJournalStats: readonly JournalStat[] = [
     },
     value: '+0.69',
     unit: 'R',
+    comparisonDelta: '+0.21R',
     get comparison(): string {
-      return msg('journal.021RVsPrevious14');
+      return msg('journal.againstThePrevious14');
     },
     get basis(): string {
       return msg('journal.14ScoredTrades');
@@ -815,8 +827,9 @@ export const mockJournalStats: readonly JournalStat[] = [
       return msg('journal.profitFactor');
     },
     value: '2.67',
+    comparisonDelta: '+0.44',
     get comparison(): string {
-      return msg('journal.044VsPrevious14');
+      return msg('journal.againstThePrevious14');
     },
     get basis(): string {
       return msg('journal.grossWin1543RGrossLoss577R');

@@ -319,6 +319,9 @@ export function JournalPage() {
                 value={stat.value}
                 {...(stat.unit ? { unit: stat.unit } : {})}
                 comparison={stat.comparison}
+                {...(stat.comparisonDelta === undefined
+                  ? {}
+                  : { comparisonDelta: stat.comparisonDelta })}
                 basis={stat.basis}
                 tone={stat.tone}
                 {...(stat.hint ? { hint: stat.hint } : {})}

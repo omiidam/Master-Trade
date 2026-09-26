@@ -11,6 +11,17 @@ export interface JournalStatCardProps {
   unit?: string;
   /** What the figure is read against. Never omitted — a bare number invites a wrong reading. */
   comparison: string;
+  /**
+   * The signed change the comparison opens with, for the figures that are read as a delta.
+   *
+   * Its own prop rather than the first words of `comparison`, and the reason is bidi: a leading `+`
+   * is a neutral, so inside a right-to-left sentence it resolves against the paragraph and is painted
+   * on the far side of its digits — `+4.2` drawing as `4.2+`, a different number wearing the same
+   * characters. As a separate element it takes `.num`, which gives the figure its own left-to-right
+   * context, and the phrase keeps the page's flow: to the delta's left in Persian, its right in
+   * English. It is optional because seven of the ten comparisons are a sentence with no delta in them.
+   */
+  comparisonDelta?: string;
   /** Sample or scope the figure was taken over. */
   basis?: string;
   tone?: StatTone;
@@ -64,6 +75,7 @@ export function JournalStatCard({
   value,
   unit,
   comparison,
+  comparisonDelta,
   basis,
   tone = 'neutral',
   hint,
@@ -126,6 +138,8 @@ export function JournalStatCard({
             <span className={cn('shrink-0', TONE_TEXT[tone])} aria-hidden>
               <Icon size={12} />
             </span>
+            {/* The delta, isolated; the sentence it opens follows the page rather than the figure. */}
+            {comparisonDelta ? <span className="num shrink-0">{comparisonDelta}</span> : null}
             {comparison}
           </p>
         </div>

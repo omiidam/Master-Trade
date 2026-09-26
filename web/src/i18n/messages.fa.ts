@@ -921,13 +921,10 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'interfaceStates.beforeDataArrivesTheLayoutIsAlreadyThe':
     'پیش از رسیدن داده‌ها؛ چیدمان از قبل شکل درست را دارد.',
   // journal ─────────────────────────────────────────────────────
-  'journal.021RVsPrevious14': '+0.21R در برابر 14 مورد پیشین',
-  'journal.044VsPrevious14': '+0.44 در برابر 14 مورد پیشین',
   'journal.14Scored2StillOpen': '14 امتیازخورده · 2 هنوز باز',
   'journal.14ScoredTrades': '14 معامله امتیازدار',
   'journal.16RecordsPlannedRisk': '16 سابقه، ریسک برنامه‌ریزی‌شده',
   'journal.3TradesNotAssessedYet': '3 معامله هنوز ارزیابی نشده',
-  'journal.42PtsVsPrevious14': '+4.2 واحد در برابر 14 مورد پیشین',
   'journal.7WinsIn14ScoredTrades': '7 برد در 14 معامله امتیازدار',
   'journal.8CompliantOf13Assessed': '8 منطبق از 13 ارزیابی‌شده',
   'journal.aBreakoutAttemptFailsAndPriceReEntersThe':
@@ -959,6 +956,7 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'journal.aboveThe025RStudyThreshold': 'بالاتر از آستانه مطالعه 0.25R',
   'journal.actionsOnARecord': 'کارهایی روی یک رکورد',
   'journal.after': 'پس از آن.',
+  'journal.againstThePrevious14': 'در برابر 14 مورد پیشین',
   'journal.aiReviewNotice':
     'در این مرحله هیچ ارائه‌دهندهٔ مدلی به دفتر معاملات متصل نیست. این پنل‌ها وضعیت‌هایی را نشان می‌دهند که سطح بازبینی باید پوشش دهد؛ هیچ‌کدام بازبینی واقعی نیست و وضعیت کامل‌شده یک نمونهٔ چیدمان برچسب‌خورده است.',
   'journal.aiReviewState.completed': 'کامل‌شده',
@@ -1183,6 +1181,7 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'ریسک برنامه‌ریزی‌شده هر معامله در برابر بودجه حساب. مسطح بودن هدف است، نه بالا بودن.',
   'journal.plannedVersusActual': 'برنامه‌ریزی‌شده در مقابل واقعی',
   'journal.plannedVersusActualRR': 'R:R برنامه‌ریزی‌شده در مقابل واقعی',
+  'journal.pointsAgainstThePrevious14': 'واحد در برابر 14 مورد پیشین',
   'journal.positionLargerThanTheWrittenRisk': 'پوزیشن بزرگ‌تر از ریسک نوشته‌شده',
   'journal.positionSizeMatchesTheWrittenRisk': 'اندازه پوزیشن با ریسک نوشته‌شده می‌خواند',
   'journal.previewNotice':

@@ -926,13 +926,10 @@ export const EN_MESSAGES = {
   'interfaceStates.beforeDataArrivesTheLayoutIsAlreadyThe':
     'Before data arrives; the layout is already the right shape.',
   // journal ─────────────────────────────────────────────────────
-  'journal.021RVsPrevious14': '+0.21R vs previous 14',
-  'journal.044VsPrevious14': '+0.44 vs previous 14',
   'journal.14Scored2StillOpen': '14 scored · 2 still open',
   'journal.14ScoredTrades': '14 scored trades',
   'journal.16RecordsPlannedRisk': '16 records, planned risk',
   'journal.3TradesNotAssessedYet': '3 trades not assessed yet',
-  'journal.42PtsVsPrevious14': '+4.2 pts vs previous 14',
   'journal.7WinsIn14ScoredTrades': '7 wins in 14 scored trades',
   'journal.8CompliantOf13Assessed': '8 compliant of 13 assessed',
   'journal.aBreakoutAttemptFailsAndPriceReEntersThe':
@@ -964,6 +961,7 @@ export const EN_MESSAGES = {
   'journal.aboveThe025RStudyThreshold': 'Above the 0.25R study threshold',
   'journal.actionsOnARecord': 'Actions on a record',
   'journal.after': 'after.',
+  'journal.againstThePrevious14': 'vs previous 14',
   'journal.aiReviewNotice':
     'No model provider is connected to the journal in this phase. These panels show the states the review surface must handle; none of them contains a real review, and the completed state is a labelled layout example.',
   'journal.aiReviewState.completed': 'Completed',
@@ -1189,6 +1187,7 @@ export const EN_MESSAGES = {
     'Planned risk per trade against the account budget. Flat is the goal, not high.',
   'journal.plannedVersusActual': 'Planned versus actual',
   'journal.plannedVersusActualRR': 'Planned versus actual R:R',
+  'journal.pointsAgainstThePrevious14': 'pts vs previous 14',
   'journal.positionLargerThanTheWrittenRisk': 'Position larger than the written risk',
   'journal.positionSizeMatchesTheWrittenRisk': 'Position size matches the written risk',
   'journal.previewNotice':
