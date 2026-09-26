@@ -2174,3 +2174,74 @@ and `.num` already gives a figure `direction: ltr; unicode-bidi: isolate; tabula
   `settings.directionFollowsTheLanguage`, `topbar.switchToLeftToRightLayout`,
   `topbar.switchToRightToLeftLayout`), because a control that is only reachable in English is a control
   the Persian interface does not have.
+
+## 29. Phase 7.5.3.5.1 — the language-quality evaluation, and the store it does not touch
+
+Twenty-eight sections of this plan built knowledge, and a pipeline that applies it under the language
+store's authority. This one adds the reading the line was missing: something that looks at Persian text and says what is
+wrong with it — axis by axis, with the characters each finding is about — and changes nothing.
+`web/src/language/evaluation.ts` is the layer and `tests/persian-evaluation.test.ts` is the suite (37
+tests). The language record, including the three false positives the verification found, is
+`docs/persian-language.md`.
+
+### A reading, not a decision, and not a flag on the pipeline
+
+The cheap version of this phase was a `reportOnly` switch on `languageQa`, and it was rejected for the
+reason the whole Persian line exists. A rule runs only when the store holds `trusted` knowledge at its
+key, so a report assembled from authorised rules answers for the text a reviewer has already decided
+about and nothing else — a report on its own configuration. A reading is not a decision, and it has to be
+able to run where the store is not: a test, a build step, a review surface, a batch over the archive.
+
+So `evaluation.ts` imports the layer's closed tables and nothing else — `fa.ts`, `rules.ts`, `spelling.ts`
+— and the suite asserts that import list rather than describing it. It also asserts the module's **export
+surface** as an allow-list of five readings, so a future `applyEvaluation` fails the suite instead of
+arriving quietly. One consequence is stated rather than discovered: a compound pair the store holds as
+`pending` is **not** asserted by the evaluation, because the product has not decided it; the report names
+those pairs in `notEvaluated` and the suite pins that they produce no finding.
+
+### Six axes, and the two readings underneath them
+
+The axes are what a reader notices rather than what the pipeline does: **wording, spelling, punctuation,
+spacing, the half-space, and mixed script**, carried by eighteen checks. Each check is either
+**mechanical** — one answer, printed with the characters it replaces — or **a judgement**, which carries
+its reason and, where the product has no business naming a replacement, `instead: null`.
+
+Telling the two readings apart is the phase's most useful finding, and it cost two rewrites:
+
+- **A mark is read locally.** Whose punctuation this is depends on the letters beside it — the same
+  reading `isPersianProse` makes, with the same tie rule and the same silence with no context, plus one
+  difference: a letter inside a protected span is not context, because a URL is not prose.
+- **A language is read as a census.** In `اندیکاتور ATR روی نماد XAUUSD سیگنال خرید میدهد.` the words
+  between the two symbols have Latin on both sides, and a local rule calls a Persian sentence Persian text
+  inside English. Both mixed-script checks therefore count the prose letters of each script first,
+  skipping protected spans, and report only when one script holds at least twice the other.
+
+### The four repositories, asked this question
+
+The brief named four projects again. Asked whether any of them already _reports_ what is wrong with
+Persian text, the answer is no, and the reasons are now read from their own examples rather than from a
+feature list: Parsivar's normalizer returns corrected text — including a space before the full stop, the
+exact shape this phase's own `spacing.before-mark` calls a slip — and its spell checker's resources are a
+Dropbox download a user is told to copy into the package, which is not a resource this repository can
+vendor. Hazm is transform-only: `normalize` returns text, every other call returns a value, and nothing
+returns _what is wrong_. Nothing was adopted; the clitic inventory adopted from Parsivar's rule-based table
+in an earlier phase is now read by this phase's `zwnj.clitic-separated` check, which is that adoption paying
+for itself twice.
+
+### The pieces
+
+| Piece                                                   | Where                                              |
+| ------------------------------------------------------- | -------------------------------------------------- |
+| `evaluatePersianQuality`, the axes, the report          | `web/src/language/evaluation.ts` (new)             |
+| The eighteen checks, and the limits each report carries | `web/src/language/evaluation.ts` (new)             |
+| The one import surface                                  | `web/src/language/index.ts`                        |
+| The contract suite                                      | `tests/persian-evaluation.test.ts` (new, 37 tests) |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1668** unit tests across **82** files (1631/81 before), including the 37 in the new suite.
+- `npm run desktop:verify` **0 errors, 4 warnings across 51 checks**; the browser suite is **42** cases and
+  is unchanged by this phase, which renders nothing.
+- No new dependency, and nothing added to `src/`: the layer is web-side data and the report crosses no
+  process boundary yet.

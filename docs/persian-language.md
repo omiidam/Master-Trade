@@ -1166,6 +1166,129 @@ namespace (`rule.zwnj-clitics` — not an `mem_*` Agent Memory id, not a secret,
 regression case. No catalogue gained a key, no i18n module changed, and the suite that asserts the three
 lifetimes are one-way streets still passes unchanged.
 
+### The same four, asked the evaluation question
+
+The evaluation is a new question, so the repositories were looked at again rather than cited: not "which
+rules can this product adopt", but "does one of these already _report_ what is wrong with Persian text,
+in a form a product could show?". Two of them were read directly this time — Parsivar's and Hazm's own
+README examples — because a published example is evidence in a way that a feature list is not.
+
+**Parsivar's normalizer returns corrected text, and the correction is not this product's.** Its README
+runs `Normalizer().normalize(...)` and the output is the same sentence with the spelling and the spacing
+already changed — including `آغاز به کار کرد .` with a space _before_ the full stop, which is precisely
+the shape this phase's own `spacing.before-mark` reports as a slip. Adopting it would not be adopting a
+verifier; it would be adopting a second opinion about punctuation, and one that disagrees. Its
+`spell_corrector` is worse as a dependency: its resources are **not in the package**, the README asks the
+user to download `spell.zip` from a Dropbox link and copy it into `parsivar/resource`. A hand-fetched,
+unhashed dictionary is a resource this repository has no way to vendor, which settles the question before
+its model quality is even considered.
+
+**Hazm is a transforming toolkit, not a reporting one.** Every example in its README returns a value:
+`normalize` returns text, `SentenceTokenizer` returns a list, the parsers and embeddings return trees and
+vectors. There is no call that returns _what is wrong_, which is the whole shape of this phase — and the
+one thing it does that this layer wants, removing the space in `دارم .`, its own example shows it doing
+as a rewrite.
+
+So the verdict for this phase is the same as the last one, for one more reason: none of the four exposes
+an evaluation API, and three of the four (`Hazm` excepted, which has no spell checker at all) expose
+correction APIs whose conventions are their own. The artefact already adopted from Parsivar's rule-based
+half-space table — the plural's clitic inventory — is now read by this phase's `zwnj.clitic-separated`
+check, which is the adoption paying for itself twice: a rule in the correction pipeline, and an axis in
+the report.
+
+## Phase 7.5.3.5.1 — the language-quality evaluation, and the line it does not cross
+
+The Persian line so far built knowledge and a pipeline that applies it: an orthography, a rule catalogue,
+a lexicon, a grammar, a spelling table, and a QA pipeline that runs them under the store's authority.
+Every one of them _changes_ text, and every one asks the store first. This phase adds the reading they do not have:
+`web/src/language/evaluation.ts` looks at Persian text and says what is wrong with it — axis by axis,
+with the characters each finding is about — and decides nothing at all.
+`tests/persian-evaluation.test.ts` is the suite: 37 tests, and the larger half of it is about what the
+layer must **not** say.
+
+### The separation, which is the whole design
+
+The tempting shape was a flag: the pipeline already has every rule, every table and every protected span,
+so a `reportOnly: true` would have produced most of this file in an afternoon. It would also have
+produced something that cannot do the job, for three reasons that are the reason this is a module:
+
+- **An evaluation has to answer for any text, including Persian a reviewer has never decided about.** A
+  rule runs only when the store holds `trusted` knowledge at its key, so a report assembled from
+  authorised rules silently shrinks to "the rules we happen to have approved" — a report on its own
+  configuration rather than on the text.
+- **A report must not be able to change anything.** `evaluation.ts` imports no store: `memory.ts`,
+  `seed.ts`, `model.ts`, `languageQa.ts` and the i18n catalogue are all absent from its import list, and
+  the suite asserts that list rather than describing it. Running it over a person's message cannot write
+  an entry, propose a rule or approve a form, because there is no path in the module to any of them.
+- **It has to work where the store is not** — a test, a build step, a review surface, a batch over the
+  archive.
+
+Two cases hold that. The first reads the file's import specifiers and requires them to be exactly
+`./fa.js`, `./rules.js`, `./spelling.js`. The second asserts the module's export surface as an allow-list
+— five names, all of them readings — so a future `applyEvaluation` fails the suite instead of quietly
+arriving. And one consequence is stated before it can be discovered:
+
+**A compound pair the store holds as `pending` is not asserted here.** The product has not decided the
+candidate pair, so reporting it would be inventing a rule the pipeline itself may not apply. Every report
+names the pending pairs in its `notEvaluated` list rather than passing over them in silence, and the
+suite pins both halves: the form reports nothing, and the report says why.
+
+### Six axes, and why they are not the pipeline's families
+
+The pipeline's families are _what it does_ — normalization, grammar, spelling, terminology. The axes are
+_what a reader notices_: **wording, spelling, punctuation, spacing, the half-space, and mixed script**.
+Two of them deliberately overlap a family, and the overlap is a feature rather than a collision: a
+spelling slip is a spelling slip whoever notices it, and the overlap is what keeps a report honest after
+a rule has been retired — the evaluation still sees the shape.
+
+Eighteen checks carry the six axes, each with a case of its own in the suite. The test walks that table in
+both directions, so a check that stopped firing and a case left behind by a renamed check both fail.
+
+| Axis          | What it reads                                                                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `wording`     | the bookish constructions, the spoken forms, and a text that switches between the two registers of one word                                                                          |
+| `spelling`    | the compound pairs, the Arabic letters, and the Arabic-Indic digits                                                                                                                  |
+| `punctuation` | an ASCII mark in Persian prose, a doubled mark, and a pair opened and not closed                                                                                                     |
+| `spacing`     | a space before a mark that hugs the word, none after a mark that separates, and two spaces between two words                                                                         |
+| `zwnj`        | a clitic separated by a space, a half-space with nothing to join, two in a row, one inside a Latin token, and a separated `می` before one of the light verbs this product conjugates |
+| `script`      | a lower-case Latin word in a text whose prose is Persian, and a Persian phrase in a text whose prose is written in another language                                                  |
+
+### What a check may claim, and the two readings behind it
+
+Every check is one of two things. **Mechanical** means the answer is decided and there is exactly one of
+it — a doubled mark, an Arabic letter, a half-space beside a space; the finding prints the characters it
+is about and what to write instead. **A judgement** means a person decides: wording, register, where a
+quotation should close, whether a Latin word in a Persian sentence is a term being named or a word that
+was meant to be translated. A judgement carries its reason and, where the product has no business naming
+a replacement, `instead: null` — inventing a phrase the product does not write is the copy decision this
+layer exists not to make.
+
+Underneath them are two readings, and telling them apart is this phase's most useful finding:
+
+- **A mark is read locally.** "Whose punctuation is this?" is a question about the letters beside the
+  mark — the same reading `isPersianProse` makes in the pipeline, with the same tie rule and the same
+  silence where there is no context, and one deliberate difference: a letter inside a protected span is
+  not context. A URL is not prose, and reading the `m` of `com` is how a Persian sentence containing a
+  code span gets called Persian text inside an English one.
+- **A language is read as a census.** "Is this text Persian?" is not a question about a token's
+  neighbours, and it was measured rather than argued: in `اندیکاتور ATR روی نماد XAUUSD سیگنال خرید میدهد.`
+  the words between the two symbols have Latin on _both_ sides. So both mixed-script checks count the
+  prose letters of each script first — skipping protected spans, which is the difference between
+  ``دستور `npm test` را اجرا کن`` and a sentence written _about_ code — and report only when one script holds
+  at least twice the letters of the other. `روند trend` is four Persian letters against five Latin ones: a
+  two-word message, not a language, and the honest answer is that nobody can tell.
+
+### What it cannot judge, on the record
+
+Every report carries the same list, because a report that names only what it checks invites a reader to
+take its silence for approval: meaning, idiom beyond the fixed tables, morphology outside them, register
+outside the closed pairs, a technical term with no preferred equivalent (this layer holds no lexicon, so
+it names the shape and not the replacement), whether a figure is _correct_ as against which repertoire
+its digits are in, and the grammar layer's own subject. Two more are data-derived rather than imagined,
+and the phase measured both: a digit inside a technical token — a ratio written with a slash, a path, a
+code span — is protected as another language's, so a mixed digit repertoire inside one goes unread; and
+the two mixed-script checks are silent about a text whose prose is not clearly one script.
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -1413,6 +1536,35 @@ they are recorded because three of them are the same mistake wearing different c
 Three of the six are one lesson: Persian's invisible characters do not survive being retyped, and a rule
 whose data lost one is a rule that silently does nothing rather than one that fails loudly.
 
+### 7.5.3.5.1: three false positives, and the point in the phase where the reading was wrong
+
+An evaluation that reports a defect that is not there is worse than one that misses a defect, so the
+three things this phase got wrong before it got them right are worth recording in that order of
+importance:
+
+1. **A Persian sentence containing a code span was read as Persian text inside English.** The first
+   version of the mixed-script check asked the nearest letter which language the text was in, and in
+   ``دستور `npm test` را اجرا کن`` the nearest letter to the second Persian run is the `t` of `test` —
+   inside a code span, which is not prose. Caught by the suite's own negative case, and fixed by having
+   the walk pass over any letter that sits inside a protected span.
+2. **Then a Persian sentence containing two symbols was read the same way.** Inspection of real copy —
+   `اندیکاتور ATR روی نماد XAUUSD سیگنال خرید میدهد.` — produced a second finding of the same kind, this
+   time with Latin on _both_ sides of the words in the middle. The first fix (a both-sides requirement on
+   the local reading) was written, measured against that sentence, and discarded: no arrangement of
+   neighbouring letters answers a question about a text's language. Both checks now read a census of the
+   prose letters first and require one script to hold at least twice the other. A symbol is not a
+   language, and a text with four Persian letters against five Latin ones is not evidence of one.
+3. **The full stop was missing from the set of marks that hug the word before them.** Nothing in the
+   codebase said so and nothing failed; it surfaced while re-reading the four upstream projects, where
+   Hazm's own example turns `دارم .` into `دارم.` and Parsivar's produces the first shape as its output.
+   The period is the entry in that set worth arguing about — it is also a decimal point and an
+   abbreviation — which is exactly why the protected spans matter there: `۳٫۵` and `index.ts` are
+   untouched, `او رفت .` is reported, and an English sentence is not, because the nearer letter decides
+   which language is being written.
+
+The lesson in all three is the phase's own subject: a quality report's currency is trust, and every one
+of these would have spent some.
+
 ## Verification
 
 The contract suite is `tests/persian-language.test.ts` — 46 tests over the store's separation and its
@@ -1559,6 +1711,21 @@ The browser suite's `the language switch, in a browser` section adds the two thi
 cannot make: that choosing Persian **survives a reload** of the running application while the document
 stays English, and that all three options fit 375 px without panning the page.
 
+Phase 7.5.3.5.1 adds `tests/persian-evaluation.test.ts` — 37 tests over the reading rather than over the
+decisions. The completeness guard: every check in the catalogue has a case of its own, every case belongs
+to a check that exists, every check names an axis that exists, and every axis is carried by at least one
+check. The report: the input comes back unchanged from a text holding every defect in the catalogue, every
+finding's offset really does point at the characters it names, every finding carries a reason a person can
+act on, the same text evaluates to the same report twice, a caller's `exceptChecks` is named in
+`skippedChecks` rather than silently absent, and a caller's own protected literal is honoured as data
+rather than as a pattern. The separation: the module's import list is an allow-list of three files, all
+inside the layer, and its export surface is an allow-list of five readings — so no store, no writer and no
+second source of knowledge can arrive without failing the suite. And the false positives, which are where
+the value is: a symbol and a price, a path, a code span, an English sentence, a correctly written Persian
+sentence, `می` as a noun, a Persian-only message, the Arabic-Indic digits inside a protected token, a
+two-word message whose prose is not clearly either script, and — the case that matters most — a compound
+pair the product has **not** decided are all reported as nothing.
+
 The four Persian suites are **132 tests** together: 46 for the store and the locale, 26 for the
 correction pipeline, 28 for the lexicon, and 32 for grammar, spelling and the QA pipeline. The language
 analysis adds 104 more across five suites: 24 in `tests/language-detection.test.ts` for the reading of a
@@ -1568,7 +1735,8 @@ and the prompt they reach, 12 in `tests/adaptive-style.test.ts` for how the answ
 language is settled, and 24 in `tests/language-learning.test.ts` for what a person says outright, the
 confidence that decides whether it is read, and the two paths that refuse to learn from it. The layout adds
 15 more in `tests/rtl-layout.test.ts`, for the direction derived from the language, the glyphs that read it
-and the free text that does not.
+and the free text that does not. The evaluation adds 37 more in `tests/persian-evaluation.test.ts`, for the
+six axes, the case every check must have, and the false positives a quality report must not produce.
 
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
@@ -1583,6 +1751,7 @@ npx vitest run tests/response-language.test.ts       # 7.5.3.4.1: the answer's l
 npx vitest run tests/adaptive-style.test.ts          # 7.5.3.4.2: how the answer is worded
 npx vitest run tests/language-learning.test.ts       # 7.5.3.4.3: what a person says, and its confidence
 npx vitest run tests/rtl-layout.test.ts              # 7.5.3.4.4: the direction, the glyphs, the free text
+npx vitest run tests/persian-evaluation.test.ts      # 7.5.3.5.1: the language-quality evaluation
 npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```

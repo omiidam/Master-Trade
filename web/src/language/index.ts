@@ -42,6 +42,10 @@
  *                   they are not allowed to change, and the shape they cross the boundary in.
  *   - `response.ts` — Phase 7.5.3.4's join: the four signals that decide the language of an answer, the
  *                   one order between them, and the single value a response stage is handed.
+ *   - `evaluation.ts` — Phase 7.5.3.5.1's language-quality evaluation: what a reader notices about
+ *                   Persian text, reported by axis with the characters each finding is about, and
+ *                   written so that it asks the store nothing and changes nothing. The one module here
+ *                   that is a reading of a text rather than a decision about it.
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
  *
  * Nothing here renders. This is the layer that reads what a person wrote and decides how the answer to it
@@ -348,6 +352,23 @@ export type {
 } from './guidance.js';
 
 export { COMPOUND_PAIRS, REGISTER_FORMS, SPELLING_RULES } from './spelling.js';
+
+export {
+  LANGUAGE_QUALITY_AXES,
+  LANGUAGE_QUALITY_CHECKS,
+  LANGUAGE_QUALITY_LIMITS,
+  evaluatePersianQuality,
+  languageQualityChecksByAxis,
+} from './evaluation.js';
+export type {
+  LanguageQualityAxis,
+  LanguageQualityCheck,
+  LanguageQualityFinding,
+  LanguageQualityOptions,
+  LanguageQualityReport,
+  QualityInput,
+  QualityMatch,
+} from './evaluation.js';
 
 export {
   LANGUAGE_QA_FAMILIES,
