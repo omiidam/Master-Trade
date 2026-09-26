@@ -2550,3 +2550,107 @@ for a pattern somebody may have written on purpose, `low` for a count.
   predicate, and `شما` as a possessive). Both are named in the layer's own limits with the count and the sentences, so
   a `problem` from those two checks is readable as a rule reaching past its evidence; neither rule was narrowed here,
   because that changes what the pipeline reports to a writer and belongs to the grammar catalogue's own phase.
+
+## 34. Phase 7.5.3.5.4 — the loop that learns, and the corpus that keeps a fixed error fixed
+
+§29–33 built two readers: one that says what is wrong with Persian text, one that says whether it is natural for the
+context the answer was written for. Neither writes anything, and deliberately — a reading that can change the knowledge
+it is judged by is a reading nobody can trust. This section is the other half: the gate between a reading and the
+product's language knowledge.
+
+```
+detected issue → candidate → validation → confidence → accept/reject → knowledge update → regression test
+```
+
+### Two laws, and the numbers that are the laws
+
+**A single example never becomes a rule.** A detector's reading starts at `0.45` and needs **three distinct texts**
+before it is `ready` to be decided about at all; a `style` note starts at `0.3` and needs four. Both numbers have to
+hold — 0.45 → 0.60 → 0.75 crosses the bar on the third text, and a candidate seen once is not ready however confident
+it looks. Corroboration counts **texts, not occurrences**: a rule that reports an Arabic yeh six times in one answer
+has produced one piece of evidence, because the label an observation stores is _where_ it was seen.
+
+**A person outranks the detector**, as four rules: a stated correction is ready on one sighting; it supersedes the
+machine's reading of the same form rather than sitting beside it; it is applied with a trusted origin, so the store
+applies it at once where a detector can only ever leave a `pending` proposal; and it is the only sighting that reopens
+a candidate a reviewer rejected. The identity a candidate is tracked by is the decision that makes precedence possible
+at all: a **family and a form**, and deliberately neither the rule (who saw it) nor the correction (what they propose).
+The rule stays _named_ when a person supersedes it, because the rule is what a case will hold — a decision about a form
+is not a decision to stop reading it.
+
+### Nothing is re-derived: the family comes from the catalogues
+
+`learningFamilyOf` is the one door, and it answers from three **total** records — `FAMILY_OF_AXIS`, `FAMILY_OF_READING`
+(with `null` where the axis is the answer, so a sixth reading in §29 fails the build) and `FAMILY_OF_ASPECT`. Nine
+families, and they are the reader's grouping rather than a taxonomy: `spacing` and `zwnj` are one question to a reader,
+a `conversational` reading is the `context` family because a register is about the context, and `script` is the phase's
+mixed Persian + English under the name the layer already uses. The suite requires every check in both catalogues to
+have a family; the total records are what make that a build-time property rather than a test.
+
+### Three sources of a candidate, and the three stances that are not one
+
+| Source  | What it is                                                                                                                   |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| problem | a verdict the layer calls a problem — a real complaint, at detector weight                                                   |
+| style   | a note the layer declined to call wrong: a repeated word, three sentences opening alike, a register the tone did not ask for |
+| lexicon | a token the quality layer recognised as terminology, where the context asked for the product's own forms                     |
+
+`acceptable`, `technical-english` and `user-wording` are agreement, so they are **not** candidates. That is §33's
+"distinguish a genuine problem from acceptable conversational Persian, intentional technical English, user
+terminology and stylistic variation" read off the layer that already decided it, rather than re-judged: prose that is
+merely informal produces no candidate, a Latin term whose English was asked for produces none, and a form the layers
+were told to leave alone produces none. The list is deduplicated by identity, so one form reported six times is one
+candidate — a list that repeated itself would invite a caller to read those six as corroboration.
+
+### The knowledge update, and the two things it never does
+
+| Verdict         | Writes                                                                                           | The case it adds                     |
+| --------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------ |
+| `form-is-right` | an `exception` entry via `approveForm` — the same entries `protectedLiterals` hands the pipeline | `accepted`: the rule stays silent    |
+| `form-is-wrong` | a worked `example` entry: what the product writes, the form it replaces, the probe that shows it | `reported`: the rule keeps reporting |
+
+It never edits a rule (a rule is a code change with a diff, and the suite compares the store's trusted list before and
+after an acceptance to prove the write is an addition), and it never writes a case for an unreviewed origin — an
+`agent-proposal` leaves something `pending` and no case, because a case is a decision the product has made. Two
+candidate kinds are **referred** instead of written: a terminology question, to `reviewTermCandidate`, where a
+reviewer's provenance becomes the term's; and a confirmed defect whose shape no rule reads, because a case that cannot
+run would be a promise rather than a test.
+
+### The corpus, and why it is a ledger rather than generated files
+
+A confirmed decision appends a case: the smallest text that shows the finding, the rule that must behave, and what it
+must do. `regressionCheck` re-reads every case, and a `reported` case fails when the error comes back or the rule stops
+reading it, an `accepted` case fails when a rule starts raising a form a person decided about, and a corpus that both
+accepts a form and requires a rule to report it fails as a contradiction — the product writes one thing. Accepted forms
+are protected for every case _the way a real caller reads them_, as `protectedLiterals` from the store's exceptions, so
+an acceptance is tested through the mechanism that actually spares the form. The suite is the runner and the ledger is
+the record; no test file is generated at runtime.
+
+### The pieces
+
+| Piece                                       | Where                                                  |
+| ------------------------------------------- | ------------------------------------------------------ |
+| The loop: identity, thresholds, decisions   | `web/src/language/continuousLearning.ts`               |
+| The reading it re-reads rather than repeats | `web/src/language/naturalness.ts` (§33)                |
+| The store it writes through, and its review | `web/src/language/memory.ts`, `languageQa.ts`          |
+| The ledger and the corpus value             | the language layer's own storage seam (§24)            |
+| The suite, including the copy measurement   | `tests/persian-continuous-learning.test.ts` (35 tests) |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1752** unit tests across **84** files (1717/83 before): the 35 new cases cover the two laws, the four decisions,
+  the corpus and its three failure modes, and the ledger as storage — a round trip, an entry another build wrote, a
+  storage that throws.
+- The separation is asserted as an import graph: the loop reaches `memory.ts` (it _is_ the update path) and never the
+  Agent Memory, the response stage, the guidance, the interface or a person's own statements, and `OBSERVATION_FIELDS` /
+  `CASE_FIELDS` are compared against the stored shape so no field a message, a person or a credential could sit in can
+  be added quietly.
+- `npm run desktop:verify` unchanged. No new dependency, no new catalogue key, nothing rewired: like §29's and §33's
+  layers, this one is a library and its suite.
+- Running the loop over the product's own Persian copy — 3,234 catalogue values — raised **24** detector candidates,
+  and each one is a reading the layers already name as a limit: 22 from `grammar.verb-number-agreement`, 1 from
+  `grammar.pronoun-agreement`, and one section heading from `punctuation.missing-question-mark`. Nothing else fired. The
+  result says something worth writing down about corroboration: it counts texts rather than truth, so a systematically
+  wrong rule crosses the bar, and the loop's answer is a recorded, permanent **rejection** rather than a promotion. The
+  limit is in `LEARNING_LIMITS` and the scan is a test, so the measurement is fixed rather than remembered.

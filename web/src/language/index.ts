@@ -51,6 +51,11 @@
  *                   `evaluation.ts`'s findings against the context rather than checking the text a
  *                   second time, reads six shapes of its own that are about an answer and not about
  *                   spelling, and offers no replacement: a verdict, a confidence and a reason.
+ *   - `continuousLearning.ts` — Phase 7.5.3.5.4's loop: a finding from either layer becomes a candidate,
+ *                   corroboration across texts decides whether it is ready, a person accepts or rejects it,
+ *                   the accepted correction goes into the knowledge store through that store's own path,
+ *                   and a regression case holds what the product decided about a form. It writes no rule,
+ *                   and a candidate one text produced is never knowledge.
  *   - `seed.ts`   — the knowledge this phase ships, and why it is only what it is.
  *
  * Nothing here renders. This is the layer that reads what a person wrote and decides how the answer to it
@@ -401,6 +406,59 @@ export type {
   NaturalnessStance,
   NaturalnessVerdict,
 } from './naturalness.js';
+
+export {
+  CASE_FIELDS,
+  CORROBORATION_STEP,
+  LANGUAGE_LEARNING_KEY,
+  LEARNING_ACTIONS,
+  LEARNING_CONFIDENCE,
+  LEARNING_EXPECTATIONS,
+  LEARNING_FAMILIES,
+  LEARNING_LIMITS,
+  LEARNING_OUTCOMES,
+  LEARNING_SOURCES,
+  LEARNING_STATES,
+  LEARNING_SURFACES,
+  LEARNING_THRESHOLDS,
+  OBSERVATION_FIELDS,
+  TERMINOLOGY_CHECK,
+  USER_CORRECTION_CHECK,
+  correctionFromUser,
+  decideObservation,
+  emptyLearningStore,
+  learningFamilyOf,
+  learningObservationId,
+  observePersianText,
+  parseLearningStore,
+  readLearningStore,
+  readyObservations,
+  recordObservations,
+  regressionCheck,
+  rejectObservation,
+  writeLearningStore,
+} from './continuousLearning.js';
+export type {
+  LanguageRegressionCase,
+  LearningAction,
+  LearningCandidate,
+  LearningDecision,
+  LearningDecisionInput,
+  LearningExpectation,
+  LearningFamily,
+  LearningInput,
+  LearningObservation,
+  LearningOutcome,
+  LearningSource,
+  LearningState,
+  LearningStore,
+  LearningSurface,
+  ObservationDecision,
+  RegressionCaseReading,
+  RegressionReport,
+  RejectionDecision,
+  UserCorrectionInput,
+} from './continuousLearning.js';
 
 export {
   LANGUAGE_QA_FAMILIES,
