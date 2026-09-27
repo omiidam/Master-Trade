@@ -157,21 +157,26 @@ describe('the shared responsive frame', () => {
 
 describe('navigation on the narrowest screen', () => {
   it('collapses the rail below the tablet breakpoint, whatever the saved preference', () => {
-    const sidebar = read('web/src/app/Sidebar.tsx');
-    const mediaQuery = read('web/src/lib/useMediaQuery.ts');
+    const model = read('web/src/app/shellLayout.ts');
+    const hook = read('web/src/app/useShellLayout.ts');
 
-    // The rail's width is driven by `userCollapsed || compactShell`, so a narrow viewport wins.
-    expect(sidebar).toMatch(/userCollapsed \|\| compactShell/);
-    expect(sidebar).toMatch(/useMediaQuery\(COMPACT_SHELL_QUERY\)/);
-    // The compact query is a max-width, so it describes the screens that need it.
-    expect(mediaQuery).toMatch(/COMPACT_SHELL_QUERY\s*=\s*'\(max-width:\s*\d+px\)'/);
+    // One model turns a width into a mode and a mode into a rail, and a narrow window wins over the
+    // saved preference *there* rather than in a component.
+    expect(model).toMatch(/if \(mode === 'tablet'\) return 'collapsed'/);
+    expect(model).toMatch(
+      /COMPACT_SHELL_QUERY\s*=\s*`\(max-width:\s*\$\{SHELL_WIDTHS\.tablet - 1\}px\)`/,
+    );
+    expect(hook).toMatch(/railModeFor\(mode, userCollapsed\)/);
   });
 
   it('hides the collapse control where there is nothing to collapse to', () => {
     const sidebar = read('web/src/app/Sidebar.tsx');
-    // In compact mode the rail is already an icon rail and the toggle is not rendered, so a
+    const hook = read('web/src/app/useShellLayout.ts');
+    // The control is rendered only where the rail can be collapsed — a laptop or a desktop — so a
     // pointer-sized control never becomes the only way to read the navigation.
-    expect(sidebar).toMatch(/compactShell \? null :/);
+    expect(sidebar).toMatch(/canCollapse \?/);
+    expect(sidebar).toMatch(/canCollapse=\{layout\.canCollapse\}/);
+    expect(hook).toMatch(/canCollapse: canCollapseRail\(mode\)/);
     expect(sidebar).toContain('aria-label');
   });
 

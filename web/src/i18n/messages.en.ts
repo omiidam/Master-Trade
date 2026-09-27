@@ -2911,6 +2911,8 @@ export const EN_MESSAGES = {
   'shell.training': 'Training',
   'shell.yes': 'yes',
   // sidebar ─────────────────────────────────────────────────────
+  'sidebar.closeNavigation': 'Close navigation',
+  'sidebar.navigationMenu': 'Navigation',
   'sidebar.safetyLiveTradingAndBrokerExecutionDisabledBy':
     'Safety: live trading and broker execution disabled by design',
   'sidebar.safetyStatus': 'Safety status',
@@ -2985,6 +2987,7 @@ export const EN_MESSAGES = {
   'tokens.wellsAndInsetsCodeLogTailsEmptyPanes': 'wells and insets: code, log tails, empty panes',
   // topbar ──────────────────────────────────────────────────────
   'topbar.notificationsAndBackgroundTasks': 'Notifications and background tasks',
+  'topbar.openNavigation': 'Open navigation',
   'topbar.switchToLeftToRightLayout': 'Switch to left-to-right layout',
   'topbar.switchToRightToLeftLayout': 'Switch to right-to-left layout',
   'topbar.toggleWritingDirection': 'Toggle writing direction',

@@ -44,7 +44,10 @@ export interface UiState {
   page: AppPageId;
   direction: Direction;
   density: Density;
+  /** The reader's saved choice for the rail: collapsed or expanded, where the width allows it. */
   sidebarCollapsed: boolean;
+  /** True while the off-canvas navigation is open. Only mobile renders it, so it is inert elsewhere. */
+  sidebarOpen: boolean;
   safetyDialogOpen: boolean;
   aboutDialogOpen: boolean;
   /** What this person chose to be answered in. `auto` when they have chosen nothing. */
@@ -64,6 +67,9 @@ export interface UiState {
   setDensity: (density: Density) => void;
   setLanguagePreference: (preference: LanguagePreference) => void;
   toggleSidebar: () => void;
+  /** Open or close the off-canvas navigation drawer (mobile). */
+  setSidebarOpen: (open: boolean) => void;
+  toggleSidebarOpen: () => void;
   setSafetyDialogOpen: (open: boolean) => void;
   setAboutDialogOpen: (open: boolean) => void;
 }
@@ -85,11 +91,14 @@ export const useUiStore = create<UiState>((set) => ({
   direction: DEFAULT_DIRECTION_PREFERENCE,
   density: 'comfortable',
   sidebarCollapsed: false,
+  sidebarOpen: false,
   safetyDialogOpen: false,
   aboutDialogOpen: false,
   languagePreference: storedLanguage.preference,
   languageStorable: storedLanguage.storable,
-  setPage: (page) => set({ page }),
+  // Choosing a destination closes the drawer it was chosen from: on mobile the navigation covers the
+  // page, and a drawer that stayed open after a tap would hide the page it just navigated to.
+  setPage: (page) => set({ page, sidebarOpen: false }),
   setDirection: (direction) => set({ direction }),
   toggleDirection: () =>
     set((state) => ({
@@ -104,6 +113,8 @@ export const useUiStore = create<UiState>((set) => ({
   setLanguagePreference: (languagePreference) =>
     set({ languagePreference, languageStorable: writeLanguagePreference(languagePreference) }),
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+  toggleSidebarOpen: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   setSafetyDialogOpen: (safetyDialogOpen) => set({ safetyDialogOpen }),
   setAboutDialogOpen: (aboutDialogOpen) => set({ aboutDialogOpen }),
 }));

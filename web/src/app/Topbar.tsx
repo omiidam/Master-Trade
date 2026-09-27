@@ -1,4 +1,4 @@
-import { Bell, Languages, Monitor, Search, ShieldCheck } from 'lucide-react';
+import { Bell, Languages, Menu, Monitor, Search, ShieldCheck } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button, IconButton } from '../components/Button';
 import { Input } from '../components/Input';
@@ -10,6 +10,7 @@ import { PROCESS_STATE_LABEL } from '@shared/desktop/process';
 import { useRealtimeStore } from '../realtime/store.js';
 import { useUiStore } from '../store/ui';
 import { msg, useTextDirection } from '../i18n/index.js';
+import { useShellLayout } from './useShellLayout';
 
 /**
  * Topbar: context, honesty about connectivity, and global affordances.
@@ -34,6 +35,11 @@ export function Topbar() {
   const streamState = useRealtimeStore((state) => state.state);
   const streamSnapshot = useRealtimeStore((state) => state.snapshot);
   const notices = useRealtimeStore((state) => state.notifications.length);
+  // In the off-canvas mode the navigation is closed until asked for, and this is the only control
+  // that asks: without it the phone would have no way to reach a page.
+  const layout = useShellLayout();
+  const sidebarOpen = useUiStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useUiStore((state) => state.setSidebarOpen);
 
   // Where this page is running is stated, never implied: in a browser there is no
   // keychain, no offline cache and no local API, and the shell says which of those
@@ -61,6 +67,22 @@ export function Topbar() {
   return (
     <header className="sticky top-0 z-[var(--z-shell)] border-b border-border bg-bg/85 backdrop-blur">
       <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
+        {layout.isDrawer ? (
+          <Tooltip content={msg('topbar.openNavigation')}>
+            {/* A disclosure, not a link: it names the navigation it controls and whether that is
+                currently open, which is what makes the drawer reachable by a screen reader too. */}
+            <IconButton
+              label={msg('topbar.openNavigation')}
+              variant="secondary"
+              aria-controls="shell-navigation"
+              aria-expanded={sidebarOpen}
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu size={16} aria-hidden />
+            </IconButton>
+          </Tooltip>
+        ) : null}
+
         <div className="min-w-0 grow basis-40">
           <h1 className="truncate text-title font-semibold text-text">{msg(section.labelKey)}</h1>
           <p className="truncate text-caption text-text-muted">{msg(section.descriptionKey)}</p>

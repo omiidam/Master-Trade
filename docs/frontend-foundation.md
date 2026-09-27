@@ -141,8 +141,9 @@ records and carry the trust/provenance labels their records declare
   windows. Desktop-first does not mean desktop-only.
 
 Phase 7.1.1 states this arrangement as a tested contract — the three landmarks, the four widths it
-must survive and the Persian mirror — in [application-shell.md](./application-shell.md) and
-`tests/frontend-shell-layout.test.ts`. **No region was restructured to write it.**
+must survive and the Persian mirror — and Phase 8.1.2 states its _behaviour_ per width (a collapsible
+rail, an off-canvas drawer on a phone) in [application-shell.md](./application-shell.md) and
+`tests/frontend-shell-layout.test.ts`. **No region was restructured to write either.**
 
 ## 4. Prototype pages (mock data only)
 

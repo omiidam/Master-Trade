@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 /**
  * Subscribe to a CSS media query from React.
  *
- * Used by the shell for one decision only: below the desktop-first breakpoint the
- * sidebar collapses to icons so the workspace keeps its width. Everything else is
- * handled by CSS.
+ * The generic subscription, with no opinion about what is being asked. The shell's own queries —
+ * and the mode they add up to — live in `app/shellLayout.ts`, so the boundaries are stated once
+ * rather than wherever a component happens to need one. Everything else is handled by CSS.
  */
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState<boolean>(() =>
@@ -25,6 +25,3 @@ export function useMediaQuery(query: string): boolean {
 
   return matches;
 }
-
-/** Desktop-first breakpoint: below this the shell tightens up. */
-export const COMPACT_SHELL_QUERY = '(max-width: 1099px)';

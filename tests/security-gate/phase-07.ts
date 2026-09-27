@@ -290,6 +290,10 @@ export const STAGE_11: readonly Attack[] = [
         'web/src/components/journal/TradeForm.tsx',
         'web/src/components/Modal.tsx',
         'web/src/components/journal/FullscreenChartViewer.tsx',
+        // The off-canvas navigation (Phase 8.1.2) is a dialog surface, not a control: focus is moved
+        // onto it when it opens and trapped on the controls inside, so a ring round the whole drawer
+        // would point at nothing a person can press — the same reason `Modal` is listed.
+        'web/src/app/Sidebar.tsx',
       ]);
       const offenders: string[] = [];
       for (const file of uiSources()) {

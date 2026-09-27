@@ -448,22 +448,50 @@ export async function openSession(executablePath: string): Promise<PageSession> 
       // Found by shape rather than by the landmark's own name: since the interface is translatable, that name
       // is in whichever language is chosen, and a driver that matched the English one would stop being able
       // to navigate the moment the switch worked.
-      const clicked = await evaluate<boolean>(`
-        (() => {
-          const wanted = ${JSON.stringify(label)};
-          for (const nav of document.querySelectorAll('nav')) {
-            const button = [...nav.querySelectorAll('button')].find(
-              (item) => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim() === wanted,
-            );
-            if (button) {
-              button.click();
-              return true;
+      const pressEntry = (): Promise<boolean> =>
+        evaluate<boolean>(`
+          (() => {
+            const wanted = ${JSON.stringify(label)};
+            for (const nav of document.querySelectorAll('nav')) {
+              const button = [...nav.querySelectorAll('button')].find(
+                (item) => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim() === wanted,
+              );
+              if (button) {
+                button.click();
+                return true;
+              }
             }
-          }
-          return false;
+            return false;
+          })()
+        `);
+
+      if (await pressEntry()) return;
+
+      // On a phone the navigation is an off-canvas drawer rather than a rail, so the entry is not in
+      // the document until something opens it. The shell's own trigger does that, and it is found by
+      // the navigation it *controls* rather than by a name, because its name is translated too.
+      const opened = await evaluate<boolean>(`
+        (() => {
+          const trigger = document.querySelector('[aria-controls="shell-navigation"]');
+          if (!trigger) return false;
+          trigger.click();
+          return true;
         })()
       `);
-      if (!clicked) throw new Error(`no navigation button is named ${JSON.stringify(label)}`);
+      if (!opened) throw new Error(`no navigation button is named ${JSON.stringify(label)}`);
+
+      // Waited on the drawer rather than on a pause: the entry is real once it is in the document.
+      await session.waitFor(
+        `[...document.querySelectorAll('nav button')].some(
+           (item) => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim() === ${JSON.stringify(label)}
+         )`,
+        `the navigation drawer to offer ${JSON.stringify(label)}`,
+      );
+      if (!(await pressEntry())) {
+        throw new Error(
+          `the navigation drawer opened but offered no entry named ${JSON.stringify(label)}`,
+        );
+      }
     },
 
     async tabCount() {

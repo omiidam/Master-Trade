@@ -577,6 +577,194 @@ suite('the Product Foundation in a real browser', () => {
   });
 
   /* ---------------------------------------------------------------------- */
+  /* C2. The off-canvas navigation, at the width where it leaves the flow     */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * The navigation at the width where it cannot afford its own column.
+   *
+   * Below the tablet breakpoint the shell takes the navigation out of the document and gives it a
+   * trigger: it is *closed* until asked for. These cases drive that the way a person does — a real
+   * click on the trigger, a real Escape key — and assert what the browser resolved, not what a class
+   * name suggests.
+   */
+  describe('the off-canvas navigation', () => {
+    const DRAWER = '[role="dialog"]';
+    const TRIGGER = '[aria-controls="shell-navigation"]';
+
+    /** Press the top-bar trigger, and wait for the drawer to open and stop sliding. */
+    const openDrawer = async (): Promise<boolean> => {
+      const pressed = await session.evaluate<boolean>(`
+        (() => {
+          const trigger = document.querySelector(${JSON.stringify(TRIGGER)});
+          if (!trigger) return false;
+          // Focused first, the way a real press leaves it: a button receives focus on mousedown, and
+          // that is what the drawer hands focus back to when it closes.
+          trigger.focus();
+          trigger.click();
+          return true;
+        })()
+      `);
+      if (!pressed) return false;
+      await session.waitFor(`!!document.querySelector(${JSON.stringify(DRAWER)})`, 'the drawer');
+      // Waited on the *settled* edge rather than on the element existing: the drawer slides, and a box
+      // measured mid-animation is not the box the layout came to rest on.
+      await session.waitFor(
+        `(() => {
+           const drawer = document.querySelector(${JSON.stringify(DRAWER)});
+           if (!drawer) return false;
+           const left = Math.round(drawer.getBoundingClientRect().left);
+           if (window.__mtDrawerLeft === left) return true;
+           window.__mtDrawerLeft = left;
+           return false;
+         })()`,
+        'the drawer to stop sliding',
+      );
+      return true;
+    };
+
+    /** Press a button by its accessible name, inside the dialog or anywhere in the document. */
+    const pressByLabel = (label: string, inside: boolean): Promise<boolean> =>
+      session.evaluate<boolean>(`
+        (() => {
+          const root = ${inside ? `document.querySelector(${JSON.stringify(DRAWER)})` : 'document'};
+          if (!root) return false;
+          const button = [...root.querySelectorAll('button')].find(
+            (item) => item.getAttribute('aria-label') === ${JSON.stringify(label)},
+          );
+          if (!button) return false;
+          button.click();
+          return true;
+        })()
+      `);
+
+    it('is closed until asked for, and the trigger names what it controls', async () => {
+      await session.setViewport(390, 844);
+      await session.goto(`${server.origin}/`);
+
+      // The rail is not in the document at all, so the trigger is the only way to the navigation.
+      expect(await session.evaluate<number>(`document.querySelectorAll('aside').length`)).toBe(0);
+      expect(
+        await session.evaluate<boolean>(`!!document.querySelector(${JSON.stringify(TRIGGER)})`),
+      ).toBe(true);
+      expect(
+        await session.evaluate<boolean>(`!!document.querySelector(${JSON.stringify(DRAWER)})`),
+      ).toBe(false);
+
+      expect(await openDrawer()).toBe(true);
+
+      // It is a modal surface, it holds focus, and the trigger says it is expanded.
+      expect(
+        await session.evaluate<boolean>(
+          `document.querySelector(${JSON.stringify(DRAWER)}).getAttribute('aria-modal') === 'true'`,
+        ),
+      ).toBe(true);
+      expect(
+        await session.evaluate<boolean>(
+          `document.querySelector(${JSON.stringify(DRAWER)}).contains(document.activeElement)`,
+        ),
+      ).toBe(true);
+      expect(
+        await session.evaluate<boolean>(
+          `document.querySelector(${JSON.stringify(TRIGGER)}).getAttribute('aria-expanded') === 'true'`,
+        ),
+      ).toBe(true);
+
+      // Escape closes it, and focus goes back to the control that opened it.
+      await session.pressKey('Escape');
+      await session.waitFor(
+        `!document.querySelector(${JSON.stringify(DRAWER)})`,
+        'the drawer to close on Escape',
+      );
+      expect(
+        await session.evaluate<boolean>(
+          `document.activeElement === document.querySelector(${JSON.stringify(TRIGGER)})`,
+        ),
+      ).toBe(true);
+    });
+
+    it('closes from its scrim and from its own close control', async () => {
+      await session.setViewport(390, 844);
+      await session.goto(`${server.origin}/`);
+      const closeName = translate('en', 'sidebar.closeNavigation');
+
+      expect(await openDrawer()).toBe(true);
+      // The scrim is the button named "close" that is *not* inside the dialog — a real control, not a
+      // bare div, so it can be reached rather than merely clicked with a pointer.
+      const scrimClicked = await session.evaluate<boolean>(`
+        (() => {
+          const dialog = document.querySelector(${JSON.stringify(DRAWER)});
+          const scrim = [...document.querySelectorAll('button')].find(
+            (item) =>
+              item.getAttribute('aria-label') === ${JSON.stringify(closeName)} && !dialog.contains(item),
+          );
+          if (!scrim) return false;
+          scrim.click();
+          return true;
+        })()
+      `);
+      expect(scrimClicked).toBe(true);
+      await session.waitFor(
+        `!document.querySelector(${JSON.stringify(DRAWER)})`,
+        'the scrim to close the drawer',
+      );
+
+      // ...and the close control *inside* the drawer does the same.
+      expect(await openDrawer()).toBe(true);
+      expect(await pressByLabel(closeName, true)).toBe(true);
+      await session.waitFor(
+        `!document.querySelector(${JSON.stringify(DRAWER)})`,
+        'the close control to close the drawer',
+      );
+    });
+
+    it('opens from the inline-start edge, so it mirrors with the language', async () => {
+      await session.setViewport(390, 844);
+
+      const edges = async (
+        lang: UiLocale,
+      ): Promise<{ left: number; right: number; viewport: number }> => {
+        await startIn(lang);
+        expect(await openDrawer()).toBe(true);
+        return session.evaluateJson<{ left: number; right: number; viewport: number }>(`
+          (() => {
+            const drawer = document.querySelector(${JSON.stringify(DRAWER)});
+            const rect = drawer.getBoundingClientRect();
+            return JSON.stringify({
+              left: Math.round(rect.left),
+              right: Math.round(rect.right),
+              viewport: window.innerWidth,
+            });
+          })()
+        `);
+      };
+
+      // Left-to-right: the drawer is flush with the left edge.
+      const english = await edges('en');
+      expect(english.left).toBeLessThanOrEqual(2);
+      expect(english.right).toBeLessThan(english.viewport);
+
+      // Right-to-left: the same drawer is flush with the *right* edge — the inline start moved.
+      const persian = await edges('fa');
+      expect(persian.right).toBeGreaterThanOrEqual(persian.viewport - 2);
+      expect(persian.left).toBeGreaterThan(0);
+
+      await startIn(null);
+    });
+
+    it('is not rendered at all where the rail fits', async () => {
+      await session.setViewport(1440, 900);
+      await session.goto(`${server.origin}/`);
+
+      // A desktop keeps the rail, so there is no trigger and nothing to open.
+      expect(await session.evaluate<number>(`document.querySelectorAll('aside').length`)).toBe(1);
+      expect(
+        await session.evaluate<boolean>(`!!document.querySelector(${JSON.stringify(TRIGGER)})`),
+      ).toBe(false);
+    });
+  });
+
+  /* ---------------------------------------------------------------------- */
   /* D. The charts, as the browser paints them                               */
   /* ---------------------------------------------------------------------- */
 
@@ -742,6 +930,29 @@ suite('the Product Foundation in a real browser', () => {
   /* ---------------------------------------------------------------------- */
 
   describe('accessibility', () => {
+    /**
+     * Open the shell's off-canvas navigation, where the width makes it a drawer.
+     *
+     * At a phone width the navigation is not a landmark until it is opened, so the probe below asks the
+     * shell for it the way a person does rather than measuring a drawer that is closed by design.
+     */
+    const openNavigation = async (): Promise<void> => {
+      const pressed = await session.evaluate<boolean>(`
+        (() => {
+          const trigger = document.querySelector('[aria-controls="shell-navigation"]');
+          if (!trigger) return false;
+          trigger.focus();
+          trigger.click();
+          return true;
+        })()
+      `);
+      if (!pressed) return;
+      await session.waitFor(
+        `!!document.querySelector('[role="dialog"] nav')`,
+        'the off-canvas navigation to open',
+      );
+    };
+
     it('names every control and every image the browser paints', async () => {
       const problems: string[] = [];
       for (const width of [1440, 390]) {
@@ -749,6 +960,8 @@ suite('the Product Foundation in a real browser', () => {
         await session.goto(`${server.origin}/`);
         for (const section of NAV_SECTIONS) {
           await visit(section.id);
+          // The navigation is a landmark in every mode: at a phone width it is the open drawer.
+          if (width < 768) await openNavigation();
           const report = await session.evaluateJson<AccessibilityReport>(ACCESSIBILITY_PROBE);
 
           expect(report.landmarks.main, `${section.id} has no single main landmark`).toBe(1);
@@ -2221,13 +2434,12 @@ suite('the Product Foundation in a real browser', () => {
     const openHistory = async (locale: UiLocale): Promise<void> => {
       // The navigation is a client-rendered application behind a static document, so it is only there
       // once it has mounted — and this case reaches the page immediately after a language change. The
-      // wait is on the entry the click is about to look for, which is the same signal `clickNav` uses.
-      const entry = translate(locale, 'shell.nav.journal.label');
+      // wait is on the shell itself rather than on a navigation button, because at a phone width the
+      // navigation is an off-canvas drawer that is not in the document until something opens it (which
+      // is what `clickNav` does).
       await session.waitFor(
-        `[...document.querySelectorAll('nav button')].some(
-           (item) => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim() === ${JSON.stringify(entry)},
-         )`,
-        `the ${locale} navigation to be rendered`,
+        `!!document.getElementById('workspace-main')`,
+        `the ${locale} interface to be rendered`,
       );
       await visitIn(locale, 'journal');
       const label = translate(locale, 'journal.tradeHistory');

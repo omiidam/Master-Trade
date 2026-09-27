@@ -129,6 +129,10 @@ describe('nothing focusable is invisible', () => {
       // inside it, so a ring drawn round the whole panel would point at nothing a user can press.
       'web/src/components/Modal.tsx': 'a dialog surface, not a control',
       'web/src/components/journal/FullscreenChartViewer.tsx': 'a dialog surface, not a control',
+      // The off-canvas navigation is the same kind of thing on a phone: focus is moved onto it when
+      // it opens and trapped on the controls inside, so a ring round the whole drawer points at
+      // nothing a person can press.
+      'web/src/app/Sidebar.tsx': 'a dialog surface, not a control',
     };
     const offenders: string[] = [];
     for (const file of uiSources()) {

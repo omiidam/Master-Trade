@@ -2880,6 +2880,8 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'shell.training': 'آموزش',
   'shell.yes': 'بله',
   // sidebar ─────────────────────────────────────────────────────
+  'sidebar.closeNavigation': 'بستن پیمایش',
+  'sidebar.navigationMenu': 'پیمایش',
   'sidebar.safetyLiveTradingAndBrokerExecutionDisabledBy':
     'ایمنی: معامله زنده و اجرای سفارش توسط کارگزار به‌حکم طراحی غیرفعال است',
   'sidebar.safetyStatus': 'وضعیت ایمنی',
@@ -2949,6 +2951,7 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'tokens.wellsAndInsetsCodeLogTailsEmptyPanes': 'چاه‌ها و تودرتوها: کد، دنباله لاگ، پنل‌های خالی',
   // topbar ──────────────────────────────────────────────────────
   'topbar.notificationsAndBackgroundTasks': 'اعلان‌ها و کارهای پس‌زمینه',
+  'topbar.openNavigation': 'باز کردن پیمایش',
   'topbar.switchToLeftToRightLayout': 'تغییر چیدمان به چپ‌به‌راست',
   'topbar.switchToRightToLeftLayout': 'تغییر چیدمان به راست‌به‌چپ',
   'topbar.toggleWritingDirection': 'تغییر جهت نوشتار',

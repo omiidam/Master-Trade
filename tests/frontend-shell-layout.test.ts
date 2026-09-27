@@ -17,13 +17,23 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { BREAKPOINTS } from '../web/src/design/tokens.js';
+import {
+  COMPACT_SHELL_QUERY,
+  MOBILE_SHELL_QUERY,
+  SHELL_MODES,
+  SHELL_WIDTHS,
+  WIDE_SHELL_QUERY,
+  railModeFor,
+  shellModeFor,
+} from '../web/src/app/shellLayout.js';
 
 const SHELL = 'web/src/app/AppShell.tsx';
 const SIDEBAR = 'web/src/app/Sidebar.tsx';
 const TOPBAR = 'web/src/app/Topbar.tsx';
 const WORKSPACE = 'web/src/app/Workspace.tsx';
-const MEDIA_QUERY = 'web/src/lib/useMediaQuery.ts';
 const UI_STORE = 'web/src/store/ui.ts';
+const SHELL_LAYOUT = 'web/src/app/shellLayout.ts';
+const SHELL_HOOK = 'web/src/app/useShellLayout.ts';
 
 const read = (path: string): string => readFileSync(path, 'utf8');
 
@@ -39,21 +49,13 @@ function strip(source: string): string {
 }
 
 /**
- * The four widths the roadmap requires the shell to survive, widest first.
+ * The four widths, widest first — the *model's* vocabulary now (`shellLayout.ts`), not this file's.
  *
  * The product is desktop-first, so the *expanded* rail is the default and every narrower step is a
- * concession: below the compact boundary the rail collapses to icons, and nothing narrower than a
- * tablet ever sees two columns of navigation. Mobile is a real mode, not a shrunken desktop — it is
- * the width at which the same shell has to stay legible rather than the width the design was drawn at.
+ * concession: below the tablet boundary the rail is an icon rail, and a phone takes the navigation
+ * out of the flow entirely. Mobile is a real mode, not a shrunken desktop — it is the width at which
+ * the same shell has to stay legible rather than the width the design was drawn at.
  */
-const LAYOUT_MODES = ['desktop', 'laptop', 'tablet', 'mobile'] as const;
-
-/** The compact-shell boundary, read from the one module that owns it. */
-function compactBoundary(): number {
-  const match = read(MEDIA_QUERY).match(/COMPACT_SHELL_QUERY\s*=\s*'\(max-width:\s*(\d+)px\)'/);
-  expect(match, 'the compact-shell query is no longer a max-width in pixels').not.toBeNull();
-  return Number((match as RegExpMatchArray)[1]);
-}
 
 /** A declared breakpoint's width in pixels, from the token inventory. */
 function breakpointPx(token: string): number {
@@ -123,23 +125,56 @@ describe('the three regions, and the order they are laid out in', () => {
 });
 
 describe('the four widths the shell must survive', () => {
-  it('names desktop, laptop, tablet and mobile as the modes it is designed at', () => {
-    expect(LAYOUT_MODES).toEqual(['desktop', 'laptop', 'tablet', 'mobile']);
+  it('maps the four modes at their declared boundaries', () => {
+    expect(SHELL_MODES).toEqual(['desktop', 'laptop', 'tablet', 'mobile']);
+    // The widths the roadmap names land where they should: phones are mobile, a 768 or 1024 tablet
+    // is a tablet, and only a genuinely wide window is a desktop.
+    expect(shellModeFor(375)).toBe('mobile');
+    expect(shellModeFor(SHELL_WIDTHS.mobile - 1)).toBe('mobile');
+    expect(shellModeFor(SHELL_WIDTHS.mobile)).toBe('tablet');
+    expect(shellModeFor(768)).toBe('tablet');
+    expect(shellModeFor(1024)).toBe('tablet');
+    expect(shellModeFor(SHELL_WIDTHS.tablet)).toBe('laptop');
+    expect(shellModeFor(1280)).toBe('desktop');
+    expect(shellModeFor(1440)).toBe('desktop');
   });
 
-  it('collapses the rail below one boundary, and that boundary sits between tablet and wide', () => {
-    expect(read(MEDIA_QUERY)).toMatch(/COMPACT_SHELL_QUERY\s*=\s*'\(max-width:\s*\d+px\)'/);
-    const boundary = compactBoundary();
-    // Above the tablet breakpoint and below the wide one: phones and tablets always get the icon
-    // rail, and only a genuinely wide window keeps the full one.
-    expect(boundary).toBeGreaterThan(breakpointPx('md'));
-    expect(boundary).toBeLessThan(breakpointPx('xl'));
+  it('derives every media query from the same widths, so the hook and the model cannot disagree', () => {
+    expect(MOBILE_SHELL_QUERY).toBe(`(max-width: ${SHELL_WIDTHS.mobile - 1}px)`);
+    expect(COMPACT_SHELL_QUERY).toBe(`(max-width: ${SHELL_WIDTHS.tablet - 1}px)`);
+    expect(WIDE_SHELL_QUERY).toBe(`(min-width: ${SHELL_WIDTHS.desktop}px)`);
+    // The tablet boundary is a deliberate step between the ladder's own `md` and `xl`.
+    expect(SHELL_WIDTHS.tablet).toBeGreaterThan(breakpointPx('md'));
+    expect(SHELL_WIDTHS.tablet).toBeLessThan(breakpointPx('xl'));
+    // One reader of those queries — the hook — rather than one per component.
+    const hook = read(SHELL_HOOK);
+    for (const query of ['MOBILE_SHELL_QUERY', 'COMPACT_SHELL_QUERY', 'WIDE_SHELL_QUERY']) {
+      expect(hook).toMatch(new RegExp(`useMediaQuery\\(${query}\\)`));
+    }
   });
 
-  it('lets the window win over the saved preference', () => {
-    const sidebar = read(SIDEBAR);
-    expect(sidebar).toMatch(/userCollapsed \|\| compactShell/);
-    expect(sidebar).toMatch(/useMediaQuery\(COMPACT_SHELL_QUERY\)/);
+  it('chooses the rail per mode, and lets a narrow window win over the saved preference', () => {
+    // A laptop and a desktop honour the reader's choice...
+    expect(railModeFor('desktop', false)).toBe('expanded');
+    expect(railModeFor('desktop', true)).toBe('collapsed');
+    expect(railModeFor('laptop', false)).toBe('expanded');
+    expect(railModeFor('laptop', true)).toBe('collapsed');
+    // ...a tablet overrides it, because a 264px rail does not fit...
+    expect(railModeFor('tablet', false)).toBe('collapsed');
+    expect(railModeFor('tablet', true)).toBe('collapsed');
+    // ...and a phone takes the navigation out of the flow entirely.
+    expect(railModeFor('mobile', false)).toBe('offcanvas');
+    expect(railModeFor('mobile', true)).toBe('offcanvas');
+    expect(read(SHELL_HOOK)).toMatch(/railModeFor\(mode, userCollapsed\)/);
+  });
+
+  it('states the boundary once, in the model', () => {
+    expect(read(SHELL_LAYOUT)).toMatch(/SHELL_WIDTHS = \{/);
+    // No region declares its own breakpoint any more: the three files read the mode, they do not
+    // compute it.
+    for (const file of [SHELL, SIDEBAR, TOPBAR]) {
+      expect(read(file), `${file} declares its own breakpoint`).not.toMatch(/max-width:\s*\d+px/);
+    }
   });
 
   it('keeps the collapsed rail navigable: every item keeps its name, and its tooltip', () => {
@@ -148,8 +183,10 @@ describe('the four widths the shell must survive', () => {
     // is gone, and the grouped headings become dividers rather than disappearing without a trace.
     expect(sidebar).toMatch(/'aria-label': msg\(section\.labelKey\)/);
     expect(sidebar).toMatch(/<Tooltip content=\{msg\(section\.labelKey\)\} side=\{railSide\}>/);
-    // And the compact rail has no collapse control, because it is already collapsed.
-    expect(sidebar).toMatch(/compactShell \? null :/);
+    // The collapse control is rendered only where the rail can be collapsed — never on a tablet,
+    // where it is already an icon rail, and never on a phone, where there is no rail.
+    expect(sidebar).toMatch(/canCollapse \?/);
+    expect(read(SHELL_HOOK)).toMatch(/canCollapse: canCollapseRail\(mode\)/);
   });
 
   it('keeps the workspace its own width at every one of them', () => {
@@ -208,17 +245,54 @@ describe('the layout mirrors for Persian', () => {
   });
 });
 
-describe('no region is positioned by a trick', () => {
-  it('lays the shell out in flow: flex for the frame, sticky for the regions', () => {
+describe('the navigation is positioned honestly', () => {
+  it('lays the rail out in flow: flex for the frame, sticky for the rail and the top bar', () => {
     expect(read(SHELL)).toMatch(/flex min-h-screen/);
     expect(read(SIDEBAR)).toMatch(/sticky top-0 flex h-screen flex-col/);
     expect(read(TOPBAR)).toMatch(/sticky top-0 z-\[var\(--z-shell\)\]/);
   });
 
-  it('reserves absolute positioning for the overlays the shell actually has', () => {
-    // The only absolute positioning in the shell is the skip link (visible on focus) and two
-    // decorations inside controls — the search glyph and the unread dot. A *region* is never
-    // `fixed` or `absolute`, because that is how a rail ends up drawn over the content it frames.
+  it('takes the navigation out of the flow only to make it off-canvas, on the start edge', () => {
+    const sidebar = read(SIDEBAR);
+    // The drawer is the one `fixed` surface in the shell, and being off-canvas is its whole point: a
+    // rail cannot be out of the flow and in the flow at once. It is drawn from the *logical* start
+    // edge, so it arrives from the correct side in either language.
+    expect(sidebar).toMatch(/fixed inset-y-0 start-0/);
+    expect(sidebar).not.toMatch(/\b(?:left|right)-0\b/);
+    // It is a modal surface with the behaviour that word requires, not a panel that happens to be
+    // off screen: a dialog, announced as modal, named, and built to hold focus.
+    expect(sidebar).toMatch(/role="dialog"/);
+    expect(sidebar).toMatch(/aria-modal="true"/);
+    expect(sidebar).toMatch(/aria-label=\{msg\('sidebar\.navigationMenu'\)\}/);
+    expect(sidebar).toMatch(/tabIndex=\{-1\}/);
+  });
+
+  it('opens and closes from the keyboard: Escape closes, and focus is moved and returned', () => {
+    const sidebar = read(SIDEBAR);
+    // Escape, wherever the focus is inside.
+    expect(sidebar).toMatch(/event\.key === 'Escape'/);
+    expect(sidebar).toMatch(/document\.addEventListener\('keydown'/);
+    // Focus enters the panel on open and returns to what opened it on close.
+    expect(sidebar).toMatch(/panelRef\.current\?\.focus\(\)/);
+    expect(sidebar).toMatch(/returnFocusRef\.current\?\.focus\(\)/);
+    // Tab cycles inside a modal surface rather than wandering onto the page behind it.
+    expect(sidebar).toMatch(/event\.key !== 'Tab'/);
+  });
+
+  it('gives the scrim a name, so it is not a div no keyboard could reach', () => {
+    const sidebar = read(SIDEBAR);
+    expect(sidebar).toMatch(
+      /<motion\.button[\s\S]*?aria-label=\{msg\('sidebar\.closeNavigation'\)\}/,
+    );
+    // ...and the shell never hides a layout defect behind a blanket overflow.
+    expect(read(SHELL)).not.toMatch(/overflow-(?:x-)?hidden/);
+    expect(sidebar).not.toMatch(/overflow-hidden/);
+  });
+
+  it('reserves absolute positioning for the two decorations the shell accounts for', () => {
+    // Absolute is still only the skip link (visible on focus) and two control decorations — the
+    // search glyph and the unread dot. The off-canvas navigation is `fixed`, never `absolute`, so a
+    // region is never positioned by a trick.
     const allowed: Record<string, readonly RegExp[]> = {
       [SHELL]: [/focus:absolute/],
       [TOPBAR]: [/absolute inset-y-0 start-2\.5/, /absolute end-1\.5 top-1\.5/],
@@ -226,7 +300,6 @@ describe('no region is positioned by a trick', () => {
     };
     for (const [file, patterns] of Object.entries(allowed)) {
       const source = read(file);
-      expect(source, `${file} fixes a region`).not.toMatch(/\bfixed\b/);
       const occurrences = source.match(/\babsolute\b/g) ?? [];
       const explained = patterns.reduce(
         (total, pattern) => total + (source.match(pattern) ? 1 : 0),
@@ -237,5 +310,40 @@ describe('no region is positioned by a trick', () => {
         `${file} positions something absolutely that the shell did not account for`,
       ).toBe(explained);
     }
+  });
+
+  it('keeps the workspace where it is when the navigation opens', () => {
+    // The drawer overlays the page rather than pushing it, and the content region's own spacing is
+    // a function of `density` alone — so opening the navigation on a phone cannot reflow what is
+    // already being read.
+    expect(read(SHELL)).toMatch(/density === 'compact' \? 'flex-1 px-4 py-4' : 'flex-1 px-5 py-5'/);
+  });
+});
+
+describe('the off-canvas navigation is reachable and closes deliberately', () => {
+  it('is opened from a top-bar control only the drawer mode renders', () => {
+    const topbar = read(TOPBAR);
+    expect(topbar).toMatch(/layout\.isDrawer \?/);
+    // A disclosure: it names the navigation it controls, and whether that is open.
+    expect(topbar).toMatch(/aria-controls="shell-navigation"/);
+    expect(topbar).toMatch(/aria-expanded=\{sidebarOpen\}/);
+    expect(topbar).toMatch(/msg\('topbar\.openNavigation'\)/);
+    // ...and the drawer's navigation carries the id the trigger points at.
+    expect(read(SIDEBAR)).toMatch(/id="shell-navigation"/);
+  });
+
+  it('closes when a destination is chosen, not only when dismissed', () => {
+    // Choosing a page is the most common way out of the drawer, so the store closes it there
+    // rather than leaving the navigation covering the page it just opened.
+    const store = read(UI_STORE);
+    expect(store).toMatch(/setPage: \(page\) => set\(\{ page, sidebarOpen: false \}\)/);
+    expect(store).toMatch(/setSidebarOpen: \(sidebarOpen\) => set\(\{ sidebarOpen \}\)/);
+    expect(store).toMatch(/toggleSidebarOpen:/);
+  });
+
+  it('closes itself when the window leaves the drawer mode', () => {
+    // A drawer left open while the window grows would be a state the rail has no way to show.
+    expect(read(SHELL)).toMatch(/layout\.mode !== 'mobile' && sidebarOpen/);
+    expect(read(SHELL)).toMatch(/setSidebarOpen\(false\)/);
   });
 });

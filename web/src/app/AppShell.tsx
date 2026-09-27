@@ -1,10 +1,11 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { BrandMark } from '../components/brand';
 import { FADE_UP } from '../design/motion';
 import { useUiStore } from '../store/ui';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { useShellLayout } from './useShellLayout';
 import { msg, useDocumentLanguage } from '../i18n/index.js';
 
 /**
@@ -21,6 +22,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const page = useUiStore((state) => state.page);
   const density = useUiStore((state) => state.density);
   const reduceMotion = useReducedMotion();
+  // The off-canvas drawer exists only in the mobile mode. A drawer left open while the window grows
+  // would be a state the rail has no way to show, so leaving mobile closes it rather than leaving it
+  // to reappear the next time the window narrows.
+  const layout = useShellLayout();
+  const sidebarOpen = useUiStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useUiStore((state) => state.setSidebarOpen);
+  useEffect(() => {
+    if (layout.mode !== 'mobile' && sidebarOpen) setSidebarOpen(false);
+  }, [layout.mode, sidebarOpen, setSidebarOpen]);
 
   return (
     <div className="flex min-h-screen">
