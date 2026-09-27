@@ -67,15 +67,31 @@ const DECLARED_ORDER = [
 /** Every entry the model draws, in the order it draws them. */
 const drawn = (): string[] => NAV_MODEL.flatMap((group) => group.items.map((item) => item.id));
 
-/** The entry component's own source, from its declaration to the next one. */
-const entrySource = (): string => {
+/**
+ * One top-level function's source: from its declaration to the next one's own doc comment.
+ *
+ * Slicing to the next `function` alone would swallow the prose above it, and prose is where words
+ * like "disabled" legitimately live — a scan for a state would then find them in a comment about a
+ * different component and report the component it was reading.
+ */
+const functionSource = (name: string, next: string): string => {
   const sidebar = read(SIDEBAR);
-  const start = sidebar.indexOf('function NavItem(');
-  const end = sidebar.indexOf('function NavGroup(');
-  expect(start, 'the sidebar no longer declares a navigation entry').toBeGreaterThan(-1);
-  expect(end, 'the sidebar no longer declares a navigation group').toBeGreaterThan(start);
-  return sidebar.slice(start, end);
+  const start = sidebar.indexOf(`function ${name}(`);
+  const end = sidebar.indexOf(`\nfunction ${next}(`);
+  expect(start, `the sidebar no longer declares ${name}`).toBeGreaterThan(-1);
+  expect(end, `the sidebar no longer declares ${next} after ${name}`).toBeGreaterThan(start);
+  const comment = sidebar.lastIndexOf('/**', end);
+  return sidebar.slice(start, comment > start ? comment : end);
 };
+
+/** The entry component's own source. */
+const entrySource = (): string => functionSource('NavItem', 'entryTooltip');
+
+/** What the collapsed rail's tooltip carries. */
+const tooltipSource = (): string => functionSource('entryTooltip', 'NavGroup');
+
+/** The group wrapper: the heading, the rule, and the semantics around them. */
+const groupSource = (): string => functionSource('NavGroup', 'SidebarNav');
 
 describe('the navigation the workspace declares', () => {
   it('draws the fourteen entries the product names, in the order it names them', () => {
@@ -209,5 +225,89 @@ describe('the sidebar draws that model, and only it', () => {
       expect(drawn().filter((entryId) => entryId === useUiStore.getState().page)).toHaveLength(1);
     }
     useUiStore.getState().setPage(before);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* What an entry says, and the states it has — Phase 8.2.2                     */
+/* -------------------------------------------------------------------------- */
+
+describe('the navigation’s semantics', () => {
+  it('identifies every entry by its section, in a name the interface cannot translate away', () => {
+    // `data-nav-id` is the entry's semantic identifier: the section id. A surface that has to name a
+    // destination without drawing it — a test, a breadcrumb, a command palette — asks for `portfolio`
+    // rather than for the English word or the Persian one the reader happens to be seeing.
+    expect(flat(entrySource())).toContain('data-nav-id={section.id}');
+    expect(new Set(NAV_SECTIONS.map((section) => section.id)).size).toBe(NAV_SECTIONS.length);
+    expect(NAV_SECTIONS.map((section) => section.id).sort()).toEqual([...APP_PAGE_IDS].sort());
+  });
+
+  it('names each group for assistive technology, so the grouping survives the collapsed rail', () => {
+    const group = flat(groupSource());
+    expect(group).toContain('role="group"');
+    expect(group).toContain('aria-label={msg(group.labelKey)}');
+    expect(group).toContain('data-nav-group={group.id}');
+    // The name is read from the catalogue rather than from the drawn heading, which is what lets it
+    // outlive the collapsed rail — where the heading has no room and is replaced by a rule — and it
+    // exists in both of the languages the shell speaks.
+    for (const locale of LOCALES) {
+      for (const model of NAV_MODEL) {
+        expect(
+          translate(locale, model.labelKey).trim().length,
+          `the ${model.id} group has no name in ${locale}`,
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('says what an entry opens exactly where its label is gone', () => {
+    const entry = flat(entrySource());
+    // The tooltip is the collapsed branch of the one place the button is drawn — with the label on
+    // screen the entry is not wrapped at all, which is why the drawer, which always has room, draws
+    // no tooltips.
+    expect(entry).toMatch(
+      /collapsed \? \( <Tooltip content=\{entryTooltip\(section\)\} side=\{railSide\}>/,
+    );
+
+    // And it carries both lines: the name the reader can no longer read, and the sentence that says
+    // what is behind it. `descriptionKey` spent five phases translated into two languages and drawn
+    // nowhere; this is where it is read.
+    const tooltip = flat(tooltipSource());
+    expect(tooltip).toContain('msg(section.labelKey)');
+    expect(tooltip).toContain('msg(section.descriptionKey)');
+    for (const locale of LOCALES) {
+      for (const section of NAV_SECTIONS) {
+        expect(
+          translate(locale, section.descriptionKey).trim().length,
+          `${section.id} has no description in ${locale}`,
+        ).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('draws one box in both presentations', () => {
+    const entry = flat(entrySource());
+    // A fixed icon slot is what makes the row the same height with and without a label; without it
+    // the icon rail's rows are the icon's own height and every entry shifts when the rail collapses.
+    expect(entry).toContain(`'grid size-[22px] shrink-0 place-items-center'`);
+    // And the padding is stated once. `collapsed && 'justify-center px-0'` put two horizontal paddings
+    // in one class list, so which one applied was the stylesheet's business rather than the entry's —
+    // the icon was centred either way, which is exactly why the contradiction went unnoticed.
+    expect(entry).toContain(`collapsed && 'justify-center'`);
+    expect(entry).not.toMatch(/\bpx-0\b/);
+  });
+
+  it('has no disabled state and no second selection state', () => {
+    const entry = flat(entrySource());
+    // All fourteen pages exist and are reachable, so a greyed-out entry would state something the
+    // product does not; and the page being read *is* the selection, which is what `aria-current`
+    // says. Both are asserted so that adding either has to be deliberate.
+    expect(entry).not.toMatch(/disabled/);
+    expect(entry).not.toMatch(/aria-selected/);
+    expect(entry).toContain(`aria-current={active ? 'page' : undefined}`);
+    // The current entry is not distinguished by colour alone: it has the raised surface, a shadow,
+    // and a marker beside the label where there is room for one.
+    expect(entry).toContain('bg-surface-raised text-text shadow-panel');
+    expect(entry).toContain('rounded-full bg-primary');
   });
 });

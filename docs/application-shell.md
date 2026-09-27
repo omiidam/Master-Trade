@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.2.1
+# Application Shell — Phases 7.1.1 through 8.2.2
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -379,3 +379,103 @@ the collapse control is missing, because the rail is collapsed already. One fail
 of the three cases now establishes the starting point it is about to measure, so a failure of one is a
 failure of one; the portfolio active state itself was never wrong (it resolves to exactly one entry in
 both presentations).
+
+## 9. Phase 8.2.2 — the navigation's UX and semantics
+
+Phase 8.2.1 stated _which_ fourteen entries the workspace has and in what order. This phase refines
+how each one is **drawn**, **named** and **identified** — and, like 8.2.1, adds no destination,
+removes none and renames none. Portfolio and Evaluation are still two modules; there is still no
+Performance entry.
+
+### 9.1 One box, in both presentations
+
+The measured starting point: expanded, every row was 237×**38** with its icon 10px in; collapsed,
+every row was 59×**33** with the same padding. The five-pixel difference was the label — the row's
+height was whatever its content happened to be, so taking the label away re-flowed the whole list
+vertically. That is a layout shift in the shell's own furniture: collapse the rail and every entry
+under the one you were looking at moves, in both directions, for a reason that has nothing to do with
+where you are.
+
+The icon now sits in a fixed 22px square slot, so the row's height is that slot or the label's line —
+whichever is taller, and the same either way. Both presentations are measured at **38px**, with one
+padding and one icon column, and a case asserts they are equal rather than each being plausible.
+
+The same pass removed a contradiction the eye had hidden: the collapsed entry carried `px-2.5` _and_
+`px-0`, two horizontal paddings in one class list, where which one applied was the stylesheet's
+business. It happened to be the 10px one, and the icon was centred anyway — because it was centred by
+`justify-center`, not by the padding — so nothing looked wrong and the class list said two different
+things. It now says one.
+
+### 9.2 Every entry has a name the interface cannot translate away
+
+Each entry carries `data-nav-id`, its section id. The rail has always been navigable by _label_ — and
+that is still how the browser suite clicks it, deliberately, because a reader navigates by the word
+they see — but the word is either English or Persian, and neither is an identity. `data-nav-id` lets a
+case (or a surface that has to name a destination without drawing it — the breadcrumb a later phase
+might add) ask for `portfolio` and be answered the same way in both languages.
+
+### 9.3 The grouping is named, not only drawn
+
+The three groups are exposed with `role="group"`, `aria-label` from the message catalogue, and
+`data-nav-group` for the value. The name has to come from the catalogue rather than from the drawn
+heading, because the collapsed rail has no room for a heading and draws a rule instead: a grouping
+that could only be _read_ would disappear exactly when a reader has least to go on.
+
+### 9.4 The collapsed rail's tooltip finally says something
+
+The tooltip carried the label alone. For a reader hovering an icon that is the one thing they already
+know — the glyph and the order are the whole clue — so it now carries the entry's **name and its
+description**: `descriptionKey` had been translated into two languages, asserted non-empty by two
+suites, and drawn nowhere for five phases.
+
+It stays a _collapsed_ affordance. The expanded rail draws the label beside the icon, and a popover
+repeating it is noise; the drawer, which always has room, draws no tooltips at all. The entry is
+wrapped in the tooltip only in the branch that has no label, and the browser case asserts the
+difference structurally — a labelled entry is not a trigger at all (`data-state` absent), rather than
+a trigger that happens not to be open.
+
+### 9.5 The states an entry has, and the two it does not
+
+Default, hover, focus and current are unchanged in intent and now stated in one place next to the
+markup. The two absent states are deliberate and asserted: there is no **disabled** entry, because all
+fourteen pages exist and are reachable — a greyed-out entry would state something the product does not
+— and there is no **selected** state distinct from current, because the page being read _is_ the
+selection and that is what `aria-current="page"` says. The current entry is not signalled by colour
+alone: it takes the raised surface, a panel shadow, a primary-tinted icon and, where there is room, a
+dot beside the label.
+
+### 9.6 A pointer, which the driver did not have
+
+A tooltip is a _pointer_ affordance, and the browser suite had no pointer: it could click and it could
+press keys, so it could only ever verify the focus path of a hover component. `hover(selector)` now
+moves a real pointer through the DevTools protocol, and it taught the harness something on its first
+run — a single synthesised mouse move to the next element does not tell the element being left that it
+was left, so the tooltip stayed open over an entry the pointer had already gone. Chrome derives the
+boundary events from the previous position; the driver now moves in two legs, which is what a hand
+does, and the tooltip closes as it should.
+
+### 9.7 What was adopted from the references, and what was not
+
+Both reference dashboards give every sidebar item one reusable structure — an icon slot, a label, an
+active treatment — and show the item's name in a tooltip exactly when the sidebar is collapsed. That
+is what § 9.1 and § 9.4 adopt. Neither adopts a second navigation for the icon rail, and this phase
+did not either: it is one entry component, one model, and one box at two widths. Their visual identity,
+component library and state library remain untouched, as in § 6 and § 8.3.
+
+### 9.8 What was verified
+
+| Check                                                     | Where                                 | Result |
+| --------------------------------------------------------- | ------------------------------------- | ------ |
+| Every entry named, and identified, in both presentations  | `tests/browser/e2e.test.ts`           | pass   |
+| The three groups named in both presentations              | `tests/browser/e2e.test.ts`           | pass   |
+| Exactly one current entry, on all fourteen routes         | `tests/browser/e2e.test.ts`           | pass   |
+| The tooltip opens on a hover and closes when it leaves    | `tests/browser/e2e.test.ts`           | pass   |
+| One row height, padding and icon column in both           | `tests/browser/e2e.test.ts`           | pass   |
+| Identifier, grouping, tooltip, states, one box (source)   | `tests/frontend-navigation.test.ts`   | 11/11  |
+| Collapsed rail keeps its name and its tooltip             | `tests/frontend-shell-layout.test.ts` | 24/24  |
+| RTL, responsive and the whole-tree contracts (regression) | `rtl-layout` / matrix / shell state   | pass   |
+| Types, formatting and build                               | `typecheck`, `format:check`, build    | pass   |
+
+Both presentations were also measured in a live browser at 1440px and 76px: 14 rows each, one height
+(38px), one icon column, icons centred to the pixel in the icon rail, three group rules, and no clipped
+label or overflow.

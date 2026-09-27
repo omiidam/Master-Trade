@@ -69,6 +69,33 @@ type RailSide = 'left' | 'right';
  * named for a screen reader. `aria-current` is the one thing this control has to *know* (rather than
  * inherit from where it sits), which is why it is derived here from the store's page: the entry and
  * the workspace read the same field, so the rail cannot announce a page the workspace is not showing.
+ *
+ * It is also *one box* in both presentations. The icon sits in a fixed square slot, so the row's
+ * height is that slot or the label's line, whichever is taller — the same either way. Collapsing the
+ * rail narrows the entries and takes their labels away; it does not re-flow them, so the icon a
+ * reader is aiming at stays where it was.
+ *
+ * The states an entry has, and the two it deliberately does not:
+ *
+ *   - **default** — muted text, faint icon.
+ *   - **hover** — the raised surface at 60%, the text lifted to full.
+ *   - **focus** — the product's own ring, inherited from the global `:focus-visible` outline. This
+ *     control never removes it; the drawer *panel* is the one surface in this file that does, and it
+ *     may, because a dialog is not a control (`frontend-integration.test.ts` records that exception).
+ *   - **current** — the raised surface, a panel shadow, a primary-tinted icon and, where there is room
+ *     for one, a dot beside the label: the page being read is never signalled by colour alone.
+ *
+ *   - no **disabled**, because all fourteen pages exist and are reachable. A greyed-out entry would
+ *     state something the product does not, so the state is a decision waiting for a reason rather
+ *     than a class waiting for a reason to be used.
+ *   - no separate **selected**: the page being read *is* the selection, which is what
+ *     `aria-current="page"` already says. A second highlight would have to mean something else, and
+ *     nothing in the workspace means anything else.
+ *
+ * `data-nav-id` is the entry's semantic identifier: the section id, which the interface language
+ * never changes. A surface that has to name a destination without drawing it — a test, or the
+ * breadcrumb a later phase might add — can ask for `portfolio` rather than for the English word or the
+ * Persian one it is currently wearing.
  */
 function NavItem({
   section,
@@ -86,6 +113,7 @@ function NavItem({
   const button = (
     <button
       type="button"
+      data-nav-id={section.id}
       onClick={() => setPage(section.id)}
       aria-current={active ? 'page' : undefined}
       {...(collapsed ? { 'aria-label': msg(section.labelKey) } : {})}
@@ -95,12 +123,14 @@ function NavItem({
         active
           ? 'bg-surface-raised text-text shadow-panel'
           : 'text-text-muted hover:bg-surface-raised/60 hover:text-text',
-        collapsed && 'justify-center px-0',
+        // Collapsed, the slot is all that is left to centre. The padding stays symmetric, so the
+        // icon's centre is the row's centre rather than a number tuned for an icon-only rail.
+        collapsed && 'justify-center',
       )}
     >
       <span
         className={cn(
-          'shrink-0',
+          'grid size-[22px] shrink-0 place-items-center',
           active ? 'text-primary' : 'text-text-faint group-hover:text-text-muted',
         )}
       >
@@ -116,13 +146,30 @@ function NavItem({
   return (
     <li>
       {collapsed ? (
-        <Tooltip content={msg(section.labelKey)} side={railSide}>
+        <Tooltip content={entryTooltip(section)} side={railSide}>
           {button}
         </Tooltip>
       ) : (
         button
       )}
     </li>
+  );
+}
+
+/**
+ * What the collapsed rail says when the label is gone: the entry's name, and what it opens.
+ *
+ * The collapsed rail is the only presentation that needs telling. When there is room, the label is
+ * drawn beside the icon and a popover repeating it would be noise — which is why the drawer, which
+ * always has room, draws no tooltips at all. Both lines come from the same catalogue the page itself
+ * reads, so a tooltip cannot promise something the destination does not hold.
+ */
+function entryTooltip(section: NavSection): ReactNode {
+  return (
+    <>
+      <span className="block">{msg(section.labelKey)}</span>
+      <span className="mt-0.5 block text-text-muted">{msg(section.descriptionKey)}</span>
+    </>
   );
 }
 
@@ -145,7 +192,16 @@ function NavGroup({
   if (group.items.length === 0) return null;
 
   return (
-    <div className="mb-3">
+    <div
+      className="mb-3"
+      // The grouping is exposed to assistive technology in *both* presentations, and its name comes
+      // from the catalogue rather than from the drawn heading — which is what lets it survive the
+      // collapsed rail, where the heading has no room and becomes a rule instead. `data-nav-group`
+      // is the same grouping as a value: `workspace`, `learning`, `system`.
+      role="group"
+      aria-label={msg(group.labelKey)}
+      data-nav-group={group.id}
+    >
       {collapsed ? (
         <div aria-hidden className="mx-2 my-2 border-t border-border" />
       ) : (

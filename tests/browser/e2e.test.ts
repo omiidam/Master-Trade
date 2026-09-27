@@ -3245,5 +3245,214 @@ suite('the Product Foundation in a real browser', () => {
         ),
       ).toBe(profile);
     }, 60_000);
+
+    /** The entries, in display order, as the markup states them. */
+    const IDS = NAV_MODEL.flatMap((group) => group.items.map((item) => item.id));
+    const NAMES = NAV_MODEL.flatMap((group) =>
+      group.items.map((item) => translate('en', item.labelKey)),
+    );
+
+    /**
+     * What each entry *is*, read from the document rather than from the configuration.
+     *
+     * `data-nav-id` is the entry's semantic identifier (Phase 8.2.2): the section id, which the
+     * interface language never changes. Reading the rail through it means a case can say which
+     * destination it means without depending on the English word, the Persian word, or the position
+     * an entry happens to hold.
+     */
+    const entries = (): Promise<{ id: string | null; label: string; name: string }[]> =>
+      session.evaluateJson(
+        `JSON.stringify(
+           [...document.querySelectorAll('aside nav button')].map((button) => ({
+             id: button.getAttribute('data-nav-id'),
+             label: (button.textContent ?? '').trim(),
+             name: (button.getAttribute('aria-label') ?? '').trim(),
+           })),
+         )`,
+      );
+
+    /** The groups the rail draws, and the name each one gives assistive technology. */
+    const groups = (): Promise<{ id: string | null; name: string | null }[]> =>
+      session.evaluateJson(
+        `JSON.stringify(
+           [...document.querySelectorAll('aside nav [data-nav-group]')].map((node) => ({
+             id: node.getAttribute('data-nav-group'),
+             name: node.getAttribute('aria-label'),
+           })),
+         )`,
+      );
+
+    it('identifies every entry by its section, and names it in whichever presentation draws it', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+
+      const drawn = await entries();
+      expect(drawn.map((entry) => entry.id)).toEqual(IDS);
+      // With the label drawn, the *label* is the entry's accessible name, and there is no second one
+      // to disagree with it.
+      expect(drawn.map((entry) => entry.label)).toEqual(NAMES);
+      for (const entry of drawn) {
+        expect(entry.label, `${entry.id} draws no label`).not.toBe('');
+        expect(entry.name, `${entry.id} is named twice while its label is drawn`).toBe('');
+      }
+
+      // Collapsed, the label is gone and the name moves to `aria-label`: an icon-only entry is still
+      // one a screen reader can name, and still the same entry (`id` is unchanged).
+      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      await waitForRail('< 100', 'the rail to collapse');
+      const squeezed = await entries();
+      expect(squeezed.map((entry) => entry.id)).toEqual(IDS);
+      expect(squeezed.map((entry) => entry.name)).toEqual(NAMES);
+      for (const entry of squeezed) {
+        expect(entry.label, `${entry.id} still draws a label in the icon rail`).toBe('');
+      }
+
+      await expandRail();
+    }, 60_000);
+
+    it('keeps the three groups named in both presentations', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+
+      const expected = NAV_MODEL.map((group) => ({
+        id: group.id,
+        name: translate('en', group.labelKey),
+      }));
+      expect(await groups()).toEqual(expected);
+
+      // The collapsed rail draws a rule where the heading was, so the name has to come from the
+      // catalogue rather than from the drawn text — otherwise the hierarchy would survive only while
+      // there was room to print it.
+      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      await waitForRail('< 100', 'the rail to collapse');
+      expect(await groups()).toEqual(expected);
+
+      await expandRail();
+    }, 60_000);
+
+    it('marks exactly one entry current on every one of the fourteen routes', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+
+      /** The entries the rail calls current, by identifier. */
+      const current = (): Promise<(string | null)[]> =>
+        session.evaluateJson(
+          `JSON.stringify(
+             [...document.querySelectorAll('aside nav button[aria-current="page"]')].map(
+               (button) => button.getAttribute('data-nav-id'),
+             ),
+           )`,
+        );
+
+      // Every destination, opened the way a reader opens it, and the rail asked who is current. One
+      // entry, the right one, unprompted and unspecial-cased — Portfolio and Evaluation included.
+      for (const id of IDS) {
+        await visit(id);
+        expect(await current(), `the rail disagrees with the ${id} page`).toEqual([id]);
+      }
+
+      expect(IDS).toContain('portfolio');
+      expect(IDS).toContain('evaluation');
+      expect(IDS).not.toContain('performance');
+    }, 120_000);
+
+    it('explains an entry whose label is gone, and stays quiet while the label is drawn', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+
+      const PORTFOLIO = '[data-nav-id="portfolio"]';
+      // A labelled entry is not a tooltip trigger at all: Radix marks its triggers with `data-state`,
+      // and this button has none — the tooltip is absent while there is a label to read, rather than
+      // present and unopened.
+      expect(
+        await session.evaluate<string | null>(
+          `document.querySelector(${JSON.stringify(PORTFOLIO)}).getAttribute('data-state')`,
+        ),
+      ).toBeNull();
+
+      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      await waitForRail('< 100', 'the rail to collapse');
+
+      // A pointer on the entry is how a reader asks an icon what it is — the case moves a real one,
+      // because focus would only prove the fallback path. What comes back is the name they can no
+      // longer read and the sentence that says what is behind it.
+      expect(await session.hover(PORTFOLIO)).toBe(true);
+      const description = translate('en', 'shell.nav.portfolio.description' as MessageKey);
+      await session.waitFor(
+        `[...document.querySelectorAll('[role="tooltip"]')]
+           .map((tip) => tip.textContent ?? '')
+           .join(' ')
+           .includes(${JSON.stringify(description)})`,
+        'the Portfolio tooltip to open with what the entry opens',
+      );
+      const tooltip = await session.evaluate<string>(
+        `[...document.querySelectorAll('[role="tooltip"]')]
+           .map((tip) => (tip.textContent ?? '').trim())
+           .join(' | ')`,
+      );
+      expect(tooltip).toContain(labelOf('portfolio'));
+      expect(tooltip).toContain(description);
+
+      // And it goes away when the pointer does.
+      expect(await session.hover('main h2')).toBe(true);
+      await session.waitFor(
+        `document.querySelectorAll('[role="tooltip"]').length === 0`,
+        'the tooltip to close when the pointer leaves the entry',
+      );
+
+      await expandRail();
+    }, 60_000);
+
+    it('keeps one row geometry in both presentations', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+
+      /** Each entry's box: its height, its padding, and the icon slot inside it. */
+      const geometry = (): Promise<
+        { height: number; padding: string; slot: string; slotOffset: number }[]
+      > =>
+        session.evaluateJson(
+          `JSON.stringify(
+             [...document.querySelectorAll('aside nav button')].map((button) => {
+               const row = button.getBoundingClientRect();
+               const style = getComputedStyle(button);
+               const slot = button.querySelector('span').getBoundingClientRect();
+               return {
+                 height: Math.round(row.height),
+                 padding: style.paddingLeft + '/' + style.paddingRight,
+                 slot: Math.round(slot.width) + 'x' + Math.round(slot.height),
+                 slotOffset: Math.round(slot.left - row.left),
+               };
+             }),
+           )`,
+        );
+
+      const drawn = await geometry();
+      expect(drawn).toHaveLength(IDS.length);
+      // One height, one padding, one icon column at one offset: the structure is the same on every
+      // row, which is what makes the rail read as a list rather than as fourteen decisions.
+      expect(new Set(drawn.map((row) => row.height)).size, 'the rows are not one height').toBe(1);
+      expect(new Set(drawn.map((row) => row.padding)).size, 'the rows are not padded alike').toBe(
+        1,
+      );
+      expect(new Set(drawn.map((row) => row.slot)).size, 'the icons are not one column').toBe(1);
+      expect(new Set(drawn.map((row) => row.slotOffset)).size, 'the icons do not line up').toBe(1);
+
+      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      await waitForRail('< 100', 'the rail to collapse');
+      const squeezed = await geometry();
+      expect(new Set(squeezed.map((row) => row.height)).size).toBe(1);
+      // The property this phase adds: the icon rail is the *same* rows with the labels taken away,
+      // so collapsing the navigation narrows it without re-flowing it vertically.
+      expect(squeezed[0]?.slot).toBe(drawn[0]?.slot);
+      expect(squeezed[0]?.height, 'the icon rail is a different row height').toBe(drawn[0]?.height);
+
+      await expandRail();
+    }, 60_000);
   });
 });

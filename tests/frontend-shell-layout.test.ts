@@ -182,7 +182,11 @@ describe('the four widths the shell must survive', () => {
     // The rail is the same navigation at every width, so an item can still be named once its label
     // is gone, and the grouped headings become dividers rather than disappearing without a trace.
     expect(sidebar).toMatch(/'aria-label': msg\(section\.labelKey\)/);
-    expect(sidebar).toMatch(/<Tooltip content=\{msg\(section\.labelKey\)\} side=\{railSide\}>/);
+    // The tooltip stands in for the label *and* says what the destination holds. Until Phase 8.2.2
+    // it repeated the label alone, which told a reader hovering an icon nothing they could not
+    // already guess from it.
+    expect(sidebar).toMatch(/<Tooltip content=\{entryTooltip\(section\)\} side=\{railSide\}>/);
+    expect(sidebar).toMatch(/msg\(section\.descriptionKey\)/);
     // The collapse control is rendered only where the rail can be collapsed — never on a tablet,
     // where it is already an icon rail, and never on a phone, where there is no rail.
     expect(sidebar).toMatch(/canCollapse \?/);

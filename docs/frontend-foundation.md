@@ -147,8 +147,11 @@ rail, an off-canvas drawer on a phone) in [application-shell.md](./application-s
 reader was on, the rail's standing choice, and one report behind every screen's view of the host — in
 section 7 of the same document and `tests/frontend-shell-state.test.ts`. Phase 8.2.1 then states the
 navigation itself — one derived model in display order, drawn by one entry component shared by the rail
-and the drawer — in section 8 and `tests/frontend-navigation.test.ts`. **No region was restructured to
-write any of them, and no destination was added, removed or renamed.**
+and the drawer — in section 8 and `tests/frontend-navigation.test.ts`. Phase 8.2.2 then refines that
+navigation's UX and semantics in section 9 of the same document: an entry is one box at both rail
+widths, carries a language-independent identifier and a name for assistive technology, and its
+tooltip says what it opens exactly where its label is gone. **No region was restructured to write any
+of them, and no destination was added, removed or renamed.**
 
 ## 4. Prototype pages (mock data only)
 

@@ -238,6 +238,15 @@ export interface PageSession {
   selectTab(index: number, where?: string): Promise<void>;
   /** Press a real key, so `:focus-visible` and default actions behave as they do for a user. */
   pressKey(key: 'Tab' | 'Enter' | 'Escape' | 'Shift+Tab'): Promise<void>;
+  /**
+   * Move the pointer onto the centre of an element, the way a user reaches a hover state.
+   *
+   * A tooltip is a *pointer* affordance, and it is the one part of the navigation a keyboard test
+   * cannot check: focusing a trigger opens Radix's tooltip, but only because focus is one of the two
+   * ways in, so a case that never moved a pointer would be verifying the fallback rather than the
+   * thing itself. Returns `false` if the selector matches nothing measurable.
+   */
+  hover(selector: string): Promise<boolean>;
   screenshot(): Promise<string>;
   /** Console errors and uncaught exceptions seen since the last `clearDiagnostics`. */
   readonly diagnostics: readonly string[];
@@ -525,6 +534,42 @@ export async function openSession(executablePath: string): Promise<PageSession> 
           ? `tab ${index} to be selected`
           : `tab ${index} of ${where} to be selected`,
       );
+    },
+
+    async hover(selector) {
+      // Where the pointer was, so a move can be a *move*. Chrome works out the boundary events — the
+      // `pointerleave` on the element being left — from the previous position, so a single jump
+      // straight onto the next element can arrive without ever telling the last one it was left: a
+      // tooltip then sits open over an entry the pointer has already gone. A hand travels, so this
+      // does too, by way of the top edge, which no entry and no tooltip occupies.
+      const measured = await evaluate<unknown>(
+        `JSON.stringify(
+           (() => {
+             const element = document.querySelector(${JSON.stringify(selector)});
+             if (!element) return null;
+             const rect = element.getBoundingClientRect();
+             if (rect.width < 1 || rect.height < 1) return null;
+             return {
+               x: Math.round(rect.left + rect.width / 2),
+               y: Math.round(rect.top + rect.height / 2),
+             };
+           })(),
+         )`,
+      );
+      if (typeof measured !== 'string') return false;
+      const point = JSON.parse(measured) as { x: number; y: number } | null;
+      if (!point) return false;
+
+      for (const leg of [{ x: point.x, y: 2 }, point]) {
+        await send('Input.dispatchMouseEvent', {
+          type: 'mouseMoved',
+          x: leg.x,
+          y: leg.y,
+          buttons: 0,
+          pointerType: 'mouse',
+        });
+      }
+      return true;
     },
 
     async pressKey(key) {
