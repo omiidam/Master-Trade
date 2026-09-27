@@ -532,9 +532,18 @@ export async function openSession(executablePath: string): Promise<PageSession> 
       // exists so a keyboard navigation check is a real key event rather than a
       // synthetic `.focus()`, which would not trigger `:focus-visible` and would
       // therefore "verify" a focus ring that a keyboard user never gets.
-      const KEYS: Record<string, { key: string; code: string; vk: number; shift?: boolean }> = {
+      //
+      // `text` marks a key that carries a character, and it is not decoration: a bare
+      // `rawKeyDown` moves the focus (Tab traversal happens on keydown) but activates nothing,
+      // because a button's Enter is acted on from the `keypress` that follows. Dispatching an
+      // Enter with no character would make "the entry can be activated from the keyboard" a claim
+      // this driver cannot test — it would pass by doing nothing at all.
+      const KEYS: Record<
+        string,
+        { key: string; code: string; vk: number; shift?: boolean; text?: string }
+      > = {
         Tab: { key: 'Tab', code: 'Tab', vk: 9 },
-        Enter: { key: 'Enter', code: 'Enter', vk: 13 },
+        Enter: { key: 'Enter', code: 'Enter', vk: 13, text: '\r' },
         Escape: { key: 'Escape', code: 'Escape', vk: 27 },
         'Shift+Tab': { key: 'Tab', code: 'Tab', vk: 9, shift: true },
       };
@@ -548,7 +557,11 @@ export async function openSession(executablePath: string): Promise<PageSession> 
         nativeVirtualKeyCode: spec.vk,
         modifiers: spec.shift ? 8 : 0,
       };
-      await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...event });
+      await send('Input.dispatchKeyEvent', {
+        type: spec.text === undefined ? 'rawKeyDown' : 'keyDown',
+        ...event,
+        ...(spec.text === undefined ? {} : { text: spec.text, unmodifiedText: spec.text }),
+      });
       await send('Input.dispatchKeyEvent', { type: 'keyUp', ...event });
     },
 

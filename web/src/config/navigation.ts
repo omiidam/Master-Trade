@@ -179,6 +179,35 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   },
 ];
 
+/**
+ * One section of the navigation as it is drawn: a declared group and the entries that belong to it.
+ */
+export interface NavGroupModel {
+  readonly id: NavGroupId;
+  readonly labelKey: MessageKey;
+  readonly items: readonly NavSection[];
+}
+
+/**
+ * The navigation in *display* order — the groups above, each carrying its own entries.
+ *
+ * This is the one place that decides which entries sit under which heading and in what order the
+ * headings themselves appear, and every surface that draws the navigation renders this rather than
+ * filtering `NAV_SECTIONS` for itself. It also keeps the two orders that legitimately differ from
+ * colliding: `NAV_SECTIONS` is held to product-page order (`NAV_SECTIONS.map(id) === APP_PAGE_IDS`,
+ * asserted in `tests/frontend-shell.test.ts`), which is why `lab` is declared after `exams` and
+ * still belongs to the workspace group — the declaration order is the product's, and this is the
+ * reader's.
+ *
+ * Stable identity, computed once: it is derived from two frozen declarations, so drawing it does
+ * not allocate a new tree on every render.
+ */
+export const NAV_MODEL: readonly NavGroupModel[] = NAV_GROUPS.map((group) => ({
+  id: group.id,
+  labelKey: group.labelKey,
+  items: NAV_SECTIONS.filter((section) => section.group === group.id),
+}));
+
 export function findNavSection(id: AppPageId): NavSection {
   const section = NAV_SECTIONS.find((item) => item.id === id);
   if (!section) throw new Error(`Unknown navigation section: ${id}`);

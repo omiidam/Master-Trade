@@ -38,7 +38,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { NAV_SECTIONS } from '../../web/src/config/navigation.js';
+import { NAV_MODEL, NAV_SECTIONS } from '../../web/src/config/navigation.js';
 import { translate, type MessageKey, type UiLocale } from '../../web/src/i18n/index.js';
 import { LANGUAGE_PREFERENCE_KEY, normalizePersianContent } from '../../web/src/language/index.js';
 import {
@@ -142,6 +142,25 @@ function headingFor(locale: UiLocale, id: string): string {
   const key = (HEADING_KEYS as Record<string, MessageKey>)[id];
   if (!key) throw new Error(`no heading key recorded for ${id}`);
   return translate(locale, key);
+}
+
+/**
+ * Every navigation entry, named in the language the interface is being read in, in display order.
+ *
+ * Read from `NAV_MODEL` — the same value the rail draws — rather than from `NAV_SECTIONS` plus a
+ * group tuple written here. Declaring order and display order legitimately differ (Phase 8.2.1), and
+ * a second derivation of "which order that is" is a second answer: it would agree with the config
+ * while the config was right and quietly disagree with it after.
+ */
+function expectedEntries(locale: UiLocale = 'en'): string[] {
+  return NAV_MODEL.flatMap((group) => group.items.map((item) => translate(locale, item.labelKey)));
+}
+
+/** The navigation entry that shows this name, so a case can turn a label back into a page id. */
+function entryIdFor(label: string, locale: UiLocale = 'en'): string {
+  const item = NAV_SECTIONS.find((section) => translate(locale, section.labelKey) === label);
+  if (!item) throw new Error(`no navigation entry is named ${label}`);
+  return item.id;
 }
 
 /** The assets the browser identities in `index.html` depend on. */
@@ -433,15 +452,12 @@ suite('the Product Foundation in a real browser', () => {
          ))`,
       );
 
-      // Rendered order is by group, not declaration order — `NAV_SECTIONS` lists the
-      // product's page order so the two stay independent, and the assertion has to
-      // respect that rather than quietly requiring the file to be sorted for display.
-      const grouped = (['workspace', 'learning', 'system'] as const).flatMap((group) =>
-        NAV_SECTIONS.filter((section) => section.group === group).map((section) =>
-          translate('en', section.labelKey),
-        ),
-      );
-      expect(entries).toEqual(grouped);
+      // Rendered order is the *display* order, not the declaration order — `NAV_SECTIONS` lists the
+      // product's page order so the two stay independent, and the assertion has to respect that
+      // rather than quietly requiring the file to be sorted for display. Both the rail and this
+      // expectation read `NAV_MODEL` (Phase 8.2.1), so there is one statement of that order rather
+      // than a second derivation here that could agree with the config by accident.
+      expect(entries).toEqual(expectedEntries());
     });
 
     it('groups the navigation as the product intends', async () => {
@@ -2962,6 +2978,224 @@ suite('the Product Foundation in a real browser', () => {
       `);
       expect(words).toContain(chip.replace('Event stream: ', ''));
       expect(chip).not.toBe('Event stream: Live');
+    }, 60_000);
+  });
+
+  /* ---------------------------------------------------------------------- */
+  /* F. The navigation foundation — Phase 8.2.1                              */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * The same navigation, at every width, in both directions, reachable by keyboard.
+   *
+   * Phase 8.2.1 adds no entry and no page: it moves *where* the navigation is stated — one derived
+   * model (`NAV_MODEL`) drawn by one entry component — and what is measured here is the property that
+   * move was for. The rail, the icon rail and the phone drawer are one list rather than three that
+   * happen to look alike; a keyboard user reaches an entry, sees where the focus is, and switches page
+   * with the entry's own activation; and a collapsed rail stays a navigation rather than becoming a
+   * row of unlabelled squares.
+   */
+  describe('the navigation foundation', () => {
+    const RAIL_ENTRIES = 'aside nav button';
+    const DRAWER_ENTRIES = '[role="dialog"] nav button';
+
+    /** The names a navigation surface draws, in the order it draws them. */
+    const entriesIn = (scope: string): Promise<string[]> =>
+      session.evaluateJson<string[]>(
+        `JSON.stringify(
+           [...document.querySelectorAll(${JSON.stringify(scope)})].map(
+             (item) => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim(),
+           ),
+         )`,
+      );
+
+    /** Press a control inside the rail by its accessible name. */
+    const pressInRail = (label: string): Promise<boolean> =>
+      session.evaluate<boolean>(
+        `(() => {
+           const button = [...document.querySelectorAll('aside button')].find(
+             (item) => item.getAttribute('aria-label') === ${JSON.stringify(label)},
+           );
+           if (!button) return false;
+           button.click();
+           return true;
+         })()`,
+      );
+
+    /** The rail's rendered width, which is what the collapse control is really about. */
+    const railWidth = (): Promise<number> =>
+      session.evaluate<number>(
+        `Math.round(document.querySelector('aside').getBoundingClientRect().width)`,
+      );
+
+    /** Where the navigation's own box sits, so a page switch can be shown not to move it. */
+    const navBox = (): Promise<{ left: number; width: number }> =>
+      session.evaluateJson<{ left: number; width: number }>(
+        `JSON.stringify(
+           (() => {
+             const box = document.querySelector('aside nav').getBoundingClientRect();
+             return { left: Math.round(box.left), width: Math.round(box.width) };
+           })(),
+         )`,
+      );
+
+    it('draws the declared entries, in the declared order, on the rail and in the phone drawer', async () => {
+      const expected = expectedEntries();
+
+      // A desktop, where the rail is the reader's to expand.
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      expect(await entriesIn(RAIL_ENTRIES)).toEqual(expected);
+
+      // A tablet, where the same rail is icons only: every entry keeps the name it was given, which
+      // is the whole point of naming it once the label goes.
+      await session.setViewport(1024, 768);
+      await startIn(null);
+      expect(await entriesIn(RAIL_ENTRIES)).toEqual(expected);
+
+      // A phone, where the navigation is out of the flow until it is asked for.
+      await session.setViewport(390, 844);
+      await startIn(null);
+      expect(
+        await session.evaluate<boolean>(
+          `(() => {
+             const trigger = document.querySelector('[aria-controls="shell-navigation"]');
+             if (!trigger) return false;
+             trigger.click();
+             return true;
+           })()`,
+        ),
+      ).toBe(true);
+      await session.waitFor(
+        `!!document.querySelector('[role="dialog"] nav')`,
+        'the off-canvas navigation to open',
+      );
+      expect(await entriesIn(DRAWER_ENTRIES)).toEqual(expected);
+
+      await startIn(null);
+    }, 60_000);
+
+    it('names the same entries, in the same order, in a right-to-left interface', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+      expect(await session.evaluate<string>('document.documentElement.dir')).toBe('rtl');
+
+      // The mirror moves the rail to the other edge and mirrors the glyphs inside it. It does not
+      // reorder the navigation: that is a list of destinations, not a direction of travel.
+      expect(await entriesIn(RAIL_ENTRIES)).toEqual(expectedEntries('fa'));
+
+      // ...and the rail is still the *inline-start* one, which is the side the mirror moved it to.
+      expect(
+        await session.evaluate<boolean>(
+          `(() => {
+             const rail = document.querySelector('aside');
+             const main = document.querySelector('main');
+             return (
+               !!rail &&
+               !!main &&
+               rail.getBoundingClientRect().left > main.getBoundingClientRect().left
+             );
+           })()`,
+        ),
+      ).toBe(true);
+
+      await startIn(null);
+    }, 60_000);
+
+    it('is reached and activated with the keyboard, and shows where the focus is', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      // A page that is not the first entry, so activating the first entry is a *change*.
+      await visit('portfolio');
+
+      // Walk in with real key presses, which is what makes `:focus-visible` match — a programmatic
+      // `.focus()` would verify a ring the keyboard user never gets.
+      let entry: { label: string; outline: string; width: string } | null = null;
+      for (let presses = 0; presses < 24 && entry === null; presses += 1) {
+        await session.pressKey('Tab');
+        entry = await session.evaluateJson<{
+          label: string;
+          outline: string;
+          width: string;
+        } | null>(
+          `JSON.stringify(
+             (() => {
+               const element = document.activeElement;
+               if (!element || !element.closest('aside nav')) return null;
+               const style = getComputedStyle(element);
+               return {
+                 label: (element.getAttribute('aria-label') ?? element.textContent ?? '').trim(),
+                 outline: style.outlineStyle,
+                 width: style.outlineWidth,
+               };
+             })(),
+           )`,
+        );
+      }
+
+      expect(entry, 'pressing Tab never reached a navigation entry').not.toBeNull();
+      // The ring is painted on the entry, so the keyboard user can see where they are.
+      expect(entry?.outline).not.toBe('none');
+      expect(Number.parseFloat(entry?.width ?? '0')).toBeGreaterThan(0);
+
+      const chosen = entryIdFor(entry?.label ?? '');
+      expect(chosen, 'the keyboard landed on the entry the page was already on').not.toBe(
+        'portfolio',
+      );
+
+      await session.pressKey('Enter');
+      await session.waitFor(
+        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', chosen))}`,
+        `the ${chosen} page to be rendered from the keyboard`,
+      );
+      // The entry says it is current, and it is the entry that was activated.
+      expect(
+        await session.evaluate<string>(
+          `(document.querySelector('aside nav button[aria-current="page"]')?.getAttribute('aria-label') ??
+             document.querySelector('aside nav button[aria-current="page"]')?.textContent ??
+             '').trim()`,
+        ),
+      ).toBe(entry?.label);
+    }, 60_000);
+
+    it('stays a navigation while it is collapsed, and does not move when a page changes', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await visit('portfolio');
+
+      const expanded = await railWidth();
+      expect(await pressInRail('Collapse sidebar')).toBe(true);
+      await session.waitFor(
+        `document.querySelector('aside').getBoundingClientRect().width < 100`,
+        'the rail to collapse',
+      );
+
+      const before = await navBox();
+      // Icons only, so the entry is found by the name it kept rather than by a label it no longer
+      // draws — which is the failure a collapsed rail is prone to.
+      await visit('profile');
+      const profile = translate('en', 'shell.nav.profile.label' as MessageKey);
+      expect(
+        await session.evaluate<string>(
+          `document.querySelector('aside nav button[aria-current="page"]')?.getAttribute('aria-label') ?? ''`,
+        ),
+      ).toBe(profile);
+      // Nothing moved: the rail is the same box in the same place, so switching page inside it is not
+      // a layout shift.
+      expect(await navBox()).toEqual(before);
+
+      // ...and expanding it again brings the labels back, with the current entry still the current one.
+      expect(await pressInRail('Expand sidebar')).toBe(true);
+      await session.waitFor(
+        `document.querySelector('aside').getBoundingClientRect().width > 200`,
+        'the rail to expand again',
+      );
+      expect(await railWidth()).toBe(expanded);
+      expect(
+        await session.evaluate<string>(
+          `document.querySelector('aside nav button[aria-current="page"]')?.textContent?.trim() ?? ''`,
+        ),
+      ).toBe(profile);
     }, 60_000);
   });
 });

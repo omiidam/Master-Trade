@@ -145,8 +145,10 @@ must survive and the Persian mirror — and Phase 8.1.2 states its _behaviour_ p
 rail, an off-canvas drawer on a phone) in [application-shell.md](./application-shell.md) and
 `tests/frontend-shell-layout.test.ts`. Phase 8.1.3 then states what the shell _remembers_ — the page a
 reader was on, the rail's standing choice, and one report behind every screen's view of the host — in
-section 7 of the same document and `tests/frontend-shell-state.test.ts`. **No region was restructured
-to write any of the three.**
+section 7 of the same document and `tests/frontend-shell-state.test.ts`. Phase 8.2.1 then states the
+navigation itself — one derived model in display order, drawn by one entry component shared by the rail
+and the drawer — in section 8 and `tests/frontend-navigation.test.ts`. **No region was restructured to
+write any of them, and no destination was added, removed or renamed.**
 
 ## 4. Prototype pages (mock data only)
 

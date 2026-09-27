@@ -18,8 +18,8 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { NAV_GROUPS, NAV_SECTIONS, navAriaLabel } from '../config/navigation';
-import type { NavIconName } from '../config/navigation';
+import { NAV_MODEL, navAriaLabel } from '../config/navigation';
+import type { NavGroupModel, NavIconName, NavSection } from '../config/navigation';
 import { Badge } from '../components/Badge';
 import { BrandLockup } from '../components/brand';
 import { PanelStartIcon } from '../components/Directional';
@@ -55,11 +55,123 @@ const ICONS: Record<NavIconName, ReactNode> = {
 type RailSide = 'left' | 'right';
 
 /**
- * The navigation groups — one list, rendered in two places.
+ * One navigation entry — the rail's and the drawer's, in one place.
+ *
+ * There is exactly one of these, and that is the point: a destination is drawn once, so the rail and
+ * the off-canvas drawer cannot drift apart in where they point or in how they say they are current.
+ * `collapsed` is the only thing that differs between them — a label-less entry keeps its accessible
+ * name, gains the tooltip that stands in for the label it lost, and centres its icon; everything
+ * else about it is the same control.
+ *
+ * It is a real `<button>` rather than a link, and deliberately: the workspace has no router and no
+ * address for a page, so a link would promise a URL, a new tab and a middle-click target that do not
+ * exist. A button is what is actually there — reachable by Tab, activated by Enter or Space, and
+ * named for a screen reader. `aria-current` is the one thing this control has to *know* (rather than
+ * inherit from where it sits), which is why it is derived here from the store's page: the entry and
+ * the workspace read the same field, so the rail cannot announce a page the workspace is not showing.
+ */
+function NavItem({
+  section,
+  collapsed,
+  railSide,
+}: {
+  section: NavSection;
+  collapsed: boolean;
+  railSide: RailSide;
+}) {
+  const page = useUiStore((state) => state.page);
+  const setPage = useUiStore((state) => state.setPage);
+  const active = page === section.id;
+
+  const button = (
+    <button
+      type="button"
+      onClick={() => setPage(section.id)}
+      aria-current={active ? 'page' : undefined}
+      {...(collapsed ? { 'aria-label': msg(section.labelKey) } : {})}
+      className={cn(
+        'group flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 py-2',
+        'text-start text-body transition-colors duration-[var(--duration-fast)]',
+        active
+          ? 'bg-surface-raised text-text shadow-panel'
+          : 'text-text-muted hover:bg-surface-raised/60 hover:text-text',
+        collapsed && 'justify-center px-0',
+      )}
+    >
+      <span
+        className={cn(
+          'shrink-0',
+          active ? 'text-primary' : 'text-text-faint group-hover:text-text-muted',
+        )}
+      >
+        {ICONS[section.icon]}
+      </span>
+      {collapsed ? null : <span className="truncate">{msg(section.labelKey)}</span>}
+      {collapsed || !active ? null : (
+        <span aria-hidden className="ms-auto h-1.5 w-1.5 rounded-full bg-primary" />
+      )}
+    </button>
+  );
+
+  return (
+    <li>
+      {collapsed ? (
+        <Tooltip content={msg(section.labelKey)} side={railSide}>
+          {button}
+        </Tooltip>
+      ) : (
+        button
+      )}
+    </li>
+  );
+}
+
+/**
+ * One group of entries, under the heading the rail has room for when it is expanded.
+ *
+ * Collapsed, the heading has no room to be read, so it becomes a rule instead of vanishing: the
+ * grouping is still drawn, and it is still the same grouping. A group that declares no entries draws
+ * nothing at all — one line of defence against a heading over empty space.
+ */
+function NavGroup({
+  group,
+  collapsed,
+  railSide,
+}: {
+  group: NavGroupModel;
+  collapsed: boolean;
+  railSide: RailSide;
+}) {
+  if (group.items.length === 0) return null;
+
+  return (
+    <div className="mb-3">
+      {collapsed ? (
+        <div aria-hidden className="mx-2 my-2 border-t border-border" />
+      ) : (
+        <p className="px-2 py-1.5 text-caption font-semibold tracking-wide text-text-faint uppercase">
+          {msg(group.labelKey)}
+        </p>
+      )}
+      <ul className="space-y-0.5">
+        {group.items.map((section) => (
+          <NavItem key={section.id} section={section} collapsed={collapsed} railSide={railSide} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * The navigation — one list, rendered in two places.
  *
  * The rail and the off-canvas drawer are the same navigation, so they share this rather than each
  * keeping a copy that can drift. `collapsed` is the only difference: the rail hides labels and the
  * drawer never does.
+ *
+ * It draws `NAV_MODEL`, so which entry belongs under which heading — and the order the headings
+ * themselves appear in — is decided in the configuration, not here. This component's whole job is
+ * the landmark and the spacing.
  */
 function SidebarNav({
   collapsed,
@@ -70,75 +182,15 @@ function SidebarNav({
   railSide: RailSide;
   id?: string;
 }) {
-  const page = useUiStore((state) => state.page);
-  const setPage = useUiStore((state) => state.setPage);
-
   return (
     <nav
       aria-label={navAriaLabel()}
       {...(id ? { id } : {})}
       className="flex-1 overflow-y-auto px-2 pb-4"
     >
-      {NAV_GROUPS.map((group) => {
-        const items = NAV_SECTIONS.filter((section) => section.group === group.id);
-        if (items.length === 0) return null;
-        return (
-          <div key={group.id} className="mb-3">
-            {collapsed ? (
-              <div aria-hidden className="mx-2 my-2 border-t border-border" />
-            ) : (
-              <p className="px-2 py-1.5 text-caption font-semibold tracking-wide text-text-faint uppercase">
-                {msg(group.labelKey)}
-              </p>
-            )}
-            <ul className="space-y-0.5">
-              {items.map((section) => {
-                const active = page === section.id;
-                const button = (
-                  <button
-                    type="button"
-                    onClick={() => setPage(section.id)}
-                    aria-current={active ? 'page' : undefined}
-                    {...(collapsed ? { 'aria-label': msg(section.labelKey) } : {})}
-                    className={cn(
-                      'group flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 py-2',
-                      'text-start text-body transition-colors duration-[var(--duration-fast)]',
-                      active
-                        ? 'bg-surface-raised text-text shadow-panel'
-                        : 'text-text-muted hover:bg-surface-raised/60 hover:text-text',
-                      collapsed && 'justify-center px-0',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'shrink-0',
-                        active ? 'text-primary' : 'text-text-faint group-hover:text-text-muted',
-                      )}
-                    >
-                      {ICONS[section.icon]}
-                    </span>
-                    {collapsed ? null : <span className="truncate">{msg(section.labelKey)}</span>}
-                    {collapsed || !active ? null : (
-                      <span aria-hidden className="ms-auto h-1.5 w-1.5 rounded-full bg-primary" />
-                    )}
-                  </button>
-                );
-                return (
-                  <li key={section.id}>
-                    {collapsed ? (
-                      <Tooltip content={msg(section.labelKey)} side={railSide}>
-                        {button}
-                      </Tooltip>
-                    ) : (
-                      button
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        );
-      })}
+      {NAV_MODEL.map((group) => (
+        <NavGroup key={group.id} group={group} collapsed={collapsed} railSide={railSide} />
+      ))}
     </nav>
   );
 }

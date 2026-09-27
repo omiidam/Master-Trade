@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 and 8.1.2
+# Application Shell — Phases 7.1.1 through 8.2.1
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -261,3 +261,91 @@ frame.
 The suite's own boundary is unchanged: the model and the contracts run offline in `tests/`, and the
 half only a browser can answer — that a reader really does land back on the tab they chose, and that the
 rail really is still collapsed after a reload — is measured in `tests/browser/e2e.test.ts`.
+
+## 8. Phase 8.2.1 — the navigation foundation
+
+Phase 8.1.2 stated how the navigation **behaves** at each width and Phase 8.1.3 what the shell
+**remembers**. This phase adds no entry, removes none and renames none: the workspace's fourteen
+destinations shipped across Phases 3–7, and they are the ones this file's § 1–7 already describe —
+_Dashboard_, _AI Workspace_, _Memory_, _Research_, _Journal_, _Portfolio_, _Evaluation_,
+_Trading Lab_, _Academy_, _Exams_, _Activity_, _Usage_, _Profile_, _Settings_. Portfolio and
+Evaluation stay two entries, and no performance summary becomes a fifteenth.
+
+What was added is the _statement_ of that list: one derived model, drawn by one entry component.
+
+### 8.1 One model, in display order
+
+`NAV_MODEL` (`web/src/config/navigation.ts`) is the navigation in **display** order — the declared
+groups (workspace, learning, system), each carrying its own entries. Three orders are in play and only
+two of them are the same:
+
+- **declaration order** — `NAV_SECTIONS`, held to `APP_PAGE_IDS` by `tests/frontend-shell.test.ts`,
+  which is why `lab` is declared after `exams`;
+- **display order** — `NAV_MODEL`, which is what the rail and the drawer actually draw;
+- **group order** — `NAV_GROUPS`.
+
+Before this phase the rail performed the grouping itself (`NAV_SECTIONS.filter(...)` inside a render
+loop) and the browser suite re-derived the same order a second time from a hard-coded tuple, so
+"which order is the navigation in" had three answers that agreed by maintenance. Now the model is
+derived from the two declarations and _keeps their objects_ — it filters, it does not copy — so a
+label changed in one place cannot go stale in another, and the rail, the drawer and both suites read
+the one value.
+
+### 8.2 One entry, one component
+
+`Sidebar.tsx` now declares three things instead of one monolith: `SidebarNav` (the landmark, drawn
+from `NAV_MODEL`), `NavGroup` (a heading, or a rule when the rail is collapsed, over its entries) and
+`NavItem` (an entry). The rail and the off-canvas drawer are two call sites of the same component, so
+they cannot drift in where they point or in how they say they are current.
+
+Two decisions were made explicit rather than left implied:
+
+- **An entry is a `<button>`, not a link.** There is no router and no address for a page, so a link
+  would promise a URL, a new tab and a middle-click target that do not exist. A button is what is
+  actually there: reachable by Tab, activated by Enter, named for a screen reader.
+- **The active entry is derived, never passed in.** `NavItem` reads the page from the same store the
+  workspace reads, so the rail cannot announce a page the workspace is not showing — and there is no
+  `active` prop for a caller to get wrong. Collapsed, the entry keeps the name it would otherwise
+  draw: `aria-label` plus the tooltip that replaces the label.
+
+Every page keeps its one frame (`Workspace`), which is where the consistent content width and rhythm
+come from; nothing in this phase touched it, and no page content was redesigned.
+
+### 8.3 What was adopted from the references, and what was not
+
+The two reference dashboards (`arhamkhnz/next-shadcn-admin-dashboard`, `nellavio/nellavio-layout`)
+keep navigation as configuration, render one reusable item per destination, derive the active entry
+from the current location, and switch the _presentation_ by width. § 6 adopted the last of those;
+this phase adopts the first three. Their visual identity, their component library and their state
+library are still not adopted, and neither is their router: a page here is a store field, not an
+address, which is the decision § 7 left open and this phase did not change.
+
+### 8.4 A defect the new case found in the harness
+
+The keyboard case is the first in the suite to activate a control with Enter, and it failed: the
+driver's `Enter` was inert. A button acts on Enter from the `keypress` that follows the keydown, and
+`pressKey` dispatched a bare `rawKeyDown` — enough for Tab (focus traversal happens on keydown),
+and nothing at all for Enter. The driver now marks Enter as a key that carries a character, so the
+keypress is dispatched and the entry really is activated. Left alone, "the navigation is reachable
+and activatable from the keyboard" would have been a claim that passed by doing nothing.
+
+### 8.5 What was verified
+
+| Check                                                    | Where                                  | Result |
+| -------------------------------------------------------- | -------------------------------------- | ------ |
+| The fourteen entries, in the product's order             | `tests/frontend-navigation.test.ts`    | 6/6    |
+| The model is a view over the declarations, not a copy    | `tests/frontend-navigation.test.ts`    | pass   |
+| One entry component, two surfaces, no second filter      | `tests/frontend-navigation.test.ts`    | pass   |
+| The entry is a Tab-reachable control that keeps its ring | `tests/frontend-navigation.test.ts`    | pass   |
+| Same entries and order on the rail, the tablet and phone | `tests/browser/e2e.test.ts`            | pass   |
+| The same order in Persian, rail still on the start edge  | `tests/browser/e2e.test.ts`            | pass   |
+| Reached and activated by keyboard, with a visible ring   | `tests/browser/e2e.test.ts`            | pass   |
+| Nav keeps working collapsed, and does not shift the page | `tests/browser/e2e.test.ts`            | pass   |
+| No overflow, clipping or layout shift (regression)       | `tests/browser/e2e.test.ts`            | pass   |
+| Shell contract and the whole tree (regression)           | `frontend-shell` / `rtl-layout` / etc. | pass   |
+| Types, formatting and build                              | `typecheck`, `typecheck:web`, build    | pass   |
+
+The distribution is deliberate: the model, the grouping and the shape of the entry run offline in
+`tests/frontend-navigation.test.ts`, and the half only a layout engine can answer — the entries a real
+browser draws in what order at which width, and whether a keyboard can reach and activate them — is
+measured in `tests/browser/e2e.test.ts` under `the navigation foundation`.
