@@ -1,0 +1,813 @@
+{
+  "$comment": "The Phase 7 Persian language level assessment, recorded. Every number here is asserted against an actual run of tests/persian-assessment by assessment.test.ts, so this file cannot drift from the battery it describes. It is a diagnostic checkpoint — a baseline, not a maximum — and it does not claim the Agent’s Persian is correct. Scoring: each case is worth one point; a dimension scores round(100 * points / max); the overall score is round(100 * totalPoints / totalMax).",
+  "version": 1,
+  "assessment": "Phase 7 Persian language level assessment",
+  "assessedCommit": "edf79d48d2a9b1371e1285b182b5f27c29b57573",
+  "timestamp": "2026-09-27T10:00:00.000Z",
+  "layer": "web/src/language (the exported Agent language interface)",
+  "harness": "tests/persian-assessment (harness.ts, cases-a.ts, cases-b.ts, cases-c.ts)",
+  "isMaximum": false,
+  "methodology": {
+    "reference": "ParsBench (mo-ghafari/ParsBench) and persian-llm-eval v1.1 — used as methodological reference only; no restricted or hidden benchmark data is copied or vendored.",
+    "scoring": "Objective cases pass/fail; rubric cases 0 / 0.5 / 1 against printed criteria. Passed = full marks, partial = strictly between, failed = zero.",
+    "scope": "The deterministic Agent language interface (web/src/language). The battery drives the real exported functions; there is no live model, no network and no clock."
+  },
+  "overall": 95,
+  "totals": {
+    "samples": 86,
+    "passed": 82,
+    "partial": 0,
+    "failed": 4,
+    "points": 82,
+    "max": 86
+  },
+  "fingerprint": "FA-001=1|FA-002=1|FA-003=1|FA-004=1|FA-005=1|FA-006=1|FA-007=1|FA-008=1|FA-009=1|FA-010=1|FA-011=1|FA-012=1|FA-013=1|FA-014=1|FA-015=1|FA-016=1|FA-017=1|FA-018=1|FA-019=1|FA-020=1|FA-021=1|FA-022=0|FA-023=1|FA-024=1|FA-025=1|FA-026=1|FA-027=1|FA-028=1|FA-029=1|FA-030=1|FA-031=1|FA-032=1|FA-033=1|FA-034=1|FA-035=1|FA-036=0|FA-037=1|FA-038=1|FA-039=1|FA-040=1|FA-041=1|FA-042=1|FA-043=1|FA-044=1|FA-045=1|FA-046=1|FA-047=1|FA-048=1|FA-049=1|FA-050=1|FA-051=1|FA-052=1|FA-053=1|FA-054=0|FA-055=0|FA-056=1|FA-057=1|FA-058=1|FA-059=1|FA-060=1|FA-061=1|FA-062=1|FA-063=1|FA-064=1|FA-065=1|FA-066=1|FA-067=1|FA-068=1|FA-069=1|FA-070=1|FA-071=1|FA-072=1|FA-073=1|FA-074=1|FA-075=1|FA-076=1|FA-077=1|FA-078=1|FA-079=1|FA-080=1|FA-081=1|FA-082=1|FA-083=1|FA-084=1|FA-085=1|FA-086=1",
+  "dimensions": [
+    {
+      "id": "normalization-orthography",
+      "index": 1,
+      "title": "Persian normalization & orthography",
+      "basis": "Unicode Arabic block (U+0600 chart) and Extended Arabic-Indic digits; ParsBench-style normalization track as methodological reference.",
+      "samples": 7,
+      "passed": 7,
+      "partial": 0,
+      "failed": 0,
+      "points": 7,
+      "max": 7,
+      "score": 100
+    },
+    {
+      "id": "spelling-punctuation",
+      "index": 2,
+      "title": "Spelling and punctuation",
+      "basis": "The product spelling catalogue (`spelling.ts`), whose compound pairs are reviewed knowledge; persian-llm-eval-style spelling track as methodological reference.",
+      "samples": 7,
+      "passed": 7,
+      "partial": 0,
+      "failed": 0,
+      "points": 7,
+      "max": 7,
+      "score": 100
+    },
+    {
+      "id": "grammar-structure",
+      "index": 3,
+      "title": "Grammar and sentence structure",
+      "basis": "The product grammar catalogue (`grammar.ts`): agreement, ezafe, the object marker, mixed-script sentence structure.",
+      "samples": 8,
+      "passed": 7,
+      "partial": 0,
+      "failed": 1,
+      "points": 7,
+      "max": 8,
+      "score": 88
+    },
+    {
+      "id": "natural-persian",
+      "index": 4,
+      "title": "Natural Iranian Persian",
+      "basis": "The product naturalness reader (`naturalness.ts`) over the quality reader (`evaluation.ts`), judged at a resolved tone/terminology/mixing context.",
+      "samples": 7,
+      "passed": 7,
+      "partial": 0,
+      "failed": 0,
+      "points": 7,
+      "max": 7,
+      "score": 100
+    },
+    {
+      "id": "reading-comprehension",
+      "index": 5,
+      "title": "Reading comprehension",
+      "basis": "The product census + lexicon reading (`detect.ts`, `context.ts`); comprehension is a proxy, since the layer reads scripts and closed vocabulary rather than meaning.",
+      "samples": 7,
+      "passed": 6,
+      "partial": 0,
+      "failed": 1,
+      "points": 6,
+      "max": 7,
+      "score": 86
+    },
+    {
+      "id": "instruction-following",
+      "index": 6,
+      "title": "Instruction following in Persian",
+      "basis": "The explicit-request vocabulary (`detect.ts`) and the precedence rule (`profile.ts`): a request in the message, an explicit choice, learned habit, the reading.",
+      "samples": 7,
+      "passed": 7,
+      "partial": 0,
+      "failed": 0,
+      "points": 7,
+      "max": 7,
+      "score": 100
+    },
+    {
+      "id": "context-style",
+      "index": 7,
+      "title": "Context and communication style",
+      "basis": "The communication-context reader (`context.ts`): setting, formality, expertise, depth, intent and terminology mixing.",
+      "samples": 7,
+      "passed": 7,
+      "partial": 0,
+      "failed": 0,
+      "points": 7,
+      "max": 7,
+      "score": 100
+    },
+    {
+      "id": "idioms-taarof",
+      "index": 8,
+      "title": "Idioms, expressions, and taarof",
+      "basis": "The product greetings and register lists (`context.ts`, `detect.ts`). Idiom coverage is a closed-list measure, not a semantic one.",
+      "samples": 7,
+      "passed": 5,
+      "partial": 0,
+      "failed": 2,
+      "points": 5,
+      "max": 7,
+      "score": 71
+    },
+    {
+      "id": "numbers-dates-currency",
+      "index": 9,
+      "title": "Numbers, dates, currency, ZWNJ and mixed text",
+      "basis": "CLDR via `Intl` (`fa.ts`) for digits, separators, the Persian calendar and currency, plus Unicode format controls for the half-space.",
+      "samples": 8,
+      "passed": 8,
+      "partial": 0,
+      "failed": 0,
+      "points": 8,
+      "max": 8,
+      "score": 100
+    },
+    {
+      "id": "rtl-layout",
+      "index": 10,
+      "title": "RTL / text-layout-sensitive responses",
+      "basis": "Unicode UAX #9 isolates (`fa.ts`): LRI/RLI/FSI/PDI for mixed Persian + Latin runs; measured structurally, not in a rendered DOM.",
+      "samples": 7,
+      "passed": 7,
+      "partial": 0,
+      "failed": 0,
+      "points": 7,
+      "max": 7,
+      "score": 100
+    },
+    {
+      "id": "technical-terminology",
+      "index": 11,
+      "title": "Technical Persian with English terminology",
+      "basis": "The product terminology lexicon (`terminology.ts`, 57 terms) and the mixed-script grammar rule; the canonical-form invariant is Unicode.",
+      "samples": 7,
+      "passed": 7,
+      "partial": 0,
+      "failed": 0,
+      "points": 7,
+      "max": 7,
+      "score": 100
+    },
+    {
+      "id": "context-adaptation-consistency",
+      "index": 12,
+      "title": "Context-aware adaptation and language consistency",
+      "basis": "The response control join (`response.ts`) over the resolver (`profile.ts`): one resolved language per turn, consistent across stages.",
+      "samples": 7,
+      "passed": 7,
+      "partial": 0,
+      "failed": 0,
+      "points": 7,
+      "max": 7,
+      "score": 100
+    }
+  ],
+  "failures": [
+    {
+      "id": "FA-022",
+      "dimension": "grammar-structure",
+      "verdict": "fail",
+      "observed": "{\"rules\":[\"grammar.verb-number-agreement\"]}"
+    },
+    {
+      "id": "FA-036",
+      "dimension": "reading-comprehension",
+      "verdict": "fail",
+      "observed": "{\"terms\":[],\"domains\":[]}"
+    },
+    {
+      "id": "FA-054",
+      "dimension": "idioms-taarof",
+      "verdict": "fail",
+      "observed": "\"neutral\""
+    },
+    {
+      "id": "FA-055",
+      "dimension": "idioms-taarof",
+      "verdict": "fail",
+      "observed": "\"neutral\""
+    }
+  ],
+  "cases": [
+    {
+      "id": "FA-001",
+      "dimension": "normalization-orthography",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"مدیریت ریسک\""
+    },
+    {
+      "id": "FA-002",
+      "dimension": "normalization-orthography",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"مصطفی\""
+    },
+    {
+      "id": "FA-003",
+      "dimension": "normalization-orthography",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"کتاب کوچک کار\""
+    },
+    {
+      "id": "FA-004",
+      "dimension": "normalization-orthography",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"vowel\":\"مثل\",\"combining\":\"أ\"}"
+    },
+    {
+      "id": "FA-005",
+      "dimension": "normalization-orthography",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"۳۳۴۵\""
+    },
+    {
+      "id": "FA-006",
+      "dimension": "normalization-orthography",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"once\":\"قیمت XAUUSD را ۳۳۴۵.۲۰ ببین\",\"twice\":\"قیمت XAUUSD را ۳۳۴۵.۲۰ ببین\"}"
+    },
+    {
+      "id": "FA-007",
+      "dimension": "normalization-orthography",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"kept\":true,\"trimmed\":true,\"stripped\":true}"
+    },
+    {
+      "id": "FA-008",
+      "dimension": "spelling-punctuation",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"به جای این کار صبر کن\""
+    },
+    {
+      "id": "FA-009",
+      "dimension": "spelling-punctuation",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"به طور کلی صبر کن\""
+    },
+    {
+      "id": "FA-010",
+      "dimension": "spelling-punctuation",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"آن‌ها رفتند\""
+    },
+    {
+      "id": "FA-011",
+      "dimension": "spelling-punctuation",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"text\":\"هیچ کدام درست نیست\",\"skipped\":[\"spelling.compound.hich-kodam\"]}"
+    },
+    {
+      "id": "FA-012",
+      "dimension": "spelling-punctuation",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"خوب است، نه؟\""
+    },
+    {
+      "id": "FA-013",
+      "dimension": "spelling-punctuation",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"قیمت بالا رفت، سود کردیم\""
+    },
+    {
+      "id": "FA-014",
+      "dimension": "spelling-punctuation",
+      "kind": "rubric",
+      "verdict": "pass",
+      "observed": "{\"family\":\"spelling\",\"rule\":\"spelling.register\",\"ruleVersion\":1,\"key\":\"rule.spelling-register\",\"deterministic\":false,\"index\":0,\"length\":4,\"found\":\"میشه\",\"suggestion\":\"می‌شود\",\"reason\":\"`میشه` is the spoken form; written copy uses `می‌شود`.\"}"
+    },
+    {
+      "id": "FA-015",
+      "dimension": "grammar-structure",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"بازار XAUUSD را دیدم\""
+    },
+    {
+      "id": "FA-016",
+      "dimension": "grammar-structure",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"ETF‌ها را بخر\""
+    },
+    {
+      "id": "FA-017",
+      "dimension": "grammar-structure",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"family\":\"grammar\",\"rule\":\"grammar.plural-after-numeral\",\"ruleVersion\":1,\"key\":\"rule.grammar-number-agreement\",\"deterministic\":false,\"index\":0,\"length\":9,\"found\":\"۳ معاملات\",\"suggestion\":\"۳ معامله\",\"reason\":\"`معاملات` is a plural, and a numeral takes the singular `معامله`.\"}"
+    },
+    {
+      "id": "FA-018",
+      "dimension": "grammar-structure",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"family\":\"grammar\",\"rule\":\"grammar.pronoun-agreement\",\"ruleVersion\":1,\"key\":\"rule.grammar-pronoun-agreement\",\"deterministic\":false,\"index\":0,\"length\":8,\"found\":\"آنها است\",\"suggestion\":\"آنها هستند\",\"reason\":\"`آنها` is plural, so the verb is `هستند` rather than `است`.\"}"
+    },
+    {
+      "id": "FA-019",
+      "dimension": "grammar-structure",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"خانه‌ی من\""
+    },
+    {
+      "id": "FA-020",
+      "dimension": "grammar-structure",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"حرف ی\""
+    },
+    {
+      "id": "FA-021",
+      "dimension": "grammar-structure",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"family\":\"grammar\",\"rule\":\"grammar.object-marker-before-verb\",\"ruleVersion\":1,\"key\":\"rule.grammar-object-marker\",\"deterministic\":false,\"index\":11,\"length\":2,\"found\":\"را\",\"suggestion\":\"را … فعل\",\"reason\":\"The clause has no verb after its object marker; Persian ends the clause with the verb.\"}"
+    },
+    {
+      "id": "FA-022",
+      "dimension": "grammar-structure",
+      "kind": "objective",
+      "verdict": "fail",
+      "observed": "{\"rules\":[\"grammar.verb-number-agreement\"]}"
+    },
+    {
+      "id": "FA-023",
+      "dimension": "natural-persian",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "[]"
+    },
+    {
+      "id": "FA-024",
+      "dimension": "natural-persian",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "[\"naturalness.english-run\"]"
+    },
+    {
+      "id": "FA-025",
+      "dimension": "natural-persian",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"register\":\"informal\",\"markers\":[\"میشه\",\"رو\"]}"
+    },
+    {
+      "id": "FA-026",
+      "dimension": "natural-persian",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"formal\""
+    },
+    {
+      "id": "FA-027",
+      "dimension": "natural-persian",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"register\":\"neutral\",\"confidence\":0.05}"
+    },
+    {
+      "id": "FA-028",
+      "dimension": "natural-persian",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "[\"naturalness.repeated-sentence\",\"naturalness.repeated-sentence\",\"naturalness.shared-opener\"]"
+    },
+    {
+      "id": "FA-029",
+      "dimension": "natural-persian",
+      "kind": "rubric",
+      "verdict": "pass",
+      "observed": "[\"quality.wording.informal\"]"
+    },
+    {
+      "id": "FA-030",
+      "dimension": "reading-comprehension",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"fa\",\"letters\":15}"
+    },
+    {
+      "id": "FA-031",
+      "dimension": "reading-comprehension",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"en\""
+    },
+    {
+      "id": "FA-032",
+      "dimension": "reading-comprehension",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"mixed\""
+    },
+    {
+      "id": "FA-033",
+      "dimension": "reading-comprehension",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"unknown\",\"confidence\":0}"
+    },
+    {
+      "id": "FA-034",
+      "dimension": "reading-comprehension",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "[\"stop-loss\"]"
+    },
+    {
+      "id": "FA-035",
+      "dimension": "reading-comprehension",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"terms\":[\"position\",\"take-profit\"],\"domains\":[\"trading\"]}"
+    },
+    {
+      "id": "FA-036",
+      "dimension": "reading-comprehension",
+      "kind": "objective",
+      "verdict": "fail",
+      "observed": "{\"terms\":[],\"domains\":[]}"
+    },
+    {
+      "id": "FA-037",
+      "dimension": "instruction-following",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"en\",\"phrase\":\"به انگلیسی\",\"confidence\":1}"
+    },
+    {
+      "id": "FA-038",
+      "dimension": "instruction-following",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"fa\",\"phrase\":\"لطفاً فارسی جواب\",\"confidence\":0.95}"
+    },
+    {
+      "id": "FA-039",
+      "dimension": "instruction-following",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"en\",\"phrase\":\"in english\",\"confidence\":0.9}"
+    },
+    {
+      "id": "FA-040",
+      "dimension": "instruction-following",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"en\",\"source\":\"requested\",\"overridden\":false,\"reason\":\"The message asks for English (به انگلیسی), so that is the language of the reply.\"}"
+    },
+    {
+      "id": "FA-041",
+      "dimension": "instruction-following",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"en\",\"source\":\"explicit\",\"overridden\":true,\"reason\":\"This person chose English, and the message looks Persian; an explicit choice is what wins.\"}"
+    },
+    {
+      "id": "FA-042",
+      "dimension": "instruction-following",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"fa\",\"source\":\"detected\",\"overridden\":false,\"reason\":\"The message is written in Persian (11 Persian letters, no Latin ones).\"}"
+    },
+    {
+      "id": "FA-043",
+      "dimension": "instruction-following",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "null"
+    },
+    {
+      "id": "FA-044",
+      "dimension": "context-style",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"setting\":\"professional\",\"intent\":\"instruction\"}"
+    },
+    {
+      "id": "FA-045",
+      "dimension": "context-style",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"setting\":\"conversational\",\"formality\":\"informal\"}"
+    },
+    {
+      "id": "FA-046",
+      "dimension": "context-style",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"context\":\"formal\",\"reading\":\"formal\"}"
+    },
+    {
+      "id": "FA-047",
+      "dimension": "context-style",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"concise\""
+    },
+    {
+      "id": "FA-048",
+      "dimension": "context-style",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"setting\":\"professional\",\"expertise\":\"informed\"}"
+    },
+    {
+      "id": "FA-049",
+      "dimension": "context-style",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"question\""
+    },
+    {
+      "id": "FA-050",
+      "dimension": "context-style",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"terms-only\""
+    },
+    {
+      "id": "FA-051",
+      "dimension": "idioms-taarof",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"conversational\""
+    },
+    {
+      "id": "FA-052",
+      "dimension": "idioms-taarof",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"setting\":\"conversational\",\"signals\":[\"ممنون\",\"a turn of fewer than eight words\"]}"
+    },
+    {
+      "id": "FA-053",
+      "dimension": "idioms-taarof",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"a\":\"formal\",\"b\":\"formal\"}"
+    },
+    {
+      "id": "FA-054",
+      "dimension": "idioms-taarof",
+      "kind": "objective",
+      "verdict": "fail",
+      "observed": "\"neutral\""
+    },
+    {
+      "id": "FA-055",
+      "dimension": "idioms-taarof",
+      "kind": "objective",
+      "verdict": "fail",
+      "observed": "\"neutral\""
+    },
+    {
+      "id": "FA-056",
+      "dimension": "idioms-taarof",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"conversational\""
+    },
+    {
+      "id": "FA-057",
+      "dimension": "idioms-taarof",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"formal\""
+    },
+    {
+      "id": "FA-058",
+      "dimension": "numbers-dates-currency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"fa\":\"۳۳۴۵\",\"back\":\"3345\"}"
+    },
+    {
+      "id": "FA-059",
+      "dimension": "numbers-dates-currency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"۱٬۲۳۴٬۵۶۷٫۸۹\""
+    },
+    {
+      "id": "FA-060",
+      "dimension": "numbers-dates-currency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"1,234,567.89\""
+    },
+    {
+      "id": "FA-061",
+      "dimension": "numbers-dates-currency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"‎ریال ۱٬۲۵۰٬۰۰۰٫۵\""
+    },
+    {
+      "id": "FA-062",
+      "dimension": "numbers-dates-currency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"۱۴۰۵/۷/۵\""
+    },
+    {
+      "id": "FA-063",
+      "dimension": "numbers-dates-currency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"۲٫۵٪\""
+    },
+    {
+      "id": "FA-064",
+      "dimension": "numbers-dates-currency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"3345\""
+    },
+    {
+      "id": "FA-065",
+      "dimension": "numbers-dates-currency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"input\":\"XAUUSD 3345.20\",\"text\":\"XAUUSD 3345.20\",\"changes\":[],\"findings\":[],\"appliedRules\":[],\"skippedRules\":[],\"protectedLiterals\":[]}"
+    },
+    {
+      "id": "FA-066",
+      "dimension": "rtl-layout",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"⁦XAUUSD⁩\""
+    },
+    {
+      "id": "FA-067",
+      "dimension": "rtl-layout",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"⁧متن⁩\""
+    },
+    {
+      "id": "FA-068",
+      "dimension": "rtl-layout",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"⁨X⁩\""
+    },
+    {
+      "id": "FA-069",
+      "dimension": "rtl-layout",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"leftToRightIsolate\":\"⁦\",\"rightToLeftIsolate\":\"⁧\",\"firstStrongIsolate\":\"⁨\",\"popDirectionalIsolate\":\"⁩\"}"
+    },
+    {
+      "id": "FA-070",
+      "dimension": "rtl-layout",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"⁦-1.00R⁩\""
+    },
+    {
+      "id": "FA-071",
+      "dimension": "rtl-layout",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"comma\":\"،\",\"semicolon\":\"؛\",\"questionMark\":\"؟\",\"percent\":\"٪\"}"
+    },
+    {
+      "id": "FA-072",
+      "dimension": "rtl-layout",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"قیمت XAUUSD بالاست\""
+    },
+    {
+      "id": "FA-073",
+      "dimension": "technical-terminology",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"family\":\"terminology\",\"rule\":\"terminology.preferred-form\",\"ruleVersion\":1,\"key\":\"term.trading.trade\",\"deterministic\":false,\"index\":4,\"length\":4,\"found\":\"ترید\",\"suggestion\":\"معامله\",\"reason\":\"This product writes `معامله` for Trade; `ترید` is understood and is not the preferred form.\"}"
+    },
+    {
+      "id": "FA-074",
+      "dimension": "technical-terminology",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"family\":\"terminology\",\"rule\":\"terminology.preferred-form\",\"ruleVersion\":1,\"key\":\"term.trading.stop-loss\",\"deterministic\":false,\"index\":0,\"length\":9,\"found\":\"استاپ لاس\",\"suggestion\":\"حد ضرر\",\"reason\":\"This product writes `حد ضرر` for Stop-loss; `استاپ لاس` is understood and is not the preferred form.\"}"
+    },
+    {
+      "id": "FA-075",
+      "dimension": "technical-terminology",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"technical\""
+    },
+    {
+      "id": "FA-076",
+      "dimension": "technical-terminology",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "57"
+    },
+    {
+      "id": "FA-077",
+      "dimension": "technical-terminology",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "[]"
+    },
+    {
+      "id": "FA-078",
+      "dimension": "technical-terminology",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"total\":57,\"unique\":57}"
+    },
+    {
+      "id": "FA-079",
+      "dimension": "technical-terminology",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "\"BTC/USDT\""
+    },
+    {
+      "id": "FA-080",
+      "dimension": "context-adaptation-consistency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"fa\",\"source\":\"detected\",\"overridden\":false,\"reason\":\"The message is written in Persian (15 Persian letters, no Latin ones).\"}"
+    },
+    {
+      "id": "FA-081",
+      "dimension": "context-adaptation-consistency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"en\",\"source\":\"detected\",\"overridden\":false,\"reason\":\"The message is written in English (26 Latin letters, no Persian ones).\"}"
+    },
+    {
+      "id": "FA-082",
+      "dimension": "context-adaptation-consistency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"en\",\"source\":\"requested\",\"overridden\":false,\"reason\":\"The message asks for English (به انگلیسی), so that is the language of the reply.\"}"
+    },
+    {
+      "id": "FA-083",
+      "dimension": "context-adaptation-consistency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"en\",\"source\":\"explicit\",\"overridden\":true,\"reason\":\"This person chose English, and the message looks Persian; an explicit choice is what wins.\"}"
+    },
+    {
+      "id": "FA-084",
+      "dimension": "context-adaptation-consistency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"language\":\"en\",\"source\":\"detected\",\"overridden\":false,\"reason\":\"The message mixes both scripts, and the Latin half is larger (18 against 16), so the reply follows it.\"}"
+    },
+    {
+      "id": "FA-085",
+      "dimension": "context-adaptation-consistency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "{\"response\":\"fa\",\"memory\":\"fa\"}"
+    },
+    {
+      "id": "FA-086",
+      "dimension": "context-adaptation-consistency",
+      "kind": "objective",
+      "verdict": "pass",
+      "observed": "[\"facts\",\"calculations\",\"tool-results\",\"permissions\",\"safety-rules\",\"trading-restrictions\",\"uncertainty\"]"
+    }
+  ]
+}
