@@ -597,6 +597,32 @@ export async function openSession(executablePath: string): Promise<PageSession> 
     },
   };
 
+  /**
+   * The motion environment the suite measures in, stated rather than inherited.
+   *
+   * `prefers-reduced-motion` follows the *host's* own setting, so without this the same suite behaves
+   * differently on two machines: one really animates the rail's width and the drawer's reveal, the
+   * other parks them at their final frame because the app neutralises its transitions. Both are
+   * legitimate states for the *product*, and neither is a legitimate way for a *layout measurement* to
+   * vary — a case can be green for months and then report `expected 84 to be 76`, because the rail
+   * animates 264px ⇄ 76px over `--duration-base` and the 84px is where the box happened to be when
+   * the assertion sampled it.
+   *
+   * So the suite asks for motion, which is the harder and more honest state to measure in: every
+   * animated box is really moving, so a case that reads one has to wait for it to come to rest rather
+   * than for a threshold it crosses mid-flight. It also means the animated paths are exercised at all
+   * — the drawer's reveal is where a mirrored layout once put every box inside it past the edge of the
+   * viewport, and a reduced-motion run cannot see that, because the app neutralises transitions and the
+   * panel is simply never in motion.
+   *
+   * The cost is that this suite then says nothing about the reduced-motion presentation itself; in
+   * this state the app's `prefers-reduced-motion` rule is not active, exactly as it would not be in
+   * the browser of a reader who has animations on.
+   */
+  await send('Emulation.setEmulatedMedia', {
+    features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }],
+  });
+
   return session;
 }
 

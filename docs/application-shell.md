@@ -349,3 +349,33 @@ The distribution is deliberate: the model, the grouping and the shape of the ent
 `tests/frontend-navigation.test.ts`, and the half only a layout engine can answer — the entries a real
 browser draws in what order at which width, and whether a keyboard can reach and activate them — is
 measured in `tests/browser/e2e.test.ts` under `the navigation foundation`.
+
+### 8.6 A measurement flake in the shell's own cases
+
+Three shell cases were reported failing — `expected 84 to be 76`, an active entry reading `['']`, and
+`expected false to be true` — and all three were defects in how the suite _observed_ the rail rather
+than in the rail. They are recorded here because the same mistake is easy to make again.
+
+**The rail animates its width**, `w-[76px]` ⇄ `w-[264px]` over `--duration-base` (220 ms, on a
+decelerating curve). A case that collapsed the rail and waited for `width < 100` was therefore not
+waiting for a layout, it was waiting for a _threshold a transition crosses mid-flight_: sampled every
+40 ms, the box travels `264, 264, 160, 96, 78, 76` and the wait accepts at 96 — or 84, a frame later
+on a different machine. The reload that followed renders the settled 76 immediately, so the case
+compared an animation frame with a layout and failed on a number this design never declares.
+
+That it was reported at all is because `prefers-reduced-motion` follows the _host's_ setting: on a
+machine with animations off the app's own reduced-motion rule neutralises the transition, the rail
+jumps, and the flake cannot happen. The suite now states the state it measures in
+(`Emulation.setEmulatedMedia({ features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })`),
+so it means the same thing on every machine — and asks for the harder state, in which the drawer's
+reveal is really moving. To measure the rail, a case waits for it to _settle_: past the threshold **and**
+no width animation still running on the `aside`.
+
+**The collapsed rail is a standing preference**, so it outlives the case that set it. A case that
+collapses the rail and then fails never reaches its own cleanup, and the next two cases inherit a rail
+that draws no labels: the current entry reads as `['']` — an entry with no label keeps its name in
+`aria-label` alone, so the reading is of a name that is not drawn rather than of a missing entry — and
+the collapse control is missing, because the rail is collapsed already. One failure, three reports. Each
+of the three cases now establishes the starting point it is about to measure, so a failure of one is a
+failure of one; the portfolio active state itself was never wrong (it resolves to exactly one entry in
+both presentations).

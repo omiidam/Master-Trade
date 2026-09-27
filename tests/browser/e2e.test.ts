@@ -27,7 +27,14 @@
  *   - a page switch is awaited on `aria-current="page"`, which is the app saying it
  *     switched, rather than on a pause that guesses how long it takes;
  *   - nothing waits a fixed interval (see `tests/test-hygiene.test.ts`);
- *   - the suite asserts what a browser measured, and nothing about what the CSS suggests.
+ *   - the suite asserts what a browser measured, and nothing about what the CSS suggests;
+ *   - the *motion state* it measures in is stated by the driver
+ *     (`Emulation.setEmulatedMedia`) rather than inherited from whatever the machine running it has
+ *     set, so a layout measurement cannot mean two things on two machines;
+ *   - a box that is still animating is waited on, never sampled. A threshold a transition crosses
+ *     mid-flight is a frame of an animation, not a layout: the rail narrows 264px → 76px over
+ *     `--duration-base`, and "narrower than 100px" is reached at 96px or 84px on the way, which is
+ *     how `expected 84 to be 76` gets reported by a case that is really about a reload.
  *
  * Where a state genuinely cannot be reached in this build — the pages render labelled
  * fixtures, so "empty" and "error" are not reachable through the UI — this file does not
@@ -291,6 +298,85 @@ suite('the Product Foundation in a real browser', () => {
 
   const heading = (): Promise<string> =>
     session.evaluate<string>(`document.querySelector('main h2')?.textContent?.trim() ?? ''`);
+
+  /** A navigation entry's label, in the language this suite reads the interface in. */
+  function labelOf(id: string): string {
+    const section = NAV_SECTIONS.find((item) => item.id === id);
+    if (!section) throw new Error(`no navigation entry with id ${id}`);
+    return translate('en', section.labelKey);
+  }
+
+  /** The rail's rendered width, in CSS pixels. */
+  const railWidth = (): Promise<number> =>
+    session.evaluate<number>(
+      `Math.round(document.querySelector('aside').getBoundingClientRect().width)`,
+    );
+
+  /** Whether the rail is currently the icon rail. */
+  const railIsCollapsed = (): Promise<boolean> =>
+    session.evaluate<boolean>(
+      `document.querySelector('aside').getBoundingClientRect().width < 100`,
+    );
+
+  /** Press a control inside the rail by its accessible name. */
+  const pressInRail = (label: string): Promise<boolean> =>
+    session.evaluate<boolean>(`
+      (() => {
+        const button = [...document.querySelectorAll('aside button')].find(
+          (item) => item.getAttribute('aria-label') === ${JSON.stringify(label)},
+        );
+        if (!button) return false;
+        button.click();
+        return true;
+      })()
+    `);
+
+  /**
+   * Wait for the rail's width to *settle* before measuring it, not merely to pass a threshold.
+   *
+   * The rail animates its width — `w-[76px]` ⇄ `w-[264px]` over `--duration-base` — and a threshold
+   * like "narrower than an icon rail" is crossed inside the slow tail of that curve. Sampled every
+   * poll, the box sits at 96px, or 84px, for a frame or two on its way to 76px, so a case that measured
+   * on the threshold would compare what it caught mid-flight with the width a reload renders instantly
+   * and fail on a number the design never declared: `expected 84 to be 76`.
+   *
+   * So the condition is "past the threshold *and* no width animation still running on the rail", which
+   * is the same thing the drawer cases wait for when they wait for the panel to stop sliding — the
+   * difference being that this one is asked of the rail in one place instead of in each case. With
+   * motion reduced the animation never runs and the condition is satisfied by the settled box
+   * immediately, so it is correct in either motion preference rather than tuned for one.
+   */
+  const waitForRail = (condition: string, description: string): Promise<void> =>
+    session.waitFor(
+      `(() => {
+         const rail = document.querySelector('aside');
+         if (!rail) return false;
+         if (!(rail.getBoundingClientRect().width ${condition})) return false;
+         return !document
+           .getAnimations()
+           .some(
+             (animation) => animation.effect?.target === rail && animation.playState === 'running',
+           );
+       })()`,
+      description,
+    );
+
+  /**
+   * Leave the rail expanded, before a case that means to measure it.
+   *
+   * The collapsed rail is a *standing* preference, so it outlives the case that set it. A case that
+   * collapses the rail and then fails on something else never reaches its own cleanup, and every case
+   * after it reads a rail that draws no labels — which is how one failure is reported as three: the
+   * current entry reads as `['']`, because an entry with no label has its name only in `aria-label`,
+   * and the next case cannot find 'Collapse sidebar' because the rail is collapsed already. A case that
+   * states the starting point it is about to measure, instead of assuming the case before it restored
+   * it, keeps one failure from being read as three.
+   */
+  const expandRail = async (): Promise<void> => {
+    if (!(await railIsCollapsed())) return;
+    expect(await pressInRail('Expand sidebar'), 'the rail’s expand control').toBe(true);
+    await waitForRail('> 200', 'the rail to expand again');
+  };
 
   /**
    * Press the shell's own writing-direction control, by the name it gives itself in `locale`.
@@ -2823,32 +2909,6 @@ suite('the Product Foundation in a real browser', () => {
    * away and back is a thing a person does, and losing what they chose is a defect rather than a shape.
    */
   describe('the shell’s state and context', () => {
-    /** A navigation entry's label in the language this block reads. */
-    const labelOf = (id: string): string => {
-      const section = NAV_SECTIONS.find((item) => item.id === id);
-      if (!section) throw new Error(`no navigation entry with id ${id}`);
-      return translate('en', section.labelKey);
-    };
-
-    /** The rail's rendered width, which is the only thing the collapse control is really about. */
-    const railWidth = (): Promise<number> =>
-      session.evaluate<number>(
-        `Math.round(document.querySelector('aside').getBoundingClientRect().width)`,
-      );
-
-    /** Press a control inside the rail by its accessible name. */
-    const pressInRail = (label: string): Promise<boolean> =>
-      session.evaluate<boolean>(`
-        (() => {
-          const button = [...document.querySelectorAll('aside button')].find(
-            (item) => item.getAttribute('aria-label') === ${JSON.stringify(label)},
-          );
-          if (!button) return false;
-          button.click();
-          return true;
-        })()
-      `);
-
     it('keeps the tab a reader was on when they walk away and come back', async () => {
       await session.setViewport(1440, 900);
       await startIn(null);
@@ -2875,21 +2935,24 @@ suite('the Product Foundation in a real browser', () => {
     it('remembers the rail’s collapsed state across a reload', async () => {
       await session.setViewport(1440, 900);
       await startIn(null);
+      // The rail's state is a *standing* preference, so this case states the one it is about to change
+      // rather than inheriting whichever one the case before it happened to leave behind.
+      await expandRail();
 
       const expanded = await railWidth();
       expect(expanded, 'the rail is not the expanded width to begin with').toBeGreaterThan(200);
 
-      expect(await pressInRail('Collapse sidebar')).toBe(true);
-      await session.waitFor(
-        `document.querySelector('aside').getBoundingClientRect().width < 100`,
-        'the rail to collapse',
-      );
+      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      // Settled, not merely narrow: this width is compared with the width a reload renders, and a
+      // sample taken while the rail is still moving is a frame of an animation rather than a layout.
+      await waitForRail('< 100', 'the rail to collapse');
       const collapsed = await railWidth();
       expect(collapsed).toBeLessThan(expanded);
 
       // A reload is the moment a *standing* choice either was remembered or was not. The rail is the
       // shell's own preference — not where the reader happened to be standing — so it survives one.
       await session.goto(`${server.origin}/`);
+      await waitForRail('< 100', 'the restored rail to settle');
       expect(
         await railWidth(),
         'the rail forgot the reader’s choice the moment the page reloaded',
@@ -2897,18 +2960,22 @@ suite('the Product Foundation in a real browser', () => {
 
       // The other direction is remembered too, and the shell is handed back the way it was found: the
       // cases after this one measure the expanded rail.
-      expect(await pressInRail('Expand sidebar')).toBe(true);
-      await session.waitFor(
-        `document.querySelector('aside').getBoundingClientRect().width > 200`,
-        'the rail to expand again',
-      );
+      expect(await pressInRail('Expand sidebar'), 'the rail’s expand control').toBe(true);
+      await waitForRail('> 200', 'the rail to expand again');
       await session.goto(`${server.origin}/`);
+      await waitForRail('> 200', 'the expanded rail to settle');
       expect(await railWidth()).toBe(expanded);
     }, 60_000);
 
     it('marks the page being read as the active navigation entry, and only that one', async () => {
       await session.setViewport(1440, 900);
       await startIn(null);
+      // What is read below are the labels the rail *draws*, so the case states that it is measuring the
+      // labelled rail. An icon rail keeps the same entry names in `aria-label` and draws no text at
+      // all — which is why a collapse leaked from the case above would read here as a current entry
+      // named `''` rather than as a missing one.
+      await expandRail();
+      expect(await railWidth(), 'the rail is not drawing its labels').toBeGreaterThan(200);
 
       /** The accessible names of the entries the rail calls current, in the order they are drawn. */
       const current = (): Promise<string[]> =>
@@ -3007,25 +3074,6 @@ suite('the Product Foundation in a real browser', () => {
              (item) => (item.getAttribute('aria-label') ?? item.textContent ?? '').trim(),
            ),
          )`,
-      );
-
-    /** Press a control inside the rail by its accessible name. */
-    const pressInRail = (label: string): Promise<boolean> =>
-      session.evaluate<boolean>(
-        `(() => {
-           const button = [...document.querySelectorAll('aside button')].find(
-             (item) => item.getAttribute('aria-label') === ${JSON.stringify(label)},
-           );
-           if (!button) return false;
-           button.click();
-           return true;
-         })()`,
-      );
-
-    /** The rail's rendered width, which is what the collapse control is really about. */
-    const railWidth = (): Promise<number> =>
-      session.evaluate<number>(
-        `Math.round(document.querySelector('aside').getBoundingClientRect().width)`,
       );
 
     /** Where the navigation's own box sits, so a page switch can be shown not to move it. */
@@ -3161,14 +3209,17 @@ suite('the Product Foundation in a real browser', () => {
     it('stays a navigation while it is collapsed, and does not move when a page changes', async () => {
       await session.setViewport(1440, 900);
       await startIn(null);
+      // This case is about the collapsed rail, so it states that it starts from the expanded one:
+      // 'Collapse sidebar' is a control that exists only while there is something to collapse.
+      await expandRail();
       await visit('portfolio');
 
       const expanded = await railWidth();
-      expect(await pressInRail('Collapse sidebar')).toBe(true);
-      await session.waitFor(
-        `document.querySelector('aside').getBoundingClientRect().width < 100`,
-        'the rail to collapse',
-      );
+      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      // Settled before the box is recorded: the box is compared with the same rail after a page
+      // change, and a sample taken mid-transition would differ from a settled one for reasons that
+      // have nothing to do with navigating.
+      await waitForRail('< 100', 'the rail to collapse');
 
       const before = await navBox();
       // Icons only, so the entry is found by the name it kept rather than by a label it no longer
@@ -3185,11 +3236,8 @@ suite('the Product Foundation in a real browser', () => {
       expect(await navBox()).toEqual(before);
 
       // ...and expanding it again brings the labels back, with the current entry still the current one.
-      expect(await pressInRail('Expand sidebar')).toBe(true);
-      await session.waitFor(
-        `document.querySelector('aside').getBoundingClientRect().width > 200`,
-        'the rail to expand again',
-      );
+      expect(await pressInRail('Expand sidebar'), 'the rail’s expand control').toBe(true);
+      await waitForRail('> 200', 'the rail to expand again');
       expect(await railWidth()).toBe(expanded);
       expect(
         await session.evaluate<string>(
