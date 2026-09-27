@@ -29,7 +29,7 @@
  */
 
 import { AppError } from '@shared/core/errors';
-import { LanguageMemory } from './memory.js';
+import { LanguageMemory, protectedLiterals } from './memory.js';
 import { seededLanguageMemory } from './seed.js';
 import {
   NORMALIZATION_RULES,
@@ -103,21 +103,6 @@ function inconsistent(reason: string, details?: Record<string, unknown>): never 
  */
 function trustedKeys(memory: LanguageMemory): Set<string> {
   return new Set(memory.trusted().map((entry) => entry.key));
-}
-
-/**
- * The strings a reviewed exception protects.
- *
- * This is the mechanism Phase 7.5.1's `exception` kind exists for: a normalizer will eventually meet
- * a string it is right about in general and wrong about here, and the fix belongs in the store with a
- * reviewer's provenance rather than in a branch in this file. An entry's `examples` are its literals,
- * matched exactly — knowledge is not a pattern.
- */
-export function protectedLiterals(memory: LanguageMemory): string[] {
-  return memory
-    .trusted()
-    .filter((entry) => entry.kind === 'exception')
-    .flatMap((entry) => entry.examples);
 }
 
 /** The rules this store authorises, in pipeline order. */

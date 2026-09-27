@@ -2654,3 +2654,90 @@ the record; no test file is generated at runtime.
   result says something worth writing down about corroboration: it counts texts rather than truth, so a systematically
   wrong rule crosses the bar, and the loop's answer is a recorded, permanent **rejection** rather than a promotion. The
   limit is in `LEARNING_LIMITS` and the scan is a test, so the measurement is fixed rather than remembered.
+
+## 35. Phase 7.5.3.5.5 — the pipeline, and the benchmark that walks it
+
+Thirteen phases each proved their own half and nothing had proved the halves fit together. §35 is the join.
+
+### One value per turn, and the smallest module in the directory
+
+`pipeline.ts` runs the phase's own flow — `detection → context → memory → knowledge → qa → response → learning →
+regression` — and holds no rule, lexicon, vocabulary, threshold, store or cache: every stage is one call into the module
+that owns the question. `LANGUAGE_PIPELINE_STAGES` is the list as a value, so a stage cannot be dropped by shrinking a
+function body, and the eight names are asserted against the report's own fields.
+
+What makes it one pipeline rather than eight calls in a row is asserted rather than described: the message is read
+_once_ and every stage below the first is handed that reading; the language is resolved once, so `memory.reply` **is**
+`response.reply`; the answer is judged in the context the response stage actually resolved — its own tone and
+terminology, plus the context stage's mixing — because a verdict against a context a caller assembled itself is a
+verdict about another turn; the answer is read once, by `readPersianAnswer`, which is the wider view of the reading
+7.5.3.5.4 exposed (the naturalness report _and_ the candidates drawn from it, from one evaluation); and the pipeline
+writes nothing at all, which the suite measures by comparing the storage, the corpus and the knowledge store before and
+after a run.
+
+### One subject per stage, said out loud
+
+The first four stages and the sixth read the **message**; the fifth and the seventh read the **answer**; the eighth
+reads the **corpus**. A caller that brings no answer therefore gets `qa: null` and no candidates and a reason that says
+so, rather than a report about somebody's own writing — which is the same boundary §29–§34 drew, now drawn in the one
+place a caller can see it.
+
+`PIPELINE_FIELDS` and `LEARNING_READING_FIELDS` are closed and compared against the produced objects, and the report
+carries the seven `GUIDANCE_INVARIANTS` and no field a figure, a tool result, a permission or an uncertainty note could
+travel in. That is the mechanical half of "language adaptation may not change what an answer says"; the other half is
+that the same turn with a clean answer and a wrong one resolves to the _same_ control.
+
+### The benchmark is the point of the phase
+
+`tests/persian-benchmark.test.ts` (68 tests) is three jobs. **The flow**, one case per property above. **The
+dimensions** the phase names — Persian, English, a mix in both directions, informal Persian, technical Persian,
+Finglish, punctuation, spelling, ZWNJ and spacing, terminology, naturalness, the language of the answer, learned
+preferences, a request over a stored choice, the interface switch and the separation from it, and RTL-safe output —
+each a case that fails if the dimension stops working, including two _boundaries_: the turn that is informed and must
+not be asked for figures verbatim, and the scan that requires this layer to reach the rest of `web/src` at exactly one
+point (`preference.ts`, from three files).
+
+**The historical defects.** Every phase recorded in `docs/persian-language.md`'s "What verification found" section is a
+table entry with a live probe through this layer and, where the defect was not in this layer, a pointer to the
+permanent case that owns it. Two cases keep the table honest: one requires each recorded defect to pass its probe and
+one reads the document and requires every recorded phase to be covered — so a future phase cannot record a defect and
+leave it uncovered. The structural half of that job covers what only a browser can otherwise witness: one writer for
+`documentElement.dir` across `web/src`, no physical direction in the language layer, no Persian catalogue value opening
+a sentence with a signed figure, and every bare module specifier in the layer already declared in `package.json`.
+
+### The cycle, and the reading that had one view
+
+Two things were found while joining the halves, and neither is a behaviour change. The layer has **one module cycle** —
+`terminology.ts` reads the character normalizer, `normalize.ts` reads the seed for its default store, and `seed.ts`
+composes itself from the lexicon — and a cycle is resolved by whichever member an entry point reaches first. Every
+suite before this one imported `index.ts`, whose export order happens to work; the pipeline imports the seed _first_, on
+purpose, with the reason next to the import, and the benchmark imports the pipeline before the index so the property is
+asserted by building. The first fix was moving `protectedLiterals` from `normalize.ts` to `memory.ts`, where it belongs
+on its own merits — it is a question about the store — which removed one edge; the remaining edge is the normalizer the
+lexicon genuinely needs, and the import order is what resolves it. And `continuousLearning.ts` had **one view where the
+phase needs two**: exposing only the candidates would have made a report that shows _why_ a form was flagged evaluate
+the same answer twice, so `readPersianAnswer` returns both from one reading and `observePersianText` is its narrower
+field — the export allow-list in §34's suite is what caught the addition.
+
+### The pieces
+
+| Piece                                  | Where                                          |
+| -------------------------------------- | ---------------------------------------------- |
+| The join: one turn, eight stages       | `web/src/language/pipeline.ts`                 |
+| The stage it reads rather than repeats | `web/src/language/continuousLearning.ts` (§34) |
+| The report's single value per turn     | `response.ts` (§24–§27), `guidance.ts` (§25)   |
+| The benchmark, and the defect table    | `tests/persian-benchmark.test.ts` (68 tests)   |
+
+### Verified
+
+- `format:check` clean; both typechecks clean; `npm run build` and `npm run build:web` clean.
+- **1820** unit tests across **85** files (1752/84 before): the 68 new cases are the flow, the dimensions and the
+  historical defects, and one case is a live measure of the product's own copy — over the 1,333 Persian catalogue values
+  long enough to be prose, every `problem` is still one of the three readings the layer names as a limit, so a fourth
+  rule starting to report this product's correct Persian fails here.
+- The layer was scanned for the two questions this phase exists to answer: no module under `web/src/language` is
+  unreachable, no exported name is referenced nowhere, and the deep imports from outside the layer are exactly one
+  module (`preference.ts`) from exactly three files — the interface switch and the agent's language memory remain
+  separate systems, mechanically.
+- `npm run desktop:verify` unchanged. No new dependency: every bare specifier the layer imports is already declared in
+  `package.json`, asserted by the benchmark. Nothing was rewired: like §29, §33 and §34, this is a library and its suite.

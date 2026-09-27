@@ -40,13 +40,9 @@
  */
 
 import type { LanguageKnowledgeEntry, LanguageProposal } from './model.js';
-import { LanguageMemory } from './memory.js';
+import { LanguageMemory, protectedLiterals } from './memory.js';
 import { findSpans, overlapsSpan, standaloneMatches } from './rules.js';
-import {
-  normalizePersianContent,
-  protectedLiterals,
-  type NormalizationOptions,
-} from './normalize.js';
+import { normalizePersianContent, type NormalizationOptions } from './normalize.js';
 
 /**
  * When the lexicon's knowledge was recorded, and where the record lives.

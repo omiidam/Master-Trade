@@ -423,3 +423,25 @@ export class LanguageMemory {
     this.changes.push({ at, key, action, fromVersion, toVersion, origin, reference });
   }
 }
+
+/**
+ * The strings a reviewed exception protects.
+ *
+ * This is the mechanism Phase 7.5.1's `exception` kind exists for: a normalizer will eventually meet a
+ * string it is right about in general and wrong about here, and the fix belongs in the store with a
+ * reviewer's provenance rather than in a branch in some rule. An entry's `examples` are its literals,
+ * matched exactly — knowledge is not a pattern.
+ *
+ * It lives here rather than beside the normalizer it serves because it is a question *about the store* —
+ * "which forms has a person approved" — and because reading it from `normalize.ts` made the layer's module
+ * cycle one edge longer: `terminology.ts` read it from there, `normalize.ts` reads `seed.ts` for its default
+ * store, and `seed.ts` composes itself from the lexicon. With that edge gone the cycle is the one the
+ * lexicon genuinely needs — it reads the character normalizer — and it is resolved by the order an entry
+ * point imports in, which is why `pipeline.ts` starts at the seed. See Phase 7.5.3.5.5's record.
+ */
+export function protectedLiterals(memory: LanguageMemory): string[] {
+  return memory
+    .trusted()
+    .filter((entry) => entry.kind === 'exception')
+    .flatMap((entry) => entry.examples);
+}

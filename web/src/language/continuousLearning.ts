@@ -682,8 +682,16 @@ function correctionFor(verdict: NaturalnessVerdict, report: NaturalnessReport): 
  * Arabic yeh six times in one answer has said one thing about one form, and a list that repeated it would
  * invite a caller to read those six as corroboration, which is exactly the mistake the ledger's evidence
  * count exists to prevent.
+ *
+ * It is written as two views of one reading rather than as two functions, because a caller that wants the
+ * verdicts *and* the candidates — 7.5.3.5.5's pipeline is one — would otherwise evaluate the same answer
+ * twice, and this layer's whole claim is that a finding is read once and judged once. `observePersianText`
+ * is the narrower view and behaves exactly as it always did.
  */
-export function observePersianText(input: LearningInput): readonly LearningCandidate[] {
+export function readPersianAnswer(input: LearningInput): {
+  readonly report: NaturalnessReport;
+  readonly candidates: readonly LearningCandidate[];
+} {
   const report = evaluatePersianNaturalness(input.text, input.context, {
     protectedLiterals: input.protectedLiterals,
     exceptChecks: input.exceptChecks,
@@ -736,7 +744,12 @@ export function observePersianText(input: LearningInput): readonly LearningCandi
     }
   }
 
-  return candidates;
+  return { report, candidates };
+}
+
+/** The candidates alone: what a reviewer would be asked to decide about. */
+export function observePersianText(input: LearningInput): readonly LearningCandidate[] {
+  return readPersianAnswer(input).candidates;
 }
 
 /**

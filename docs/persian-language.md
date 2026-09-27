@@ -1713,6 +1713,99 @@ an entry this build cannot read is dropped rather than taking the ledger with it
 whole rather than repaired, because half a promise is worse than none. `LEARNING_LIMITS` names the six
 things the loop does not judge, including the one this phase's own verification produced.
 
+## Phase 7.5.3.5.5 — the pipeline, and the benchmark that walks it
+
+Thirteen phases each proved their own half, and nothing had proved the halves fit together. This one is the
+join, and it is deliberately the smallest module in the directory: `pipeline.ts` holds **no** rule, no
+lexicon, no vocabulary, no threshold, no store and no cache. Every stage is one call into the module that
+owns the question, and the value each returns is carried whole.
+
+```
+user input → detection → context → memory → knowledge → qa → response → learning → regression
+```
+
+### What the one call is, and what it is not
+
+The eight stages are the phase's own list, and `LANGUAGE_PIPELINE_STAGES` is that list as a value so a stage
+cannot be dropped by shrinking the function body. What matters more is what the pipeline does _not_ do:
+
+- **it reads the message once.** `detectLanguage` runs in the first stage and every stage below it is handed
+  that value — the same `LanguageDetection` reaches the context, the resolver and the lexicon read, so the
+  report cannot contain two opinions about one message. The suite asserts it by identity rather than by
+  agreement.
+- **it resolves the language once.** The memory stage calls `resolveLanguage` and the response stage calls
+  `responseControl` with the same detection, the same setting and the same store, so the two cannot disagree;
+  the suite asserts `memory.reply` and `response.reply` are one value.
+- **it judges the answer in the context the answer was owed.** The learning context is built from the
+  response stage's own resolved tone and terminology plus the context stage's own mixing reading — which is
+  exactly the context 7.5.3.5.3 requires and the reason it requires one: a verdict against a context a caller
+  assembled itself is a verdict about another turn.
+- **it reads the answer once.** `readPersianAnswer` is the wider view of `observePersianText`'s reading — the
+  naturalness report (which carries the quality report) and the candidates drawn from it — because a caller
+  that wants the verdicts _and_ the candidates would otherwise evaluate the same answer twice. The narrower
+  function is the wider one's field, and 7.5.3.5.4's own suite is unchanged by it.
+- **it writes nothing.** No stage proposes a rule, approves a form, records an observation or mutates the
+  store it was handed. The one call that looks like a write, `recordFeedback`, returns a _new_ store in its
+  decision and leaves the one it was given alone; the suite runs a turn and compares the storage, the corpus
+  and the knowledge store before and after.
+- **it reads no clock.** A caller that cares when a turn happened says so; one that does not gets the epoch
+  rather than the current instant, because a value that changes between two identical calls is a value no
+  suite can assert.
+
+One subject per stage, named where it can be checked: the first four stages and the sixth read the **message**
+(what the person wrote and what the answer owes it), the fifth and seventh read the **answer** (a quality
+report and a learning ledger about text this product wrote), and the eighth reads neither — it reads the
+corpus. So a caller that brings no answer gets `qa: null` and no candidates and a reason that says so, rather
+than a report about somebody's own writing.
+
+### The one projection, and the four sentences
+
+The stage types are the modules' own types, not copies. The two values this file derives are projections of a
+stage's output rather than new knowledge: `concepts` copies the fields the turn needs out of `lexiconTerms`,
+which is the view that already applies the store's corrections to the catalogue row, and the learning context
+is three fields read out of the response guidance and the communication context. Each stage also carries the
+sentence a person reads, and none of them contains a figure or a result: they say what was read, by which
+module, and in the fourth case how many candidates came out and that a candidate is not knowledge.
+
+`PIPELINE_FIELDS` is closed and compared against the produced object, and the learning reading has its own
+closed list (`LEARNING_READING_FIELDS`). The report carries the seven `GUIDANCE_INVARIANTS` and no field a
+figure, a tool result, a permission or an uncertainty note could travel in — which is the mechanical half of
+"language adaptation may not change what an answer says".
+
+### The benchmark, and what it is for
+
+`tests/persian-benchmark.test.ts` is the phase's other deliverable, and it is written as three jobs rather
+than as a list of assertions:
+
+1. **The flow**, stage by stage, with the six properties above asserted rather than described — plus
+   determinism, the closed field lists, and the no-write property measured against the three things a run
+   could have touched.
+2. **The dimensions** the phase names: Persian, English, a mix (both directions, because the reply follows
+   the larger script and the terminology style follows the reply), informal Persian, technical Persian,
+   Finglish, punctuation, spelling, ZWNJ and spacing, terminology, naturalness, the language of the answer,
+   learned preferences, an in-message request over a stored choice, the interface switch and the separation
+   from it, and RTL-safe output. Two of them are _boundaries_ rather than features — the case that refuses to
+   call a turn technical merely because it holds a figure, and the case that asserts the layer reaches the
+   interface at exactly one point — because a rule that fires everywhere is as wrong as one that never fires.
+3. **The historical defects.** Every phase the "What verification found" section records is in a table with
+   the defect, a live re-run of the fix through this layer, and a pointer to the permanent case that owns it
+   where the defect was not in this layer at all. Two cases keep the table honest: one requires each recorded
+   defect to actually pass its live probe, and one reads the document and requires every recorded phase to be
+   covered — so a future phase cannot record a defect and leave it uncovered.
+
+The scans in the third job are deliberately structural rather than behavioural where a browser is the only
+witness: one writer for `documentElement.dir` across `web/src`, no physical direction in the language layer,
+no Persian catalogue value opening a sentence with a signed figure, the brand name the only Persian value that
+looks like English, and every bare module specifier in the layer already declared in `package.json`.
+
+### What this phase does not do
+
+It does not change a rule, a term, a threshold or a stored decision; it does not add a metric, a cache, a
+second detector or a second store; and it does not move anything of 7.5.3.4.4's direction work into this
+layer. The two questions it does answer, it answers by _reading_: which modules the layer reaches (the scan
+in the benchmark), and whether anything in it is unreachable (nothing is — every module under
+`web/src/language` is imported somewhere, and no exported name is referenced nowhere).
+
 ## What verification found
 
 Running the locale layer on real values rather than only on asserted ones turned up a defect that the
@@ -1727,6 +1820,30 @@ malformed code is still shown as itself so the mistake stays visible. Regression
 
 The English path is untouched by this: `labels.ts#formatMoney` is a different function with a different
 caller contract, and its behaviour is asserted unchanged by the same suite.
+
+### 7.5.3.5.5: a module cycle that only an entry point could see, and a reading that had one view
+
+1. **The layer has one module cycle, and it only breaks in one direction.** `terminology.ts` reads the
+   character normalizer, `normalize.ts` reads the seed for its default store, and `seed.ts` composes itself
+   from the lexicon. A cycle is resolved by whichever member an entry point reaches first: through the seed
+   the catalogue is built before anything asks it a question, through the lexicon `SEED_LANGUAGE_KNOWLEDGE`
+   is assembled while `TERMINOLOGY` is still initializing — and the import throws. Every suite before this one
+   imported `index.ts`, whose export order happens to be the working one, so nothing had ever seen it. It was
+   found by writing an entry point that is not the index: the pipeline imports the seed **first**, on purpose
+   and with the reason written next to the import, and the benchmark imports the pipeline before the index so
+   the property is asserted by building rather than assumed. (The first fix was to move `protectedLiterals`
+   from `normalize.ts` into `memory.ts`, where it belongs on its own merits — it is a question about the
+   store — and that removed one edge of the cycle; the edge left is the normalizer the lexicon genuinely
+   needs, and the order is what resolves it.)
+2. **One reading, two views.** The phase needs the naturalness report the candidates were drawn from as well
+   as the candidates, and the first shape of `continuousLearning.ts` exposed only the second — so a report
+   that showed _why_ a form was flagged would have had to evaluate the same answer a second time, which is
+   exactly the duplicate reading this layer spends thirteen phases avoiding. `readPersianAnswer` returns both
+   from one evaluation and `observePersianText` is its narrower field, so 7.5.3.5.4's suite and every caller of
+   it are unchanged; the export allow-list in that suite is what caught the addition.
+
+Neither is a behaviour change, which is why both are recorded here rather than as fixes: the first was a
+property nothing was testing, and the second was a duplication nothing was causing yet.
 
 ### 7.5.3.4.4: one attribute with two writers, and thirteen invisible ones
 
@@ -2348,6 +2465,24 @@ The strip and the panels behind it add 2 more to `tests/frontend-integration.tes
 suite — which is where the number that matters was taken: five signed figures painting their signs after
 their digits before the fix, none after it.
 
+Phase 7.5.3.5.5 adds `tests/persian-benchmark.test.ts` — 68 tests, and the only suite that imports the
+pipeline rather than the index. Its first job asserts the flow the phase names, one case per property: every
+stage present in `LANGUAGE_PIPELINE_STAGES`' own order, the message read once (asserted by identity, not by
+agreement), the language resolved once (`memory.reply` **is** `response.reply`), the answer judged in the
+context the response stage actually resolved, the answer read once (`report.quality` is the object the
+candidates were drawn from), the two closed field lists compared with the produced object, no rewrite, and a
+run that leaves the storage, the corpus and the knowledge store exactly as it found them. Its second job is
+the dimensions: each one a case that fails if the dimension stops working rather than a re-assertion of
+another suite's internals — including two boundary cases, the turn that is _informed_ and must not be asked
+for figures verbatim, and the scan that requires the language layer to reach `web/src` at exactly one point
+(`web/src/language/preference.ts`, from three files), which is what "the interface and the agent's language
+memory stay separate systems" means mechanically. Its third job is the historical defects: one case per phase
+recorded in this file, each with a live probe — a protected span honoured, a rule that can see a clause-final
+verb, a balanced mix out-scoring an unbalanced one, the deduplicated greeting, the ellipsis reported zero
+times, the superseded identity, the round trip that keeps a context — plus two cases that keep the table
+itself honest, one requiring each probe to pass and one requiring every `### 7.x` heading in this document to
+be covered.
+
 ```bash
 npm run fonts:vendor      # re-derive web/public/fonts from the declared dependency
 npm run fonts:check       # re-hash what is vendored, write nothing
@@ -2364,6 +2499,7 @@ npx vitest run tests/rtl-layout.test.ts              # 7.5.3.4.4: the direction,
 npx vitest run tests/persian-evaluation.test.ts      # 7.5.3.5.1-2: the evaluation, grammar and the readings
 npx vitest run tests/persian-naturalness.test.ts     # 7.5.3.5.3: the answer, judged against its context
 npx vitest run tests/persian-continuous-learning.test.ts # 7.5.3.5.4: the loop, the corpus, the ledger
+npx vitest run tests/persian-benchmark.test.ts     # 7.5.3.5.5: the flow, the dimensions, the defects
 npm run test:e2e          # the browser suite, including the measurements above
 npm run validate          # the full gate
 ```

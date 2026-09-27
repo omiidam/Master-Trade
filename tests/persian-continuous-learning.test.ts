@@ -898,6 +898,7 @@ describe('the ledger is storage, and it is the language layer’s own', () => {
       'observePersianText',
       'parseLearningStore',
       'readLearningStore',
+      'readPersianAnswer',
       'readyObservations',
       'recordObservations',
       'regressionCheck',

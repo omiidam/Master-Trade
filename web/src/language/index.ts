@@ -51,6 +51,11 @@
  *                   `evaluation.ts`'s findings against the context rather than checking the text a
  *                   second time, reads six shapes of its own that are about an answer and not about
  *                   spelling, and offers no replacement: a verdict, a confidence and a reason.
+ *   - `pipeline.ts` — Phase 7.5.3.5.5's join: one turn through every stage above, in the phase's own order,
+ *                   as one value. It holds no rule, vocabulary, threshold or store of its own — each stage is
+ *                   one call into the module that owns the question — and it writes nothing. This is the
+ *                   surface a caller that wants "the Persian language layer" reaches for, and the one the
+ *                   benchmark walks.
  *   - `continuousLearning.ts` — Phase 7.5.3.5.4's loop: a finding from either layer becomes a candidate,
  *                   corroboration across texts decides whether it is ready, a person accepts or rejects it,
  *                   the accepted correction goes into the knowledge store through that store's own path,
@@ -106,7 +111,7 @@ export type {
   LanguageSnapshot,
 } from './model.js';
 
-export { LanguageMemory } from './memory.js';
+export { LanguageMemory, protectedLiterals } from './memory.js';
 export type { LanguageDeprecation, LanguageProposalResult, LanguageReviewInput } from './memory.js';
 
 export { SEED_LANGUAGE_KNOWLEDGE, seededLanguageMemory } from './seed.js';
@@ -176,7 +181,6 @@ export {
   isNormalizedPersian,
   normalizePersianContent,
   persianFindings,
-  protectedLiterals,
   runRules,
 } from './normalize.js';
 
@@ -352,6 +356,25 @@ export {
 
 export { RESPONSE_CONTROL_VERSION, responseControl, storedResponseOptions } from './response.js';
 export type { ResponseControl, ResponseControlOptions, StoredResponseOptions } from './response.js';
+
+export {
+  LANGUAGE_PIPELINE_STAGES,
+  LANGUAGE_PIPELINE_VERSION,
+  PIPELINE_EPOCH,
+  LEARNING_READING_FIELDS,
+  PIPELINE_FIELDS,
+  languagePipeline,
+} from './pipeline.js';
+export type {
+  LanguagePipelineOptions,
+  LanguagePipelineReport,
+  LanguagePipelineStage,
+  LanguageTurn,
+  PipelineConcept,
+  PipelineKnowledgeReading,
+  PipelineLearningReading,
+  PipelineMemoryReading,
+} from './pipeline.js';
 export type {
   GuidanceClauseId,
   GuidanceInvariant,
@@ -432,6 +455,7 @@ export {
   observePersianText,
   parseLearningStore,
   readLearningStore,
+  readPersianAnswer,
   readyObservations,
   recordObservations,
   regressionCheck,
