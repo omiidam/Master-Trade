@@ -140,6 +140,10 @@ records and carry the trust/provenance labels their records declare
   icon keeps an accessible name, so the workspace keeps its width in narrow
   windows. Desktop-first does not mean desktop-only.
 
+Phase 7.1.1 states this arrangement as a tested contract — the three landmarks, the four widths it
+must survive and the Persian mirror — in [application-shell.md](./application-shell.md) and
+`tests/frontend-shell-layout.test.ts`. **No region was restructured to write it.**
+
 ## 4. Prototype pages (mock data only)
 
 | Page             | Contents                                                                                                                                    | Honesty markers                                                  |
