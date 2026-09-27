@@ -252,9 +252,11 @@ function SidebarRail({ collapsed, canCollapse }: { collapsed: boolean; canCollap
  *   - the scrim is a real button with a name, so it is reachable and announced — not a bare `div`
  *     with a handler, which no keyboard can reach.
  *
- * The slide is a Framer Motion transform rather than a `translate-x` utility, so it mirrors by the
- * *direction*, not by a class: the drawer arrives from the inline-start edge and leaves the same
- * way, in either language. Under `prefers-reduced-motion` it fades instead of sliding.
+ * The reveal is a Framer Motion clip rather than a `translate-x` utility, so it mirrors by the
+ * *direction*, not by a class: the drawer opens from the inline-start edge and closes back into it,
+ * in either language — and, because the panel itself never moves, its box stays inside the layout
+ * viewport even in the mirrored case, where "off-canvas" would otherwise mean "past the right edge".
+ * Under `prefers-reduced-motion` it fades instead of revealing.
  */
 function SidebarDrawer({
   open,
@@ -312,9 +314,24 @@ function SidebarDrawer({
     }
   };
 
-  // Where the panel starts and leaves: off the inline-start edge, which is the left in a
-  // left-to-right interface and the right in a right-to-left one.
-  const offscreen = direction === 'rtl' ? '100%' : '-100%';
+  /**
+   * How the drawer goes out of sight: it is *clipped*, not pushed past the edge it is anchored to.
+   *
+   * The panel is `fixed` to the inline-start edge, which is the left in a left-to-right interface and
+   * the right in a right-to-left one — and in the mirrored case that edge is the *right* one, the edge a
+   * layout viewport measures its overflow against. Carrying the panel off-canvas by its own width would
+   * therefore put every box inside it past that edge for the length of the animation, which is a real
+   * defect rather than a flourish: a phone in Persian shows it, and a phone in English hides the very
+   * same mistake, because `-100%` moves the panel away from the edge being measured.
+   *
+   * So the panel never moves. Its box is the edge it belongs to, and the reveal is a clip that opens
+   * from that edge — the same gesture, mirrored the same way, and unable to widen the page while it
+   * runs. The clip overshoots the box by a fifth of the panel's own size so the shadow is never the
+   * thing being cut off.
+   */
+  const revealed = 'inset(-20% -20% -20% -20%)';
+  const concealed =
+    direction === 'rtl' ? 'inset(-20% -20% -20% 100%)' : 'inset(-20% 100% -20% -20%)';
 
   return (
     <>
@@ -344,9 +361,9 @@ function SidebarDrawer({
             aria-label={msg('sidebar.navigationMenu')}
             tabIndex={-1}
             onKeyDown={trapFocus}
-            initial={reduceMotion ? false : { x: offscreen }}
-            animate={{ x: 0 }}
-            exit={reduceMotion ? { opacity: 0 } : { x: offscreen }}
+            initial={reduceMotion ? false : { clipPath: concealed }}
+            animate={{ clipPath: revealed }}
+            exit={reduceMotion ? { opacity: 0 } : { clipPath: concealed }}
             transition={{ duration: reduceMotion ? 0 : DURATION.base, ease: EASE.emphasis }}
             className={cn(
               'fixed inset-y-0 start-0 z-[var(--z-modal)] flex w-[280px] max-w-[85vw] flex-col',
