@@ -565,12 +565,15 @@ describe('the decision routes', () => {
     try {
       const user = await h.repositories.identity.createUser({ displayName: 'L', timezone: 'UTC' });
       const auth = await session(h, user.id);
-
+      // The decision is kept, not merely sent: the figures the log must not carry are the ones on
+      // *this* record, so the assertion is about the decision that was made rather than about a
+      // number written into the test twice.
+      const decision = completeDecision();
       const created = await h.server.app.inject({
         method: 'POST',
         url: '/v1/decisions',
         headers: AUTH(auth.token),
-        payload: completeDecision(),
+        payload: decision,
       });
       const logId = created.json().data.decision.id as string;
       await h.server.app.inject({
@@ -592,11 +595,61 @@ describe('the decision routes', () => {
       });
 
       const written = JSON.stringify(h.sink.records);
-      // The symbol, the rationale and the prices are the user's; none of them reaches a line.
+      // The symbol and the rationale are the user's; neither reaches a line. These two are safe to
+      // look for as substrings because no generated id can spell either of them.
       expect(written).not.toContain('AAPL');
       expect(written).not.toContain('Breakout retest');
-      expect(written).not.toContain('106');
-      // What does reach it: the ids, the counts and the codes a reviewer needs.
+
+      // The figures, though, are asserted against the *record* rather than against a substring of the
+      // whole log. A substring check for a price's digits is defeated by a generated id that happens
+      // to contain them — a userId ending `…106d` failed a case that is about a leak — and the
+      // question here is which fields the line has and what they hold, not whether some unrelated
+      // number in the dump shares its characters.
+      const evaluations = h.sink.records.filter(
+        (record) => record.event === 'decision.evaluate' && record.message === 'decision evaluated',
+      );
+      expect(evaluations, 'the evaluation was not logged under its event name').toHaveLength(1);
+      const evaluation = evaluations[0];
+      const data = evaluation?.data ?? {};
+
+      // No field carries the report's `figures`. That field is the list of the user's prices; the
+      // record holds a *count* of them instead — a number, never the list, and never one of its values.
+      expect(Array.isArray(data.figures), 'the figures list reached the log').toBe(false);
+      expect(typeof data.figures, '`figures` is not a count').toBe('number');
+
+      // ...and no value anywhere in the record is one of this decision's own prices. Walked rather
+      // than searched for as text, so a figure under an unexpected key is still caught and a count
+      // that merely shares a digit with a price cannot fail the case.
+      const numbersIn = (value: unknown): number[] => {
+        if (typeof value === 'number') return [value];
+        if (Array.isArray(value)) return value.flatMap(numbersIn);
+        if (value !== null && typeof value === 'object') {
+          return Object.values(value as Record<string, unknown>).flatMap(numbersIn);
+        }
+        return [];
+      };
+      const prices = [
+        decision.entryPrice.value,
+        decision.exitPrice.value,
+        decision.risk.stopPrice,
+        decision.risk.targetPrice,
+      ];
+      expect(
+        numbersIn(data).filter((value) => prices.includes(value)),
+        'a decision figure reached the evaluation line',
+      ).toEqual([]);
+
+      // What does reach it: the counts, the flags, the identifiers and the code a reviewer needs — the
+      // fields the log is *for*. The id is here, digits and all, and that is the point: `usr_…106d` is
+      // an identifier, not a price, and the assertions above are about figures rather than about the
+      // characters an id happens to be made of.
+      expect(typeof data.userId).toBe('string');
+      expect(data.userId).toMatch(/^usr_/);
+      expect(typeof data.observations).toBe('number');
+      expect(typeof data.assumptions).toBe('number');
+      expect(typeof data.evaluable).toBe('boolean');
+      expect(typeof data.outcome).toBe('string');
+      expect(evaluation?.component).toContain('decision');
       expect(written).toContain('decision evaluated');
       expect(written).toContain('capabilities read');
       expect(written).toContain('capability.resolve');
