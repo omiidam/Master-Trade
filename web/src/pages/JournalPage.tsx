@@ -82,6 +82,7 @@ import type {
   TradeFilters as TradeFilterState,
   TradeRange,
 } from '../mock/journal';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 const TABS = [
@@ -163,12 +164,26 @@ function lineSeries(
  *     constant with a provenance strip, and the store is not connected.
  */
 export function JournalPage() {
-  const [tab, setTab] = useState<string>('overview');
-  const [filters, setFilters] = useState<TradeFilterState>(EMPTY_TRADE_FILTERS);
-  const [analyticsRange, setAnalyticsRange] = useState<TradeRange>('last-90');
-  const [analyticsFrom, setAnalyticsFrom] = useState<string>('');
-  const [analyticsTo, setAnalyticsTo] = useState<string>('');
-  const [calendarView, setCalendarView] = useState<'month' | 'week'>('month');
+  // The view the reader was on, and the working state that belongs to it: walking to another page and
+  // back lands on the same tab with the same filters, rather than at the top of the journal again.
+  const [tab, setTab] = usePageView<string>('journal', 'tab', 'overview');
+  const [filters, setFilters] = usePageView<TradeFilterState>(
+    'journal',
+    'filters',
+    EMPTY_TRADE_FILTERS,
+  );
+  const [analyticsRange, setAnalyticsRange] = usePageView<TradeRange>(
+    'journal',
+    'range',
+    'last-90',
+  );
+  const [analyticsFrom, setAnalyticsFrom] = usePageView<string>('journal', 'from', '');
+  const [analyticsTo, setAnalyticsTo] = usePageView<string>('journal', 'to', '');
+  const [calendarView, setCalendarView] = usePageView<'month' | 'week'>(
+    'journal',
+    'calendar',
+    'month',
+  );
   const [selectedDate, setSelectedDate] = useState<string | null>('2026-09-19');
   const [selectedRef, setSelectedRef] = useState<string>(mockTrades[0]?.ref ?? '');
   const [reviewState, setReviewState] = useState<AiReviewState>('not-available');

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Coins, History, Layers, ShieldCheck, Wallet } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -30,6 +30,7 @@ import {
 } from '../components/usage';
 import { Grid, Workspace } from '../app/Workspace';
 import { useUsageStore } from '../store/usage';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 /**
@@ -105,7 +106,7 @@ export function UsagePage() {
   const historyError = useUsageStore((state) => state.historyError);
   const loadHistory = useUsageStore((state) => state.loadHistory);
 
-  const [tab, setTab] = useState<string>('overview');
+  const [tab, setTab] = usePageView<string>('usage', 'tab', 'overview');
 
   useEffect(() => {
     if (status === 'idle') void load();

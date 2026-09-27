@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Bot,
   BrainCircuit,
@@ -35,6 +34,7 @@ import { Workspace } from '../app/Workspace';
 import { EPISTEMIC_LABEL, mockDataNotice, mockConversation, mockSystemStatus } from '../mock/data';
 import { formatTimestamp } from '../lib/format';
 import { useUiStore } from '../store/ui';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 /**
@@ -83,7 +83,7 @@ const COMPOSER_EXAMPLES: readonly string[] = [
 
 export function AgentWorkspacePage() {
   const setPage = useUiStore((state) => state.setPage);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = usePageView<string>('agent', 'draft', '');
 
   return (
     <Workspace

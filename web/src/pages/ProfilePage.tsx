@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   AlertTriangle,
   GaugeCircle,
@@ -37,6 +37,7 @@ import {
 import { Grid, Workspace } from '../app/Workspace';
 import { useProfileStore, type ProfileContextInput } from '../store/profile';
 import { useQualityStore } from '../store/quality';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 /**
@@ -111,7 +112,7 @@ export function ProfilePage() {
   const qualityError = useQualityStore((state) => state.error);
   const loadQuality = useQualityStore((state) => state.load);
 
-  const [tab, setTab] = useState<string>('overview');
+  const [tab, setTab] = usePageView<string>('profile', 'tab', 'overview');
 
   useEffect(() => {
     if (status === 'idle') void load();

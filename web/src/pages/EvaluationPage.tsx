@@ -30,7 +30,7 @@
  * never scrolls sideways.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Blocks, FileSearch, Layers, RefreshCw, ShieldQuestion } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -63,6 +63,7 @@ import {
 import { Grid, Workspace } from '../app/Workspace';
 import { useCapabilitiesStore } from '../store/capabilities';
 import { useDecisionsStore } from '../store/decisions';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 /**
@@ -98,7 +99,7 @@ const TABS = [
 ];
 
 export function EvaluationPage() {
-  const [tab, setTab] = useState('decisions');
+  const [tab, setTab] = usePageView<string>('evaluation', 'tab', 'decisions');
 
   const listStatus = useDecisionsStore((state) => state.status);
   const list = useDecisionsStore((state) => state.list);

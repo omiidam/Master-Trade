@@ -158,9 +158,10 @@ A phone gets a **modal** drawer, not a narrow rail:
   and **returned to the trigger** on close, Tab cycled inside, Escape closes from anywhere.
 - **Four ways out**: the close control, the scrim (a real, named `button`, not a bare `div`), Escape,
   or choosing a destination — the store closes the drawer on `setPage`.
-- **Mirrored by the direction.** It slides from the inline-start edge with a Framer Motion transform
-  (`x`), not a `translate-x` utility, so it arrives from the right in Persian and the left in English;
-  under `prefers-reduced-motion` it fades instead of sliding.
+- **Mirrored by the direction.** It opens from the inline-start edge with a Framer Motion _clip_ —
+  not a `translate-x` utility, and not a transform at all — so it arrives from the right in Persian and
+  the left in English while never leaving the edge it is anchored to (§ 7.4). Under
+  `prefers-reduced-motion` it fades instead of revealing.
 
 The shell also closes the drawer itself when the window leaves the mobile mode, so a drawer left open
 while the window grows cannot reappear later.
@@ -188,3 +189,75 @@ token ladder and a UI store, and a second one is how a shell acquires two source
 The browser harness learned the one thing the new behaviour changes: on a phone the navigation is
 behind the trigger, so `clickNav` opens the drawer before it clicks the entry — the path a person
 takes, rather than a DOM shortcut that would pass while the drawer was unreachable.
+
+## 7. Phase 8.1.3 — the shell's state and context
+
+Phase 8.1.2 made the navigation _behave_ per width. This phase is about what the shell — and the pages
+it frames — **remembers**. The workspace renders one page at a time and unmounts the rest, and that
+shape is load-bearing for every measurement in this file: a page swap is a real swap, so "the page on
+screen" is the page whose heading was painted. Its cost is that anything a page held in `useState` was
+thrown away the moment its reader looked elsewhere. Three things were made to survive instead.
+
+### 7.1 The page's context lives above the page
+
+`web/src/store/pageContext.ts` keeps the _view_ a reader was on, keyed by page and by slot: the tab
+every page opens on, the journal's filters, analytics range and calendar view, the memory page's query
+and its two filters, the research selection, and the agent workspace's unsent draft.
+`usePageView(page, slot, initial)` is a drop-in for `useState` — the same tuple, and a setter that still
+accepts an updater — so a page states _what_ it is keeping and _where_ it belongs and changes nothing
+else. The slots are a closed set (`VIEW_SLOTS`), because a slot that can be misspelled is a second,
+empty copy of the reader's state waiting to happen.
+
+It is deliberately **not a router** (nothing enters the URL; `page` in `store/ui.ts` still decides which
+page is open) and **not a cache** (only choices are kept — a page still reads its data on mount). It is
+also not persisted: this is session context, and a new session should start where its defaults say.
+
+### 7.2 The rail's choice is a preference
+
+`web/src/app/shellPreference.ts` persists `sidebarCollapsed` under
+`master-trade.shell.sidebarCollapsed`, on the language preference's own rules and its own storage probe
+(`preferenceStorage`, imported rather than re-derived, so "can this origin remember anything?" has one
+answer). The store reads it once at creation and writes it as the control flips, so the choice and the
+pixel change together. The docs had called this "the reader's saved preference" since Phase 3.2 while it
+was in fact memory-only; this is the half that was missing. Whether a width _honours_ it is still
+`railModeFor`'s decision, not this module's.
+
+### 7.3 The shell's status is fetched once
+
+`web/src/desktop/shellReport.ts` owns the report and the poll; `useShellStatus` is a subscription plus a
+pure derivation (`shellStatusState`). It replaced a poll **per mount**: the topbar and Settings each held
+their own snapshot on their own cadence, so for up to a poll interval the same process could be
+_loading_ in one place and _ready_ in another — the same product describing itself two ways. Two readers
+can now differ only about `stopping`, which is an argument to a pure function rather than a fact about
+the process. Polling is reference-counted and stops with the last reader, so importing the module starts
+no timer and the report is never fetched by nobody.
+
+### 7.4 The drawer no longer leaves the edge it is anchored to
+
+The clip in § 6 is a fix, not a preference. The drawer is `fixed` to the inline-start edge, so in a
+right-to-left interface it is pinned to the **right** edge — and hiding it by translating the panel by
+its own width carried every box inside it past that edge for as long as the animation ran. The phone
+layout is measured against exactly that edge, so the mirrored drawer reported its own panel, nav, header
+and safety block as overflow whenever a measurement landed mid-animation; the identical code in English
+was invisible only because `-100%` moves the panel away from the edge being measured. The panel now
+stays put and the reveal is a direction-aware clip, so its box is inside the layout viewport at every
+frame.
+
+### 7.5 What was verified
+
+| Check                                             | Where                                           | Result |
+| ------------------------------------------------- | ----------------------------------------------- | ------ |
+| The page context, the rail preference, one report | `tests/frontend-shell-state.test.ts`            | 22/22  |
+| Every page's tab is kept under its own page id    | `tests/frontend-shell-state.test.ts`            | pass   |
+| A tab survives a walk away and back               | `tests/browser/e2e.test.ts`                     | pass   |
+| The rail's choice survives a reload               | `tests/browser/e2e.test.ts`                     | pass   |
+| The active navigation entry follows the page      | `tests/browser/e2e.test.ts`                     | pass   |
+| The host is described the same way in both places | `tests/browser/e2e.test.ts`                     | pass   |
+| The stream states its own condition, never "live" | `tests/browser/e2e.test.ts`                     | pass   |
+| Every connection state still has words            | `tests/frontend-shell-state.test.ts`            | pass   |
+| Shell contract and the whole tree (regression)    | `frontend-shell-layout` / `rtl-layout` / matrix | pass   |
+| Types, formatting and build                       | `typecheck`, `typecheck:web`, `format:check`    | pass   |
+
+The suite's own boundary is unchanged: the model and the contracts run offline in `tests/`, and the
+half only a browser can answer — that a reader really does land back on the tab they chose, and that the
+rail really is still collapsed after a reload — is measured in `tests/browser/e2e.test.ts`.

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   AlertTriangle,
   Award,
@@ -51,6 +50,7 @@ import {
   mockScoreEvolution,
   summariseExamProgress,
 } from '../mock/exams';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 const TABS = [
@@ -94,7 +94,7 @@ const TABS = [
 const OUTCOME_TONE = { passed: 'primary', failed: 'danger', void: 'outline' } as const;
 
 export function ExamsPage() {
-  const [tab, setTab] = useState<string>('overview');
+  const [tab, setTab] = usePageView<string>('exams', 'tab', 'overview');
   const progress = summariseExamProgress();
   const openExams = mockExamDefinitions.filter(
     (exam) => exam.state === 'available' || exam.state === 'in-progress',

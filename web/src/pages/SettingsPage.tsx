@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import {
   Database,
   KeyRound,
@@ -33,6 +33,7 @@ import { useShellStatus } from '../desktop/useShellStatus';
 import { mockBudget, mockProviders, mockSystemStatus } from '../mock/data';
 import { LANGUAGE_PREFERENCES, type LanguagePreference } from '../language/preference';
 import { useUiStore } from '../store/ui';
+import { usePageView } from '../store/pageContext';
 import { cn } from '../lib/cn';
 import {
   DIRECTION_PREFERENCES,
@@ -88,7 +89,7 @@ const DIRECTION_OPTION_KEYS: Readonly<Record<DirectionPreference, MessageKey>> =
 };
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<string>('appearance');
+  const [tab, setTab] = usePageView<string>('settings', 'tab', 'appearance');
   const direction = useUiStore((state) => state.direction);
   const setDirection = useUiStore((state) => state.setDirection);
   const density = useUiStore((state) => state.density);

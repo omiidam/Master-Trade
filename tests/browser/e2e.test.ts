@@ -2792,4 +2792,176 @@ suite('the Product Foundation in a real browser', () => {
       await startIn(null);
     }, 120_000);
   });
+
+  /* ---------------------------------------------------------------------- */
+  /* D. What the shell remembers — Phase 8.1.3                               */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * The state that has to outlive the thing that held it.
+   *
+   * The workspace renders one page at a time and unmounts the rest, which is deliberate and is what
+   * every measurement above relies on — a page swap is a real swap, so "the page on screen" is the page
+   * whose heading was painted. The cost of that shape is that anything a page kept in `useState` is
+   * thrown away the moment the reader looks elsewhere, and this block is where that is measured: walking
+   * away and back is a thing a person does, and losing what they chose is a defect rather than a shape.
+   */
+  describe('the shell’s state and context', () => {
+    /** A navigation entry's label in the language this block reads. */
+    const labelOf = (id: string): string => {
+      const section = NAV_SECTIONS.find((item) => item.id === id);
+      if (!section) throw new Error(`no navigation entry with id ${id}`);
+      return translate('en', section.labelKey);
+    };
+
+    /** The rail's rendered width, which is the only thing the collapse control is really about. */
+    const railWidth = (): Promise<number> =>
+      session.evaluate<number>(
+        `Math.round(document.querySelector('aside').getBoundingClientRect().width)`,
+      );
+
+    /** Press a control inside the rail by its accessible name. */
+    const pressInRail = (label: string): Promise<boolean> =>
+      session.evaluate<boolean>(`
+        (() => {
+          const button = [...document.querySelectorAll('aside button')].find(
+            (item) => item.getAttribute('aria-label') === ${JSON.stringify(label)},
+          );
+          if (!button) return false;
+          button.click();
+          return true;
+        })()
+      `);
+
+    it('keeps the tab a reader was on when they walk away and come back', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await visit('journal');
+
+      // A tab that is *not* the page's opening one, so "it stayed" cannot be satisfied by the default.
+      const tabs = await session.tabCount();
+      expect(tabs, 'the journal has no tab strip to test').toBeGreaterThan(3);
+      const chosen = tabs - 1;
+      expect(await session.tabSelected(chosen)).toBe(false);
+      await session.selectTab(chosen, 'journal');
+      expect(await session.tabSelected(chosen)).toBe(true);
+
+      // Leaving the page is what unmounts it — the whole reason the tab was ever lost.
+      await visit('portfolio');
+      await visit('journal');
+
+      expect(
+        await session.tabSelected(chosen),
+        'the journal opened on its first tab again instead of the one the reader chose',
+      ).toBe(true);
+    }, 60_000);
+
+    it('remembers the rail’s collapsed state across a reload', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+
+      const expanded = await railWidth();
+      expect(expanded, 'the rail is not the expanded width to begin with').toBeGreaterThan(200);
+
+      expect(await pressInRail('Collapse sidebar')).toBe(true);
+      await session.waitFor(
+        `document.querySelector('aside').getBoundingClientRect().width < 100`,
+        'the rail to collapse',
+      );
+      const collapsed = await railWidth();
+      expect(collapsed).toBeLessThan(expanded);
+
+      // A reload is the moment a *standing* choice either was remembered or was not. The rail is the
+      // shell's own preference — not where the reader happened to be standing — so it survives one.
+      await session.goto(`${server.origin}/`);
+      expect(
+        await railWidth(),
+        'the rail forgot the reader’s choice the moment the page reloaded',
+      ).toBe(collapsed);
+
+      // The other direction is remembered too, and the shell is handed back the way it was found: the
+      // cases after this one measure the expanded rail.
+      expect(await pressInRail('Expand sidebar')).toBe(true);
+      await session.waitFor(
+        `document.querySelector('aside').getBoundingClientRect().width > 200`,
+        'the rail to expand again',
+      );
+      await session.goto(`${server.origin}/`);
+      expect(await railWidth()).toBe(expanded);
+    }, 60_000);
+
+    it('marks the page being read as the active navigation entry, and only that one', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+
+      /** The accessible names of the entries the rail calls current, in the order they are drawn. */
+      const current = (): Promise<string[]> =>
+        session.evaluateJson<string[]>(`
+          JSON.stringify(
+            [...document.querySelectorAll('aside nav button[aria-current="page"]')].map(
+              (item) => (item.textContent ?? '').trim(),
+            ),
+          )
+        `);
+
+      await visit('portfolio');
+      expect(await current()).toEqual([labelOf('portfolio')]);
+
+      // The entry that was current does not merely go dim: it stops being the current one, so a reader
+      // who arrives at a page is told where they are and nothing else.
+      await visit('journal');
+      expect(await current()).toEqual([labelOf('journal')]);
+      expect(await current()).not.toContain(labelOf('portfolio'));
+    }, 60_000);
+
+    it('describes where it is running the same way in the shell and in Settings', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+
+      // One report, read by both: the topbar's badge and the Settings card are the same answer to the
+      // same question, and the failure this guards against is the two of them disagreeing about it.
+      const topbar = await session.evaluate<string>(
+        `(document.querySelector('header')?.innerText ?? '').replace(/\\s+/g, ' ')`,
+      );
+      expect(topbar).toContain('Browser preview');
+      expect(topbar).not.toContain('Desktop shell');
+
+      // The host card is on the settings page's own tab, so the page is read the way a person reads it:
+      // find the tab by the name it shows and open it.
+      await visit('settings');
+      const hostTab = await session.evaluate<number>(`
+        [...document.querySelectorAll('main [role="tab"]')].findIndex(
+          (item) => (item.textContent ?? '').trim() === ${JSON.stringify(translate('en', 'settings.aiProviders'))},
+        )
+      `);
+      expect(hostTab, 'the settings page has no tab that reports the host').toBeGreaterThanOrEqual(
+        0,
+      );
+      await session.selectTab(hostTab, 'settings host');
+
+      const settings = await session.evaluate<string>(
+        `document.body.innerText.replace(/\\s+/g, ' ')`,
+      );
+      expect(settings).toContain('Running in a browser');
+      expect(settings).not.toContain('Running in the desktop shell');
+    }, 60_000);
+
+    it('states the stream’s own condition instead of implying it is live', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+
+      // The four states the shell has to be able to show, in the words the interface gives them. Which
+      // one a browser with no session settles on is its own business; that it *says* one, and never
+      // claims to be live, is the claim.
+      const words = ['Preparing', 'Not connected', 'Connecting', 'Authenticating', 'Offline'];
+      const chip = await session.evaluate<string>(`
+        (() => {
+          const status = document.querySelector('[role="status"][aria-label^="Event stream:"]');
+          return status?.getAttribute('aria-label') ?? '';
+        })()
+      `);
+      expect(words).toContain(chip.replace('Event stream: ', ''));
+      expect(chip).not.toBe('Event stream: Live');
+    }, 60_000);
+  });
 });

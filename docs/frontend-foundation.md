@@ -143,7 +143,10 @@ records and carry the trust/provenance labels their records declare
 Phase 7.1.1 states this arrangement as a tested contract — the three landmarks, the four widths it
 must survive and the Persian mirror — and Phase 8.1.2 states its _behaviour_ per width (a collapsible
 rail, an off-canvas drawer on a phone) in [application-shell.md](./application-shell.md) and
-`tests/frontend-shell-layout.test.ts`. **No region was restructured to write either.**
+`tests/frontend-shell-layout.test.ts`. Phase 8.1.3 then states what the shell _remembers_ — the page a
+reader was on, the rail's standing choice, and one report behind every screen's view of the host — in
+section 7 of the same document and `tests/frontend-shell-state.test.ts`. **No region was restructured
+to write any of the three.**
 
 ## 4. Prototype pages (mock data only)
 

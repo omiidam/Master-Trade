@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { inDesktopShell, shellStatus } from './bridge';
+import { useMemo, useSyncExternalStore } from 'react';
 import type { ShellStatus } from '@shared/desktop/ipc';
 import {
   initialSupervisorStatus,
@@ -10,22 +9,35 @@ import {
 import { currentRuntime, type DesktopRuntime } from '@shared/desktop/runtime';
 import {
   desktopStartupState,
-  isStartupSettled,
   type DesktopStartupState,
   type DesktopStartupView,
 } from '@shared/desktop/startup';
+import {
+  SHELL_POLL_PENDING_MS,
+  SHELL_POLL_SETTLED_MS,
+  shellStatusReport,
+  subscribeToShellStatus,
+  type ShellReport,
+} from './shellReport.js';
 
 /**
- * How often the shell is asked how the local API is doing.
+ * The shell's status, as one screen needs to read it — Phase 8.1.3.
  *
- * Two cadences, because the answer stops being interesting once it stops changing — but never
- * becomes *uninteresting*, which is the point. A supervisor can crash the API an hour after a
- * clean start, so a single request at mount would leave the interface claiming "connected" for
- * the rest of the session. Polling at 1s while something is happening and 5s once it has settled
- * keeps a crash visible without asking a local process 86,400 questions a day.
+ * The *fetching* is not here any more. It used to be: every mount opened its own poll, so the topbar
+ * and Settings could each hold a different snapshot of the same process and describe it two ways for
+ * up to a poll interval. `shellReport.ts` owns the report and the single poll now, and this file is
+ * the reading half — a subscription plus a pure derivation, which is the shape `shellLayout.ts` /
+ * `useShellLayout.ts` already uses for the widths.
+ *
+ * The split is also what keeps `stopping` honest. The report is shared and has no opinion about a
+ * shutdown; `desktopStartupState` takes `stopping` as an argument, so the screens that share the report
+ * still derive their own view from the *same* facts. Two consumers cannot disagree about which API
+ * state the shell reported; they can only differ about whether a quit has been asked for, and each of
+ * them knows that.
  */
-export const SHELL_POLL_PENDING_MS = 1_000;
-export const SHELL_POLL_SETTLED_MS = 5_000;
+
+/** Re-exported so the cadences are stated where a reader of the hook will find them. */
+export { SHELL_POLL_PENDING_MS, SHELL_POLL_SETTLED_MS };
 
 export interface ShellStatusState {
   /** True while the first status call is in flight. */
@@ -61,7 +73,7 @@ export interface ShellStatusState {
  * Report where this page is running, what the host can do, and how far the app has got.
  *
  * The shell answers asynchronously and may not answer at all (a browser, or a shell whose
- * status command failed), so this hook distinguishes three states rather than defaulting to
+ * status command failed), so this distinguishes three states rather than defaulting to
  * "fine": loading, inside a shell, and everything else — which the UI must render as "no
  * keychain, no cache, no local API".
  *
@@ -72,109 +84,67 @@ export interface ShellStatusState {
  */
 export function useShellStatus(options: { stopping?: boolean } = {}): ShellStatusState {
   const stopping = options.stopping ?? false;
-
-  const [state, setState] = useState<ShellStatusState>(() => initialStatusState(stopping));
-  // Read inside the polling loop, so a reschedule decision does not restart the effect and
-  // reset the cadence on every report.
-  const stoppingRef = useRef(stopping);
-  stoppingRef.current = stopping;
-
-  useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const poll = async (): Promise<void> => {
-      try {
-        const status = await shellStatus();
-        if (cancelled) return;
-        const runtime = currentRuntime();
-        const next = statusState(status, runtime, stoppingRef.current);
-        setState(next);
-        schedule(next.startup.state);
-      } catch (error: unknown) {
-        if (cancelled) return;
-        const message = error instanceof Error ? error.message : 'the shell did not answer';
-        setState({
-          ...initialStatusState(stoppingRef.current),
-          loading: false,
-          error: message,
-          // Not `STARTING`: the answer will not arrive, and saying otherwise keeps a
-          // progress indicator up for a shell that has already given up.
-          startup: {
-            state: 'ERROR' satisfies DesktopStartupState,
-            reason: message,
-            apiBaseUrl: null,
-            missingCapabilities: [],
-          },
-        });
-        // A refused status command is not retried: it is a contract mismatch, and asking
-        // twice a second would turn a clear failure into a busy loop.
-      }
-    };
-
-    const schedule = (startupState: DesktopStartupState): void => {
-      if (cancelled) return;
-      const delay = isStartupSettled(startupState) ? SHELL_POLL_SETTLED_MS : SHELL_POLL_PENDING_MS;
-      timer = setTimeout(() => void poll(), delay);
-    };
-
-    void poll();
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
-    // `stopping` is read through a ref, so the first effect run still sees the initial value.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // A late `stopping` flag is reflected immediately rather than at the next poll.
-  useEffect(() => {
-    setState((previous) => {
-      if (!previous.status) {
-        return {
-          ...previous,
-          startup: desktopStartupState({ runtime: previous.runtime, status: null, stopping }),
-        };
-      }
-      const next = statusState(previous.status, previous.runtime, stopping);
-      return { ...next, loading: previous.loading, error: previous.error };
-    });
-  }, [stopping]);
-
-  return state;
+  const report = useSyncExternalStore(subscribeToShellStatus, shellStatusReport);
+  return useMemo(() => shellStatusState(report, stopping), [report, stopping]);
 }
 
-/** The state before the shell has said anything. */
-function initialStatusState(stopping: boolean): ShellStatusState {
+/**
+ * The report, as one screen renders it. Pure, so a test can drive every state directly.
+ *
+ * The `stopping` argument is the only thing two readers of the same report may differ about, and it
+ * only reaches the view of the *startup* — a quit being asked for changes what the app should say
+ * about itself, not what the shell said.
+ */
+export function shellStatusState(report: ShellReport, stopping: boolean): ShellStatusState {
+  if (report.error !== null) {
+    return {
+      ...initialStatusState(stopping, report.inShell),
+      loading: false,
+      error: report.error,
+      // Not `STARTING`: the answer will not arrive, and saying otherwise keeps a
+      // progress indicator up for a shell that has already given up.
+      startup: {
+        state: 'ERROR' satisfies DesktopStartupState,
+        reason: report.error,
+        apiBaseUrl: null,
+        missingCapabilities: [],
+      },
+    };
+  }
+
+  if (report.status === null) return initialStatusState(stopping, report.inShell);
+
+  const status = report.status;
+  const processReport = status.runtime ?? initialSupervisorStatus();
+  return {
+    loading: false,
+    inShell: report.inShell,
+    status,
+    error: null,
+    runtime: report.runtime,
+    processState: processReport.state,
+    runtimeState: runtimeStateOf(processReport.state),
+    startup: desktopStartupState({ runtime: report.runtime, status, stopping }),
+  };
+}
+
+/**
+ * The state before the shell has said anything.
+ *
+ * `inShell` is passed in rather than probed here: where this page is running is one fact about one
+ * page, and the shared report already carries it. A second probe would be a second answer.
+ */
+function initialStatusState(stopping: boolean, inShell: boolean): ShellStatusState {
   const runtime = currentRuntime();
   const processState: ProcessState = 'idle';
   return {
     loading: true,
-    inShell: inDesktopShell(),
+    inShell,
     status: null,
     error: null,
     runtime,
     processState,
     runtimeState: runtimeStateOf(processState),
     startup: desktopStartupState({ runtime, status: null, stopping }),
-  };
-}
-
-/** Build the state from a shell report. Pure, so a test can drive it directly. */
-function statusState(
-  status: ShellStatus,
-  runtime: DesktopRuntime,
-  stopping: boolean,
-): ShellStatusState {
-  const report = status.runtime ?? initialSupervisorStatus();
-  return {
-    loading: false,
-    inShell: inDesktopShell(),
-    status,
-    error: null,
-    runtime,
-    processState: report.state,
-    runtimeState: runtimeStateOf(report.state),
-    startup: desktopStartupState({ runtime, status, stopping }),
   };
 }

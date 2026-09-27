@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Calculator, Check, FileText, Gavel, Lock, ShieldCheck, Wrench } from 'lucide-react';
 import { AgentBadge, AgentCardItem, AgentCardList } from '../components/agent/AgentCard';
 import { Badge } from '../components/Badge';
@@ -21,6 +20,7 @@ import { Tooltip } from '../components/Tooltip';
 import { Grid, Workspace } from '../app/Workspace';
 import { mockDataNotice, mockBars, mockDashboard, mockLabSetups } from '../mock/data';
 import { cn } from '../lib/cn';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 const SETUP_TONE = {
@@ -51,7 +51,7 @@ const TABS = [
 ] as const;
 
 export function TradingLabPage() {
-  const [tab, setTab] = useState<string>('review');
+  const [tab, setTab] = usePageView<string>('lab', 'tab', 'review');
 
   return (
     <Workspace

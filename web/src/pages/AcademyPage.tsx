@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { BookOpen, CheckCircle2, GraduationCap, ListChecks, Lock, Target } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import {
@@ -24,6 +23,7 @@ import {
 } from '../mock/data';
 import { formatPercent } from '../lib/format';
 import { cn } from '../lib/cn';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 const STATUS_TONE = {
@@ -65,7 +65,7 @@ const TABS = [
 ] as const;
 
 export function AcademyPage() {
-  const [tab, setTab] = useState<string>('modules');
+  const [tab, setTab] = usePageView<string>('academy', 'tab', 'modules');
 
   return (
     <Workspace

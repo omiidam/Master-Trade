@@ -42,6 +42,7 @@ import { memoryStatus, mockKnowledge, mockKnowledgeGrowth } from '../mock/memory
 import { summariseResearch } from '../mock/research';
 import { useUiStore } from '../store/ui';
 import { formatPercent, formatRelative, formatTimestamp } from '../lib/format';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 const TABS = [
@@ -66,7 +67,7 @@ const TABS = [
 ] as const;
 
 export function DashboardPage() {
-  const [tab, setTab] = useState<string>('overview');
+  const [tab, setTab] = usePageView<string>('dashboard', 'tab', 'overview');
   const [loading, setLoading] = useState(true);
   const setPage = useUiStore((state) => state.setPage);
 

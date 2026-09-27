@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Archive,
   BadgeCheck,
@@ -49,6 +49,7 @@ import {
   mockTrustFacets,
   type MemoryStatus,
 } from '../mock/memory';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 const TABS = [
@@ -89,11 +90,27 @@ const STATUS_ICON = {
   archived: <Archive size={14} aria-hidden />,
 } as const;
 
+/**
+ * The filter a reader has not chosen yet.
+ *
+ * A module constant rather than a fresh `[]` per render, so "nothing filtered" is one value the whole
+ * page shares — and so the kept context can compare it by identity rather than by contents.
+ */
+const NO_FILTERS: readonly string[] = [];
+
 export function MemoryPage() {
-  const [tab, setTab] = useState<string>('board');
-  const [query, setQuery] = useState('');
-  const [statusFilters, setStatusFilters] = useState<readonly string[]>([]);
-  const [sourceFilters, setSourceFilters] = useState<readonly string[]>([]);
+  const [tab, setTab] = usePageView<string>('memory', 'tab', 'board');
+  const [query, setQuery] = usePageView<string>('memory', 'query', '');
+  const [statusFilters, setStatusFilters] = usePageView<readonly string[]>(
+    'memory',
+    'statusFilter',
+    NO_FILTERS,
+  );
+  const [sourceFilters, setSourceFilters] = usePageView<readonly string[]>(
+    'memory',
+    'sourceFilter',
+    NO_FILTERS,
+  );
 
   const categoryLabel = (categoryId: string) =>
     mockMemoryCategories.find((category) => category.id === categoryId)?.label ?? categoryId;

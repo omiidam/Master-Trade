@@ -7,15 +7,20 @@
  * the frontend never calls a provider, the database or the LLM directly
  * (docs/technology-decisions.md § 1.2).
  *
- * The language preference is the one entry here that outlives the process, and it is deliberately a
- * *mirror* rather than an owner. `language/preference.ts` owns the setting — the key, the validation
- * and the storage access all live there — and this store holds the current value so the interface can
- * render its selected state and so a language stage can read the choice without touching storage on
- * every message. Reading it again in `setLanguagePreference`'s write path means the state here says
- * exactly what storage says, including after a write that failed.
+ * Two entries here outlive the process — the language preference and the rail's collapsed state — and
+ * each is deliberately a *mirror* rather than an owner. `language/preference.ts` and
+ * `app/shellPreference.ts` own their settings: the key, the validation and the storage access all live
+ * there, and this store holds the current value so the interface can render it without touching storage
+ * on every render. Reading the language again in `setLanguagePreference`'s write path means the state
+ * here says exactly what storage says, including after a write that failed.
+ *
+ * Everything else is memory on purpose. Which page is open, which dialog is showing and whether the
+ * off-canvas drawer is open are positions rather than choices, and a product that reopened on the last
+ * dialog somebody closed would be remembering the wrong thing.
  */
 
 import { create } from 'zustand';
+import { readSidebarCollapsed, writeSidebarCollapsed } from '../app/shellPreference.js';
 import type { AppPageId } from '../config/navigation.js';
 import {
   DEFAULT_DIRECTION_PREFERENCE,
@@ -84,13 +89,23 @@ export interface UiState {
  */
 const storedLanguage = readLanguagePreference();
 
+/**
+ * The rail's standing choice, read once when the store is created.
+ *
+ * Same reason as the language above, and it is the one piece of shell state that is a *preference*
+ * rather than a position: the reader collapses the rail because they want it collapsed, so it has to
+ * still be collapsed at the next launch. Which of the four widths may honour it is `railModeFor`'s
+ * decision, not this store's.
+ */
+const storedSidebarCollapsed = readSidebarCollapsed();
+
 export const useUiStore = create<UiState>((set) => ({
   page: 'dashboard',
   // `auto`, so that choosing Persian in Settings mirrors the interface without a second control: the
   // direction follows the language until somebody says otherwise.
   direction: DEFAULT_DIRECTION_PREFERENCE,
   density: 'comfortable',
-  sidebarCollapsed: false,
+  sidebarCollapsed: storedSidebarCollapsed,
   sidebarOpen: false,
   safetyDialogOpen: false,
   aboutDialogOpen: false,
@@ -112,7 +127,14 @@ export const useUiStore = create<UiState>((set) => ({
   // remembered choice only when it really was remembered.
   setLanguagePreference: (languagePreference) =>
     set({ languagePreference, languageStorable: writeLanguagePreference(languagePreference) }),
-  toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  // Written as it is flipped, so the preference and the pixel change together: there is no commit step
+  // for the reader to skip and no second place that has to remember to save it.
+  toggleSidebar: () =>
+    set((state) => {
+      const collapsed = !state.sidebarCollapsed;
+      writeSidebarCollapsed(collapsed);
+      return { sidebarCollapsed: collapsed };
+    }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   toggleSidebarOpen: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   setSafetyDialogOpen: (safetyDialogOpen) => set({ safetyDialogOpen }),

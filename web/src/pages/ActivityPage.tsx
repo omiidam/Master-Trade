@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Ban,
   BellRing,
@@ -35,6 +35,7 @@ import {
 import { Grid, Workspace } from '../app/Workspace';
 import { describeUnavailability, type RealtimeUnavailable } from '../realtime/session.js';
 import { DEFAULT_SUBSCRIPTION, useRealtimeStore } from '../realtime/store.js';
+import { usePageView } from '../store/pageContext';
 import {
   activityPreviewNotice,
   jobPreviewNotice,
@@ -111,7 +112,7 @@ const KIND_LABELS: Record<string, string> = liveLabels({
  * capability than this phase grants.
  */
 export function ActivityPage() {
-  const [tab, setTab] = useState<string>('stream');
+  const [tab, setTab] = usePageView<string>('activity', 'tab', 'stream');
   const resolution = useRealtimeStore((state) => state.resolution);
   const state = useRealtimeStore((state) => state.state);
   const snapshot = useRealtimeStore((state) => state.snapshot);

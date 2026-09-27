@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Coins, Gauge, Layers, ListChecks, PencilLine, Sparkles } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -25,6 +25,7 @@ import {
 import { Grid, Workspace } from '../app/Workspace';
 import { usePortfolioStore } from '../store/portfolio';
 import { useQualityStore } from '../store/quality';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 /**
@@ -122,7 +123,7 @@ export function PortfolioPage() {
   const assessment = useQualityStore((state) => state.assessment);
   const assess = useQualityStore((state) => state.load);
 
-  const [tab, setTab] = useState<string>('overview');
+  const [tab, setTab] = usePageView<string>('portfolio', 'tab', 'overview');
 
   useEffect(() => {
     if (status === 'idle') void load();

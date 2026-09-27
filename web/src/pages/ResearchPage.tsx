@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Beaker,
   ClipboardCheck,
@@ -43,6 +42,7 @@ import {
   mockReports,
   summariseResearch,
 } from '../mock/research';
+import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
 
 const TABS = [
@@ -84,8 +84,12 @@ const TABS = [
 ] as const;
 
 export function ResearchPage() {
-  const [tab, setTab] = useState<string>('overview');
-  const [selectedId, setSelectedId] = useState<string>(mockExperiments[0]?.id ?? '');
+  const [tab, setTab] = usePageView<string>('research', 'tab', 'overview');
+  const [selectedId, setSelectedId] = usePageView<string>(
+    'research',
+    'selection',
+    mockExperiments[0]?.id ?? '',
+  );
   const progress = summariseResearch();
   const selected = mockExperiments.find((experiment) => experiment.id === selectedId);
   const report = mockReports[0] ?? null;
