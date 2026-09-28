@@ -53,6 +53,8 @@ export interface UiState {
   sidebarCollapsed: boolean;
   /** True while the off-canvas navigation is open. Only mobile renders it, so it is inert elsewhere. */
   sidebarOpen: boolean;
+  /** True while the quick-navigation palette is showing. Like the drawer, it is a modal surface. */
+  quickNavOpen: boolean;
   safetyDialogOpen: boolean;
   aboutDialogOpen: boolean;
   /** What this person chose to be answered in. `auto` when they have chosen nothing. */
@@ -75,6 +77,9 @@ export interface UiState {
   /** Open or close the off-canvas navigation drawer (mobile). */
   setSidebarOpen: (open: boolean) => void;
   toggleSidebarOpen: () => void;
+  /** Open or close the quick-navigation palette (the search over the fourteen destinations). */
+  setQuickNavOpen: (open: boolean) => void;
+  toggleQuickNav: () => void;
   setSafetyDialogOpen: (open: boolean) => void;
   setAboutDialogOpen: (open: boolean) => void;
 }
@@ -107,6 +112,7 @@ export const useUiStore = create<UiState>((set) => ({
   density: 'comfortable',
   sidebarCollapsed: storedSidebarCollapsed,
   sidebarOpen: false,
+  quickNavOpen: false,
   safetyDialogOpen: false,
   aboutDialogOpen: false,
   languagePreference: storedLanguage.preference,
@@ -137,6 +143,16 @@ export const useUiStore = create<UiState>((set) => ({
     }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   toggleSidebarOpen: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+  // Opening the palette closes the off-canvas drawer it may have been opened from: both are modal
+  // surfaces, and a dialog drawn over another dialog is two answers to "who has the keyboard". The
+  // reverse is not true — closing the palette touches nothing else, because a reader who dismisses
+  // the search is back exactly where they were, not a drawer further on.
+  setQuickNavOpen: (quickNavOpen) =>
+    set(quickNavOpen ? { quickNavOpen, sidebarOpen: false } : { quickNavOpen }),
+  toggleQuickNav: () =>
+    set((state) =>
+      state.quickNavOpen ? { quickNavOpen: false } : { quickNavOpen: true, sidebarOpen: false },
+    ),
   setSafetyDialogOpen: (safetyDialogOpen) => set({ safetyDialogOpen }),
   setAboutDialogOpen: (aboutDialogOpen) => set({ aboutDialogOpen }),
 }));

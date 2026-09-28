@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.2.2
+# Application Shell — Phases 7.1.1 through 8.2.3
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -479,3 +479,157 @@ component library and state library remain untouched, as in § 6 and § 8.3.
 Both presentations were also measured in a live browser at 1440px and 76px: 14 rows each, one height
 (38px), one icon column, icons centred to the pixel in the icon rail, three group rules, and no clipped
 label or overflow.
+
+## 10. Phase 8.2.3 — navigation discoverability and quick access
+
+Phase 8.2.1 stated _which_ fourteen destinations the workspace has and in what order, and 8.2.2 gave
+each one a box, a name and an identifier. This phase adds the **second way in**: a quick-navigation
+palette — one field over the same fourteen entries, opened from anywhere with `Ctrl`/`⌘`+`K`. It
+adds no destination, removes none, renames none, and moves none.
+
+The rail stays the primary navigation, in every sense that matters. It is still the list that is
+always there, still the thing a reader reads to learn what the product does. The palette is for the
+reader who already knows the name of what they want and would rather type three letters of it than
+read eleven entries to be sure the twelfth is not the one. Portfolio and Evaluation are still two
+modules; there is still no Performance entry; no page, no Top Bar control and no region was redesigned.
+
+### 10.1 One list, drawn twice — and not a second list of destinations
+
+The whole risk of a second way in is a second answer to "where does this product go". So the palette
+has no list of its own: `web/src/app/navSearch.ts` builds its index from `NAV_MODEL` — the same value
+the rail draws — and a case asserts the module contains no section id at all, while the results keep
+the _same_ section objects the rail holds (`expect(match.section).toBe(findNavSection(...))`, which
+only passes because the model filters the declaration rather than copying it). A destination that
+moved or was renamed moved here too, and there is no target in this surface that is not a real page.
+
+One thing is shared the other way round: the glyph each destination is drawn with. `Sidebar.tsx` now
+exports its `NAV_ICONS` map, and the palette renders `NAV_ICONS[match.section.icon]` — one icon per
+section, so the two surfaces cannot teach different symbols for the same page.
+
+### 10.2 What a query can be found by
+
+`searchQuickNav(query, locale)` answers to four fields, and the order they are ranked in is the
+ladder from "what the reader was looking at" to "where it happens to live":
+
+| Rank | Field                 | Why it is where it is                                                                   |
+| ---- | --------------------- | --------------------------------------------------------------------------------------- |
+| 0–1  | the visible **label** | the word on screen, prefix first — typing `ex` should put Exams above nothing           |
+| 2    | the **identifier**    | the semantic route metadata: `agent` finds the AI Workspace, which nothing visible says |
+| 3    | the **description**   | so "cost basis" finds Portfolio; the reader knows the job, not the name                 |
+| 4    | the **group**         | so "learning" finds the two study surfaces; a query can ask for a _place_               |
+
+The tie-break is the rail's own display order, stated rather than inherited from `Array.sort`'s
+stability, and an empty query is the whole directory in that order — the palette is a directory as
+well as a search, which is what makes opening it a way of discovering what is here. `found('set')`
+returns `['settings', 'journal', 'lab']`: the best answer is the _last_ entry the rail draws, which is
+the case that would look wrong if the ladder and the display order were one thing.
+
+Both sides of the comparison are folded: case, `NFKC`, and the zero-width joiners Persian writes into
+words a reader may not type. A word spelled with a non-joiner is found by the spelling without one,
+which is the difference between a search that works in Persian and one that works in English.
+
+### 10.3 The surface, and which primitive it is built on
+
+The palette is a **combobox over a listbox** rather than a dialog with a list in it: the field is
+`role="combobox"`, it names the list it filters (`aria-controls`), it says which row is highlighted
+through `aria-activedescendant` — so the keyboard never leaves the field while walking results — and
+each row is a `role="option"` whose `aria-selected` is the highlight. The rows are `tabIndex={-1}`:
+the field already has the keyboard, and fourteen tab stops would be a second route through the same
+fourteen answers.
+
+It is built on Radix's dialog primitive directly, not on the shared `Modal`, and the reason is
+particular: Radix moves focus into a dialog from a passive effect after mount, and `Modal`'s first
+tabbable thing is its close control. A command surface whose field must own the keyboard the instant
+it opens is a race the shared component loses. Everything that makes a dialog a dialog — the portal,
+the scrim, `aria-modal`, focus moved in and returned, Escape, Tab cycled inside — is still Radix's;
+this file re-implements none of it. A case asserts there is exactly _one_ `document.addEventListener`
+call in it (the shortcut) and no hand-rolled Escape or Tab handling, so a later phase cannot quietly
+grow a second focus trap.
+
+The palette is not a page and claims no page: it contains no `aria-current`. Choosing a result calls
+the same `setPage` the rail's own entries call, so "which page is open" and "which entry is current"
+stay one answer from one field — and after a quick-navigation the rail is asked, unprompted, and
+marks exactly one entry.
+
+### 10.4 The shortcut, printed and published
+
+The shortcut is `Ctrl`/`⌘`+`K`, read from the same `keydown` for both modifiers, `preventDefault`ed so
+the browser's own search bar does not also open, and toggling (so the same keys close it). It is
+written where it is used, in the platform's own dialect — `⌘K` on an Apple keyboard, `Ctrl+K`
+otherwise, because a hint that names a key the keyboard does not have is worse than no hint — and it
+is published to assistive technology as well, through `aria-keyshortcuts="Control+K Meta+K"` on both
+the field and the rail's control. A `<kbd>` in the palette and the same notation at the end of the
+rail's row: a keyboard route nobody can see is a route only the person who wrote it knows.
+
+### 10.5 Where it is drawn, and why it is not inside `<nav>`
+
+The control that opens the palette is part of the rail, above the list, in both presentations: the
+label and the hint where there is room, an icon with the tooltip where there is not. It is
+**beside** the landmark rather than inside it, and that is not tidiness: inside `<nav>` it would be a
+fifteenth entry for every case that counts what the navigation offers, a fifteenth tab stop on the way
+to a page, and — the part that matters — a row that looks like a destination and is not one. A case
+slices `SidebarNav`'s own source and asserts the trigger is not in it, alongside the two call sites
+(the rail and the off-canvas drawer) it must have.
+
+The row is the same box as the entries: 22px glyph slot, 10px padding, and — after the same kind of
+measurement this phase's predecessor made — **38px** in both presentations. The first draft drew the
+two rows at 39px, because the `<kbd>` chip's line box was one pixel taller than the glyph slot beside
+it; the chip is `leading-none` now, and a browser case is what said so. The one difference left is
+honest and stated: at a window height where the fourteen entries need to scroll, the entries are 237px
+and the row is 247px, because the 10px is the navigation's own scrollbar. The row spans the rail's
+inner width; the entries stop at the scroll marker.
+
+Opening it from the phone's off-canvas navigation closes that drawer (`setQuickNavOpen(true)` sets
+`sidebarOpen: false`), because two modal surfaces cannot both hold the keyboard — and closing the
+palette touches nothing else, so a reader who dismisses the search is exactly where they were.
+
+### 10.6 What was adopted from the references, and what was not
+
+All four reference dashboards put a command palette over their route table: one keyboard-first
+surface, one list of destinations derived from the router's own metadata, a highlighted row driven by
+`aria-activedescendant`, and the shortcut printed on it. That is § 10.2–§ 10.4, and it is the whole
+of what was adopted. None of them has a second navigation — they replace or supplement the sidebar,
+and this phase deliberately does not: the rail is the primary navigation and the palette is an
+accelerator beside it, which is why the control lives in the rail and the Top Bar is untouched.
+
+Left alone on purpose: the Top Bar's disabled `Search lessons, sessions, notes` field. Its subject is
+_content_ — lessons, sessions and notes — which still arrives with the API layer, and this phase's
+mechanism is navigation. Wiring one to the other would have renamed a control without building what
+its label promises.
+
+### 10.7 What was verified
+
+| Check                                                                   | Where                              | Result |
+| ----------------------------------------------------------------------- | ---------------------------------- | ------ |
+| Every destination offered, in rail order, on open                       | `tests/browser/e2e.test.ts`        | pass   |
+| Found by name, identifier, description and group                        | `tests/browser/e2e.test.ts`        | pass   |
+| Enter opens the page, and exactly one entry is left current             | `tests/browser/e2e.test.ts`        | pass   |
+| The arrows walk the list and wrap, at both ends                         | `tests/browser/e2e.test.ts`        | pass   |
+| Reached from the rail's control, and the keyboard is handed back        | `tests/browser/e2e.test.ts`        | pass   |
+| The same directory, order and names under a mirrored interface (**fa**) | `tests/browser/e2e.test.ts`        | pass   |
+| No overflow, no clipping and no layout shift at 1440 / 1024 / 390       | `tests/browser/e2e.test.ts`        | pass   |
+| Opens over the phone's drawer rather than behind it                     | `tests/browser/e2e.test.ts`        | pass   |
+| Search: totality, rank, tie-break, folding, no foreign targets          | `tests/frontend-quicknav.test.ts`  | 13/13  |
+| The palette derives from the model, and claims no page                  | `tests/frontend-quicknav.test.ts`  | pass   |
+| Navigation, shell layout, RTL, responsive, integration (regression)     | `frontend-*` / `rtl-layout`        | pass   |
+| Types, formatting and build                                             | `typecheck`, `format:check`, build | pass   |
+
+And measured in a live browser rather than inferred: the palette at 1440px and at 390px — 14 rows,
+the panel inside the viewport (16→374 of 390, 76→751 of 844), one dialog in the document, and
+`scrollWidth === innerWidth`; the rail's control 59×38 collapsed and 247×38 expanded, against entries
+of 59×38 and 237×38.
+
+### 10.8 A defect the browser case found, and the one it would have missed
+
+The case that presses Escape and asks where the keyboard went came back with **nowhere**: Radix closes
+a dialog by returning focus to its own `Dialog.Trigger`, and it calls `preventDefault()` on the
+browser's own restore in order to do that — so with no trigger inside the dialog's tree, the keyboard
+was simply dropped onto the document. This palette's trigger is the rail's control, a component away
+and outside the `Dialog.Root`, so the element is remembered when the panel opens (a _layout_ effect,
+because Radix's own focus move is a passive one and would otherwise be read back) and handed back in
+`onCloseAutoFocus`. The off-canvas drawer remembers its opener the same way and for the same reason;
+this is the second surface in the shell to do it, and both say why next to the line.
+
+The near-miss is worth recording: the same case asserts the field has the keyboard when the palette
+opens, and _that_ would have passed either way — Radix's mount focus works. Only the way back was
+broken, and only a case that closes the surface and then asks catches it.

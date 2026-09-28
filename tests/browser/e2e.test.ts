@@ -3455,4 +3455,444 @@ suite('the Product Foundation in a real browser', () => {
       await expandRail();
     }, 60_000);
   });
+
+  /* ---------------------------------------------------------------------- */
+  /* Quick navigation (Phase 8.2.3)                                          */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * The palette, measured where it is used.
+   *
+   * The suite above holds the rail to what it draws; this one holds the *second way in* to the same
+   * fourteen destinations. Every case here is a question only a browser can answer: does the shortcut
+   * really open it, does the field really hold the keyboard when it does, do the arrow keys really
+   * walk the list (and wrap at both ends), does Enter really open the page and leave exactly one entry
+   * current, and does all of that survive the icon rail, a phone and a mirrored interface.
+   *
+   * The cases state their own starting width, language and rail, like the ones above: the collapse is a
+   * *standing* preference, so a case that failed before its cleanup must not decide the next one.
+   */
+  describe('quick navigation, in a browser', () => {
+    const PALETTE = '[role="dialog"]';
+    const FIELD = '[role="dialog"] [role="combobox"]';
+    const OPTIONS = '[role="dialog"] [role="option"]';
+    /** The shell's own control for opening the palette, in either presentation. */
+    const TRIGGER = '[aria-haspopup="dialog"]';
+
+    /** The fourteen destinations, in display order, and their names in a language. */
+    const IDS = NAV_MODEL.flatMap((group) => group.items.map((item) => item.id));
+    const namesIn = (locale: UiLocale): string[] =>
+      NAV_MODEL.flatMap((group) => group.items.map((item) => translate(locale, item.labelKey)));
+
+    /** The destinations the palette is offering right now, in the order it draws them. */
+    const offered = (): Promise<(string | null)[]> =>
+      session.evaluateJson(
+        `JSON.stringify(
+           [...document.querySelectorAll(${JSON.stringify(OPTIONS)})].map(
+             (option) => option.getAttribute('data-quick-nav-id'),
+           ),
+         )`,
+      );
+
+    /**
+     * The row the palette is pointing at, read through the attribute assistive technology uses.
+     *
+     * `aria-activedescendant` names it *and* the option says it is the selected one, which is the pair
+     * that makes "the highlight" a thing a screen reader can follow rather than a colour.
+     */
+    const highlighted = (): Promise<string | null> =>
+      session.evaluate<string | null>(
+        `document.querySelector('[role="dialog"] [role="option"][aria-selected="true"]')
+           ?.getAttribute('data-quick-nav-id') ?? null`,
+      );
+
+    /** Whether the palette is in the document. */
+    const palettePresent = (): Promise<boolean> =>
+      session.evaluate<boolean>(`!!document.querySelector(${JSON.stringify(FIELD)})`);
+
+    /** Open the palette from the shell's own shortcut, and wait until it holds the keyboard. */
+    const openPalette = async (): Promise<void> => {
+      await session.pressKey('Control+k');
+      await session.waitFor(
+        `!!document.querySelector(${JSON.stringify(FIELD)})`,
+        'the quick-navigation palette',
+      );
+      // The field, not the panel: a palette that opened without the keyboard would be a dialog with a
+      // search box in it rather than a command surface.
+      await session.waitFor(
+        `document.activeElement === document.querySelector(${JSON.stringify(FIELD)})`,
+        'the palette to take the keyboard',
+      );
+    };
+
+    const closePalette = async (): Promise<void> => {
+      await session.pressKey('Escape');
+      await session.waitFor(
+        `!document.querySelector(${JSON.stringify(FIELD)})`,
+        'the palette to close',
+      );
+    };
+
+    /**
+     * Ask the palette a question, from closed, and hand back what it offered.
+     *
+     * The wait is on the *answer* rather than on the keystrokes having landed. The field's value and
+     * the list it filters are two renders, so a case that read the list as soon as the text arrived
+     * would sometimes be reading the previous answer — the same mistake the rail's width cases avoid by
+     * waiting for the animation to settle rather than for a threshold. Two consecutive polls that agree
+     * are what "settled" means here, and the answer is keyed to the query so a stale one cannot pass.
+     */
+    const ask = async (query: string): Promise<(string | null)[]> => {
+      // Every question starts from a closed palette: the query and the highlight are state a fresh open
+      // resets, and a case that inherited them from the case before would be measuring the wrong thing.
+      if (await palettePresent()) await closePalette();
+      await openPalette();
+      if (query !== '') await session.typeText(query);
+      await session.waitFor(
+        `(() => {
+           const ids = [...document.querySelectorAll(${JSON.stringify(OPTIONS)})].map(
+             (option) => option.getAttribute('data-quick-nav-id'),
+           );
+           const stamp = JSON.stringify([${JSON.stringify(query)}, ids]);
+           if (window.__mtQuickNav === stamp) return true;
+           window.__mtQuickNav = stamp;
+           return false;
+         })()`,
+        `the palette to settle on an answer to ${JSON.stringify(query)}`,
+      );
+      return offered();
+    };
+
+    it('offers every destination, in rail order, and takes the keyboard when it opens', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+
+      // Opened from the keyboard, with the whole directory in it: the list *is* the discovery — a
+      // query is one way to use it and reading it is the other.
+      expect(await ask('')).toEqual(IDS);
+
+      // The shortcut is printed where it is used, and published to assistive technology too.
+      expect(
+        await session.evaluate<string>(
+          `(document.querySelector('[role="dialog"] kbd')?.textContent ?? '').trim()`,
+        ),
+      ).toMatch(/K$/);
+      expect(
+        await session.evaluate<string | null>(
+          `document.querySelector(${JSON.stringify(FIELD)}).getAttribute('aria-keyshortcuts')`,
+        ),
+      ).toBe('Control+K Meta+K');
+
+      await closePalette();
+    }, 60_000);
+
+    it('finds a destination by its name, by its identifier and by what it holds', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+
+      // The printed word…
+      expect(await ask('portfolio')).toEqual(['portfolio']);
+      // …and the identifier: nothing on screen says "agent" about the AI Workspace, so this is the
+      // query that only the semantic route metadata can answer. Its neighbour mentions an agent in its
+      // description, and comes second — the identifier beats the prose.
+      expect(await ask('agent')).toEqual(['agent', 'memory']);
+      // …the sentence that says what a destination holds…
+      expect(await ask('cost basis')).toEqual(['portfolio']);
+      // …and the group it lives under, which is in no entry's own words.
+      expect(await ask('learning')).toEqual(['academy', 'exams']);
+
+      // And it finds nothing that is not there: there is no Performance section to reach, so a query
+      // for one is empty and says so rather than offering the nearest thing.
+      expect(await ask('performance')).toEqual([]);
+      expect(
+        await session.evaluate<boolean>(
+          `(document.querySelector(${JSON.stringify(PALETTE)})?.textContent ?? '').includes(
+             ${JSON.stringify(translate('en', 'shell.quickNavNoMatches'))},
+           )`,
+        ),
+      ).toBe(true);
+
+      await closePalette();
+    }, 60_000);
+
+    it('opens the destination the reader picked, and leaves exactly that entry current', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+
+      /** The entries the rail calls current, by identifier. */
+      const current = (): Promise<(string | null)[]> =>
+        session.evaluateJson(
+          `JSON.stringify(
+             [...document.querySelectorAll('aside nav button[aria-current="page"]')].map(
+               (button) => button.getAttribute('data-nav-id'),
+             ),
+           )`,
+        );
+
+      // Chosen from the field: the highlight starts on the best answer, so Enter takes it.
+      expect(await ask('evaluation')).toEqual(['evaluation']);
+      await session.pressKey('Enter');
+      await session.waitFor(
+        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'evaluation'))}`,
+        'the Evaluation page to be rendered from the palette',
+      );
+      // The palette leaves with the choice rather than sitting over the page it opened, and the rail —
+      // not the palette — is what says where the reader is.
+      await session.waitFor(
+        `!document.querySelector(${JSON.stringify(FIELD)})`,
+        'the palette to leave with the choice',
+      );
+      expect(await current()).toEqual(['evaluation']);
+
+      // Walked to with the arrow keys, from the top of the directory.
+      await ask('');
+      expect(await highlighted()).toBe(IDS[0]);
+      await session.pressKey('ArrowDown');
+      await session.pressKey('ArrowDown');
+      await session.pressKey('ArrowDown');
+      expect(await highlighted()).toBe(IDS[3]);
+      // …and the list wraps, so the row above the first is the last one rather than nothing at all.
+      await session.pressKey('ArrowUp');
+      await session.pressKey('ArrowUp');
+      await session.pressKey('ArrowUp');
+      expect(await highlighted()).toBe(IDS[0]);
+      await session.pressKey('ArrowUp');
+      expect(await highlighted()).toBe(IDS[IDS.length - 1]);
+
+      const last = IDS[IDS.length - 1] ?? '';
+      expect(last).not.toBe('');
+      await session.pressKey('Enter');
+      await session.waitFor(
+        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', last))}`,
+        `the ${last} page to be rendered from the keyboard`,
+      );
+      await session.waitFor(
+        `!document.querySelector(${JSON.stringify(FIELD)})`,
+        'the palette to leave with the keyboard’s choice',
+      );
+      // One entry, the right one, and no second claim on the page anywhere in the document.
+      expect(await current()).toEqual([last]);
+      expect(
+        await session.evaluate<number>(`document.querySelectorAll('[aria-current="page"]').length`),
+      ).toBe(1);
+    }, 90_000);
+
+    it('is reached from the rail’s own control in either presentation, and hands the keyboard back', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+
+      /** Press the shell's own control for the palette, focused the way a real press leaves it. */
+      const pressTrigger = (): Promise<boolean> =>
+        session.evaluate<boolean>(`
+          (() => {
+            const trigger = document.querySelector(${JSON.stringify(TRIGGER)});
+            if (!trigger) return false;
+            trigger.focus();
+            trigger.click();
+            return true;
+          })()
+        `);
+
+      expect(await pressTrigger()).toBe(true);
+      await session.waitFor(
+        `document.activeElement === document.querySelector(${JSON.stringify(FIELD)})`,
+        'the palette opened from the rail to take the keyboard',
+      );
+      expect(await offered()).toEqual(IDS);
+
+      // Escape closes it, and the keyboard goes back to the control that opened it — which is what makes
+      // a dialog opened from the rail a detour rather than a trap.
+      await closePalette();
+      // Awaited rather than sampled: Radix hands the keyboard back from a zero-delay timer once the
+      // panel is gone, so a case that read `activeElement` the instant the field disappeared would be
+      // reading the moment before the handover.
+      await session.waitFor(
+        `document.activeElement === document.querySelector(${JSON.stringify(TRIGGER)})`,
+        'the keyboard to go back to the control that opened the palette',
+      );
+
+      // Collapsed, the same control keeps a name and the same route in: an icon is not a name, and this
+      // is the one way into the palette that survives the rail losing its labels.
+      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      await waitForRail('< 100', 'the rail to collapse');
+      const quickNav = translate('en', 'shell.quickNav' as MessageKey);
+      expect(
+        await session.evaluate<string | null>(
+          `document.querySelector(${JSON.stringify(TRIGGER)}).getAttribute('aria-label')`,
+        ),
+      ).toBe(quickNav);
+      expect(await pressTrigger()).toBe(true);
+      await session.waitFor(
+        `document.activeElement === document.querySelector(${JSON.stringify(FIELD)})`,
+        'the palette opened from the icon rail to take the keyboard',
+      );
+      await closePalette();
+
+      await expandRail();
+    }, 60_000);
+
+    it('is the same directory mirrored: the same list, in the same order, in a right-to-left interface', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+      expect(await session.evaluate<string>('document.documentElement.dir')).toBe('rtl');
+
+      // The same fourteen, in the same sequence: the rail's order is a fact about the product, not
+      // about the words, so the mirror does not reorder the destinations.
+      expect(await ask('')).toEqual(IDS);
+      // Each row is named by the entry the rail draws for it, in the language being read.
+      expect(
+        await session.evaluateJson<string[]>(
+          `JSON.stringify(
+             [...document.querySelectorAll(${JSON.stringify(OPTIONS)})].map(
+               (option) => (option.querySelector('span.block')?.textContent ?? '').trim(),
+             ),
+           )`,
+        ),
+      ).toEqual(namesIn('fa'));
+
+      // A query in the interface's own script finds the entry by the name it is drawn with.
+      const portfolio = translate('fa', 'shell.nav.portfolio.label' as MessageKey);
+      expect(await ask(portfolio)).toEqual(['portfolio']);
+
+      // Nothing reaches past the edge of the viewport, in either direction, and the panel is inside it.
+      const overflow = await session.evaluateJson<OverflowReport>(OVERFLOW_PROBE);
+      expect(overflow.total, JSON.stringify(overflow.findings)).toBe(0);
+      expect(overflow.documentScrollWidth).toBeLessThanOrEqual(overflow.limit);
+      expect(
+        await session.evaluate<boolean>(
+          `(() => {
+             const box = document.querySelector(${JSON.stringify(PALETTE)}).getBoundingClientRect();
+             return box.left >= 0 && box.right <= window.innerWidth + 0.5;
+           })()`,
+        ),
+      ).toBe(true);
+
+      await closePalette();
+      await startIn(null);
+    }, 60_000);
+
+    it('never widens the page at any width, and does not move what is being read', async () => {
+      for (const [width, height] of [
+        [1440, 900],
+        [1024, 768],
+        [390, 844],
+      ] as const) {
+        await session.setViewport(width, height);
+        await startIn(null);
+
+        /** Where the page being read starts, so a page switch can be shown not to move it. */
+        const readingBox = (): Promise<{ left: number; width: number }> =>
+          session.evaluateJson(
+            `JSON.stringify(
+               (() => {
+                 const box = document.querySelector('main h2').getBoundingClientRect();
+                 return { left: Math.round(box.left), width: Math.round(box.width) };
+               })(),
+             )`,
+          );
+
+        const before = await readingBox();
+        expect(await ask('')).toEqual(IDS);
+
+        const overflow = await session.evaluateJson<OverflowReport>(OVERFLOW_PROBE);
+        expect(overflow.total, `${width}px: ${JSON.stringify(overflow.findings)}`).toBe(0);
+        expect(overflow.documentScrollWidth).toBeLessThanOrEqual(overflow.limit);
+        // A truncated row is a design decision (`truncate` + the full sentence on the same row); text
+        // that spills past its own box is not.
+        const clipped = await session.evaluateJson<ClippingReport>(CLIPPING_PROBE);
+        expect(
+          clipped.sample.filter((item) => !item.truncate),
+          `${width}px: ${JSON.stringify(clipped.sample)}`,
+        ).toEqual([]);
+        expect(
+          await session.evaluate<boolean>(
+            `(() => {
+               const box = document.querySelector(${JSON.stringify(PALETTE)}).getBoundingClientRect();
+               return box.left >= 0 && box.right <= window.innerWidth + 0.5 && box.top >= 0;
+             })()`,
+          ),
+          `the palette is not inside the viewport at ${width}px`,
+        ).toBe(true);
+
+        // It is *over* the page rather than in it: opening the palette is not a layout shift for
+        // whatever was being read underneath it.
+        expect(await readingBox(), `opening the palette moved the page at ${width}px`).toEqual(
+          before,
+        );
+
+        await closePalette();
+      }
+    }, 120_000);
+
+    it('opens over the phone’s drawer rather than behind it', async () => {
+      await session.setViewport(390, 844);
+      await startIn(null);
+
+      // On a phone the navigation is off-canvas, so the shell's control for the palette is inside the
+      // drawer — the reader asks for it from the same place they ask for a page.
+      expect(
+        await session.evaluate<boolean>(`
+          (() => {
+            const trigger = document.querySelector('[aria-controls="shell-navigation"]');
+            if (!trigger) return false;
+            trigger.click();
+            return true;
+          })()
+        `),
+      ).toBe(true);
+      await session.waitFor(
+        `!!document.querySelector('[role="dialog"] nav')`,
+        'the off-canvas navigation to open',
+      );
+
+      expect(
+        await session.evaluate<boolean>(`
+          (() => {
+            const trigger = document.querySelector(${JSON.stringify(TRIGGER)});
+            if (!trigger) return false;
+            trigger.focus();
+            trigger.click();
+            return true;
+          })()
+        `),
+      ).toBe(true);
+
+      // One modal surface at a time: the drawer leaves as the palette arrives, rather than sitting
+      // behind it holding a second copy of the same keyboard trap.
+      await session.waitFor(
+        `document.querySelectorAll('[role="dialog"]').length === 1 &&
+         !document.querySelector('[role="dialog"] nav')`,
+        'the drawer to leave and only the palette to remain',
+      );
+      expect(await session.evaluate<number>(`document.querySelectorAll('aside').length`)).toBe(0);
+      expect(
+        await session.evaluate<boolean>(
+          `document.activeElement === document.querySelector(${JSON.stringify(FIELD)})`,
+        ),
+      ).toBe(true);
+
+      const overflow = await session.evaluateJson<OverflowReport>(OVERFLOW_PROBE);
+      expect(overflow.total, JSON.stringify(overflow.findings)).toBe(0);
+
+      // And a destination can be opened from it with the keyboard alone.
+      await session.typeText('settings');
+      await session.waitFor(
+        `document.querySelector(${JSON.stringify(FIELD)}).value === 'settings'`,
+        'the phone palette to hold the query',
+      );
+      await session.pressKey('Enter');
+      await session.waitFor(
+        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'settings'))}`,
+        'the Settings page to be rendered from the phone palette',
+      );
+      // Both surfaces are gone and the page is what is on screen.
+      await session.waitFor(
+        `document.querySelectorAll('[role="dialog"]').length === 0`,
+        'the palette to leave with the choice',
+      );
+    }, 60_000);
+  });
 });

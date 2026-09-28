@@ -10,6 +10,7 @@ import {
   Microscope,
   NotebookPen,
   PieChart,
+  Search,
   Settings as SettingsIcon,
   ShieldCheck,
   Sparkles,
@@ -31,8 +32,16 @@ import { useUiStore } from '../store/ui';
 import { CardTile } from '../components/Card';
 import { msg, useTextDirection } from '../i18n/index.js';
 import { useShellLayout } from './useShellLayout';
+import { QUICK_NAV_KEYS, quickNavShortcut } from './navSearch';
 
-const ICONS: Record<NavIconName, ReactNode> = {
+/**
+ * The glyph each destination is drawn with.
+ *
+ * Exported because a destination has *one* icon, not one per surface: the rail draws these and so does
+ * the quick-navigation palette, and a second map would be the place the two started to disagree about
+ * what Research looks like.
+ */
+export const NAV_ICONS: Record<NavIconName, ReactNode> = {
   gauge: <Gauge size={17} aria-hidden />,
   coins: <Coins size={17} aria-hidden />,
   'pie-chart': <PieChart size={17} aria-hidden />,
@@ -134,7 +143,7 @@ function NavItem({
           active ? 'text-primary' : 'text-text-faint group-hover:text-text-muted',
         )}
       >
-        {ICONS[section.icon]}
+        {NAV_ICONS[section.icon]}
       </span>
       {collapsed ? null : <span className="truncate">{msg(section.labelKey)}</span>}
       {collapsed || !active ? null : (
@@ -251,6 +260,81 @@ function SidebarNav({
   );
 }
 
+/**
+ * The way into the quick-navigation palette, drawn above the navigation.
+ *
+ * It sits *beside* the navigation rather than inside it, and that is the whole reason it is its own
+ * component: `<nav>` is the list of fourteen destinations, and a search field among them would be a
+ * fifteenth thing to tab past on the way to a page, a fifteenth entry for every suite that counts what
+ * the navigation offers, and — the part that actually matters — a row that looks like a destination
+ * and is not one. The rail above it is what the reader reads; this is what the reader *asks*.
+ *
+ * It carries the shortcut in both presentations, because a keyboard route nobody can see is a route
+ * only the person who wrote it knows: expanded it sits at the end of the row like the field it stands
+ * in for, and collapsed the tooltip says the same thing the label would have. The two rows are the
+ * same box as the entries below them — the same padding, the same 22px glyph slot — so the rail still
+ * reads as one column rather than as a control that arrived from somewhere else.
+ */
+function QuickNavTrigger({ collapsed, railSide }: { collapsed: boolean; railSide: RailSide }) {
+  const quickNavOpen = useUiStore((state) => state.quickNavOpen);
+  const setQuickNavOpen = useUiStore((state) => state.setQuickNavOpen);
+  const shortcut = quickNavShortcut();
+
+  const button = (
+    <button
+      type="button"
+      // Told the truth about what it does: this opens a dialog, and a screen reader can say so
+      // without the dialog having to be in the document first.
+      aria-haspopup="dialog"
+      aria-expanded={quickNavOpen}
+      aria-keyshortcuts={QUICK_NAV_KEYS}
+      {...(collapsed ? { 'aria-label': msg('shell.quickNav') } : {})}
+      onClick={() => setQuickNavOpen(true)}
+      className={cn(
+        'group flex w-full items-center gap-2.5 rounded-[var(--radius-control)] px-2.5 py-2',
+        'text-start text-body text-text-muted transition-colors duration-[var(--duration-fast)]',
+        'hover:bg-surface-raised/60 hover:text-text',
+        collapsed && 'justify-center',
+      )}
+    >
+      <span className="grid size-[22px] shrink-0 place-items-center text-text-faint group-hover:text-text-muted">
+        <Search size={16} aria-hidden />
+      </span>
+      {collapsed ? null : <span className="truncate">{msg('shell.quickNav')}</span>}
+      {collapsed ? null : (
+        // `leading-none` is not decoration: the chip's line box is what would otherwise decide this
+        // row's height, and one pixel taller than the 22px glyph slot beside it is one pixel taller
+        // than every entry below it.
+        <kbd className="num ms-auto shrink-0 rounded-[var(--radius-control)] border border-border px-1.5 py-0.5 text-caption leading-none text-text-faint">
+          {shortcut}
+        </kbd>
+      )}
+    </button>
+  );
+
+  return (
+    <div className="px-2 pb-1">
+      {collapsed ? (
+        // The label went with the width, so the tooltip says what the row is *and* how to ask for it
+        // from the keyboard — which is the one thing an icon-only rail cannot show.
+        <Tooltip
+          content={
+            <>
+              <span className="block">{msg('shell.quickNav')}</span>
+              <span className="mt-0.5 block text-text-muted">{shortcut}</span>
+            </>
+          }
+          side={railSide}
+        >
+          {button}
+        </Tooltip>
+      ) : (
+        button
+      )}
+    </div>
+  );
+}
+
 /** The permanent safety statement, in the rail and in the drawer alike. */
 function SidebarSafety({ collapsed, railSide }: { collapsed: boolean; railSide: RailSide }) {
   const openSafety = useUiStore((state) => state.setSafetyDialogOpen);
@@ -337,6 +421,7 @@ function SidebarRail({ collapsed, canCollapse }: { collapsed: boolean; canCollap
         ) : null}
       </div>
 
+      <QuickNavTrigger collapsed={collapsed} railSide={railSide} />
       <SidebarNav collapsed={collapsed} railSide={railSide} />
       <SidebarSafety collapsed={collapsed} railSide={railSide} />
     </aside>
@@ -492,6 +577,7 @@ function SidebarDrawer({
               </IconButton>
             </div>
 
+            <QuickNavTrigger collapsed={false} railSide={railSide} />
             <SidebarNav collapsed={false} railSide={railSide} id="shell-navigation" />
             <SidebarSafety collapsed={false} railSide={railSide} />
           </motion.div>

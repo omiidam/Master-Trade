@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { BrandMark } from '../components/brand';
 import { FADE_UP } from '../design/motion';
 import { useUiStore } from '../store/ui';
+import { QuickNav } from './QuickNav';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { useShellLayout } from './useShellLayout';
@@ -70,6 +71,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span>{msg('shell.masterTradeTrainingWorkstationLiveTrading')}</span>
         </footer>
       </div>
+      {/* The quick-navigation palette: not a region of the shell but a surface over it, so it is
+          mounted once here and draws nothing until it is asked for. It is the only part of the
+          shell that exists on every page while belonging to none of them. */}
+      <QuickNav />
     </div>
   );
 }

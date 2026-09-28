@@ -133,6 +133,10 @@ describe('nothing focusable is invisible', () => {
       // it opens and trapped on the controls inside, so a ring round the whole drawer points at
       // nothing a person can press.
       'web/src/app/Sidebar.tsx': 'a dialog surface, not a control',
+      // And the quick-navigation palette, whose keyboard story is the field inside it: Radix moves
+      // focus into the dialog and traps it on the controls, so the panel itself is a surface rather
+      // than something a user can point a ring at.
+      'web/src/app/QuickNav.tsx': 'a dialog surface, not a control',
     };
     const offenders: string[] = [];
     for (const file of uiSources()) {

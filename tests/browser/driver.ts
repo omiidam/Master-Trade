@@ -237,7 +237,17 @@ export interface PageSession {
    */
   selectTab(index: number, where?: string): Promise<void>;
   /** Press a real key, so `:focus-visible` and default actions behave as they do for a user. */
-  pressKey(key: 'Tab' | 'Enter' | 'Escape' | 'Shift+Tab'): Promise<void>;
+  pressKey(key: PressableKey): Promise<void>;
+  /**
+   * Put text into whatever holds the focus, as one text-input event.
+   *
+   * A single insertion rather than a key event per character, and deliberately: a case that types a
+   * query is asking whether the field's value changed and whether the list followed it, and this is
+   * the browser's own input path — the same one a paste or an input method takes — rather than a DOM
+   * mutation that React would have to be told about. The *keyboard*, which is where the behaviour
+   * lives, is exercised with `pressKey`: reaching the field, walking the results, opening one.
+   */
+  typeText(text: string): Promise<void>;
   /**
    * Move the pointer onto the centre of an element, the way a user reaches a hover state.
    *
@@ -253,6 +263,16 @@ export interface PageSession {
   clearDiagnostics(): void;
   close(): Promise<void>;
 }
+
+/**
+ * The keys a case may press by name.
+ *
+ * Named keys only — each with the modifiers its name states — so that a keyboard assertion is an
+ * assertion about the *keyboard*: `:focus-visible` and a control's own default action both depend on a
+ * real key event, and a synthetic `.focus()` verifies a ring a keyboard user never gets.
+ */
+export type PressableKey =
+  'Tab' | 'Enter' | 'Escape' | 'Shift+Tab' | 'ArrowDown' | 'ArrowUp' | 'Control+k';
 
 const LAYOUT_SETTLE_MS = 8_000;
 
@@ -573,7 +593,7 @@ export async function openSession(executablePath: string): Promise<PageSession> 
     },
 
     async pressKey(key) {
-      // Named keys only. Scancodes and text keys are deliberately out of scope: this
+      // Named keys only. Scancodes and arbitrary characters are deliberately out of scope: this
       // exists so a keyboard navigation check is a real key event rather than a
       // synthetic `.focus()`, which would not trigger `:focus-visible` and would
       // therefore "verify" a focus ring that a keyboard user never gets.
@@ -583,14 +603,23 @@ export async function openSession(executablePath: string): Promise<PageSession> 
       // because a button's Enter is acted on from the `keypress` that follows. Dispatching an
       // Enter with no character would make "the entry can be activated from the keyboard" a claim
       // this driver cannot test — it would pass by doing nothing at all.
+      //
+      // The modifier bits are the protocol's own: Alt 1, Ctrl 2, Meta 4, Shift 8.
       const KEYS: Record<
-        string,
-        { key: string; code: string; vk: number; shift?: boolean; text?: string }
+        PressableKey,
+        { key: string; code: string; vk: number; shift?: boolean; ctrl?: boolean; text?: string }
       > = {
         Tab: { key: 'Tab', code: 'Tab', vk: 9 },
         Enter: { key: 'Enter', code: 'Enter', vk: 13, text: '\r' },
         Escape: { key: 'Escape', code: 'Escape', vk: 27 },
         'Shift+Tab': { key: 'Tab', code: 'Tab', vk: 9, shift: true },
+        // The arrow keys carry no character, so they are dispatched as raw key downs — which is what
+        // moves a highlight, and what would otherwise scroll the list under it.
+        ArrowDown: { key: 'ArrowDown', code: 'ArrowDown', vk: 40 },
+        ArrowUp: { key: 'ArrowUp', code: 'ArrowUp', vk: 38 },
+        // A shortcut is a key press with a modifier, not a different kind of event: `⌘K` and `Ctrl+K`
+        // are the same `k` with a different bit set, and the page reads them from the event itself.
+        'Control+k': { key: 'k', code: 'KeyK', vk: 75, ctrl: true },
       };
       const spec = KEYS[key];
       if (!spec) throw new Error(`unsupported key: ${key}`);
@@ -600,7 +629,7 @@ export async function openSession(executablePath: string): Promise<PageSession> 
         code: spec.code,
         windowsVirtualKeyCode: spec.vk,
         nativeVirtualKeyCode: spec.vk,
-        modifiers: spec.shift ? 8 : 0,
+        modifiers: (spec.shift ? 8 : 0) + (spec.ctrl ? 2 : 0),
       };
       await send('Input.dispatchKeyEvent', {
         type: spec.text === undefined ? 'rawKeyDown' : 'keyDown',
@@ -608,6 +637,10 @@ export async function openSession(executablePath: string): Promise<PageSession> 
         ...(spec.text === undefined ? {} : { text: spec.text, unmodifiedText: spec.text }),
       });
       await send('Input.dispatchKeyEvent', { type: 'keyUp', ...event });
+    },
+
+    async typeText(text) {
+      await send('Input.insertText', { text });
     },
 
     async screenshot() {

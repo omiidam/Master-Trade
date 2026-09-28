@@ -114,6 +114,11 @@ const ALLOWED: readonly { file: string; pattern: RegExp; why: string }[] = [
     why: 'a centred overlay is centred in both directions: the offset and the transform are opposite and equal, so neither direction moves it',
   },
   {
+    file: 'web/src/app/QuickNav.tsx',
+    pattern: /left-1\/2|-translate-x-1\/2/,
+    why: 'the quick-navigation palette is a centred overlay, centred the same way `Modal` is: the offset and the transform are opposite and equal, so neither direction moves it',
+  },
+  {
     file: 'web/src/components/journal/PerformanceChart.tsx',
     pattern: /-translate-x-1\/2|\{ left: /,
     why: "the tooltip's anchor is computed from a datum's x position inside a frame pinned to `direction: ltr` (a time series)",

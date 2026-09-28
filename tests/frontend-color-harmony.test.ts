@@ -459,6 +459,10 @@ describe('Task 2 — the shell and the well have one home', () => {
       file: 'web/src/pages/ExamsPage.tsx',
       why: 'a fixed-size numbered mark, which is a figure and not a surface',
     },
+    {
+      file: 'web/src/app/QuickNav.tsx',
+      why: 'the shortcut hint beside the palette field — a key cap is a figure, not a surface',
+    },
   ];
 
   it('writes the card shell and the well in exactly one place', () => {

@@ -294,6 +294,10 @@ export const STAGE_11: readonly Attack[] = [
         // onto it when it opens and trapped on the controls inside, so a ring round the whole drawer
         // would point at nothing a person can press — the same reason `Modal` is listed.
         'web/src/app/Sidebar.tsx',
+        // The quick-navigation palette (Phase 8.2.3) is the same kind of surface as the drawer above:
+        // Radix moves the keyboard onto it when it opens and keeps it on the controls inside, so a
+        // ring round the panel would point at nothing a person can press.
+        'web/src/app/QuickNav.tsx',
       ]);
       const offenders: string[] = [];
       for (const file of uiSources()) {
