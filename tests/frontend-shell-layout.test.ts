@@ -14,7 +14,7 @@
  * mirror — is measured at four widths in `tests/browser/e2e.test.ts`.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { BREAKPOINTS } from '../web/src/design/tokens.js';
 import {
@@ -413,5 +413,46 @@ describe('the off-canvas navigation is reachable and closes deliberately', () =>
     // A drawer left open while the window grows would be a state the rail has no way to show.
     expect(read(SHELL)).toMatch(/layout\.mode !== 'mobile' && sidebarOpen/);
     expect(read(SHELL)).toMatch(/setSidebarOpen\(false\)/);
+  });
+});
+
+/**
+ * Phase 8.3.3 — the column's width is the shell's decision, not a section's.
+ *
+ * The phase asked whether the fourteen sections need different content widths, and the answer is that
+ * they do not need different *frames*. Every one of them is a card grid — one to nine `Grid` regions —
+ * and a grid's own column count already changes by breakpoint (`1 → 2 → 3/4`), so the density a section
+ * needs is expressed **inside** the one frame rather than by narrowing or widening it. What is left to
+ * hold is the half that keeps 8.3.1's alignment true for every section: a section may not opt out of
+ * the frame, and it may not solve a width it dislikes with a literal.
+ *
+ * A *named* cap on a paragraph inside a card is a different thing and stays allowed — `max-w-3xl` on
+ * the description under a page title is a text measure, not a frame. The rule below is about literals
+ * and viewport widths, which is the shape an arbitrary width actually takes.
+ */
+describe('the width is the shell’s decision', () => {
+  /** A width written as a number: the way a page would take the frame's own decision away from it. */
+  const WIDTH_LITERAL = /\b(?:max-w-\[|min-w-\[|max-w-screen|w-\[\d)/;
+
+  const pages = (): string[] =>
+    readdirSync('web/src/pages')
+      .filter((name) => name.endsWith('.tsx'))
+      .map((name) => `web/src/pages/${name}`);
+
+  it('gives no section a width of its own', () => {
+    const files = pages();
+    expect(files.length, 'no sections were inspected').toBeGreaterThan(0);
+    for (const file of files) {
+      expect(read(file), `${file} writes a width of its own`).not.toMatch(WIDTH_LITERAL);
+    }
+  });
+
+  it('expresses a section’s density inside that frame, in the grids it renders', () => {
+    for (const file of pages()) {
+      expect(
+        read(file),
+        `${file} renders no grid, so its density is not the frame's business`,
+      ).toMatch(/<Grid/);
+    }
   });
 });

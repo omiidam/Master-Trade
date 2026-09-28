@@ -2997,6 +2997,215 @@ suite('the Product Foundation in a real browser', () => {
       expect(await railWidth()).toBe(expanded);
     }, 60_000);
 
+    /**
+     * The shell's other standing preference, read the way the reader would read it.
+     *
+     * Density is spent in exactly one place — the content region's *vertical* inset — so the probe
+     * takes that number together with the column's own box. A case can then say which of the two
+     * moved, which is the difference between "the reader asked for a tighter workspace" and "a
+     * preference moved their content sideways".
+     */
+    const workspace = (): Promise<{ top: number; columnLeft: number; columnWidth: number }> =>
+      session.evaluateJson<{ top: number; columnLeft: number; columnWidth: number }>(
+        `JSON.stringify(
+           (() => {
+             const region = document.querySelector('main');
+             const column = region.querySelector('div[class*="max-w-"]').getBoundingClientRect();
+             return {
+               top: Math.round(parseFloat(getComputedStyle(region).paddingTop)),
+               columnLeft: Math.round(column.left),
+               columnWidth: Math.round(column.width),
+             };
+           })(),
+         )`,
+      );
+
+    /** The two density controls, found by the word each shows and the state each reports. */
+    const densityControl = (label: string): string => `
+      [...document.querySelectorAll('main button[aria-pressed]')].find(
+        (item) => (item.textContent ?? '').trim() === ${JSON.stringify(label)},
+      )`;
+
+    const pressDensity = (label: string): Promise<boolean> =>
+      session.evaluate<boolean>(`
+        (() => {
+          const button = ${densityControl(label)};
+          if (!button) return false;
+          button.click();
+          return true;
+        })()
+      `);
+
+    const densityIsPressed = (label: string): Promise<boolean> =>
+      session.evaluate<boolean>(
+        `(${densityControl(label)})?.getAttribute('aria-pressed') === 'true'`,
+      );
+
+    /**
+     * The Settings tab that holds the density control, opened the way a reader opens it.
+     *
+     * The page remembers which tab it was left on, so a case that needs the appearance card states
+     * that it is opening it rather than trusting whichever tab the case before it happened to leave
+     * behind — the same reason the rail's state is stated at the top of the case above.
+     */
+    const openAppearance = async (): Promise<void> => {
+      const index = await session.evaluate<number>(`
+        [...document.querySelectorAll('main [role="tab"]')].findIndex(
+          (item) => (item.textContent ?? '').trim() === ${JSON.stringify(
+            translate('en', 'settings.appearance'),
+          )},
+        )
+      `);
+      expect(index, 'the settings page has no appearance tab').toBeGreaterThanOrEqual(0);
+      await session.selectTab(index, 'settings appearance');
+    };
+
+    it('remembers the workspace’s density across a reload, and spends it on the rhythm alone', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      // Stated, not inherited: a density left behind by another case would make the first reading
+      // below a measurement of the wrong starting point.
+      await expandRail();
+      await visit('settings');
+      await openAppearance();
+      expect(await pressDensity(translate('en', 'settings.comfortable'))).toBe(true);
+      await visit('dashboard');
+      await session.waitFor(
+        `Math.round(parseFloat(getComputedStyle(document.querySelector('main')).paddingTop)) === 20`,
+        'the workspace to settle comfortable',
+      );
+      const comfortable = await workspace();
+      expect(comfortable.top, 'the comfortable workspace is not the roomy one').toBe(20);
+
+      // The reader tightens the workspace from the card that offers it.
+      await visit('settings');
+      await openAppearance();
+      expect(await pressDensity(translate('en', 'settings.compact'))).toBe(true);
+      await visit('dashboard');
+      await session.waitFor(
+        `Math.round(parseFloat(getComputedStyle(document.querySelector('main')).paddingTop)) === 16`,
+        'the workspace to tighten',
+      );
+
+      const compact = await workspace();
+      expect(compact.top, 'choosing compact did not change the workspace’s rhythm').toBeLessThan(
+        comfortable.top,
+      );
+      // And it changed *only* the rhythm. The horizontal inset is `SHELL_GUTTER`, the same `px-5` in
+      // every state, so a preference that moved the column would be a Phase 8.3.1 regression wearing
+      // a Phase 8.3.3 label — a reader tightening their workspace must not have their cards move
+      // sideways, and the title must keep naming the column it sits above.
+      expect(
+        { left: compact.columnLeft, width: compact.columnWidth },
+        'the density preference moved the content column',
+      ).toEqual({ left: comfortable.columnLeft, width: comfortable.columnWidth });
+
+      // A reload is the moment a standing choice either was remembered or was not. This is the one
+      // setting in the product that used to undo itself here, so it is read back twice: once as the
+      // geometry it draws, and once as the control that says the reader chose it.
+      await session.goto(`${server.origin}/`);
+      // Read straight after the load, with no settle of its own: the store reads the preference as it
+      // is created, so the first paint is already the remembered one — a wait here would be waiting
+      // for a wrong answer to turn into a right one rather than measuring which it is.
+      expect(
+        (await workspace()).top,
+        'the workspace forgot the reader’s density the moment the page reloaded',
+      ).toBe(compact.top);
+
+      await visit('settings');
+      await openAppearance();
+      expect(
+        await densityIsPressed(translate('en', 'settings.compact')),
+        'the density control did not come back showing the choice it remembered',
+      ).toBe(true);
+      expect(await densityIsPressed(translate('en', 'settings.comfortable'))).toBe(false);
+
+      // The other direction is remembered too, and the shell is handed back the way it was found: a
+      // standing preference the suite changes is a standing preference the suite has to restore.
+      expect(await pressDensity(translate('en', 'settings.comfortable'))).toBe(true);
+      await visit('dashboard');
+      await session.goto(`${server.origin}/`);
+      expect(await workspace()).toEqual(comfortable);
+    }, 60_000);
+
+    it('never spends the reader’s rail choice on a window that cannot honour it', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+      const expanded = await railWidth();
+
+      /**
+       * The rail, the page title and the column, read in one round trip.
+       *
+       * Three numbers, because the claim is a relationship between them rather than a width: the rail
+       * may change at a breakpoint, and what must not change is that the title sits on the same start
+       * edge as the content it names. This case reads the English interface, so `left` is the
+       * inline-start edge; the mirrored reading of the same rule is Phase 8.3.2's case.
+       */
+      const origin = (): Promise<{ rail: number; title: number; column: number }> =>
+        session.evaluateJson<{ rail: number; title: number; column: number }>(
+          `JSON.stringify(
+             (() => {
+               const region = document.querySelector('main');
+               const column = region.querySelector('div[class*="max-w-"]');
+               return {
+                 rail: Math.round(document.querySelector('aside').getBoundingClientRect().width),
+                 title: Math.round(region.querySelector('h2').getBoundingClientRect().left),
+                 column: Math.round(column.getBoundingClientRect().left),
+               };
+             })(),
+           )`,
+        );
+
+      // A laptop is one of the two modes that asks the reader, so the window moving must not move
+      // their answer: the rail is *their* choice here.
+      await session.setViewport(1200, 900);
+      await waitForRail('> 200', 'the rail to settle at laptop width');
+      expect(await railWidth()).toBe(expanded);
+
+      // A tablet cannot honour it — there is no room for a 264px rail — so the window wins. The word
+      // that matters is *set aside* rather than *spent*: the preference is not the tablet's to
+      // rewrite, because the next window may be a laptop again.
+      await session.setViewport(900, 900);
+      await waitForRail('< 100', 'the rail to settle at tablet width');
+      expect((await origin()).rail, 'a tablet drew an expanded rail').toBeLessThan(100);
+
+      // Back at laptop width the reader's choice is still theirs, and the content still has one start
+      // edge: the title names the column beneath it, whatever the rail did in between.
+      await session.setViewport(1200, 900);
+      await waitForRail('> 200', 'the rail to come back to the reader’s choice');
+      expect(await railWidth()).toBe(expanded);
+      const after = await origin();
+      expect(after.title, 'the page title no longer names the column below it').toBe(after.column);
+
+      // And it is still *remembered*: passing through a tablet neither rewrote the standing preference
+      // nor dropped it, which is the thing a reload reads.
+      await session.goto(`${server.origin}/`);
+      await waitForRail('> 200', 'the restored rail to settle');
+      expect(await railWidth()).toBe(expanded);
+
+      // The other direction holds too — a collapsed choice survives the same sequence — and the shell
+      // is handed back the way it was found.
+      await session.setViewport(1440, 900);
+      await waitForRail('> 200', 'the rail to settle back at desktop width');
+      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      await waitForRail('< 100', 'the rail to collapse');
+      const collapsed = await railWidth();
+
+      await session.setViewport(900, 900);
+      await waitForRail('< 100', 'the rail to stay narrow through the tablet');
+      await session.setViewport(1440, 900);
+      await waitForRail('< 100', 'the reader’s collapsed rail to come back');
+      expect(
+        await railWidth(),
+        'the tablet spent the reader’s choice instead of setting it aside',
+      ).toBe(collapsed);
+
+      expect(await pressInRail('Expand sidebar'), 'the rail’s expand control').toBe(true);
+      await waitForRail('> 200', 'the rail to expand again');
+      expect(await railWidth()).toBe(expanded);
+    }, 90_000);
+
     it('marks the page being read as the active navigation entry, and only that one', async () => {
       await session.setViewport(1440, 900);
       await startIn(null);
@@ -3076,6 +3285,76 @@ suite('the Product Foundation in a real browser', () => {
       expect(words).toContain(chip.replace('Event stream: ', ''));
       expect(chip).not.toBe('Event stream: Live');
     }, 60_000);
+
+    it('keeps the shell’s geometry while the stream changes its word', async () => {
+      /**
+       * Every word the bar can be made to draw, taken from the catalogue rather than written here.
+       *
+       * The eight connection states are the product's own vocabulary, and the requirement is about all
+       * of them: an Offline or a Reconnecting workspace must not be a workspace that moved. Reading the
+       * words from the catalogue means a state added later, or a translation that lengthens one, is
+       * measured by this case rather than escaping it — which is not hypothetical, because the widest
+       * word in the two languages is a Persian one.
+       */
+      const stateWords = (locale: UiLocale): string[] =>
+        (
+          [
+            'connectionStatus.preparing',
+            'connectionStatus.notConnected',
+            'connectionStatus.connecting',
+            'connectionStatus.authenticating',
+            'connectionStatus.live',
+            'connectionStatus.reconnecting',
+            'connectionStatus.offline',
+            'connectionStatus.notPermitted',
+          ] as const
+        ).map((key) => translate(locale, key));
+
+      for (const locale of ['en', 'fa'] as const) {
+        await startIn(locale === 'en' ? null : locale);
+        const words = stateWords(locale);
+
+        for (const [width, height] of WIDTHS) {
+          await session.setViewport(width, height);
+          await session.goto(`${server.origin}/`);
+
+          // The chip the bar states the stream in, and the word inside it. The pill around the word is
+          // the same box in every state — same border, same padding, same declared `leading-5` line box
+          // and a reserved width — so the word is the whole of what a state change puts into the bar,
+          // and driving the word is driving the state. The bar is then read at each word, which is what
+          // "the bar did not move" means: one height, whatever the condition.
+          const heights = await session.evaluateJson<number[]>(
+            `JSON.stringify(
+               (() => {
+                 const status = document.querySelector('[role="status"][aria-label^="Event stream:"]');
+                 const header = document.querySelector('header');
+                 if (!status || !header) return [];
+                 const label = [...status.childNodes].filter((node) => node.nodeType === 3).pop();
+                 if (!label) return [];
+                 const before = label.nodeValue;
+                 const drawn = ${JSON.stringify(words)}.map((word) => {
+                   label.nodeValue = word;
+                   return Math.round(header.getBoundingClientRect().height);
+                 });
+                 label.nodeValue = before;
+                 return drawn;
+               })(),
+             )`,
+          );
+
+          const [first] = heights;
+          expect(heights.length, `the bar draws no stream chip at ${width}px`).toBe(words.length);
+          expect(first, `the bar has no height at ${width}px`).toBeGreaterThan(0);
+          expect(
+            [...new Set(heights)],
+            `the top bar’s height changed with the stream’s word at ${width}px (${locale})`,
+          ).toEqual([first]);
+        }
+      }
+
+      // Handed back in the language the rest of the file reads the interface in.
+      await startIn(null);
+    }, 300_000);
   });
 
   /* ---------------------------------------------------------------------- */

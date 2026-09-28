@@ -165,8 +165,20 @@ export function ConnectionStatus({
         // `<button>` wrapping it contributed a fraction of a pixel of its own baseline space,
         // which a different font does not. A declared 20px line box makes it 26px anywhere, and
         // matches the sibling pills it sits beside in the shell.
+        //
+        // `min-w-32` is declared for the same reason, one step outwards: this pill is the only mark
+        // in the top bar whose width depends on which *word* it is carrying, and the bar is a
+        // wrapping row — so a longer state could push a control onto another line and change the
+        // bar's height. Measured on the built application at 430px, the eight states drew pills of
+        // 51–104px in English and 49–113px in Persian, and anything wider than 76px pushed the
+        // Safety control to a seventh line: the same window drew a 112px bar while the stream was
+        // live and a 156px bar while it was not, so a stream that connected moved every section
+        // down 44px, and one that dropped moved them back. A reserved box makes the bar's height a
+        // property of the window again rather than of the connection: 8rem holds the widest word in
+        // either language (113px) with room to spare, and the browser suite sweeps all eight states
+        // at every supported width in both languages to keep that true.
         className={cn(
-          'inline-flex items-center gap-2 rounded-[var(--radius-pill)] border px-2 py-0.5 text-caption leading-5',
+          'inline-flex min-w-32 items-center justify-center gap-2 rounded-[var(--radius-pill)] border px-2 py-0.5 text-caption leading-5',
           TONE_CLASSES[presentation.tone],
           className,
         )}

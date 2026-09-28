@@ -7,9 +7,9 @@
  * the frontend never calls a provider, the database or the LLM directly
  * (docs/technology-decisions.md § 1.2).
  *
- * Two entries here outlive the process — the language preference and the rail's collapsed state — and
- * each is deliberately a *mirror* rather than an owner. `language/preference.ts` and
- * `app/shellPreference.ts` own their settings: the key, the validation and the storage access all live
+ * Three entries here outlive the process — the language preference, the rail's collapsed state and the
+ * workspace's density — and each is deliberately a *mirror* rather than an owner. `language/preference.ts`
+ * and `app/shellPreference.ts` own their settings: the key, the validation and the storage access all live
  * there, and this store holds the current value so the interface can render it without touching storage
  * on every render. Reading the language again in `setLanguagePreference`'s write path means the state
  * here says exactly what storage says, including after a write that failed.
@@ -25,7 +25,13 @@
  */
 
 import { create } from 'zustand';
-import { readSidebarCollapsed, writeSidebarCollapsed } from '../app/shellPreference.js';
+import {
+  readDensity,
+  readSidebarCollapsed,
+  writeDensity,
+  writeSidebarCollapsed,
+  type ShellDensity,
+} from '../app/shellPreference.js';
 import type { AppPageId } from '../config/navigation.js';
 import {
   DEFAULT_DIRECTION_PREFERENCE,
@@ -39,7 +45,14 @@ import {
   type LanguagePreference,
 } from '../language/preference.js';
 
-export type Density = 'comfortable' | 'compact';
+/**
+ * The workspace's density, re-exported under the name this store has used since Phase 3.
+ *
+ * The vocabulary itself is the shell preference module's (`web/src/app/shellPreference.ts`), because
+ * density is a written-down choice rather than a rendering detail: the file that validates what storage
+ * may hold is the file that names the values it accepts.
+ */
+export type Density = ShellDensity;
 
 /**
  * The writing-direction preference, re-exported under the name this store has used since Phase 3.
@@ -109,12 +122,24 @@ const storedLanguage = readLanguagePreference();
  */
 const storedSidebarCollapsed = readSidebarCollapsed();
 
+/**
+ * The workspace's standing choice, read once when the store is created — Phase 8.3.3.
+ *
+ * The third of the store's three surviving entries and the one that was missing until this phase: the
+ * rail's state and the language preference both came back after a reload while this one did not, so the
+ * reader's own spacing choice was the only setting in the product that quietly undid itself. Same reason
+ * as the two above for reading it here rather than on mount — the first paint is then already the right
+ * one, and a workspace that renders airy and tightens a frame later has told the reader their choice was
+ * lost before telling them it was remembered.
+ */
+const storedDensity = readDensity();
+
 export const useUiStore = create<UiState>((set) => ({
   page: 'dashboard',
   // `auto`, so that choosing Persian in Settings mirrors the interface without a second control: the
   // direction follows the language until somebody says otherwise.
   direction: DEFAULT_DIRECTION_PREFERENCE,
-  density: 'comfortable',
+  density: storedDensity,
   sidebarCollapsed: storedSidebarCollapsed,
   sidebarOpen: false,
   quickNavOpen: false,
@@ -133,7 +158,12 @@ export const useUiStore = create<UiState>((set) => ({
           ? 'ltr'
           : 'rtl',
     })),
-  setDensity: (density) => set({ density }),
+  // Written as it is chosen, like the rail's flip below: there is no commit step for the reader to
+  // skip, and no second place that has to remember to save it.
+  setDensity: (density) => {
+    writeDensity(density);
+    set({ density });
+  },
   // The write happens first and its verdict is the new `languageStorable`: the control shows a
   // remembered choice only when it really was remembered.
   setLanguagePreference: (languagePreference) =>

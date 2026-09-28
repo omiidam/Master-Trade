@@ -27,8 +27,11 @@ import { desktopStartupState } from '../packages/shared/src/desktop/startup.js';
 import type { ShellStatus } from '../packages/shared/src/desktop/ipc.js';
 import { APP_PAGE_IDS } from '../web/src/config/navigation.js';
 import {
+  DENSITY_KEY,
   SIDEBAR_COLLAPSED_KEY,
+  readDensity,
   readSidebarCollapsed,
+  writeDensity,
   writeSidebarCollapsed,
   type ShellStorage,
 } from '../web/src/app/shellPreference.js';
@@ -221,6 +224,91 @@ describe('the rail’s saved preference', () => {
     expect(useUiStore.getState().sidebarCollapsed).toBe(!before);
     useUiStore.getState().toggleSidebar();
     expect(useUiStore.getState().sidebarCollapsed).toBe(before);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* How much air the workspace gives each row (Phase 8.3.3)                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The shell's second standing preference, held to the first one's rules.
+ *
+ * The defect this phase fixed was not a missing mechanism. `shellPreference.ts`, its probe, its key
+ * and its rules all existed — for the rail. The density control sat two cards down on the same Settings
+ * screen, changed the workspace's vertical rhythm, and was the one setting in the product that undid
+ * itself on the next launch, because nothing said the two preferences were the same kind of thing. The
+ * cases below hold the density to the rail's rules, and the last one says out loud that a standing
+ * choice has to be added in both halves.
+ */
+describe('the workspace’s saved density', () => {
+  it('starts comfortable, and comes back comfortable for anything it cannot understand', () => {
+    expect(readDensity(fakeStorage())).toBe('comfortable');
+    expect(readDensity(fakeStorage({ [DENSITY_KEY]: 'tight' }))).toBe('comfortable');
+    expect(readDensity(fakeStorage({ [DENSITY_KEY]: '' }))).toBe('comfortable');
+  });
+
+  it('round-trips the reader’s choice, which is what survives a reload', () => {
+    const storage = fakeStorage();
+    expect(writeDensity('compact', storage)).toBe(true);
+    expect(storage.entries[DENSITY_KEY]).toBe('compact');
+    expect(readDensity(storage)).toBe('compact');
+
+    // Choosing the roomy one again is a written choice too, not an erased one: the reader could tell
+    // us either way, and "nobody has chosen" is a different fact from "they chose comfortable".
+    expect(writeDensity('comfortable', storage)).toBe(true);
+    expect(readDensity(storage)).toBe('comfortable');
+  });
+
+  it('degrades to the default when storage refuses, and never throws', () => {
+    const hostile = hostileStorage();
+    expect(readDensity(hostile)).toBe('comfortable');
+    expect(writeDensity('compact', hostile)).toBe(false);
+    expect(writeDensity('compact', null)).toBe(false);
+    expect(readDensity(null)).toBe('comfortable');
+  });
+
+  it('is the store’s starting value, and is written as the control chooses it', () => {
+    const store = flat(read(UI_STORE));
+    expect(store).toMatch(/const storedDensity = readDensity\(\)/);
+    expect(store).toMatch(/density: storedDensity/);
+    expect(store).toMatch(/writeDensity\(density\)/);
+
+    // The vocabulary has one home. The store re-exports the preference module's union rather than
+    // declaring a second one: two literal unions are two validations, and they disagree the first time
+    // one of them gains a value.
+    expect(store).toMatch(/type ShellDensity[^}]*\} from '\.\.\/app\/shellPreference\.js'/);
+    expect(store).toMatch(/export type Density = ShellDensity/);
+    expect(read(SHELL_PREFERENCE)).toContain(`'master-trade.shell.density'`);
+  });
+
+  it('is changed through the store the workspace actually reads', () => {
+    const before = useUiStore.getState().density;
+    useUiStore.getState().setDensity('compact');
+    expect(useUiStore.getState().density).toBe('compact');
+    useUiStore.getState().setDensity(before);
+    expect(useUiStore.getState().density).toBe(before);
+  });
+
+  it('is one of the shell’s standing choices, and both of them are remembered', () => {
+    // The rail's state and the workspace's density are the same kind of thing — a choice rather than a
+    // position — so each needs the same pair, and this is where the next one is forced to have it.
+    const preference = read(SHELL_PREFERENCE);
+    for (const [reader, writer, key] of [
+      ['readSidebarCollapsed', 'writeSidebarCollapsed', SIDEBAR_COLLAPSED_KEY],
+      ['readDensity', 'writeDensity', DENSITY_KEY],
+    ] as const) {
+      expect(preference, `${reader} is not exported`).toMatch(
+        new RegExp(`export function ${reader}\\(`),
+      );
+      expect(preference, `${writer} is not exported`).toMatch(
+        new RegExp(`export function ${writer}\\(`),
+      );
+      expect(preference, `${key} is not named by the module that owns it`).toContain(`'${key}'`);
+    }
+    // And neither of them is remembered anywhere else: one module owns both keys, and the store only
+    // ever asks it.
+    expect(flat(read(UI_STORE))).not.toMatch(/localStorage/);
   });
 });
 

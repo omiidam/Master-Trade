@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.3.2
+# Application Shell — Phases 7.1.1 through 8.3.3
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -8,7 +8,7 @@ workspace keeps its own width, and the Persian mirror does not break it. Phase 8
 navigation's **behaviour** explicit at each of those widths (§ 6) without touching the structure.
 
 Nothing in `web/src/app/` was restructured. The deliverable is the focused suite
-([`tests/frontend-shell-layout.test.ts`](../tests/frontend-shell-layout.test.ts), 24 cases), the
+([`tests/frontend-shell-layout.test.ts`](../tests/frontend-shell-layout.test.ts), 29 cases), the
 browser cases in `tests/browser/e2e.test.ts`, and this record.
 
 ## 1. The three regions
@@ -1002,3 +1002,132 @@ and the reset is instant rather than animated; no section was added, renamed or 
 history behaviour is 8.2.4's; the scrollbar measurement and its deliberately-untaken trade from § 12.3
 stands; and no dependency was added. The whole mechanism is one module, one component, and one line in the
 shell.
+
+## 14. Phase 8.3.3 — shell state and visual continuity
+
+8.3.1 gave the three regions one inset and 8.3.2 gave them one surface. This phase asks what survives: the
+rail's state across a reload, the reader's choices across a window it cannot honour, the shell across the
+stream changing its mind. Two defects came out of it, one of them in the shell's own chrome, and both were
+found by writing the measurement rather than by looking at the interface.
+
+### 14.1 The shell has two standing preferences, and only one was remembered
+
+The rail has remembered whether the reader collapsed it since Phase 8.1.3 — the key, the validation, the
+storage probe and the write-on-change all live in `web/src/app/shellPreference.ts`, and § 7 records it as
+"the reader's saved preference". The workspace's **density** — Comfortable or Compact, the control two cards
+down on the same Settings screen, which is what decides the section's vertical rhythm — was the same kind of
+choice and was not remembered at all. A reader who tightened the workspace got the airy one back at the next
+launch, and the next, with nothing on screen saying why: it was the only setting in the product that quietly
+undid itself.
+
+The fix is that the second preference is written down by the first one's rules, in the first one's file:
+`DENSITY_KEY`, `readDensity` and `writeDensity` beside their rail equivalents, the same "only the value this
+build writes is honoured, everything else is the default" validation, and the same verdict returned from the
+write. The store mirrors it the way it mirrors the other two — `density: storedDensity` at creation, so the
+first paint is already the remembered one, and `setDensity` writes as it sets. The vocabulary has one home:
+`Density` is now a re-export of the preference module's `ShellDensity` rather than a second literal union,
+because two unions are two validations and they disagree the first time one of them gains a value.
+
+Measured on the built application, the defect is one number: the workspace draws `py-5` (20px) comfortable
+and `py-4` (16px) compact, and a reload after choosing compact returned 20. The browser case now fails on
+exactly that sentence when the store's read is removed — `the workspace forgot the reader's density the
+moment the page reloaded: expected 16, received 20` — and its sibling assertion is that the preference
+touches _nothing else_: the column's left edge and width are compared before and after, because 8.3.1's rule
+is that density is vertical and a preference that moved every card sideways would be a layout shift wearing
+a preference's clothes.
+
+### 14.2 The top bar's height depended on the stream's word
+
+The second defect came out of a case written to check a claim that turned out to be false. The top bar's own
+status pill is the only mark in the chrome whose width depends on which word it is carrying — the eight
+connection states draw 51–104px in English and 49–113px in Persian — and the bar is a wrapping row, so a
+longer word can move a control onto another line.
+
+At 430px it did. The row after the title block holds `Browser preview` (118px), the state pill, two icon
+buttons (36px each) and `Safety` (92px), with 8px between them and 390px to spend: **anything wider than a
+76px pill pushed `Safety` onto a seventh line.** So the same window drew a **112px** bar while the stream was
+live and a **156px** bar while it was not, and a stream that connected moved every section on the screen down
+44px — the jump this phase exists to prevent, in the chrome rather than in a page. It is not a phone-width
+curiosity: the band where the row's items straddle the wrap threshold is 405–457px, which is where 412, 414,
+428, 430 and 432px phones live, and the Persian vocabulary moves the band rather than removing it.
+
+The pill now reserves its own box (`min-w-32`, 8rem, with its contents centred in it). This is the same
+decision `Badge` already documents one level down — a row whose height depends on which vocabulary word a
+record happens to carry — and the same shape as § 12.2's `SHELL_GUTTER`: a measured value, named once, with
+the measurement beside it. The bar's height is a property of the window again, and it is the same height it
+always was at the widths that were never ambiguous: **146px at 390, 156px at 430 (constant now), 112px at
+768, 68px at every width from 1024 up**, for all eight states in both languages.
+
+### 14.3 A window that cannot honour a choice must not spend it
+
+The rail's preference is honoured at laptop and desktop widths and overridden at tablet and mobile, where
+there is no room for a 264px rail. The browser case walks 1440 → 1200 → 900 → 1200 → 1440 and reads the
+rail's width at each stop: **264 → 264 → 76 → 264 → 264**, a reload in the middle still 264, and the same
+walk with the reader's other choice holds 76 throughout. The load-bearing word is _set aside_ rather than
+_spent_: a tablet in the middle of a sequence must not rewrite the standing preference, and the case exists
+because the failure it guards is invisible until the next window — a reader whose rail came back expanded
+after passing through a narrow window would have no way to tell what had changed it.
+
+### 14.4 The fourteen sections need one frame, not fourteen widths
+
+The phase asked whether each section needs a content width of its own. The answer is that the _frame_ is
+one — the anchored `SHELL_COLUMN` of § 12.2 — and that a section's density is already expressed inside it:
+every one of the fourteen renders between one and nine `Grid` regions whose column count changes by
+breakpoint, so a reading surface and a data surface differ where the difference is legible rather than by
+narrowing the box they are measured against. The suite now states the half that keeps that true: no section
+may write a width literal (`max-w-[…]`, `min-w-[…]`, `max-w-screen`, `w-[N`), and every section must render
+at least one `Grid`. A _named_ text measure on a paragraph inside a card is a different thing and stays
+allowed — the rule is about frames, not about prose.
+
+### 14.5 Focus is not moved by a section change, deliberately
+
+The keyboard stays where it was: activating a rail entry leaves focus on that entry, which is why Phase
+8.2.4's case can assert that a walk backwards finds the keyboard on the control the reader was using. The
+rail is one element whose children the page swaps, so the control a reader was on is still the control they
+are on — and moving focus into the new section's heading would take a keyboard user out of the navigation
+they are still using, on every section change. The shell loses no focus anywhere in either direction; the
+one thing it does not do is _take_ focus, and that is the decision rather than an omission.
+
+### 14.6 Known: one pre-existing flaky case, recorded rather than papered over
+
+`marks every trade on its start edge, and keeps the row menu inside the window` measures that a row menu
+keeps its distance from its trigger while the page scrolls under it, with a 1px tolerance. It fails
+intermittently — `expected 10 to be less than or equal to 1` — because the panel is re-placed for the scroll
+and the case can measure it before the placement has settled. It was confirmed **not** to be this phase's:
+with this phase's sources reverted to HEAD and the same case run against that build, it fails with
+byte-identical measurements (menu gap 52 → 42, `docH` 1524, header height 68, `scrollY` 584), which is the
+same page state this phase produces. Its tolerance and its wait were left exactly as they were. The honest
+fix is a wait on the invariant rather than on the weaker non-overlap condition it waits on now, and that is a
+change to a page's own case rather than to the shell — recorded here so the next phase finds it, not hidden
+by editing the number.
+
+### 14.7 What was verified
+
+| Check                                                                                      | Where                                   | Result  |
+| ------------------------------------------------------------------------------------------ | --------------------------------------- | ------- |
+| The density preference: default, round trip, hostile storage, one home for the vocabulary  | `tests/frontend-shell-state.test.ts`    | 6/6     |
+| The width is the shell's decision: no section writes one, every section renders a grid     | `tests/frontend-shell-layout.test.ts`   | 2/2     |
+| Compact density survives a reload, and changes the rhythm and nothing else                 | `tests/browser/e2e.test.ts`             | pass    |
+| A tablet sets the reader's rail choice aside and does not consume it, across a reload      | `tests/browser/e2e.test.ts`             | pass    |
+| The bar's height holds for all eight stream states, at 7 widths, in English and Persian    | `tests/browser/e2e.test.ts`             | pass    |
+| Shell, navigation, quick nav, page history, content surface, RTL, integration (regression) | `frontend-*` / `rtl-layout`             | 66/66   |
+| Types, formatting, build and the whole node suite                                          | `typecheck`, `format:check`, `npm test` | 1938/92 |
+| The whole browser suite, including the three new cases                                     | `tests/browser/e2e.test.ts`             | 81/81   |
+
+Both new shell cases were checked in both directions before being trusted: the density case fails on the
+reload with the defect's own number (`expected 16, received 20`), and the pill case fails on the wrap with
+the bar's own pair (`the top bar's height changed with the stream's word at 430px (en): expected
+[156, 112]`). The rail case needs no injected fault — it reads a behaviour that did not exist before this
+phase's measurement of it.
+
+### 14.8 What was not changed
+
+No page was redesigned and no card form was touched, so the purposeful variation between sections stands;
+no section was added, renamed, reordered or split (Portfolio and Evaluation remain separate, and there is no
+Performance entry); no dependency was added and no mock data exists anywhere in this phase; the shell's
+architecture, its four modes, its one inset and its one anchored column are 8.3.1's and 8.3.2's, and the
+only geometry this phase changed is the width of one status pill, which is what made the bar's height
+independent of the stream again. The transition is still the shell's own token-driven fade-up with no delay
+added; nothing is hidden with `overflow`; and the two facts this phase did not want to change — the bar's
+height at 390/768/1024 and the reader's rail choice across a window that cannot honour it — were measured
+before and after rather than assumed.

@@ -1,5 +1,5 @@
 /**
- * The rail's collapsed state, remembered — Phase 8.1.3.
+ * The shell's own standing preferences, remembered — Phase 8.1.3, Phase 8.3.3.
  *
  * The shell has offered the reader a collapse control since Phase 3.2, and the docs have called the
  * result "the reader's saved preference" ever since. It was not saved: `sidebarCollapsed` lived in the
@@ -21,6 +21,14 @@
  * What this file does **not** own is the meaning of the setting. `railModeFor` in `shellLayout.ts`
  * decides whether a mode honours it at all — a tablet overrides the reader because a 264px rail does
  * not fit — and that stays where it is.
+ *
+ * **Phase 8.3.3 found the other half of the same sentence.** The shell has two standing preferences
+ * and only one of them was remembered: the rail's state survived a reload while the workspace's
+ * *density* — the Comfortable/Compact choice two cards down on the same Settings screen, which is
+ * what decides the workspace's vertical rhythm — silently reverted every time. A reader who tightened
+ * the workspace so more rows fit on a laptop screen got the airy one back at the next launch, and the
+ * next, with nothing on screen saying why. It is written down here now, by exactly these rules,
+ * because a preference is either remembered in one place or it is not remembered at all.
  */
 
 /** The storage key, namespaced like the language preference's. */
@@ -89,6 +97,61 @@ export function writeSidebarCollapsed(
   if (storage === null) return false;
   try {
     storage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? COLLAPSED : 'false');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* How much air the workspace gives each row (Phase 8.3.3)                     */
+/* -------------------------------------------------------------------------- */
+
+/** The density key, alongside the rail's. */
+export const DENSITY_KEY = 'master-trade.shell.density';
+
+/**
+ * The two densities, named here because this module is what writes them down.
+ *
+ * The store re-exports this union rather than declaring a second one, so the vocabulary the reader
+ * chooses from and the vocabulary storage accepts cannot drift apart — a second literal union is a
+ * second validation, and the two would disagree the first time one of them gained a value.
+ */
+export type ShellDensity = 'comfortable' | 'compact';
+
+/** What the workspace is when nobody has chosen — and when a choice cannot be understood. */
+const COMFORTABLE: ShellDensity = 'comfortable';
+
+/**
+ * The reader's density, or the product's default.
+ *
+ * The rail's rule, unchanged: only the value this build writes is honoured, and anything else — a
+ * value written by a newer build, a truncated write, something put there by hand — is the default
+ * rather than a state the shell acts on.
+ */
+export function readDensity(storage: ShellStorage | null = shellStorage()): ShellDensity {
+  if (storage === null) return COMFORTABLE;
+  try {
+    return storage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : COMFORTABLE;
+  } catch {
+    return COMFORTABLE;
+  }
+}
+
+/**
+ * Write the choice, and report whether it landed, for the same reason the rail's write does.
+ *
+ * The Settings control does not stop to say so, which is the decision Phase 8.1.3 already made for the
+ * rail: a status line per press of a two-state button is noise, and the *verdict* is the contract — a
+ * caller that needs to tell a remembered choice from a shown one can ask for it.
+ */
+export function writeDensity(
+  density: ShellDensity,
+  storage: ShellStorage | null = shellStorage(),
+): boolean {
+  if (storage === null) return false;
+  try {
+    storage.setItem(DENSITY_KEY, density);
     return true;
   } catch {
     return false;
