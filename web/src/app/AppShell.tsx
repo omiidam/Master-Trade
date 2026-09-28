@@ -11,6 +11,7 @@ import { useShellLayout } from './useShellLayout';
 import { usePageHistory } from './usePageHistory';
 import { msg, useDocumentLanguage } from '../i18n/index.js';
 import { cn } from '../lib/cn';
+import { SectionOrigin } from './contentSurface';
 
 /**
  * Application shell: sidebar + topbar + scrollable workspace.
@@ -18,6 +19,9 @@ import { cn } from '../lib/cn';
  * The shell owns no domain state. It is RTL-ready because every spacing rule is
  * a logical property (`ms-*`, `ps-*`, `border-e`), so flipping `dir` on <html>
  * mirrors the layout without a second stylesheet.
+ *
+ * What "scrollable" means is stated in one place — `contentSurface.tsx`: the window is the one
+ * surface, the rail and the bar are chrome around it, and a section begins at its own origin.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   // One subscription to the interface language, at the top of the tree: it puts the language on `<html lang>`
@@ -70,6 +74,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                     transition: FADE_UP.transition,
                   })}
             >
+              {/* A section is presented from its own beginning, inside the keyed surface so the
+                  reset lands with the new section rather than on the one still leaving. */}
+              <SectionOrigin />
               {children}
             </motion.div>
           </AnimatePresence>

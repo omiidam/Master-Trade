@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.3.1
+# Application Shell — Phases 7.1.1 through 8.3.2
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -885,3 +885,120 @@ widths, its transition token and the mobile drawer are untouched; the column's w
 boundaries and the wrapping top bar are the values they already had. No dependency was added — the whole
 change is two named constants, three call sites, and one comment recording a measurement that was taken
 and deliberately not acted on.
+
+## 13. Phase 8.3.2 — the content surface
+
+8.3.1 made the three regions agree on one inset. This phase asks the question underneath that one —
+**which box scrolls** — because every spacing rule in the shell is measured against the answer, and then
+follows it through the two moments a surface is most likely to move under the reader's hands: choosing a
+section, and watching one change state.
+
+What it found was one defect, and it was a reader-visible one. The surface itself was already right: the
+window scrolls, the shell around it is chrome, and the content region is a landmark a page renders into
+rather than a container with a height of its own. What was wrong was **where the reader stood after a
+section change**. Nothing in the interface had ever touched the scroll position, so a reader who was 1829px
+into the journal — the bottom of a 2729px page in a 900px window — and chose the trading lab stayed at that
+offset for as long as the new section could hold it: the engine clamped 1829 down to **239**, and the lab
+opened 239px in, with its own title far above the top of the window. Every section arrived somewhere the
+reader had not chosen, and the shortest ones arrived at their own feet.
+
+Nothing was restructured for it either. One module states the surface, one component inside the keyed
+section asserts the origin, and the focused suite plus four browser cases hold both.
+
+### 13.1 One surface, and the six scroll boxes that are allowed to exist
+
+`web/src/app/contentSurface.tsx` is where the rule lives, and it is a _rule_ rather than a helper: the
+surface is the window; the top bar and the rail are sticky chrome above and beside it; `min-h-screen` on
+the shell's root and `flex-1` on the content region keep a section with less content than a screen from
+leaving a gap under the footer; and the region a section renders into never scrolls on its own, because a
+reader with two scroll positions has a wheel that only moves one of them.
+
+Nested scrolling is not banned outright — it is **enumerated**. Eight surfaces in the product genuinely
+are their own place — six that scroll vertically and two horizontal boxes that compute one of their own —
+and each is named in the focused suite with the reason it is there:
+
+| Surface                                        | Why it scrolls                                                        |
+| ---------------------------------------------- | --------------------------------------------------------------------- |
+| `app/Sidebar.tsx`                              | the rail's fourteen entries, inside a viewport-tall rail              |
+| `app/QuickNav.tsx`                             | the palette's results, inside a dialog                                |
+| `components/Modal.tsx`                         | a dialog's body, bounded by its own `max-h`                           |
+| `components/journal/FullscreenChartViewer.tsx` | the full-screen viewer's whole surface                                |
+| `components/journal/TradeTable.tsx`            | one trade's detail, bounded by its own `max-h`                        |
+| `components/realtime/AgentActivityFeed.tsx`    | a bounded activity feed                                               |
+| `components/Table.tsx`                         | a dense table's own horizontal box (which also computes `overflow-y`) |
+| `components/Tabs.tsx`                          | a tab strip that may be wider than its column                         |
+
+The case reads the tree and fails in **both** directions: a scroller that is not on the list, and a list
+entry that no longer has a scroller behind it. The second half is the one that keeps the list honest — a
+permission nobody has to justify again is how an allowlist becomes a loophole.
+
+### 13.2 A section begins at its own origin
+
+`SectionOrigin` renders nothing and calls `resetContentOrigin(window)` — one line, `scrollTo(0, 0)`, instant
+rather than smooth, because a section change is a new page and not a scroll. The whole of the phase is in
+_where_ it is mounted: inside the keyed surface, as the motion wrapper's first child.
+
+That placement is load-bearing rather than tidiness. The shell re-renders the instant the reader chooses a
+section, while the outgoing section is still on screen playing its exit animation — so the obvious
+implementation, an effect in the shell keyed on `page`, runs a section too early and scrolls the reader to
+the top of the page they are _leaving_. Mounted inside the keyed node, the reset happens in the same commit
+that brings the new section in and before the browser paints it, so no frame is ever drawn at another
+section's offset. The focused suite pins all three parts of that: the reset is `scrollTo(0, 0)`, it is
+mounted after the surface and before the page's own children, and the shell itself contains no scroll call
+at all — the module is the interface's only home for one, the way `pageHistory` is the only home for the
+History API.
+
+### 13.3 A state is not a layout
+
+Loading, empty and failure were already the design system's own plates (`LoadingState`/`EmptyState` render
+a `Card`, `ErrorState` the shared `Alert`), and the loading placeholder was already shaped like what is
+coming — a list, a table or a chart panel rather than a spinner in the middle of nothing. What the phase
+adds is the statement that makes those facts into a property of the surface: **none of the three sets a
+width of its own.** A state that measured itself would drag the shell's column with it, and a placeholder
+that did not match its content would move the section by whatever the data turned out to be.
+
+The built preview renders labelled fixtures, so "empty" and "failure" are still not reachable through the
+UI; that remains the known limitation recorded in `docs/product-foundation-handoff.md` rather than
+something this phase invented a way around.
+
+### 13.4 Two things the new cases found in the harness, not in the product
+
+**A resize is not a width.** `setViewport` deliberately crosses the phone boundary by loading a blank
+document (a loaded page has already resolved its `<meta name="viewport">`, and flipping the emulation's
+mobile flag under it is not reliably re-applied). The first draft of these cases resized and then waited
+for the shell to follow, which is a wait that can never end: the tab was on `about:blank`. Every case in
+this file loads the application _at_ a width; these four do the same, and all three earlier drafts are the
+reason the rule is written down here.
+
+**"No aside" is not "no rail".** The AI workspace renders a column of its own beside the transcript, so a
+case that asked the document for an `<aside>` was answered by a page rather than by the shell the moment it
+ran on that section. The rail is now found as the aside inside the shell's own root and never as the
+drawer — which is a dialog — and the difference is the whole reason two of these cases failed on their
+first run against a correct product.
+
+### 13.5 What was verified
+
+| Check                                                                                                | Where                                    | Result |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------ |
+| The surface model, the origin rule, the scroll allowlist, the state plates (new suite)               | `tests/frontend-content-surface.test.ts` | 9/9    |
+| A section starts at its origin, after a long read, in both directions and at 1440/390                | `tests/browser/e2e.test.ts`              | pass   |
+| Every one of the fourteen sections fills the window and never scrolls inside itself, at 1440 and 390 | `tests/browser/e2e.test.ts`              | pass   |
+| No frame of the rail's 264px → 76px transition overflows or holds a width the column cannot have     | `tests/browser/e2e.test.ts`              | pass   |
+| No moment of a section change leaves the surface empty or puts the reader at a third offset          | `tests/browser/e2e.test.ts`              | pass   |
+| The whole browser suite, including the four new cases                                                | `tests/browser/e2e.test.ts`              | 78/78  |
+| Shell, navigation, navigation semantics, quick nav, page history, RTL, integration (regression)      | `frontend-*` / `rtl-layout`              | pass   |
+| Types, formatting, build and the whole node suite (1930 cases)                                       | `typecheck`, `format:check`, `npm test`  | pass   |
+
+The origin case is the one that matters most, so it was checked in both directions: with the fix removed it
+fails on the number the defect produces — `the change to the lab at 1440px left the reader mid-section:
+expected 239 to be +0`, with the invariant case beside it reporting the offsets the reader was put at,
+`[239, 1829]`. A case that cannot fail on the defect it was written for is decoration.
+
+### 13.6 What was not changed
+
+No page was redesigned and no card form or purposeful card variation was touched; the section transition is
+the one the shell already had (the token-driven fade-up, reduced-motion aware) — nothing was added to it,
+and the reset is instant rather than animated; no section was added, renamed or reordered; the same-URL
+history behaviour is 8.2.4's; the scrollbar measurement and its deliberately-untaken trade from § 12.3
+stands; and no dependency was added. The whole mechanism is one module, one component, and one line in the
+shell.

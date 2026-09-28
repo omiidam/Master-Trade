@@ -224,6 +224,36 @@ interface SignedFigureReport {
   }[];
 }
 
+/**
+ * Where the reader is on the content surface, and how the surface is drawn around them.
+ *
+ * `regionScroll` is the difference between the content region's own scroll height and its height:
+ * it has to be zero on every section, because a region that answers anything else is a second
+ * scroll box inside the first one — which is the whole subject of the surface cases.
+ */
+interface SurfaceState {
+  y: number;
+  innerH: number;
+  docH: number;
+  regionScroll: number;
+  columnLeft: number;
+  columnWidth: number;
+  barHeight: number;
+  titleTop: number;
+}
+
+/** One frame of a surface that is being watched while something else moves. */
+interface SurfaceFrame {
+  y: number;
+  innerH: number;
+  docH: number;
+  regionHeight: number;
+  regionClientWidth: number;
+  regionScrollWidth: number;
+  columnWidth: number;
+  railWidth: number;
+}
+
 suite('the Product Foundation in a real browser', () => {
   let session: PageSession;
   let server: StaticServer;
@@ -4161,5 +4191,304 @@ suite('the Product Foundation in a real browser', () => {
 
       await startClean();
     }, 90_000);
+  });
+
+  describe('the content surface, in a browser', () => {
+    /**
+     * Where the reader is, and how the surface under them is drawn, in one round trip.
+     *
+     * The column is read by shape rather than by class: it is the frame every section renders
+     * inside, and `div[class*="max-w-"]` is how the other cases in this file have always found it.
+     */
+    const surface = (): Promise<SurfaceState> =>
+      session.evaluateJson<SurfaceState>(
+        `JSON.stringify(
+           (() => {
+             const region = document.querySelector('main');
+             const column = region.querySelector('div[class*="max-w-"]').getBoundingClientRect();
+             return {
+               y: Math.round(window.scrollY),
+               innerH: window.innerHeight,
+               docH: Math.round(document.documentElement.scrollHeight),
+               regionScroll: region.scrollHeight - region.clientHeight,
+               columnLeft: Math.round(column.left),
+               columnWidth: Math.round(column.width),
+               barHeight: Math.round(document.querySelector('header').getBoundingClientRect().height),
+               titleTop: Math.round(region.querySelector('h2').getBoundingClientRect().top),
+             };
+           })(),
+         )`,
+      );
+
+    /**
+     * The rail, and only the rail.
+     *
+     * `aside` on its own is not the navigation: the AI workspace renders a column of its own beside
+     * the transcript, so "there is no aside" is not the same sentence as "there is no rail" at a
+     * phone width where the navigation is a drawer. The shell's rail is the aside inside the shell's
+     * own root — and never the drawer, which is a dialog.
+     */
+    const SHELL_RAIL = 'div.flex.min-h-screen > aside:not([role="dialog"])';
+
+    /**
+     * Watch the surface while the thing being measured moves.
+     *
+     * The suite's rule is that a box still animating is *waited on* rather than sampled, and these
+     * cases keep it: no value is asserted mid-flight. What is asserted is an invariant that has to
+     * hold at every moment in between — whether the reader is ever dropped at an offset nobody chose,
+     * and whether the content is ever measured at a width it cannot have — and a settled measurement
+     * cannot answer either question. The waiting is still done by `waitFor` on the application's own
+     * signal; this only records what happened while it happened.
+     *
+     * Two instruments, because they answer different halves. `requestAnimationFrame` gives the width
+     * every *painted* frame was drawn at. The scroll listener and the mutation observer give the
+     * offsets the reader was put at even where no frame was painted for it — and a scroll the engine
+     * makes on its own, which is what clamping a reader's position to a shorter document is, is
+     * exactly the move that must not happen silently.
+     */
+    const watchSurface = (): Promise<null> =>
+      session.evaluate<null>(
+        `(() => {
+           window.__surfaceFrames = [];
+           window.__surfaceWatched = [];
+           window.__surfaceWatching = true;
+           const record = () => {
+             const region = document.querySelector('main');
+             window.__surfaceWatched.push([
+               Math.round(window.scrollY),
+               Math.round(document.documentElement.scrollHeight),
+               region ? Math.round(region.getBoundingClientRect().height) : 0,
+               window.innerHeight,
+             ]);
+           };
+           window.addEventListener('scroll', record, { passive: true });
+           new MutationObserver(record).observe(document.querySelector('main'), {
+             childList: true,
+             subtree: true,
+           });
+           record();
+           const tick = () => {
+             const region = document.querySelector('main');
+             const column = region ? region.querySelector('div[class*="max-w-"]') : null;
+             const rail = document.querySelector(${JSON.stringify(SHELL_RAIL)});
+             window.__surfaceFrames.push({
+               y: Math.round(window.scrollY),
+               innerH: window.innerHeight,
+               docH: Math.round(document.documentElement.scrollHeight),
+               regionHeight: region ? Math.round(region.getBoundingClientRect().height) : 0,
+               regionClientWidth: region ? region.clientWidth : 0,
+               regionScrollWidth: region ? region.scrollWidth : 0,
+               columnWidth: column ? Math.round(column.getBoundingClientRect().width) : 0,
+               railWidth: rail ? Math.round(rail.getBoundingClientRect().width) : 0,
+             });
+             if (window.__surfaceWatching) requestAnimationFrame(tick);
+           };
+           requestAnimationFrame(tick);
+           return null;
+         })()`,
+      );
+
+    const watched = async (): Promise<{
+      frames: SurfaceFrame[];
+      moments: number[][];
+    }> => {
+      const result = await session.evaluateJson<{ frames: SurfaceFrame[]; moments: number[][] }>(
+        `((window.__surfaceWatching = false), JSON.stringify({
+           frames: window.__surfaceFrames,
+           moments: window.__surfaceWatched,
+         }))`,
+      );
+      expect(result.moments.length, 'the surface was never recorded').toBeGreaterThan(0);
+      return result;
+    };
+
+    /**
+     * Wait for the shell to be the shell this width has.
+     *
+     * Called *after* the application has been loaded at the new width, never in place of it: crossing
+     * the phone boundary deliberately leaves the tab on a blank document (`setViewport` explains why),
+     * so the shell is started at a width rather than asked to follow one — which is also what a reader
+     * does when they open the app on that screen. This only says how to tell that it has arrived: the
+     * rail belongs to the three wider modes, and the drawer's trigger to the phone.
+     */
+    const settleShell = (width: number): Promise<void> =>
+      session.waitFor(
+        width < 768
+          ? `!document.querySelector(${JSON.stringify(SHELL_RAIL)}) && Boolean(document.querySelector('[aria-controls="shell-navigation"]'))`
+          : `Boolean(document.querySelector(${JSON.stringify(SHELL_RAIL)})?.querySelector('nav button'))`,
+        width < 768
+          ? `the phone’s navigation trigger, and no rail beside it, at ${width}px`
+          : `the rail’s own navigation at ${width}px`,
+      );
+
+    it('starts every section at its own origin, from wherever the last one was left', async () => {
+      for (const locale of ['en', 'fa'] as const) {
+        for (const [width, height] of [
+          [1440, 900],
+          [390, 844],
+        ] as const) {
+          const where = `${locale} at ${width}px`;
+          await session.setViewport(width, height);
+          await startIn(locale);
+          await settleShell(width);
+          if (width >= 768) await expandRail();
+          expect(await session.evaluate<string>('document.documentElement.dir')).toBe(
+            locale === 'fa' ? 'rtl' : 'ltr',
+          );
+
+          // The journal read from its bottom: a section taller than the window, with the reader deep
+          // inside it.
+          await visitIn(locale, 'journal');
+          await session.evaluate<null>(
+            '((window.scrollTo(0, document.documentElement.scrollHeight)), null)',
+          );
+          const deep = await surface();
+          expect(deep.y, `the journal did not scroll for ${where}`).toBeGreaterThan(0);
+
+          // Then a different section — too tall to fit, so the offset it inherits is one it *can*
+          // keep. That is the measurement: this used to leave the reader at whatever the engine
+          // clamped the old offset to, which is the end of a section they had not started reading.
+          await visitIn(locale, 'lab');
+          const arrived = await surface();
+          expect(arrived.y, `the change to the lab for ${where} left the reader mid-section`).toBe(
+            0,
+          );
+
+          // …and it arrives without moving the shell: the section's own frame and the bar above it
+          // are where they already were. Mirrored, that is the same claim about the same two edges —
+          // the section reads from its own start, whichever side that is.
+          expect(
+            { left: arrived.columnLeft, width: arrived.columnWidth },
+            `the change for ${where} moved the page sideways`,
+          ).toEqual({ left: deep.columnLeft, width: deep.columnWidth });
+          expect(arrived.barHeight, `the change for ${where} resized the top bar`).toBe(
+            deep.barHeight,
+          );
+
+          // The section it arrived at is presented from its beginning rather than from its foot: its
+          // own title is on screen.
+          expect(
+            arrived.titleTop,
+            `the lab’s title is off screen for ${where}`,
+          ).toBeGreaterThanOrEqual(0);
+          expect(arrived.titleTop).toBeLessThan(arrived.innerH);
+        }
+      }
+    }, 120_000);
+
+    it('fills the window on every section, and never becomes a second scroll surface', async () => {
+      for (const [width, height] of [
+        [1440, 900],
+        [390, 844],
+      ] as const) {
+        await session.setViewport(width, height);
+        await startIn(null);
+        await settleShell(width);
+
+        for (const section of NAV_SECTIONS) {
+          await visit(section.id);
+          const state = await surface();
+
+          // The region a section renders into never scrolls on its own: if it did, the reader would
+          // have two scroll positions and the wheel would only ever move one of them.
+          expect(
+            state.regionScroll,
+            `${section.id} makes the content region a scroll box at ${width}px`,
+          ).toBe(0);
+
+          // And the surface is never shorter than the window, so a section with less content than a
+          // screen still fills it rather than leaving the footer floating above a gap.
+          expect(
+            state.docH,
+            `${section.id} leaves the surface shorter than the window at ${width}px`,
+          ).toBeGreaterThanOrEqual(state.innerH);
+        }
+      }
+    }, 120_000);
+
+    it('never measures the content at a width it cannot have while the rail moves', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+      await visit('journal');
+
+      await watchSurface();
+      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      await waitForRail('< 100', 'the rail to collapse');
+      const { frames } = await watched();
+      expect(frames.length, 'the rail’s transition was never painted').toBeGreaterThan(1);
+
+      for (const frame of frames) {
+        // The rail animates 264px → 76px, so the content beside it is a different width on every
+        // frame. Nothing may spill in the meantime: a row that is one pixel too wide is a scrollbar
+        // appearing under the reader's pointer and then leaving again.
+        expect(
+          frame.regionScrollWidth - frame.regionClientWidth,
+          `the content region overflowed at rail width ${frame.railWidth}px`,
+        ).toBeLessThanOrEqual(1);
+
+        // …and the frame a section renders into is always its region's own width, capped at the
+        // model's column. A frame that were briefly the *old* width would be the column flashing at
+        // a size the shell can no longer give it.
+        expect(
+          Math.abs(frame.columnWidth - Math.min(frame.regionClientWidth - 40, 1400)),
+          `the column was ${frame.columnWidth}px in a ${frame.regionClientWidth}px region`,
+        ).toBeLessThanOrEqual(1);
+
+        expect(frame.railWidth).toBeGreaterThanOrEqual(76);
+        expect(frame.railWidth).toBeLessThanOrEqual(264);
+      }
+
+      expect((await surface()).regionScroll, 'the content region became a scroll box').toBe(0);
+      await expandRail();
+    }, 120_000);
+
+    it('never drops the reader somewhere they did not ask for while a section changes', async () => {
+      await session.setViewport(1440, 900);
+      await startIn(null);
+      await expandRail();
+
+      await visit('journal');
+      await session.evaluate<null>(
+        '((window.scrollTo(0, document.documentElement.scrollHeight)), null)',
+      );
+      const deep = (await surface()).y;
+      expect(deep).toBeGreaterThan(0);
+
+      // Watch the whole change: the outgoing section, the swap, and the arriving one.
+      await watchSurface();
+      await visit('lab');
+      const { frames, moments } = await watched();
+
+      // Every moment — a painted frame, a scroll the engine made, or a change inside the region — is
+      // either where the reader was reading or the new section's own beginning. A third offset is a
+      // position nobody chose, and the one that used to exist was the engine's: the old offset,
+      // clamped to however short the section that had not finished arriving was.
+      const offsets = [...new Set(moments.map((moment) => moment[0] ?? 0))].sort((a, b) => a - b);
+      expect(
+        offsets.filter((offset) => offset !== 0 && offset !== deep),
+        `offsets the reader was put at on the way: ${JSON.stringify(offsets)}`,
+      ).toEqual([]);
+
+      // The surface is never empty while one section replaces another. An empty region is a document
+      // whose height collapses for as long as it lasts, and a collapsed document is what invites the
+      // engine to move a reader.
+      for (const [y, docH, regionHeight, innerH] of moments) {
+        expect(regionHeight, `the content region emptied at offset ${y}`).toBeGreaterThan(0);
+        expect(docH, `the surface fell below the window at offset ${y}`).toBeGreaterThanOrEqual(
+          innerH ?? 0,
+        );
+      }
+
+      // …and it stayed there: no painted frame may describe a surface that contradicts the record.
+      for (const frame of frames) {
+        expect(frame.regionHeight, 'a painted frame had no content in it').toBeGreaterThan(0);
+        expect(frame.docH, 'a painted frame was shorter than the window').toBeGreaterThanOrEqual(
+          frame.innerH,
+        );
+      }
+
+      expect((await surface()).y, 'the new section did not start at its origin').toBe(0);
+    }, 120_000);
   });
 });
