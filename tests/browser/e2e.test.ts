@@ -3895,4 +3895,271 @@ suite('the Product Foundation in a real browser', () => {
       );
     }, 60_000);
   });
+
+  /**
+   * The session history, walked by the browser rather than by a control — Phase 8.2.4.
+   *
+   * The application has no router and never changes its address: a move between the fourteen sections
+   * pushes a *same-URL* history entry carrying the section it was made from. So the reader's Back
+   * button undoes a move, and the static-hosting property that made a router unnecessary — that a host
+   * is never asked to resolve a path — is untouched.
+   *
+   * Every case here walks with `history.back()`/`history.forward()`, which is the same traversal the
+   * buttons perform, and waits on the *page heading* rather than on `aria-current`: the store changes
+   * the instant the traversal lands, and the workspace swaps its children inside `AnimatePresence`
+   * afterwards, so a rail read taken too early would describe the page the reader just left.
+   */
+  describe('the session history, in a browser', () => {
+    const RAIL_CURRENT = 'aside nav button[aria-current="page"]';
+    const DRAWER_CURRENT = '[role="dialog"] nav button[aria-current="page"]';
+    const DRAWER_TRIGGER = '[aria-controls="shell-navigation"]';
+    const FIELD = '[role="dialog"] [role="combobox"]';
+
+    /** The entries a navigation surface calls current, by identifier — the shell's own answer. */
+    const currentIn = (scope: string): Promise<(string | null)[]> =>
+      session.evaluateJson(
+        `JSON.stringify(
+           [...document.querySelectorAll(${JSON.stringify(scope)})].map(
+             (button) => button.getAttribute('data-nav-id'),
+           ),
+         )`,
+      );
+
+    /** Where the document actually is. Never asserted to *change*: that is the property under test. */
+    const address = (): Promise<string> => session.evaluate<string>('location.href');
+
+    // `history.length` is deliberately *not* the measurement here, and it is also not the *starting
+    // point*: see `startClean` below. The walk is the measurement: a move that was not recorded is a move
+    // Back cannot undo, and every case below presses Back and asserts which page it lands on.
+
+    /**
+     * Load the application in a tab whose session history holds nothing but this document.
+     *
+     * A session history is per-tab and cannot be cleared from the page, this suite shares one tab for its
+     * whole run, and Chrome caps a tab's history at fifty entries and prunes the oldest as new ones
+     * arrive. So by the time these cases run, the entries a walk depends on are being pruned out from
+     * under it: `back 2` of a four-move walk stepped past the document into whatever the suite had
+     * loaded before it. That is a measurement of the browser's ceiling, not of the application.
+     *
+     * A reader presses Back in a tab they have just opened, so that is the tab measured here — asked of
+     * the protocol rather than by opening a second browser, because the tab is the only thing that has to
+     * be new. The language is cleared with it, so the case reads the chrome it means to read.
+     */
+    const startClean = async (preference: string | null = null): Promise<void> => {
+      await session.resetNavigationHistory();
+      await startIn(preference);
+    };
+
+    /** Wait until the page behind `id` is the one on screen, in the language in use. */
+    const landsOn = (id: string, locale: UiLocale = 'en'): Promise<void> =>
+      session.waitFor(
+        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(
+          headingFor(locale, id),
+        )}`,
+        `the ${id} page to be the one on screen after the walk`,
+      );
+
+    /** One step backwards, and the page and the rail both agree about where the walk arrived. */
+    const backTo = async (id: string): Promise<void> => {
+      await session.traverseHistory('back');
+      await landsOn(id);
+      // Exactly one entry current, and it is the page the walk arrived at — never two, and never the
+      // one that was left behind.
+      expect(await currentIn(RAIL_CURRENT), `the rail after walking back to ${id}`).toEqual([id]);
+    };
+
+    /** Wait for the off-canvas navigation to be gone, exit animation and all. */
+    const drawerGone = (): Promise<void> =>
+      session.waitFor(
+        `document.querySelectorAll('[role="dialog"]').length === 0`,
+        'the off-canvas navigation to be gone',
+      );
+
+    /** Open the off-canvas navigation on a phone, and wait for it to be there. */
+    const openDrawer = async (): Promise<void> => {
+      expect(
+        await session.evaluate<boolean>(`
+          (() => {
+            const trigger = document.querySelector(${JSON.stringify(DRAWER_TRIGGER)});
+            if (!trigger) return false;
+            trigger.click();
+            return true;
+          })()
+        `),
+        'the shell’s own control for the off-canvas navigation',
+      ).toBe(true);
+      await session.waitFor(
+        `!!document.querySelector(${JSON.stringify(DRAWER_CURRENT)})`,
+        'the off-canvas navigation to open',
+      );
+    };
+
+    it('walks back and forward through the sections a reader visited, without moving the address', async () => {
+      await session.setViewport(1440, 900);
+      await startClean();
+      await expandRail();
+
+      const start = await address();
+
+      // The entry the document loaded on is *named*, not merely rested on: the shell seeds it on mount,
+      // so the first Back has a page to return to rather than an entry this build never wrote.
+      expect(await session.evaluate<string>('JSON.stringify(history.state)')).toBe(
+        '{"masterTrade.page":"dashboard"}',
+      );
+
+      // Four moves, made the way a reader makes them.
+      await visit('journal');
+      await visit('portfolio');
+      await visit('evaluation');
+      await visit('academy');
+      expect(await currentIn(RAIL_CURRENT)).toEqual(['academy']);
+
+      // Not one of the moves moved the document: this is the whole trade the phase makes — a browser
+      // that can walk the sections, and a host that still has one path to serve.
+      expect(await address()).toBe(start);
+
+      await backTo('evaluation');
+      await backTo('portfolio');
+      await backTo('journal');
+      expect(await address()).toBe(start);
+
+      // …and forward walks the same steps in the other direction, back to where the walk began.
+      await session.traverseHistory('forward');
+      await landsOn('portfolio');
+      expect(await currentIn(RAIL_CURRENT)).toEqual(['portfolio']);
+
+      await session.traverseHistory('forward');
+      await landsOn('evaluation');
+      expect(await currentIn(RAIL_CURRENT)).toEqual(['evaluation']);
+
+      await session.traverseHistory('forward');
+      await landsOn('academy');
+      expect(await currentIn(RAIL_CURRENT)).toEqual(['academy']);
+      expect(await address()).toBe(start);
+    }, 90_000);
+
+    it('undoes a move made from the palette exactly as it undoes one made from the rail', async () => {
+      await session.setViewport(1440, 900);
+      await startClean();
+      await expandRail();
+
+      await visit('journal');
+
+      // A destination opened from the palette is the rail's own action — the same store call — so it is
+      // the same step in the history, and that is worth measuring rather than assuming: the palette is
+      // the one way into a page that does not press a navigation button.
+      await session.pressKey('Control+k');
+      await session.waitFor(
+        `document.activeElement === document.querySelector(${JSON.stringify(FIELD)})`,
+        'the palette to take the keyboard',
+      );
+      await session.typeText('portfolio');
+      await session.pressKey('Enter');
+      await landsOn('portfolio');
+      expect(await currentIn(RAIL_CURRENT)).toEqual(['portfolio']);
+
+      // Back undoes it, and the palette does not come back with it: a traversal moves the page, and a
+      // modal the reader already dismissed is not part of where they were.
+      await backTo('journal');
+      await session.waitFor(
+        `document.querySelectorAll('[role="dialog"]').length === 0`,
+        'the palette to stay closed across the walk back',
+      );
+    }, 60_000);
+
+    it('leaves the keyboard where it was when the walk moves the page', async () => {
+      await session.setViewport(1440, 900);
+      await startClean();
+      await expandRail();
+
+      // Start somewhere that is not the entry the keyboard will land on, so opening it is a move.
+      await visit('journal');
+
+      // Walk in with real key presses: a programmatic `.focus()` would prove the shell moves the
+      // keyboard, which is not the question — the question is whether a traversal takes it away.
+      let focused: string | null = null;
+      for (let presses = 0; presses < 24 && focused === null; presses += 1) {
+        await session.pressKey('Tab');
+        focused = await session.evaluate<string | null>(
+          `(() => {
+             const element = document.activeElement;
+             if (!element || !element.closest('aside nav')) return null;
+             return element.getAttribute('data-nav-id');
+           })()`,
+        );
+      }
+      expect(focused, 'pressing Tab never reached a navigation entry').not.toBeNull();
+      expect(focused).not.toBe('journal');
+
+      await session.pressKey('Enter');
+      await landsOn(focused as string);
+      expect(await currentIn(RAIL_CURRENT)).toEqual([focused]);
+
+      // And the step back leaves the keyboard exactly where it was: the rail is one element the page
+      // swaps its children inside, so the control a reader was on is still the control they are on —
+      // rather than the focus landing on the document, which is where a keyboard user loses their place.
+      await backTo('journal');
+      expect(
+        await session.evaluate<string | null>(
+          `(() => {
+             const element = document.activeElement;
+             if (!element || !element.closest('aside nav')) return null;
+             return element.getAttribute('data-nav-id');
+           })()`,
+        ),
+        'the navigation entry a reader was on after walking back',
+      ).toBe(focused);
+    }, 60_000);
+
+    it('does not spend a step on a move that goes nowhere', async () => {
+      await session.setViewport(1440, 900);
+      await startClean();
+      await expandRail();
+
+      await visit('journal');
+      await visit('portfolio');
+
+      // The rail's current entry is a button like every other, so this press really happens. Recorded,
+      // it would be a step that appears to do nothing when it is walked — and the reader would have to
+      // press Back twice to undo one move.
+      await session.clickNav(labelOf('portfolio'));
+      expect(await currentIn(RAIL_CURRENT)).toEqual(['portfolio']);
+
+      // One Back, one move undone: this is what makes "the press spent nothing" a measurement rather
+      // than a claim — had it recorded, this Back would have landed on the page it was pressed from.
+      await backTo('journal');
+    }, 60_000);
+
+    it('keeps the page, the rail and the drawer in step when the walk happens mirrored, on a phone', async () => {
+      await session.setViewport(390, 844);
+      await startClean('fa');
+      expect(await session.evaluate<string>('document.documentElement.dir')).toBe('rtl');
+      const start = await address();
+
+      // On a phone every move is made through the off-canvas navigation, which closes behind the choice.
+      await visitIn('fa', 'usage');
+      await visitIn('fa', 'profile');
+      await drawerGone();
+
+      // The walk arrives at the previous section, mirrored, with the drawer shut and exactly one entry
+      // claiming the page — in the drawer, because that is the navigation this width has.
+      await session.traverseHistory('back');
+      await landsOn('usage', 'fa');
+      await drawerGone();
+      await openDrawer();
+      expect(await currentIn(DRAWER_CURRENT)).toEqual(['usage']);
+
+      // And the mirrored layout the walk arrived in is still a layout no wider than the phone.
+      const overflow = await session.evaluateJson<OverflowReport>(OVERFLOW_PROBE);
+      expect(overflow.total, JSON.stringify(overflow.findings)).toBe(0);
+      expect(await address()).toBe(start);
+
+      // A destination chosen from the opened drawer is a move again, and Back undoes it from there.
+      await visitIn('fa', 'profile');
+      await session.traverseHistory('back');
+      await landsOn('usage', 'fa');
+
+      await startClean();
+    }, 90_000);
+  });
 });

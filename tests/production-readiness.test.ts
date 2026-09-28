@@ -17,15 +17,18 @@
  *      interface and every default origin is loopback; a public bind is something an operator
  *      writes down, not something that happens by omission.
  *   3. **The frontend is static, so no server-side route is load-bearing.** There is no client
- *      router and no history API use anywhere in the UI, which is why the Nginx config needs no
- *      `try_files` fallback and cannot 404 on a deep link — because no deep link exists.
+ *      router, and since Phase 8.2.4 the one file that touches the session history passes no address
+ *      to it, which is why the Nginx config needs no `try_files` fallback and cannot 404 on a deep
+ *      link — because no deep link exists. The reader's Back button walks the entries the app pushed,
+ *      all of them at the same path.
  *   4. **Every asset reference is same-origin and present.** Each `/…` reference in the HTML and the
  *      manifest resolves to a file that ships, with no `http://` anywhere to trigger mixed content.
  *   5. **Readiness tells the truth under load.** Liveness answers without authentication and
  *      without a database, and neither endpoint leaks a credential.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MemoryLogSink } from '../packages/shared/src/core/logging.js';
 import {
@@ -44,6 +47,25 @@ import { createServer } from '../src/server/index.js';
 import type { ServerDeps } from '../src/server/index.js';
 
 const read = (path: string): string => readFileSync(path, 'utf8');
+
+/**
+ * Every source file the interface ships, on the same convention the frontend suites use.
+ *
+ * The interface's own tree rather than a list of the files this phase happens to know about, because
+ * the claims below are "nowhere in the UI" claims and a list is exactly what a later file escapes.
+ */
+function uiSources(): string[] {
+  const walk = (directory: string): string[] => {
+    const found: string[] = [];
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) found.push(...walk(path));
+      else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) found.push(path);
+    }
+    return found;
+  };
+  return walk(join('web', 'src')).map((path) => path.split(sep).join('/'));
+}
 
 const OPERATING_MODES: readonly OperatingMode[] = ['training', 'sandbox', 'shadow'];
 
@@ -226,13 +248,39 @@ describe('the frontend is static, so no server route is load-bearing', () => {
     expect(html).toMatch(/<div id="root">/);
     expect(html).toMatch(/<script type="module" src="\/src\/main\.tsx">/);
 
-    // No router and no history API anywhere in the UI: the shell selects a page from its own
-    // store, so there is no deep link for a static host to fail to resolve.
-    for (const path of ['web/src/App.tsx', 'web/src/app/AppShell.tsx', 'web/src/store/ui.ts']) {
-      const source = read(path);
-      expect(source, path).not.toMatch(/history\.pushState|history\.replaceState|useNavigate/);
-      expect(source, path).not.toMatch(/BrowserRouter|createBrowserRouter|<Route\b/);
-    }
+    // No router anywhere in the UI: the shell selects a page from its own store, so there is no
+    // deep link for a static host to fail to resolve. This is asserted over the whole tree rather
+    // than over the three files that could obviously grow one — a router arrives as a component.
+    const routers = uiSources().filter((path) =>
+      /BrowserRouter|createBrowserRouter|HashRouter|useNavigate|<Route\b/.test(read(path)),
+    );
+    expect(routers, 'a router shape has appeared in the UI tree').toEqual([]);
+
+    // Phase 8.2.4 gave the reader the browser's own Back button, which needs the History API. The
+    // property that made a router unnecessary is *not* that nothing touches history — it is that no
+    // address is ever navigated to, so the host has nothing extra to resolve. Both halves are held
+    // here: the API has exactly one home, and that home passes no URL.
+    const historyApi = /history\.(pushState|replaceState)|addEventListener\(\s*'popstate'/;
+    const touchers = uiSources().filter((path) => historyApi.test(read(path)));
+    expect(touchers, 'the session history has exactly one home').toEqual([
+      'web/src/app/pageHistory.ts',
+    ]);
+
+    const home = read('web/src/app/pageHistory.ts');
+    // Two arguments and the second the protocol's unused title: the address is never a parameter, so
+    // there is no value here that *could* be a deep link. A phase that wants addresses has to argue
+    // for the third argument in this file.
+    expect(home).toMatch(/pushState\(\s*\{[^)]*\},\s*''\s*\)/);
+    expect(home).toMatch(/replaceState\(\s*\{[^)]*\},\s*''\s*\)/);
+    expect(home, 'the one file that may touch history must not read an address').not.toMatch(
+      /location\.(href|pathname|search|hash)/,
+    );
+    // And nothing else in the UI reads the address either, which is the same claim from the other
+    // side: the document is mounted at one path and no component has an opinion about which.
+    const readers = uiSources().filter((path) =>
+      /location\.(href|pathname|search|hash)/.test(read(path)),
+    );
+    expect(readers).toEqual([]);
   });
 
   it('builds for a root mount and binds its own dev servers to loopback', () => {

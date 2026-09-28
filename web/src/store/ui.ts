@@ -16,7 +16,12 @@
  *
  * Everything else is memory on purpose. Which page is open, which dialog is showing and whether the
  * off-canvas drawer is open are positions rather than choices, and a product that reopened on the last
- * dialog somebody closed would be remembering the wrong thing.
+ * dialog somebody closed would be remembering the wrong thing. The *page* is the one position the
+ * browser also keeps a record of, and even that is not stored here: `app/pageHistory.ts` subscribes to
+ * this store, records each move in the session history, and applies what Back and Forward walk to — the
+ * same mirror arrangement as the two settings above, one layer out (`docs/application-shell.md` § 11.2).
+ * A reload still starts at the dashboard: the session history is the browser's, not a place this product
+ * keeps a position in.
  */
 
 import { create } from 'zustand';

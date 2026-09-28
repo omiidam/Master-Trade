@@ -257,6 +257,30 @@ export interface PageSession {
    * thing itself. Returns `false` if the selector matches nothing measurable.
    */
   hover(selector: string): Promise<boolean>;
+  /**
+   * Walk one step through the session history, the way the browser's Back and Forward buttons do.
+   *
+   * `history.back()` is the *same* traversal those buttons perform and raises the same `popstate` the
+   * page receives, which is why it is used instead of a synthesised `Alt+Left` — that shortcut belongs
+   * to the browser chrome rather than to the document, so a key event would be testing something else.
+   * It returns as soon as the call is made: the traversal may be same-document and instant or a real
+   * document load, and what a case waits on afterwards is the application's own signal, never a pause.
+   */
+  traverseHistory(direction: 'back' | 'forward'): Promise<void>;
+  /**
+   * Forget every entry before the one the document is on, so the session history starts here.
+   *
+   * A session history is a per-tab resource that cannot be *cleared* from the page, and this suite shares
+   * one tab for its whole run — while Chrome caps a tab's history at fifty entries and prunes the oldest as
+   * new ones arrive. A case about "Back walks the moves this reader made" measured in that tab is
+   * therefore measuring the browser's ceiling: by the time it runs, the entries it pushed have been pruned
+   * out from under it, and Back steps past the document into whatever came before it.
+   *
+   * A reader presses Back in a tab they have just opened, so that is the tab to measure in. This asks the
+   * protocol for that starting point rather than opening a second browser, because the tab is the only
+   * thing that needs to be new.
+   */
+  resetNavigationHistory(): Promise<void>;
   screenshot(): Promise<string>;
   /** Console errors and uncaught exceptions seen since the last `clearDiagnostics`. */
   readonly diagnostics: readonly string[];
@@ -641,6 +665,14 @@ export async function openSession(executablePath: string): Promise<PageSession> 
 
     async typeText(text) {
       await send('Input.insertText', { text });
+    },
+
+    async traverseHistory(direction) {
+      await evaluate(`history.${direction}()`);
+    },
+
+    async resetNavigationHistory() {
+      await send('Page.resetNavigationHistory');
     },
 
     async screenshot() {

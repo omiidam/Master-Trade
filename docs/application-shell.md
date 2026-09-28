@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.2.3
+# Application Shell — Phases 7.1.1 through 8.2.4
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -633,3 +633,125 @@ this is the second surface in the shell to do it, and both say why next to the l
 The near-miss is worth recording: the same case asserts the field has the keyboard when the palette
 opens, and _that_ would have passed either way — Radix's mount focus works. Only the way back was
 broken, and only a case that closes the surface and then asks catches it.
+
+## 11. Phase 8.2.4 — the navigation as an integrated system
+
+8.2.1 stated the fourteen destinations, 8.2.2 gave each one a box and an identifier, and 8.2.3 added a
+second way in. This phase is the one that treats them as one system and checks the _joins_: every entry
+resolves to its page, every page agrees with the entry that opened it, the rail and the palette cannot
+disagree, the four widths and both directions behave, and the reader's own navigation — the browser's
+Back and Forward buttons — works.
+
+One thing was missing, and it was not a detail. The application had never participated in the session
+history at all: pressing Back after walking from Journal to Portfolio **left the application**. § 11.2 to
+§ 11.4 are that gap and its resolution; § 11.5 records the two defects the browser cases found in it.
+Nothing else changed — no destination was added, removed or renamed, Portfolio and Evaluation are still
+two modules, there is still no Performance entry, and no page or Top Bar control was redesigned.
+
+### 11.1 What the integration pass found, besides the history
+
+Everything else the phase asked for was already true, and is now asserted as a _flow_ rather than as a
+set of parts: the rail and the phone drawer draw the same fourteen entries in the same order
+(8.2.2), each entry's page is titled by the string the entry is labelled with (8.1.3), the rail marks
+exactly one entry current on all fourteen routes, choosing a destination closes the drawer it was
+chosen from, the collapsed rail stays 76px and stays a navigation, the palette offers the same
+directory in the same order under a mirrored interface, and no width the design commits to scrolls
+sideways or clips a label. The one surface that had no coverage at all was the one the browser owns,
+which is what the rest of this section is about.
+
+### 11.2 The page is a position the browser also keeps
+
+The workspace is path-less on purpose, and § 5.9 of the deployment record depends on that: there is no
+client router, so a static host is never asked to resolve a path and no deep link can 404. The reader's
+Back button nevertheless expects to undo a move between sections, and the two are not in conflict —
+because the History API can put a **state-carrying entry on the same address**.
+
+`web/src/app/pageHistory.ts` writes entries with `pushState(state, '')`: two arguments, the second the
+protocol's unused title, and no URL at all. A step is added to the session history and the address does
+not move, so every entry the reader can walk to is at the one path the host already serves. A `popstate`
+listener then moves the shell to whatever the entry it landed on names.
+
+The entry the document loads on is _named_ rather than left unnamed (`replaceState`, on mount), so the
+first Back returns to the page the reader started on instead of to an entry this build never wrote. And
+there is still exactly **one** way to change the page: the store's `setPage`, unchanged from Phase 3.
+The history watches it rather than being called by it — `connectPageHistory` subscribes to the store and
+records every change of `page`, which means a move is recorded however it was made (the rail, the
+palette, the top bar's stream chip, a link inside a page, or a phase that does not exist yet) and
+re-choosing the page the reader is already on is not a change, so it costs no step and needs no guard.
+
+**The direction of that dependency is load-bearing, not stylistic.** `config/navigation.ts` reads its
+labels through `i18n/index.ts`, and `i18n/active.ts` reads the store while it is being evaluated. So
+anything the store imports may not reach the navigation: a store that recorded its own moves — importing
+this module, which imports the navigation for `APP_PAGE_IDS` — is a cycle in which the store's own value
+is undefined by the time the language layer asks for it, and the `language-detection` suite (which
+imports the store first) fails on it. The first draft of this phase did exactly that and was rewritten.
+The mirror arrangement is also the one this store already uses for its two settings: the store holds the
+value, and one owner outside it keeps the copy that outlives the process — except that the page is not
+persisted at all, because a position is not a choice (§ 7). A reload still starts at the dashboard.
+
+### 11.3 What a traversal is not allowed to do
+
+Four rules, each with a case:
+
+| Rule                                                                   | Why                                                                              |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| A traversal is **not recorded**                                        | recorded, it would append the page just left and Back would never move           |
+| An entry this build did not write **changes nothing**                  | a state from another script or build must not be able to send the shell anywhere |
+| A traversal **closes the drawer** it arrives over                      | the drawer covers the page it is over; the page changed under it                 |
+| A traversal **does not reopen a surface** the reader already dismissed | the palette is where the reader _was_, not part of the page they are on          |
+
+The second is the interesting one. `readPageEntry` validates the state against the same
+`APP_PAGE_IDS` the rail is drawn from, accepts only an _own_ property, and answers `null` for everything
+else — including a section this product deliberately does not have (`performance`), which a hostile or
+stale state could otherwise name. `null` means "not a page this build wrote", and the shell's answer is
+to stay exactly where the reader is rather than to jump somewhere nothing asked for.
+
+### 11.4 The defect the browser cases found, twice
+
+**`popstate` never reaches the document.** The first draft listened on `document`, which is where a
+`popstate` looks like it should arrive and where nothing arrives at all: the specification fires it at
+`window`, the event does not reach `document`, and the listener simply never ran. In a browser the
+symptom was a walk that changed `history.state` and left the rail marking the page the address had
+already left; there was no console error, because nothing had failed. Measured, then fixed: the listener
+is on `window`, and the line above it says why.
+
+**A shared tab hits the browser's history ceiling.** The first version of these cases counted steps with
+`history.length`. Chrome caps a tab's session history at **fifty entries** and prunes the oldest as new
+ones arrive, and this suite shares one tab for its whole run — so by the time the walk ran, the entries
+it had just pushed were being pruned out from under it, and `back 2` of a four-move walk stepped _past
+the document_ into whatever the suite had loaded before. The count was measuring the browser's ceiling
+rather than the application (`expected 51 to be 50`), and the walk was measuring the tab's age rather
+than the shell.
+
+Both halves of that are now stated in the cases rather than worked around: `startClean` resets the tab's
+navigation history (`Page.resetNavigationHistory`) before each one, because a reader presses Back in a
+tab they have just opened; and the walk itself is the measurement — a move that was not recorded is a
+move Back cannot undo, and every case presses Back and asserts which page it lands on. `history.length`
+is not asserted anywhere in the phase.
+
+### 11.5 What was verified
+
+| Check                                                                       | Where                                   | Result |
+| --------------------------------------------------------------------------- | --------------------------------------- | ------ |
+| Four moves, three steps back, three forward, and the address never moves    | `tests/browser/e2e.test.ts`             | pass   |
+| The entry the document loaded on is named before any move                   | `tests/browser/e2e.test.ts`             | pass   |
+| A move made from the palette is undone exactly like one from the rail       | `tests/browser/e2e.test.ts`             | pass   |
+| The keyboard stays on the rail's entry across a walk                        | `tests/browser/e2e.test.ts`             | pass   |
+| A press on the entry already current spends no step                         | `tests/browser/e2e.test.ts`             | pass   |
+| The walk in a mirrored interface on a phone: drawer shut, one entry current | `tests/browser/e2e.test.ts`             | 5/5    |
+| Every entry, its page, and exactly one entry current on all fourteen routes | `tests/browser/e2e.test.ts`             | pass   |
+| The palette and the rail cannot disagree after a walk                       | `tests/browser/e2e.test.ts`             | pass   |
+| Collapsed rail, phone drawer, four widths, both directions (regression)     | `tests/browser/e2e.test.ts`             | pass   |
+| Entry reading: totality, validation, own-property, foreign states           | `tests/frontend-page-history.test.ts`   | 20/20  |
+| The connection: recording, traversal, teardown (behavioural)                | `tests/frontend-page-history.test.ts`   | pass   |
+| One home for the History API, and no address ever passed to it              | `tests/production-readiness.test.ts`    | pass   |
+| Navigation, shell, RTL, responsive, integration, quick nav (regression)     | `frontend-*` / `rtl-layout`             | pass   |
+| Types, formatting, build and the whole node suite                           | `typecheck`, `format:check`, `npm test` | pass   |
+
+### 11.6 What was not changed
+
+No entry was added, removed, renamed or reordered; Portfolio and Evaluation remain two modules and there
+is still no Performance page; the palette and the rail keep the same fourteen destinations and the same
+order; the store's action for changing the page is the one it has had since Phase 3; no page content and
+no Top Bar control was touched; no dependency was added — the whole mechanism is the platform's History
+API and one store subscription.
