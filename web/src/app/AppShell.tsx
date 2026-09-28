@@ -6,9 +6,11 @@ import { useUiStore } from '../store/ui';
 import { QuickNav } from './QuickNav';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
-import { usePageHistory } from './usePageHistory';
+import { SHELL_GUTTER } from './shellLayout';
 import { useShellLayout } from './useShellLayout';
+import { usePageHistory } from './usePageHistory';
 import { msg, useDocumentLanguage } from '../i18n/index.js';
+import { cn } from '../lib/cn';
 
 /**
  * Application shell: sidebar + topbar + scrollable workspace.
@@ -49,10 +51,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
+        {/* The region's inset is the window's (`SHELL_GUTTER`) and only its vertical rhythm answers to
+            `density` — so tightening the workspace for a reader moves nothing sideways, and the page
+            below begins at the same edge as the title above it. */}
         <main
           id="workspace-main"
           tabIndex={-1}
-          className={density === 'compact' ? 'flex-1 px-4 py-4' : 'flex-1 px-5 py-5'}
+          className={cn('flex-1', SHELL_GUTTER, density === 'compact' ? 'py-4' : 'py-5')}
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -69,7 +74,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             </motion.div>
           </AnimatePresence>
         </main>
-        <footer className="flex items-center gap-2 border-t border-border px-5 py-3 text-caption text-text-faint">
+        <footer
+          className={cn(
+            'flex items-center gap-2 border-t border-border py-3 text-caption text-text-faint',
+            SHELL_GUTTER,
+          )}
+        >
           {/* The footer is a public surface of the product, so it carries the mark —
               decorative here, because the sentence beside it already names Master Trade. */}
           <BrandMark size={18} />

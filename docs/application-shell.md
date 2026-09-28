@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.2.4
+# Application Shell — Phases 7.1.1 through 8.3.1
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -755,3 +755,133 @@ is still no Performance page; the palette and the rail keep the same fourteen de
 order; the store's action for changing the page is the one it has had since Phase 3; no page content and
 no Top Bar control was touched; no dependency was added — the whole mechanism is the platform's History
 API and one store subscription.
+
+## 12. Phase 8.3.1 — the shell's own geometry
+
+The honest shape of a polish pass is that most of what it looks at is already right. The three regions,
+the four widths, the rail's two states, both directions and all fourteen pages behaved; nothing needed
+rearranging, and no page was redesigned. What the phase found was in the **arithmetic of the frame
+itself**: three horizontal insets where there should have been one, and a content column that was
+centred inside its region instead of anchored to it. Both are small numbers, and both were visible — at
+a phone width the row the page title sits in began 4px to the outside of the content it names, and at
+1920px folding the navigation slid the page 94px sideways.
+
+Nothing was restructured for it. Two constants were named in `web/src/app/shellLayout.ts` — the module
+that already owns the widths — and the three regions now read them instead of writing their own.
+
+### 12.1 Three gutters, and which one had to win
+
+| Region                        | Before 8.3.1                                    | At 390px          |
+| ----------------------------- | ----------------------------------------------- | ----------------- |
+| Top Bar (`Topbar.tsx`)        | `px-4 py-3 sm:px-5`                             | 16px              |
+| Main Content (`AppShell.tsx`) | `px-5 py-5` — or `px-4 py-4` in compact density | 20px (16 compact) |
+| Footer (`AppShell.tsx`)       | `px-5`                                          | 20px              |
+
+So the row the page title sits in began 16px from the window while the column the title names began 20px
+from it: the heading was **outside its own content**, and in the reader's compact density it was outside
+it at _every_ width, because that preference was moving the workspace region's horizontal inset too.
+`SHELL_GUTTER = 'px-5'` is now the one value, and the top bar's row, the main region and the footer all
+name it.
+
+The value that won is the one the workspace already drew with, and the alternative was rejected on
+measurement rather than taste. Taking the top bar's value instead — `px-4 sm:px-5` — would have handed
+every card 8px more width at a phone width, and the journal's chart spends its box to the last pixel: the
+browser suite recorded it reaching 1px past a 390px window the moment the content region grew. The
+alignment was what was wrong, not the page.
+
+`density` now decides the **vertical** rhythm only (`py-4` against `py-5`) — how many rows fit on one
+screen, which is what the setting is for. A preference that moved every card sideways would be a layout
+shift wearing a preference's clothes, and the content region is no longer allowed to answer to it.
+
+### 12.2 A centred column moves when nothing about it moved
+
+The frame capped its own width and centred the result: `mx-auto flex w-full max-w-[1400px]`. Centring
+looks free and is not, because the thing being centred re-centres whenever its container changes width —
+and moving the rail is exactly that. At 1920px with the rail expanded the region is 1646px wide, so a
+1400px column centred in its 1606px content box begins 123px inside the region's edge, while the page
+title above it begins at 20px: **the title sat 103px away from the content it names.** Folding the rail
+widens the region by 188px, half of which is 94px of fresh slack on each side — so the column slid 94px
+against a title, a footer and a rail that had not moved at all.
+
+`SHELL_COLUMN = 'w-full max-w-[1400px]'` is the same width, named, with `mx-auto` removed: the column is
+_anchored_ to the gutter, so the space a wider window buys goes to its trailing side. Measured in the
+running application at 1920px, in the Persian mirror, the top bar's heading, the page title and the
+column all report the same inline-start edge in both rail states — **1626 / 1626 / 1626 expanded, 1814 /
+1814 / 1814 collapsed** — and in the same run the footer's first child reports that edge too, with all
+three regions computing `padding-inline-start: 20px`.
+
+### 12.3 The scrollbar, measured and then left to the engine
+
+Toggling the window's scrollbar changes `documentElement.clientWidth` (1910 against 1920, 1014 against 1024) and therefore the width of everything inside it. Measured at 1024px in the mirror, a page that
+scrolls put the content's start edge at 918 and a short page at 928 — the reader moving between Journal
+and Portfolio watched the page move 10px. In LTR the same change lands on the trailing edge and the
+content's start edge does not move at all; in RTL the region is anchored to the rail and the rail is on
+the physical side the scrollbar occupies, so the whole region travels together.
+
+The phase tried to hold it still and did not: **`scrollbar-gutter: stable` is inert for the viewport in
+this Chromium** — with the declaration set, a 900px-tall settings page in a 900px window is still 1440px
+wide in a 1440px window. The only other declaration that reserves the column is `overflow-y: scroll`,
+and that one takes the 10px out of _every_ page at every laptop width rather than out of the two that
+happen not to scroll. A layout phase does not get to narrow every card in the product to stop the chrome
+moving on the pages that are short, so the declaration was removed again — it had already been written —
+and a comment above the `html` rule carries the numbers. What it is **not** is `overflow: hidden`, which
+would hide the content that made the page tall; there is no blanketed `overflow` in the shell at all.
+
+The same 10px has one more visible consequence, and it is recorded rather than papered over: the phone's
+top bar is an auto-height wrapping row, so 10px of row width can move one chip across a line boundary.
+At 390px the bar is 146px tall on a page that scrolls and 156px on one that does not — a consequence of
+the bar wrapping at all, on a bar that was already wrapping to six and seven rows before this phase. The
+fix for it would be to stop the row wrapping, which means fixing its height and hiding what does not fit;
+neither is worth a stable 10px.
+
+### 12.4 The cases that hold it
+
+Two assertions were corrected and one group added, all in
+[`tests/frontend-shell-layout.test.ts`](../tests/frontend-shell-layout.test.ts), because each of the two
+decisions can be undone by a single plausible-looking class:
+
+- **`the shell has one alignment system`** — states the inset once, requires the three regions to name
+  `SHELL_GUTTER`/`SHELL_COLUMN`, and refuses a bare `px-4`, `px-5`, `px-6` or `px-8` in any of them, which
+  is precisely how the three values came back the first time.
+- **The column is anchored, not centred** — `Workspace.tsx` may not contain `mx-auto`, and the width must be
+  the model's constant rather than a literal beside it.
+- **The scrollbar is left to the engine** — no `scrollbar-gutter:` declaration and no `overflow-y: scroll`
+  declaration (the comment above the rule mentions both, so the cases match declarations, not words), the
+  10px scrollbar is still styled once, and no region of the shell may hide what it cannot fit.
+
+The two corrected assertions are the same two claims in their older homes: the responsive suite's
+frame-width case now reads `SHELL_COLUMN` in the model and expects no `mx-auto`; the drawer case asserts
+that the content region's class list is `cn('flex-1', SHELL_GUTTER, density === 'compact' ? 'py-4' :
+'py-5')` **and** that no part of it reads `sidebarOpen`, `layout.mode` or `layout.isDrawer` — opening the
+navigation on a phone still cannot reflow what is being read, now with one more term in the sentence.
+
+### 12.5 What was verified
+
+| Check                                                                                    | Where                                   | Result |
+| ---------------------------------------------------------------------------------------- | --------------------------------------- | ------ |
+| One inset, named once, no bare gutter in the shell (3 new cases)                         | `tests/frontend-shell-layout.test.ts`   | 27/27  |
+| The frame names the column constant and is not centred (2 corrected cases)               | `frontend-shell-layout` / `responsive`  | pass   |
+| Alignment, rail states, top bar, scrollbar and overflow behaviour                        | `tests/browser/e2e.test.ts`             | 74/74  |
+| Navigation, navigation semantics, quick nav, page history, RTL, integration (regression) | `frontend-*` / `rtl-layout`             | pass   |
+| Types, formatting, build and the whole node suite (1921 cases)                           | `typecheck`, `format:check`, `npm test` | pass   |
+
+The sweep was run against the built preview in both directions, over all fourteen sections, at 390 / 768
+/ 1024 / 1152 (laptop) / 1920 (desktop): the top bar's row, the page title and the content column share
+one inline-start edge on **every** page, exactly one entry is `aria-current` on every route, the bar's
+height is constant while navigating at 768px (112px, five wrapped rows) and at 1024 / 1152 / 1920 (68px)
+and varies only at 390px for the scrollbar reason § 12.3 records (146px against 156px), no page scrolls
+sideways (`scrollWidth == clientWidth` for the document **and** for the main region at all fourteen
+routes), the rail is 76px collapsed and 264px expanded with the column following it by exactly that
+difference (188px), and Back and Forward still walk the visited sections with the address unchanged.
+Keyboard focus was confirmed visible in the running interface rather than only in the cases: the focused
+control matches `:focus-visible` and draws the 2px primary outline.
+
+### 12.6 What was not changed
+
+No page was redesigned, no card form was replaced and no purposeful variation between cards was removed;
+no navigation entry was added, removed, renamed or reordered, so the fourteen destinations, their
+active-state mapping and the same-URL Back/Forward behaviour are the ones 8.2.4 left; the rail's two
+widths, its transition token and the mobile drawer are untouched; the column's width, the four mode
+boundaries and the wrapping top bar are the values they already had. No dependency was added — the whole
+change is two named constants, three call sites, and one comment recording a measurement that was taken
+and deliberately not acted on.

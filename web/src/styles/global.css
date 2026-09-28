@@ -566,6 +566,21 @@
 }
 
 @layer base {
+  /*
+   * The document scrolls as the engine draws the scrollbar: the window is 10px narrower while a page
+   * is taller than it, and back to its full width when it is not.
+   *
+   * Phase 8.3.1 measured it, because at 1920px the content column read 5px further from the rail on a
+   * page that did not scroll than on one that did. It did *not* reserve the column, and the reason is
+   * in the same measurement: `scrollbar-gutter: stable` is ignored here for the viewport — with it set,
+   * a 900px-tall settings page in a 900px window is still 1440px wide in a 1440px window — so the only
+   * declaration that reserves anything is `overflow-y: scroll`, and that one takes the 10px out of
+   * every page at every laptop width rather than out of the two that happen not to scroll. A layout
+   * phase does not get to narrow every card in the product to stop the chrome moving 10px, so the
+   * column stays as the engine draws it and this comment is the record of the number.
+   *
+   * What it is not is `overflow: hidden`, which would hide the very content that made the page tall.
+   */
   html {
     color-scheme: dark;
     background-color: var(--color-bg);

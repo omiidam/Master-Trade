@@ -1,11 +1,15 @@
 import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
+import { SHELL_COLUMN } from './shellLayout';
 
 /**
  * Workspace layout: the page header plus a content grid.
  *
  * `density` comes from the UI store so the whole workstation can tighten up for
  * users who prefer more rows on screen; pages render their own sections inside.
+ *
+ * The column's width is `SHELL_COLUMN` rather than a literal here, because it is not this component's
+ * number: the top bar above it and the footer below it are held to the same edge (Phase 8.3.1).
  */
 export function Workspace({
   title,
@@ -21,7 +25,7 @@ export function Workspace({
   className?: string;
 }) {
   return (
-    <div className={cn('mx-auto flex w-full max-w-[1400px] flex-col gap-5', className)}>
+    <div className={cn(SHELL_COLUMN, 'flex flex-col gap-5', className)}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-heading font-semibold tracking-tight text-text">{title}</h2>

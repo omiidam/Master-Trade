@@ -89,3 +89,45 @@ export function railModeFor(mode: ShellMode, userCollapsed: boolean): RailMode {
 export function canCollapseRail(mode: ShellMode): boolean {
   return mode === 'laptop' || mode === 'desktop';
 }
+
+/* -------------------------------------------------------------------------- */
+/* The horizontal geometry the four modes share (Phase 8.3.1)                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The shell's content gutter — the one horizontal inset every region starts from.
+ *
+ * Phase 8.3.1 found three of them. The top bar inset its row by 16px below 640px and 20px above it,
+ * the workspace region was 20px (or 16px in the reader's compact density), and the footer was 20px
+ * at every width — so at a phone width the page title sat 4px outside the content it named, and in
+ * compact density 4px outside it at *every* width. Measured, then made one value: 20px, at every
+ * width, in all three regions.
+ *
+ * It is the value the workspace already drew with, which is why the other two regions are the ones
+ * that moved. A phase that normalises spacing is not a licence to widen every page: matching the top
+ * bar instead would have handed every card 8px more width at a phone width, and the journal's chart
+ * spends its box to the last pixel — the browser suite recorded it reaching 1px past a 390px window the
+ * moment the workspace region grew. The alignment is what was wrong, not the page.
+ *
+ * The value is the window's, not the reader's: `density` tightens the *vertical* rhythm (how many
+ * rows fit on one screen, which is what it is for), while the horizontal inset stays put — otherwise
+ * choosing compact would move every card sideways, which is a layout shift wearing a preference's
+ * clothes.
+ */
+export const SHELL_GUTTER = 'px-5';
+
+/**
+ * The shell's content column — the widest the workspace is ever drawn.
+ *
+ * It is anchored to the gutter rather than centred in it, and that is the other half of the same
+ * finding. Centred, at 1920px with the rail expanded, the column began 123px from the region's edge
+ * while the page title above it and the footer below it began at 20px — the title was 197px away
+ * from the content it names — and *collapsing the rail slid the whole column 94px sideways*, because
+ * a centred column re-centres when its container widens. Anchored, all three regions read from one
+ * edge at every width, and the space a wider window buys goes to the column's trailing side: the
+ * reader's text does not move when the navigation does.
+ *
+ * The width itself is unchanged from Phase 3 — it is the value `Workspace` has always drawn with,
+ * named here so the shell's other regions can be held to the same edge.
+ */
+export const SHELL_COLUMN = 'w-full max-w-[1400px]';

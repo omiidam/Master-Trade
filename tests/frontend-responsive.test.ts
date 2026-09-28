@@ -8,8 +8,8 @@
  * source rather than from a browser:
  *
  *   1. **One frame.** Every page renders inside the shared `Workspace`, and the frame caps its own
- *      width with `max-w-` rather than a fixed width. A page that built its own container would
- *      be the one that scrolled sideways on a phone.
+ *      width with `max-w-` rather than a fixed width, anchored to the shell's inset (Phase 8.3.1).
+ *      A page that built its own container would be the one that scrolled sideways on a phone.
  *   2. **Mobile-first grids.** Every grid starts at one column and widens at a breakpoint, and no
  *      screen starts at three columns. Two chips fit at 320px; three do not.
  *   3. **Nothing widens the page.** Every table with a minimum width sits inside a container that
@@ -119,10 +119,18 @@ describe('the shared responsive frame', () => {
 
   it('caps the frame width instead of fixing it, and lets the header wrap', () => {
     const workspace = read('web/src/app/Workspace.tsx');
+    const shell = read('web/src/app/shellLayout.ts');
     // `max-w-` is a cap: below it the frame is fluid. A fixed `w-` would be a container that
     // overflows the moment the viewport is narrower than the number.
-    expect(workspace).toMatch(/max-w-\[[0-9]+px\]/);
-    expect(workspace).toMatch(/mx-auto flex w-full/);
+    //
+    // The cap is stated once, in the shell layout module, because the top bar and the footer are
+    // held to the same edge as this column: the frame names the constant instead of repeating
+    // the number (Phase 8.3.1).
+    expect(shell).toMatch(/SHELL_COLUMN = 'w-full max-w-\[[0-9]+px\]'/);
+    expect(workspace).toMatch(/SHELL_COLUMN/);
+    // The frame is anchored to the shell's inset rather than centred inside it. A centred column
+    // slides sideways the moment the rail collapses, which is the jump this phase removed.
+    expect(workspace).not.toMatch(/mx-auto/);
     expect(workspace).toMatch(/flex-wrap/);
     // And the frame itself declares no fixed pixel width outside a cap.
     const fixed = workspace.match(FIXED_WIDTH) ?? [];

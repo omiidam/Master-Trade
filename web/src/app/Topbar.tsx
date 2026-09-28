@@ -10,6 +10,8 @@ import { PROCESS_STATE_LABEL } from '@shared/desktop/process';
 import { useRealtimeStore } from '../realtime/store.js';
 import { useUiStore } from '../store/ui';
 import { msg, useTextDirection } from '../i18n/index.js';
+import { cn } from '../lib/cn';
+import { SHELL_GUTTER } from './shellLayout';
 import { useShellLayout } from './useShellLayout';
 
 /**
@@ -66,7 +68,10 @@ export function Topbar() {
 
   return (
     <header className="sticky top-0 z-[var(--z-shell)] border-b border-border bg-bg/85 backdrop-blur">
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-5">
+      {/* The row starts from the shell's one inset (`SHELL_GUTTER`), which is what puts the page title
+          on the same edge as the cards beneath it and the footer below them. The bar itself stays
+          full-bleed, so the sticky background and its rule span the whole region at any width. */}
+      <div className={cn('flex flex-wrap items-center gap-2 py-3', SHELL_GUTTER)}>
         {layout.isDrawer ? (
           <Tooltip content={msg('topbar.openNavigation')}>
             {/* A disclosure, not a link: it names the navigation it controls and whether that is

@@ -197,7 +197,11 @@ describe('the four widths the shell must survive', () => {
     // The content column may shrink (`min-w-0`) and the frame caps itself (`max-w-`), so a wide
     // table scrolls inside its own box instead of widening the shell.
     expect(read(SHELL)).toMatch(/min-w-0/);
-    expect(read(WORKSPACE)).toMatch(/mx-auto flex w-full max-w-\[\d+px\]/);
+    // The column's width is the shell model's value rather than a literal in the component, and it
+    // caps itself with a `max-w-` so a wide table scrolls inside its own box instead of widening the
+    // shell. It is *anchored* to the gutter, not centred in it — see the alignment suite below.
+    expect(read(WORKSPACE)).toMatch(/SHELL_COLUMN/);
+    expect(read(SHELL_LAYOUT)).toMatch(/SHELL_COLUMN = 'w-full max-w-\[\d+px\]'/);
     // The rail's two widths are the only fixed widths the shell is allowed, and its motion is a
     // token rather than a number written at the call site.
     const sidebar = read(SIDEBAR);
@@ -319,8 +323,68 @@ describe('the navigation is positioned honestly', () => {
   it('keeps the workspace where it is when the navigation opens', () => {
     // The drawer overlays the page rather than pushing it, and the content region's own spacing is
     // a function of `density` alone — so opening the navigation on a phone cannot reflow what is
-    // already being read.
-    expect(read(SHELL)).toMatch(/density === 'compact' \? 'flex-1 px-4 py-4' : 'flex-1 px-5 py-5'/);
+    // already being read. Phase 8.3.1 made the inset the window's (`SHELL_GUTTER`) and left the
+    // vertical rhythm as the only thing `density` decides, which is the same claim with one more
+    // term in it.
+    const shell = read(SHELL);
+    const main = shell.slice(shell.indexOf('<main'), shell.indexOf('</main>'));
+    expect(main).toMatch(/cn\('flex-1', SHELL_GUTTER, density === 'compact' \? 'py-4' : 'py-5'\)/);
+    // …and no part of the content region answers to the drawer or to the rail's mode.
+    expect(main).not.toMatch(/sidebarOpen|layout\.mode|layout\.isDrawer/);
+  });
+});
+
+/**
+ * Phase 8.3.1 — the alignment the three regions share.
+ *
+ * The phase found the shell with *three* horizontal insets (a width-dependent one in the top bar, a
+ * density-dependent one in the workspace, a fixed one in the footer) and a content column that was
+ * centred inside its region — so at 1920px the page title sat 197px from the content it named, and
+ * collapsing the rail slid that content 94px sideways. Both were measured in a browser before they
+ * were changed. These cases hold the two resulting decisions in place, because either of them could
+ * be undone by one plausible-looking class.
+ */
+describe('the shell has one alignment system', () => {
+  const GUTTERS = /\bpx-(?:4|5|6|8)\b/;
+
+  it('states the inset once, and starts all three regions from it', () => {
+    const model = read(SHELL_LAYOUT);
+    expect(model).toMatch(/SHELL_GUTTER = 'px-5'/);
+    // Each region names the value rather than repeating it, so the inset cannot drift in one of them.
+    expect(read(TOPBAR)).toMatch(/SHELL_GUTTER/);
+    expect(read(SHELL)).toMatch(/SHELL_GUTTER/);
+    expect(read(WORKSPACE)).toMatch(/SHELL_COLUMN/);
+    // And no region writes a gutter of its own: a bare `px-4` beside the constant is how the three
+    // values came back the first time.
+    for (const file of [SHELL, TOPBAR, WORKSPACE]) {
+      expect(read(file), `${file} hardcodes a horizontal gutter`).not.toMatch(GUTTERS);
+    }
+  });
+
+  it('anchors the column to that inset instead of centring it', () => {
+    // Centred, the column re-centres whenever its region widens — which is what moving the rail is —
+    // and it only lines up with the title above it while the region is narrower than the column.
+    expect(read(WORKSPACE)).not.toMatch(/mx-auto/);
+    expect(read(SHELL_LAYOUT)).toMatch(/SHELL_COLUMN/);
+  });
+
+  it('leaves the scrollbar to the engine, and hides nothing in its place', () => {
+    const css = read('web/src/styles/global.css');
+    // The window keeps the width the engine gives it. Reserving a scrollbar column is what would
+    // hold the chrome perfectly still, and this phase measured that trade and did not take it: the
+    // only declaration that reserves anything here is `overflow-y: scroll`, which takes 10px out of
+    // *every* page at laptop widths to stop the chrome moving on the two that do not scroll. The
+    // stylesheet's own comment carries the numbers; these are the two ways it could come back.
+    // A declaration, not a mention: the comment above the rule names both properties too.
+    expect(css).not.toMatch(/^\s*scrollbar-gutter\s*:/m);
+    expect(css).not.toMatch(/^\s*overflow-y\s*:\s*scroll/m);
+    // The scrollbar is styled once, at the width the shell's measurements are taken against.
+    expect(css).toMatch(/::-webkit-scrollbar\s*\{\s*width:\s*10px;/);
+    // And no region of the shell hides what it cannot fit, which would be the other way to make a
+    // width stop moving: `overflow: hidden` would hide the content that made the page tall.
+    for (const file of [SHELL, TOPBAR, SIDEBAR]) {
+      expect(read(file), `${file} hides what it cannot fit`).not.toMatch(/overflow-hidden/);
+    }
   });
 });
 
