@@ -2889,6 +2889,8 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'shell.yes': 'بله',
   // sidebar ─────────────────────────────────────────────────────
   'sidebar.closeNavigation': 'بستن پیمایش',
+  'sidebar.collapseSidebar': 'جمع کردن نوار کناری',
+  'sidebar.expandSidebar': 'باز کردن نوار کناری',
   'sidebar.navigationMenu': 'پیمایش',
   'sidebar.safetyLiveTradingAndBrokerExecutionDisabledBy':
     'ایمنی: معامله زنده و اجرای سفارش توسط کارگزار به‌حکم طراحی غیرفعال است',

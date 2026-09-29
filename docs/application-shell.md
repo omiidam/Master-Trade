@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.3.3
+# Application Shell — Phases 7.1.1 through 8.3.4
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -1131,3 +1131,111 @@ independent of the stream again. The transition is still the shell's own token-d
 added; nothing is hidden with `overflow`; and the two facts this phase did not want to change — the bar's
 height at 390/768/1024 and the reader's rail choice across a window that cannot honour it — were measured
 before and after rather than assumed.
+
+## 15. Phase 8.3.4 — the shell's interactions, held to the keyboard
+
+The shell's _geometry_ was the subject of 8.3.1 to 8.3.3. This phase asked the other question — what happens
+when the reader uses it with a keyboard — and found two defects, both of them in the one region of the shell
+that had never been driven by a real key press: the rail's own control, and the off-canvas drawer.
+
+### 15.1 The rail's one name that was not in the catalogue
+
+Measured in a Persian, right-to-left interface, the controls inside the `<aside>` announced themselves as:
+
+```
+["Collapse sidebar", null, null]
+```
+
+`null` is not a name — it is a button whose `aria-label` is absent — and the two rows that follow are the
+palette row and the first navigation entry, which name themselves from the catalogue and read «پیمایش سریع»
+and «داشبورد». The one control that changes the _shape of the shell_ was the one control in the chrome whose
+accessible name was an English literal in the component: `collapsed ? 'Expand sidebar' : 'Collapse sidebar'`.
+A Persian reader was told, in English, what the control beside fourteen Persian entries would do.
+
+It is the catalogue's now — `sidebar.collapseSidebar` and `sidebar.expandSidebar`, in both languages — and
+the shell-layout suite holds both halves: the call site must read its name from `msg`, and the file must not
+name any control with a literal, because a control that names itself in one language is unreadable in the
+other. The suite's own way in had to move with it: `pressInRail('Collapse sidebar')` was finding a control by
+the one sentence this phase stopped hard-coding, so the browser case now finds it by the name the interface
+gives it (`translate(locale, …)`), the way the writing-direction control beside it is already found.
+
+### 15.2 The drawer's keyboard walked out of the dialog in two presses
+
+A focus trap was in place, and it was the wrong shape. It was a handler **on the panel**, so it only ever saw
+a key press while the focus was already inside the panel — and the drawer opens with the focus on the panel
+_itself_ (`tabIndex={-1}`). `Shift+Tab` from a container is not a move to its own last control: it is a move
+to the previous tabbable thing in the **document**. Measured in the browser, in a 390×844 window:
+
+| Press             | Where the keyboard went                                                 |
+| ----------------- | ----------------------------------------------------------------------- |
+| Drawer opens      | the panel (`role="dialog"`, `aria-modal="true"`)                        |
+| `Shift+Tab`       | the scrim — a `fixed inset-0` button, 380×844, named "Close navigation" |
+| `Shift+Tab` again | the skip link, **behind the dialog**                                    |
+
+Two things were wrong at once, and they are the same thing seen twice. The first stop painted no focus
+indicator a reader could see: its 2px ring with a 2px offset is drawn 4px outside the window at the top and
+the bottom, so the one stop the scrim offered showed nothing (WCAG 2.4.7). The second stop was on the page
+`aria-modal="true"` claims is inert.
+
+The wrap is now asked of the **focus** rather than of the first and last control, and it is read from the
+document — where Escape has been read from since the drawer existed, which is where the asymmetry was. One
+exclusion is load-bearing: `Node.contains` is true of the panel itself, so "inside" is measured by excluding
+the panel, or the first press after opening is not a wrap at all. Walking past the last control and
+backwards past the first still wrap, exactly as they did.
+
+### 15.3 The scrim is a control, and not a tab stop
+
+Both facts about the scrim are true, and the previous phase had written down only the first: it is a real,
+named `button` rather than a `div` with a handler, so it is announced and a pointer has a target that says
+what it does. It is now explicitly **not** a tab stop — `tabIndex={-1}` — because a control the size of the
+viewport cannot show where the focus is, and a stop that shows nothing is worse than no stop. The keyboard's
+three ways out of the drawer are the close control, Escape, and choosing a destination; all three are inside
+the dialog. With the trap asked of the focus, the scrim could no longer be reached by keyboard in any case,
+so `tabIndex={-1}` is the DOM saying what the behaviour already did rather than a second mechanism.
+
+### 15.4 The cases this phase added
+
+| Case                                                                                   | What it pins                                                                                                      |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `keeps the keyboard inside it, however the walk is made`                               | the wrap in both directions, with real keys at 390px, and a visible ring on every stop                            |
+| `keeps every control it offers reachable, and shows where the focus is on all of them` | every control in the shell's chrome, at 1440/768/390 in both directions: reached by `Tab`, ring painted on screen |
+| `names the rail's own control in the language the interface is read in`                | the Persian name is present, the English one is not, and the control still collapses and expands in Persian       |
+
+Two properties of the walk are what make the sweep more than a formality. It asks `:focus-visible`, which the
+browser only matches after a _real_ key press — the driver's `pressKey` exists for exactly this reason, and a
+programmatic `.focus()` would "verify" a ring a keyboard user never gets. And it asserts where the ring
+_lands_, not merely that one was declared: the stop is measured in the window, which is the check the scrim
+would have failed. The walk is bounded by the document (it stops when it arrives back at the skip link)
+rather than by a fixed number of presses, so a control added to the bar later is covered on the day it is
+added, and the count of stops reached is compared with the count the document says are focusable — an
+unreachable control is a failure rather than an omission.
+
+### 15.5 What was verified
+
+| Check                                                                            | Where                                    | Result  |
+| -------------------------------------------------------------------------------- | ---------------------------------------- | ------- |
+| The shell's geometry, alignment, state, density and width contract (regression)  | `frontend-shell-layout.test.ts`          | 29/29   |
+| The whole node suite, including the Persian catalogues and the terminology layer | `npm test`                               | 1938/92 |
+| The three new browser cases, in both directions                                  | `tests/browser/e2e.test.ts`              | pass    |
+| The whole browser suite, at 7 widths, in both languages and both directions      | `tests/browser/e2e.test.ts`              | 84/84   |
+| Types, formatting and the production build                                       | `typecheck`, `format:check`, `build:web` | pass    |
+
+Both defects were reproduced in the running product before they were fixed — the English name read off a
+Persian panel, and the walk out of the dialog driven with real `Shift+Tab` presses in a 390×844 window — and
+the first fix was measured _failing_ first: the trap as first written still leaked, because `contains` is true
+of the panel itself. The full browser suite was run three times; one run reported the mirrored-drawer case
+(`opens from the inline-start edge`) at its 30s budget, which passed in isolation, passed with the block, and
+passed on the two later full runs — the case's own budget is tight rather than the product being wrong, and it
+is recorded here rather than hidden by raising the number.
+
+### 15.6 What was not changed
+
+No page was redesigned and no card form was touched; no section was added, renamed, reordered or split
+(Portfolio and Evaluation remain separate, and there is no Performance entry); no dependency was added and no
+mock data exists; no delay was introduced and nothing is hidden with `overflow`. The shell's architecture, its
+four modes, its one inset, its one anchored column and its geometry are 8.3.1's to 8.3.3's — this phase moved
+no box. What it changed is three things about behaviour: the rail's control speaks the interface's language,
+the drawer's keyboard no longer leaves it, and the scrim stopped being a tab stop it could not draw. The two
+English-only reports in the top bar and the Settings card — "Browser preview" and the host sentence, which
+agree with each other by construction — were left as they are: translating one without the other would make
+the shell and the page disagree about the same fact, which is the defect 8.3.3 spent a case on.

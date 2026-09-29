@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { NAV_MODEL, navAriaLabel } from '../config/navigation';
 import type { NavGroupModel, NavIconName, NavSection } from '../config/navigation';
 import { Badge } from '../components/Badge';
@@ -62,6 +62,16 @@ export const NAV_ICONS: Record<NavIconName, ReactNode> = {
 
 /** Which side the rail's tooltips open on, from the direction rather than from a literal. */
 type RailSide = 'left' | 'right';
+
+/**
+ * What counts as a stop inside the off-canvas drawer, for the wrap in `SidebarDrawer` below.
+ *
+ * Native controls, and an explicit `tabindex` that is not `-1` — the second half is what keeps a
+ * programmatically focusable container out of a list whose whole job is to describe the tab order,
+ * and the drawer's own panel is exactly that (`tabIndex={-1}`, focused on open).
+ */
+const FOCUSABLE_IN_DIALOG =
+  'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * One navigation entry — the rail's and the drawer's, in one place.
@@ -410,7 +420,11 @@ function SidebarRail({ collapsed, canCollapse }: { collapsed: boolean; canCollap
         <BrandLockup markSize={36} markOnly={collapsed} />
         {canCollapse ? (
           <IconButton
-            label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            // The shell's own control names itself in the interface language, like every other
+            // control around it. It was the last accessible name in the chrome written in English
+            // whatever the interface was being read in, which left the one control that changes the
+            // shape of the shell as the only thing in a Persian screen a reader could not read.
+            label={msg(collapsed ? 'sidebar.expandSidebar' : 'sidebar.collapseSidebar')}
             variant="ghost"
             size="icon"
             className="ms-auto"
@@ -441,9 +455,11 @@ function SidebarRail({ collapsed, canCollapse }: { collapsed: boolean; canCollap
  *
  *   - `role="dialog"` + `aria-modal`, so assistive technology treats the page behind it as inert;
  *   - focus moves into it on open and returns to whatever opened it on close;
- *   - Tab is cycled inside it, and Escape closes it from anywhere inside;
- *   - the scrim is a real button with a name, so it is reachable and announced — not a bare `div`
- *     with a handler, which no keyboard can reach.
+ *   - Tab is cycled inside it from anywhere, and Escape closes it from anywhere inside;
+ *   - the scrim is a real button with a name, so it is announced and a pointer has a target that says
+ *     what it does — but it is not a tab stop: it is the whole viewport, so a ring drawn on it lands
+ *     outside the window. The keyboard's three ways out are the close control, Escape, and choosing a
+ *     destination.
  *
  * The reveal is a Framer Motion clip rather than a `translate-x` utility, so it mirrors by the
  * *direction*, not by a class: the drawer opens from the inline-start edge and closes back into it,
@@ -476,36 +492,52 @@ function SidebarDrawer({
     };
   }, [open]);
 
-  // Escape closes, wherever the focus is inside the drawer.
+  /**
+   * Escape closes the drawer, and Tab cycles inside it — both read from the document.
+   *
+   * The two together are one decision, and it is a measured correction rather than a preference. A
+   * handler on the panel only sees a key press while the focus is already inside the panel, and the
+   * drawer is opened *with the focus on the panel itself* (`tabIndex={-1}`). `Shift+Tab` from a
+   * container is not a move to its own last control: it is a move to the previous tabbable thing in
+   * the document — which is the scrim, and after that the skip link behind the dialog. So two presses
+   * of `Shift+Tab` walked the keyboard out of a surface that declares `aria-modal`, onto a
+   * full-viewport control that cannot paint a focus ring anywhere a reader could see it, and then
+   * onto the page behind. `frontend-shell-layout.test.ts` records the shell's side of this; the
+   * browser case is the one that drives it with real keys.
+   *
+   * So the question is asked of the focus itself rather than of the first and last control: wherever
+   * the focus is, if it is not inside the panel, the next press wraps to the end of the panel it is
+   * trying to leave. Walking forward past the last control and backward past the first still wrap,
+   * exactly as they did.
+   */
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') onOpenChange(false);
+      if (event.key === 'Escape') {
+        onOpenChange(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = panel.querySelectorAll<HTMLElement>(FOCUSABLE_IN_DIALOG);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      const current = document.activeElement;
+      // `contains` is true of the panel *itself*, and the panel is where the drawer opens — so "inside"
+      // means a control of the panel's, measured by excluding it. Without the exclusion the first
+      // `Shift+Tab` after opening is not a wrap at all: the panel counts as an interior position and the
+      // press is left to the browser, which is how it reached the page behind in the first place.
+      const inside = current instanceof HTMLElement && current !== panel && panel.contains(current);
+      const leaving = event.shiftKey ? current === first || !inside : current === last || !inside;
+      if (!leaving) return;
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open, onOpenChange]);
-
-  // Tab cycles inside the drawer: a modal surface that lets focus wander onto the page behind it is
-  // modal in name only.
-  const trapFocus = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Tab') return;
-    const panel = panelRef.current;
-    if (!panel) return;
-    const focusable = panel.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    );
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
 
   /**
    * How the drawer goes out of sight: it is *clipped*, not pushed past the edge it is anchored to.
@@ -533,6 +565,11 @@ function SidebarDrawer({
           <motion.button
             key="scrim"
             type="button"
+            // Named, so it is a control rather than a div with a handler — and *not* a tab stop,
+            // which is the honest box for it: it is the whole viewport, so the ring measured on it at
+            // 390×844 was drawn 4px outside the window at the top and the bottom, and a keyboard user
+            // arrived at a stop that showed them nothing.
+            tabIndex={-1}
             aria-label={msg('sidebar.closeNavigation')}
             onClick={() => onOpenChange(false)}
             initial={reduceMotion ? false : { opacity: 0 }}
@@ -553,7 +590,6 @@ function SidebarDrawer({
             aria-modal="true"
             aria-label={msg('sidebar.navigationMenu')}
             tabIndex={-1}
-            onKeyDown={trapFocus}
             initial={reduceMotion ? false : { clipPath: concealed }}
             animate={{ clipPath: revealed }}
             exit={reduceMotion ? { opacity: 0 } : { clipPath: concealed }}

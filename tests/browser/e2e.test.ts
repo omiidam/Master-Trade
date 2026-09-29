@@ -821,8 +821,10 @@ suite('the Product Foundation in a real browser', () => {
       const closeName = translate('en', 'sidebar.closeNavigation');
 
       expect(await openDrawer()).toBe(true);
-      // The scrim is the button named "close" that is *not* inside the dialog — a real control, not a
-      // bare div, so it can be reached rather than merely clicked with a pointer.
+      // The scrim is the button named "close" that is *not* inside the dialog — a real control rather
+      // than a bare div, with a name a reader and a pointer both get. It is deliberately not a *tab
+      // stop*: it is the whole viewport, so the ring on it lands outside the window, which is what the
+      // keyboard walk below measures rather than assumes.
       const scrimClicked = await session.evaluate<boolean>(`
         (() => {
           const dialog = document.querySelector(${JSON.stringify(DRAWER)});
@@ -848,6 +850,124 @@ suite('the Product Foundation in a real browser', () => {
         `!document.querySelector(${JSON.stringify(DRAWER)})`,
         'the close control to close the drawer',
       );
+    });
+
+    /**
+     * Where the keyboard is, and whether a reader could see that it is there.
+     *
+     * `inside` is the drawer's own question — `aria-modal` promises the page behind is inert, so a
+     * focus stop outside the panel is a promise the surface is not keeping. `shown` is the browser's
+     * answer rather than the stylesheet's: `:focus-visible` matched (which needs a *real* key press —
+     * `.focus()` would report a ring no keyboard user gets), an outline is actually painted, and the
+     * ring lands where a reader can see it. That last part is the whole reason this case exists: the
+     * scrim's ring was painted 4px outside the window at the top and the bottom of a 390×844 one.
+     */
+    interface FocusReading {
+      inside: boolean;
+      label: string;
+      focusVisible: boolean;
+      outline: string;
+      rect: { left: number; top: number; right: number; bottom: number };
+      viewport: { width: number; height: number };
+    }
+
+    type FocusStop = FocusReading & { shown: boolean };
+
+    const FOCUS_STOP_PROBE = `JSON.stringify(
+      (() => {
+        const drawer = document.querySelector(${JSON.stringify(DRAWER)});
+        const element = document.activeElement;
+        const style = element ? getComputedStyle(element) : null;
+        const box = element ? element.getBoundingClientRect() : null;
+        const offset = style ? Number.parseFloat(style.outlineOffset) || 0 : 0;
+        const width = style ? Number.parseFloat(style.outlineWidth) || 0 : 0;
+        return {
+          inside: !!drawer && !!element && drawer.contains(element),
+          label: (element?.getAttribute('aria-label') ?? element?.textContent ?? '')
+            .trim()
+            .replace(/\\s+/g, ' ')
+            .slice(0, 32),
+          focusVisible: !!element && element.matches(':focus-visible'),
+          outline: style?.outlineStyle ?? 'none',
+          rect: box
+            ? {
+                left: Math.round(box.left - offset - width),
+                top: Math.round(box.top - offset - width),
+                right: Math.round(box.right + offset + width),
+                bottom: Math.round(box.bottom + offset + width),
+              }
+            : { left: 0, top: 0, right: 0, bottom: 0 },
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+        };
+      })(),
+    )`;
+
+    /** Whether the ring the browser painted on this stop landed inside the window. */
+    const ringIsOnScreen = (reading: FocusReading): boolean =>
+      reading.focusVisible &&
+      reading.outline !== 'none' &&
+      reading.rect.left >= -0.5 &&
+      reading.rect.top >= -0.5 &&
+      reading.rect.right <= reading.viewport.width + 0.5 &&
+      reading.rect.bottom <= reading.viewport.height + 0.5;
+
+    /** Press a key, then read where the keyboard went and what the reader can see of it. */
+    const walkOne = async (key: 'Tab' | 'Shift+Tab'): Promise<FocusStop> => {
+      await session.pressKey(key);
+      const reading = await session.evaluateJson<FocusReading>(FOCUS_STOP_PROBE);
+      return { ...reading, shown: ringIsOnScreen(reading) };
+    };
+
+    const describeStop = (stop: FocusStop): string =>
+      `“${stop.label}” inside=${stop.inside} focus-visible=${stop.focusVisible} outline=${stop.outline} ring=${stop.rect.left},${stop.rect.top}→${stop.rect.right},${stop.rect.bottom}`;
+
+    it('keeps the keyboard inside it, however the walk is made', async () => {
+      await session.setViewport(390, 844);
+      await startIn(null);
+      const closeName = translate('en', 'sidebar.closeNavigation');
+
+      // Backwards first, because that is the way out of a modal that leaked: the drawer opens with the
+      // keyboard on the panel itself (`tabIndex={-1}`), and `Shift+Tab` from a container is a move to
+      // the previous tabbable thing in the *document* rather than to the last of its own controls.
+      // Two presses used to walk onto the scrim — the whole viewport, so its ring was drawn outside it
+      // — and then onto the skip link behind a dialog that declares the page behind inert.
+      expect(await openDrawer()).toBe(true);
+      const backwards: FocusStop[] = [];
+      for (let presses = 0; presses < 3; presses += 1) backwards.push(await walkOne('Shift+Tab'));
+      expect(
+        backwards.filter((stop) => !stop.inside).map(describeStop),
+        'the keyboard left the drawer walking backwards',
+      ).toEqual([]);
+      expect(
+        backwards.filter((stop) => !stop.shown).map(describeStop),
+        'a stop inside the drawer showed no focus ring where a reader could see it',
+      ).toEqual([]);
+
+      // Forwards: the panel's first press reaches its first control, and the two ends of the drawer are
+      // joined — the last control's `Tab` comes back to the first, and the first's `Shift+Tab` to the
+      // last, which is what makes the wrap a cycle rather than a wall in one direction.
+      expect(await openDrawer()).toBe(true);
+      const first = await walkOne('Tab');
+      expect(first.inside, `Tab from the panel went to ${describeStop(first)}`).toBe(true);
+      expect(first.label).toBe(closeName);
+
+      const wrapped = await walkOne('Shift+Tab');
+      expect(
+        wrapped.inside,
+        `Shift+Tab from the first control went to ${describeStop(wrapped)}`,
+      ).toBe(true);
+      // The drawer's last control, which is the safety detail's own button: the wrap is a real move to
+      // the other end rather than a step onto whatever happened to be next in the document.
+      expect(wrapped.label).toBe(translate('en', 'shell.safetyDetails'));
+
+      const round = await walkOne('Tab');
+      expect(round.inside).toBe(true);
+      expect(round.label).toBe(closeName);
+
+      // And the drawer is still the only thing with the keyboard: no stop on the way round left it.
+      for (const stop of [first, wrapped, round]) {
+        expect(stop.shown, describeStop(stop)).toBe(true);
+      }
     });
 
     it('opens from the inline-start edge, so it mirrors with the language', async () => {
@@ -1133,6 +1253,161 @@ suite('the Product Foundation in a real browser', () => {
       expect(active.text.toLowerCase()).toContain('skip');
       expect(active.visible).toBe(true);
     });
+
+    /**
+     * The stop the keyboard is on, and what a reader can see of it.
+     *
+     * `where` is which region of the shell owns it, so a case can say the walk covered the chrome
+     * without claiming anything about a page's own controls — a page's cards are the page's business,
+     * and this phase polished the shell. `shown` is the browser's answer rather than the stylesheet's:
+     * `:focus-visible` matched (which needs a real key press), an outline is actually painted, and the
+     * ring *lands* in the window. That last part is the measurement: a ring drawn outside the viewport
+     * is not a focus indicator, which is what the drawer's scrim turned out to be.
+     */
+    interface ShellStop {
+      where: 'skip' | 'rail' | 'bar' | 'footer' | 'page' | 'other';
+      label: string;
+      shown: boolean;
+      ring: string;
+    }
+
+    const SHELL_STOP_PROBE = `JSON.stringify(
+      (() => {
+        const element = document.activeElement;
+        if (!element) return null;
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        const offset = Number.parseFloat(style.outlineOffset) || 0;
+        const width = Number.parseFloat(style.outlineWidth) || 0;
+        const ring = {
+          left: box.left - offset - width,
+          top: box.top - offset - width,
+          right: box.right + offset + width,
+          bottom: box.bottom + offset + width,
+        };
+        const where = element.getAttribute('href') === '#workspace-main'
+          ? 'skip'
+          : element.closest('aside')
+            ? 'rail'
+            : element.closest('header')
+              ? 'bar'
+              : element.closest('footer')
+                ? 'footer'
+                : element.closest('main')
+                  ? 'page'
+                  : 'other';
+        return {
+          where,
+          label: (element.getAttribute('aria-label') ?? element.textContent ?? '')
+            .trim()
+            .replace(/\\s+/g, ' ')
+            .slice(0, 32),
+          shown:
+            element.matches(':focus-visible') &&
+            style.outlineStyle !== 'none' &&
+            width > 0 &&
+            ring.left >= -0.5 &&
+            ring.top >= -0.5 &&
+            ring.right <= window.innerWidth + 0.5 &&
+            ring.bottom <= window.innerHeight + 0.5,
+          ring: [ring.left, ring.top, ring.right, ring.bottom].map(Math.round).join(','),
+        };
+      })(),
+    )`;
+
+    /** How many controls the shell's own chrome offers the keyboard, in the document as it stands. */
+    const CHROME_STOPS = `(
+      [...document.querySelectorAll(
+        'header button, header a[href], header input, header select, header textarea,' +
+        'aside button, aside a[href], aside input, aside select, aside textarea',
+      )].filter(
+        (item) =>
+          !item.disabled &&
+          item.getBoundingClientRect().width > 0 &&
+          item.getBoundingClientRect().height > 0,
+      ).length
+    )`;
+
+    it('keeps every control it offers reachable, and shows where the focus is on all of them', async () => {
+      const offenders: string[] = [];
+      const combinations = [
+        [1440, 900, 'en'],
+        [768, 900, 'en'],
+        [390, 844, 'en'],
+        [1440, 900, 'fa'],
+        [390, 844, 'fa'],
+      ] as const;
+
+      for (const [width, height, locale] of combinations) {
+        await session.setViewport(width, height);
+        await startIn(locale);
+
+        // Walked until the keyboard arrives back at the first stop, so a control added to the chrome
+        // later is walked too: a fixed number of presses would quietly stop covering the shell the day
+        // someone added a seventh control to the bar.
+        const stops: ShellStop[] = [];
+        for (let presses = 0; presses < 60; presses += 1) {
+          await session.pressKey('Tab');
+          const stop = await session.evaluateJson<ShellStop | null>(SHELL_STOP_PROBE);
+          if (!stop || stop.where === 'other') break;
+          if (stop.where === 'skip' && stops.length > 0) break;
+          stops.push(stop);
+        }
+
+        const chrome = stops.filter((stop) => stop.where !== 'page');
+        for (const stop of chrome) {
+          if (!stop.shown) {
+            offenders.push(`${locale} @${width}: ${stop.where} “${stop.label}” ring ${stop.ring}`);
+          }
+        }
+
+        // Reachable, not merely focusable: what the chrome offers is what pressing Tab found. The skip
+        // link is excluded because it belongs to the frame rather than to either region.
+        const focusable = await session.evaluate<number>(CHROME_STOPS);
+        const reached = chrome.filter((stop) => stop.where !== 'skip').length;
+        expect(
+          reached,
+          `${locale} @${width}: the keyboard reached ${reached} of the ${focusable} controls in the shell’s chrome`,
+        ).toBe(focusable);
+      }
+
+      expect(offenders, 'a shell control showed no focus ring a reader could see').toEqual([]);
+    }, 120_000);
+
+    it('names the rail’s own control in the language the interface is read in', async () => {
+      await session.setViewport(1440, 900);
+      await startIn('fa');
+      expect(await session.evaluate<string>('document.documentElement.dir')).toBe('rtl');
+
+      // The one name in the chrome that was an English literal until this phase: in a Persian
+      // interface, the control that changes the shape of the shell was the one control a reader could
+      // not read, while every entry beside it was in Persian. It is the catalogue's now, in both
+      // languages — so the rail is found by the name it gives itself, and never by the other one.
+      const names = await session.evaluate<string[]>(
+        `[...document.querySelectorAll('aside button')].map(
+           (item) => item.getAttribute('aria-label') ?? '',
+         )`,
+      );
+      expect(names).toContain(translate('fa', 'sidebar.collapseSidebar'));
+      expect(
+        names,
+        'the rail names its own control in English whatever the interface is read in',
+      ).not.toContain(translate('en', 'sidebar.collapseSidebar'));
+
+      // And it does its job in Persian, in both directions.
+      expect(
+        await pressInRail(translate('fa', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control, in Persian',
+      ).toBe(true);
+      await waitForRail('< 100', 'the rail to collapse');
+      expect(
+        await pressInRail(translate('fa', 'sidebar.expandSidebar')),
+        'the rail’s expand control, in Persian',
+      ).toBe(true);
+      await waitForRail('> 200', 'the rail to expand again');
+
+      await startIn(null);
+    }, 60_000);
 
     it('gives the brand mark an alternative and paints real artwork', async () => {
       await session.setViewport(1440, 900);

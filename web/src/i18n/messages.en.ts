@@ -2919,6 +2919,8 @@ export const EN_MESSAGES = {
   'shell.yes': 'yes',
   // sidebar ─────────────────────────────────────────────────────
   'sidebar.closeNavigation': 'Close navigation',
+  'sidebar.collapseSidebar': 'Collapse sidebar',
+  'sidebar.expandSidebar': 'Expand sidebar',
   'sidebar.navigationMenu': 'Navigation',
   'sidebar.safetyLiveTradingAndBrokerExecutionDisabledBy':
     'Safety: live trading and broker execution disabled by design',

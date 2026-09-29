@@ -191,6 +191,15 @@ describe('the four widths the shell must survive', () => {
     // where it is already an icon rail, and never on a phone, where there is no rail.
     expect(sidebar).toMatch(/canCollapse \?/);
     expect(read(SHELL_HOOK)).toMatch(/canCollapse: canCollapseRail\(mode\)/);
+    // And what that control *says* comes from the catalogue like everything beside it. It was the
+    // last accessible name in the chrome written as an English literal, so in a Persian interface the
+    // one control that changes the shape of the shell was the one control a reader could not read.
+    expect(sidebar).toMatch(
+      /label=\{msg\(collapsed \? 'sidebar\.expandSidebar' : 'sidebar\.collapseSidebar'\)\}/,
+    );
+    expect(sidebar, 'an English name written at the call site').not.toMatch(
+      /(?:label|aria-label)=\{[^}]*'[A-Za-z][A-Za-z ]+'/,
+    );
   });
 
   it('keeps the workspace its own width at every one of them', () => {
@@ -283,15 +292,30 @@ describe('the navigation is positioned honestly', () => {
     // Focus enters the panel on open and returns to what opened it on close.
     expect(sidebar).toMatch(/panelRef\.current\?\.focus\(\)/);
     expect(sidebar).toMatch(/returnFocusRef\.current\?\.focus\(\)/);
-    // Tab cycles inside a modal surface rather than wandering onto the page behind it.
+    // Tab cycles inside a modal surface rather than wandering onto the page behind it — and the wrap
+    // is asked of the *focus* rather than of the two ends of the panel's own list. It was asked of the
+    // ends until Phase 8.3.4, which is a hole rather than a bug in a corner: the panel takes the focus
+    // when the drawer opens, and `Shift+Tab` from a container is a move to the previous tabbable thing
+    // in the document. Two presses walked the keyboard onto the scrim and then onto the skip link
+    // behind a dialog that declares `aria-modal`. The browser case drives it with real keys; this one
+    // is what stops the panel-local handler coming back.
     expect(sidebar).toMatch(/event\.key !== 'Tab'/);
+    expect(sidebar).toMatch(/panel\.contains\(current\)/);
+    expect(sidebar).toMatch(/\(event\.shiftKey \? last : first\)\.focus\(\)/);
+    expect(sidebar).not.toMatch(/onKeyDown=\{trapFocus\}/);
   });
 
-  it('gives the scrim a name, so it is not a div no keyboard could reach', () => {
+  it('gives the scrim a name, and keeps it out of a tab order it cannot show', () => {
     const sidebar = read(SIDEBAR);
+    // A control rather than a div with a handler: it is announced, and a pointer has a target that
+    // says what it does.
     expect(sidebar).toMatch(
       /<motion\.button[\s\S]*?aria-label=\{msg\('sidebar\.closeNavigation'\)\}/,
     );
+    // And it is not a *tab stop*, which is the honest box for a surface that is the whole viewport:
+    // measured at 390×844, the ring a keyboard user found on it was drawn 4px outside the window, so
+    // the one stop it offered showed nothing at all. The drawer's own ways out are inside the dialog.
+    expect(sidebar).toMatch(/<motion\.button[\s\S]*?tabIndex=\{-1\}/);
     // ...and the shell never hides a layout defect behind a blanket overflow.
     expect(read(SHELL)).not.toMatch(/overflow-(?:x-)?hidden/);
     expect(sidebar).not.toMatch(/overflow-hidden/);
