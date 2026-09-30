@@ -2729,12 +2729,19 @@ suite('the Product Foundation in a real browser', () => {
       `);
 
     /**
-     * The page heading's *painted* extent, against the box that holds it.
+     * The page's identity line, *painted*, against the box that holds it.
      *
      * `text-align: start` is the rule; the measurement is where the glyphs actually went. A box wider than its
      * own text has slack on one side, and which side it is on is the difference between a mirrored page and a
-     * translated string left-aligned inside an English one. A `Range` over the heading's contents reports the
+     * translated string left-aligned inside an English one. A `Range` over the line's contents reports the
      * advance box of the text rather than the block it sits in, which is what makes the comparison meaningful.
+     *
+     * The subject is the top bar's `<h1>` — the document's identity heading since Phase 8.5.2.1 — and not the
+     * subtitle paragraph beside it. That paragraph is `truncate`d by design (one nowrap line, ellipsized so a
+     * long sentence cannot grow the bar), and for a text run wider than its box the painted range overruns the
+     * clipped box: the measurement then reports how much text was *cut off*, not how the line is aligned. The
+     * h1 is a block-level line in the same `min-w-0 grow basis-40` column, its label is short in either
+     * language, and its slack is therefore a real measure of the alignment the case is about.
      */
     interface HeadingReport {
       text: string;
@@ -2747,7 +2754,7 @@ suite('the Product Foundation in a real browser', () => {
     const pageHeading = (): Promise<HeadingReport | null> =>
       session.evaluateJson<HeadingReport | null>(`
         (() => {
-          const heading = document.querySelector('header p');
+          const heading = document.querySelector('header h1');
           if (!heading) return JSON.stringify(null);
           const range = document.createRange();
           range.selectNodeContents(heading);
@@ -2823,7 +2830,7 @@ suite('the Product Foundation in a real browser', () => {
       expect(english.railLeft).toBeLessThan(english.viewport / 2);
       expect(englishRow?.label).toBe(translate('en', 'shell.nav.dashboard.label'));
       expect(englishRow?.fromLeft).toBeLessThan(englishRow?.fromRight ?? -1);
-      // The subtitle is aligned to the *start* of the line, which in English is the left edge...
+      // The identity line is aligned to the *start* of the line, which in English is the left edge...
       expect(englishHeading?.direction).toBe('ltr');
       expect(englishHeading?.textAlign).toBe('start');
       expect(englishHeading?.slackLeft).toBeLessThanOrEqual(1);
@@ -2848,8 +2855,8 @@ suite('the Product Foundation in a real browser', () => {
       // آموزش», which is the pair the page-rendering cases above hold every entry to.
       expect(persianRow?.label).toBe(translate('fa', 'shell.nav.dashboard.label'));
       expect(persianRow?.fromRight).toBeLessThan(persianRow?.fromLeft ?? -1);
-      // And the subtitle is still aligned to the start of its line, which is now the right edge.
-      expect(persianHeading?.text).toBe(translate('fa', 'shell.nav.dashboard.description'));
+      // And the identity line is still aligned to the start of its line, which is now the right edge.
+      expect(persianHeading?.text).toBe(translate('fa', 'shell.nav.dashboard.label'));
       expect(persianHeading?.direction).toBe('rtl');
       expect(persianHeading?.textAlign).toBe('start');
       expect(persianHeading?.slackRight).toBeLessThanOrEqual(1);

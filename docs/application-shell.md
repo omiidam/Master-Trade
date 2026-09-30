@@ -1510,7 +1510,7 @@ of the shell uses, and it applies to all fourteen sections because it is the fra
 Two of the suite's own probes had to move with the change, and both were re-pointed at something the reader
 can still see: the cases that waited for a page by its header heading now wait for the trail's current crumb
 (rendered by the frame inside the page's keyed subtree, so it is the same page-swap signal), and the mirror
-case measures the top bar's subtitle where it used to measure the page title. One seven-second tooltip case
+case measures the top bar's identity heading where it used to measure the page title. One seven-second tooltip case
 needed its pointer to travel to the top bar rather than to a content heading, because the shortest path to
 the content passed through the tooltip itself and kept it open.
 
