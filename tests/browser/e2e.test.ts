@@ -242,6 +242,30 @@ interface SurfaceState {
   titleTop: number;
 }
 
+/**
+ * The three shell regions' boxes, read in one round trip.
+ *
+ * `rtl` rides along so the adjacency assertion can be made against the inline-start edge rather
+ * than against physical `left` values a mirrored document would break.
+ */
+interface RegionArrangement {
+  innerWidth: number;
+  clientWidth: number;
+  barTop: number;
+  barLeft: number;
+  barWidth: number;
+  barHeight: number;
+  hasRail: boolean;
+  railLeft: number;
+  railRight: number;
+  railWidth: number;
+  railHeight: number;
+  columnLeft: number;
+  columnRight: number;
+  columnWidth: number;
+  rtl: boolean;
+}
+
 /** One frame of a surface that is being watched while something else moves. */
 interface SurfaceFrame {
   y: number;
@@ -404,7 +428,10 @@ suite('the Product Foundation in a real browser', () => {
    */
   const expandRail = async (): Promise<void> => {
     if (!(await railIsCollapsed())) return;
-    expect(await pressInRail('Expand sidebar'), 'the rail’s expand control').toBe(true);
+    expect(
+      await pressInRail(translate('en', 'sidebar.expandSidebar')),
+      'the rail’s expand control',
+    ).toBe(true);
     await waitForRail('> 200', 'the rail to expand again');
   };
 
@@ -706,6 +733,141 @@ suite('the Product Foundation in a real browser', () => {
       }
       expect(clipped).toEqual([]);
     });
+
+    /* ------------------------------------------------------------------ */
+    /* C1.1 The shell's three regions, as one arrangement (Phase 8.4)      */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * One case that asks, at every declared width and in both directions, whether the three
+     * regions still describe one shell — because each region's own cases answer "is this region
+     * well-drawn" but nothing else answered "do they still fit each other".
+     *
+     * The relationships are the ones the shell's own stylesheet names: the bar is sticky to the
+     * viewport's top edge and spans the content column; the rail and the workspace are flex
+     * siblings on the row the shell draws; the workspace column is what is left. In a mirrored
+     * document the row is the same row read from the other edge — which is why the RTL half of
+     * this case asserts the same adjacency against the inline-end edge rather than asserting
+     * `left` numbers a mirror would break.
+     */
+    it('keeps the three regions one arrangement — bar on top, rail and workspace beside each other — at every width, in both directions', async () => {
+      /**
+       * The three shell regions' boxes in one round trip, plus the viewport they were measured in.
+       *
+       * The bar is the shell's own `<header>`, the rail the shell's own `<aside>` — the same
+       * selector the rail cases already read (`aside:not([role="dialog"])` is unnecessary here:
+       * a drawer is open only while its case holds it, and this case never opens one). The
+       * workspace is the column between them, found as the bar's parent — which is also `main`'s
+       * parent, so "the bar spans the workspace" and "the workspace is what is left" are
+       * measured against the same box.
+       *
+       * The rail is *optional*, deliberately: at phone widths the shell has no rail `aside` at
+       * all — the navigation is out of the flow until its trigger is asked for — and `hasRail`
+       * is how the case tells "the shell drew no rail" (correct below 768px) from "the shell
+       * drew no arrangement" (a failure at any width).
+       */
+      const arrangement = (): Promise<RegionArrangement> =>
+        session.evaluateJson<RegionArrangement>(
+          `JSON.stringify(
+             (() => {
+               const header = document.querySelector('header');
+               const rail = document.querySelector('aside');
+               const workspace = header?.parentElement;
+               if (!header || !workspace) return null;
+               const bar = header.getBoundingClientRect();
+               const aside = rail?.getBoundingClientRect();
+               const column = workspace.getBoundingClientRect();
+               return {
+                 innerWidth: window.innerWidth,
+                 clientWidth: document.documentElement.clientWidth,
+                 barTop: Math.round(bar.top),
+                 barLeft: Math.round(bar.left),
+                 barWidth: Math.round(bar.width),
+                 barHeight: Math.round(bar.height),
+                 hasRail: Boolean(rail),
+                 railLeft: Math.round(aside?.left ?? 0),
+                 railRight: Math.round(aside?.right ?? 0),
+                 railWidth: Math.round(aside?.width ?? 0),
+                 railHeight: Math.round(aside?.height ?? 0),
+                 columnLeft: Math.round(column.left),
+                 columnRight: Math.round(column.right),
+                 columnWidth: Math.round(column.width),
+                 rtl: document.documentElement.dir === 'rtl',
+               };
+             })(),
+           )`,
+        );
+
+      for (const locale of ['en', 'fa'] as const) {
+        for (const [width, height] of WIDTHS) {
+          const where = `${locale} at ${width}px`;
+          await session.setViewport(width, height);
+          await startIn(locale);
+
+          const state = await arrangement();
+          expect(state, `the shell drew no arrangement at ${where}`).not.toBeNull();
+
+          // The bar is sticky to the top edge — at every width, because it is a property of the
+          // element, not of a breakpoint. Its own cases elsewhere assert the height; this asserts
+          // the *position* the sticky rule promises.
+          expect(state!.barTop, `the top bar is not pinned to the top edge for ${where}`).toBe(0);
+
+          // The bar spans the workspace column and nothing else: the rail takes its own width out
+          // of the row, so a bar as wide as the *window* would have crossed the rail.
+          expect(
+            state!.barLeft,
+            `the top bar did not start at the workspace column for ${where}`,
+          ).toBe(state!.columnLeft);
+          expect(
+            state!.barWidth,
+            `the top bar is not as wide as the workspace column for ${where}`,
+          ).toBe(state!.columnWidth);
+
+          // The bar does not grow into the content: the workspace column starts where the bar's
+          // top edge begins, one box under the other.
+          expect(state!.barHeight, `the top bar drew no height for ${where}`).toBeGreaterThan(0);
+
+          // Rail and workspace are siblings on one row: the workspace column is exactly what is
+          // left of the document once the rail takes its own width. The comparison is against the
+          // document's *client* area rather than `innerWidth`, because the vertical scrollbar the
+          // window's own scroll surface draws lives inside `innerWidth` but belongs to neither
+          // region. The rail is the inline-start sibling, so the mirror moves the pair to the other
+          // edge rather than reordering it — the same claim as the RTL rail case, at every width.
+          // Below the shell's own mobile breakpoint there is no rail to share with — the drawer
+          // claim ("navigation reachable, out of the flow") is the drawer cases' to make — so the
+          // row is asserted only where the shell draws one.
+          if (state!.hasRail) {
+            expect(state!.railWidth, `the rail drew no width for ${where}`).toBeGreaterThan(0);
+            expect(state!.railHeight, `the rail drew no height for ${where}`).toBeGreaterThan(0);
+            expect(
+              state!.columnWidth + state!.railWidth,
+              `the workspace and the rail do not share the window for ${where}`,
+            ).toBe(state!.clientWidth);
+
+            // The pair is adjacent — no gutter of nothing between them — on the edge the direction
+            // puts the rail on: inline-start, so the rail's far edge touches the workspace's start
+            // edge, whichever physical side that is.
+            const railAtStart = state!.rtl
+              ? state!.railLeft >= state!.columnRight
+              : state!.railRight <= state!.columnLeft;
+            expect(
+              railAtStart,
+              `the rail is not the inline-start sibling of the workspace for ${where} ` +
+                `(rail ${state!.railLeft}..${state!.railRight}, column ${state!.columnLeft}..${state!.columnRight})`,
+            ).toBe(true);
+          } else {
+            // No rail means the navigation is out of the flow, so the workspace column is the
+            // whole document — anything else is the phone keeping a column nobody can see.
+            expect(state!.columnWidth, `the phone kept a rail-width column for ${where}`).toBe(
+              state!.clientWidth,
+            );
+          }
+        }
+      }
+
+      // Handed back in the language the rest of the file reads the interface in.
+      await startIn(null);
+    }, 300_000);
   });
 
   /* ---------------------------------------------------------------------- */
@@ -3247,7 +3409,10 @@ suite('the Product Foundation in a real browser', () => {
       const expanded = await railWidth();
       expect(expanded, 'the rail is not the expanded width to begin with').toBeGreaterThan(200);
 
-      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control',
+      ).toBe(true);
       // Settled, not merely narrow: this width is compared with the width a reload renders, and a
       // sample taken while the rail is still moving is a frame of an animation rather than a layout.
       await waitForRail('< 100', 'the rail to collapse');
@@ -3265,7 +3430,10 @@ suite('the Product Foundation in a real browser', () => {
 
       // The other direction is remembered too, and the shell is handed back the way it was found: the
       // cases after this one measure the expanded rail.
-      expect(await pressInRail('Expand sidebar'), 'the rail’s expand control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.expandSidebar')),
+        'the rail’s expand control',
+      ).toBe(true);
       await waitForRail('> 200', 'the rail to expand again');
       await session.goto(`${server.origin}/`);
       await waitForRail('> 200', 'the expanded rail to settle');
@@ -3463,7 +3631,10 @@ suite('the Product Foundation in a real browser', () => {
       // is handed back the way it was found.
       await session.setViewport(1440, 900);
       await waitForRail('> 200', 'the rail to settle back at desktop width');
-      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control',
+      ).toBe(true);
       await waitForRail('< 100', 'the rail to collapse');
       const collapsed = await railWidth();
 
@@ -3476,7 +3647,10 @@ suite('the Product Foundation in a real browser', () => {
         'the tablet spent the reader’s choice instead of setting it aside',
       ).toBe(collapsed);
 
-      expect(await pressInRail('Expand sidebar'), 'the rail’s expand control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.expandSidebar')),
+        'the rail’s expand control',
+      ).toBe(true);
       await waitForRail('> 200', 'the rail to expand again');
       expect(await railWidth()).toBe(expanded);
     }, 90_000);
@@ -3799,7 +3973,10 @@ suite('the Product Foundation in a real browser', () => {
       await visit('portfolio');
 
       const expanded = await railWidth();
-      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control',
+      ).toBe(true);
       // Settled before the box is recorded: the box is compared with the same rail after a page
       // change, and a sample taken mid-transition would differ from a settled one for reasons that
       // have nothing to do with navigating.
@@ -3820,7 +3997,10 @@ suite('the Product Foundation in a real browser', () => {
       expect(await navBox()).toEqual(before);
 
       // ...and expanding it again brings the labels back, with the current entry still the current one.
-      expect(await pressInRail('Expand sidebar'), 'the rail’s expand control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.expandSidebar')),
+        'the rail’s expand control',
+      ).toBe(true);
       await waitForRail('> 200', 'the rail to expand again');
       expect(await railWidth()).toBe(expanded);
       expect(
@@ -3883,7 +4063,10 @@ suite('the Product Foundation in a real browser', () => {
 
       // Collapsed, the label is gone and the name moves to `aria-label`: an icon-only entry is still
       // one a screen reader can name, and still the same entry (`id` is unchanged).
-      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control',
+      ).toBe(true);
       await waitForRail('< 100', 'the rail to collapse');
       const squeezed = await entries();
       expect(squeezed.map((entry) => entry.id)).toEqual(IDS);
@@ -3909,7 +4092,10 @@ suite('the Product Foundation in a real browser', () => {
       // The collapsed rail draws a rule where the heading was, so the name has to come from the
       // catalogue rather than from the drawn text — otherwise the hierarchy would survive only while
       // there was room to print it.
-      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control',
+      ).toBe(true);
       await waitForRail('< 100', 'the rail to collapse');
       expect(await groups()).toEqual(expected);
 
@@ -3958,7 +4144,10 @@ suite('the Product Foundation in a real browser', () => {
         ),
       ).toBeNull();
 
-      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control',
+      ).toBe(true);
       await waitForRail('< 100', 'the rail to collapse');
 
       // A pointer on the entry is how a reader asks an icon what it is — the case moves a real one,
@@ -4027,7 +4216,10 @@ suite('the Product Foundation in a real browser', () => {
       expect(new Set(drawn.map((row) => row.slot)).size, 'the icons are not one column').toBe(1);
       expect(new Set(drawn.map((row) => row.slotOffset)).size, 'the icons do not line up').toBe(1);
 
-      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control',
+      ).toBe(true);
       await waitForRail('< 100', 'the rail to collapse');
       const squeezed = await geometry();
       expect(new Set(squeezed.map((row) => row.height)).size).toBe(1);
@@ -4300,7 +4492,10 @@ suite('the Product Foundation in a real browser', () => {
 
       // Collapsed, the same control keeps a name and the same route in: an icon is not a name, and this
       // is the one way into the palette that survives the rail losing its labels.
-      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control',
+      ).toBe(true);
       await waitForRail('< 100', 'the rail to collapse');
       const quickNav = translate('en', 'shell.quickNav' as MessageKey);
       expect(
@@ -4967,7 +5162,10 @@ suite('the Product Foundation in a real browser', () => {
       await visit('journal');
 
       await watchSurface();
-      expect(await pressInRail('Collapse sidebar'), 'the rail’s collapse control').toBe(true);
+      expect(
+        await pressInRail(translate('en', 'sidebar.collapseSidebar')),
+        'the rail’s collapse control',
+      ).toBe(true);
       await waitForRail('< 100', 'the rail to collapse');
       const { frames } = await watched();
       expect(frames.length, 'the rail’s transition was never painted').toBeGreaterThan(1);

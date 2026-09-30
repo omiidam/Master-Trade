@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.3.4
+# Application Shell — Phases 7.1.1 through 8.4
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -1239,3 +1239,80 @@ the drawer's keyboard no longer leaves it, and the scrim stopped being a tab sto
 English-only reports in the top bar and the Settings card — "Browser preview" and the host sentence, which
 agree with each other by construction — were left as they are: translating one without the other would make
 the shell and the page disagree about the same fact, which is the defect 8.3.3 spent a case on.
+
+## 16. Phase 8.4 — the layout's regression hardening
+
+The shell was complete; this phase asked what would catch it moving. It added no case that merely restates an
+existing one: every item on the QA list was first mapped against the suites already carrying it, and the work
+went to the three places where an assertion was weaker than the invariant it claimed, or missing entirely.
+
+### 16.1 The coupling 8.3.4 created, closed
+
+8.3.4 moved the rail control's name into the catalogue (`sidebar.collapseSidebar` / `sidebar.expandSidebar`)
+and migrated one case to read it through `translate`. Twelve other call sites kept the English literal
+`'Collapse sidebar'` — correct only while the English catalogue value happened to equal the old string, which
+is a latent coupling rather than a contract. All twelve (and the `expandRail` helper) now read the catalogue:
+
+```ts
+await pressInRail(translate('en', 'sidebar.collapseSidebar'));
+```
+
+No assertion changed strength; a rename of either catalogue value now fails one lookup instead of silently
+passing twelve sites while breaking a thirteenth that reads it honestly.
+
+### 16.2 One case for the arrangement the three regions make together
+
+Each region's own cases assert that region's geometry — the bar's height across every stream state, the
+rail's width across every mode, the column's width and origin. Nothing asserted the **relationship**: that
+the bar is pinned to the viewport's top edge and spans the workspace column and nothing else; that the rail
+and the workspace are adjacent flex siblings sharing the document's client area; that in a mirrored document
+the rail is still the inline-start sibling. `keeps the three regions one arrangement — bar on top, rail and
+workspace beside each other — at every width, in both directions` asserts exactly that, at all seven declared
+widths in English and Persian, from the live boxes rather than from class names.
+
+Two measurement decisions are part of the case's honesty. The rail/workspace split is compared against
+`document.documentElement.clientWidth` rather than `innerWidth`, because the vertical scrollbar lives inside
+`innerWidth` but belongs to neither region — and the first draft compared against `innerWidth` and failed at
+1920px by exactly the scrollbar's width (1910 vs 1920), which is how the choice was verified rather than
+assumed. And the rail is optional in the probe: below the mobile breakpoint the shell draws no `aside` at
+all, so the phone widths assert the drawer contract instead — the workspace column is the _whole_ client
+area, and any rail-width remainder is a column nobody can see.
+
+### 16.3 What was deliberately not added
+
+No image snapshots: the project has no Playwright, no screenshot comparison, and the dependency-graph suite
+forbids the dependency; the shell's determinism is held by the geometric and state assertions this file
+already records, which name a defect instead of diffing a pixel. No duplicate coverage: overflow, clipping,
+touch targets, drawer geometry, Back/Forward, reload persistence, focus rings, RTL mirroring and active-nav
+state were all already asserted by named suites, and restating them would weaken the suite by giving a
+defect two homes with different failure modes.
+
+### 16.4 Known: the trade-history menu case, still intermittent
+
+The full browser suite was run twice with this phase's changes. The first run failed one case —
+`marks every trade on its start edge, and keeps the row menu inside the window` (`expected 5 to be less than
+or equal to 1`), the same case §14.6 records. It was investigated rather than assumed: in isolation the case
+fails on this phase's tree repeatedly, **and fails on a stashed HEAD tree too** (2 of 3 runs, then 3 of 5),
+which is the pre-existing intermittence, not a regression this phase introduced — the phase's changes touch
+only catalogue lookups and the new arrangement case, nothing in the trade-history block. The second full run
+passed 85/85. Its §14.6 disposition stands: the honest fix is a wait on the invariant rather than on the
+weaker non-overlap condition, and it remains a page's own case, deliberately not changed here.
+
+### 16.5 What was verified
+
+| Check                                                                       | Where                                        | Result   |
+| --------------------------------------------------------------------------- | -------------------------------------------- | -------- |
+| The rail-control catalogue contract, at every call site                     | `tests/browser/e2e.test.ts`                  | 13 sites |
+| The three regions' arrangement, 7 widths × en/fa, live boxes                | `tests/browser/e2e.test.ts` (new case)       | pass     |
+| Shell layout, shell state, RTL contracts (regression)                       | `frontend-*` / `rtl-layout`                  | 72/72    |
+| The whole node suite                                                        | `npm test`                                   | 1938/92  |
+| The whole browser suite, at 7 widths, in both languages and both directions | `tests/browser/e2e.test.ts`                  | 85/85    |
+| Types, formatting                                                           | `typecheck`, `typecheck:web`, `format:check` | pass     |
+
+### 16.6 What was not changed
+
+No region was added, moved or redesigned; no section was added, renamed, reordered or split (Portfolio and
+Evaluation remain separate, and there is no Performance entry); no dependency was added, no snapshot directory
+was created, no mock data exists; no delay was introduced, no timeout was raised, and nothing is hidden with
+`overflow`. The shell's sources in `web/src/app/` are untouched by this phase — every change is in the test
+suite and this record.
