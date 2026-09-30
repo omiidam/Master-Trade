@@ -1552,6 +1552,202 @@ suite('the Product Foundation in a real browser', () => {
     }, 300_000);
 
     /* ------------------------------------------------------------------ */
+    /* The page's contextual actions, as the browser renders them (8.5.3)  */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * The sections that already had a page-level operation in their context row.
+     *
+     * This is the phase's audit, stated as a contract: the four sections with a real operation
+     * (`dashboard`'s refresh, `journal`'s export and new-entry, `activity`'s connect/disconnect)
+     * plus the five whose row is status context, and *nothing else*. A section that grows an action
+     * the phase did not audit fails here, which is what keeps speculation out of the header.
+     */
+    const SECTIONS_WITH_ACTIONS = [
+      'dashboard',
+      'agent',
+      'memory',
+      'research',
+      'journal',
+      'academy',
+      'exams',
+      'lab',
+      'activity',
+    ];
+
+    /**
+     * The actions row as the browser resolved it, with the geometry the phase must not disturb.
+     *
+     * `gap` is the one that matters most: the distance from the top bar's bottom edge to the trail's
+     * top edge must be the content region's own top padding, exactly — no stray margin and no second
+     * row. A row of actions arriving or leaving must not move it, which is why every section is
+     * measured and the readings are compared across sections rather than only inside each one.
+     */
+    interface RenderedActions {
+      present: boolean;
+      /** Everything in the row: status chips as well as controls. */
+      items: number;
+      controls: number;
+      unnamed: number;
+      left: number;
+      right: number;
+      clientWidth: number;
+      overflow: number;
+      gap: number;
+      paddingTop: number;
+      barBottom: number;
+      barHeight: number;
+      mainTop: number;
+      trailTop: number;
+    }
+
+    const pageActions = (): Promise<RenderedActions> =>
+      session.evaluateJson<RenderedActions>(
+        `JSON.stringify(
+           (() => {
+             const region = document.querySelector('main');
+             const row = document.querySelector('main header [data-page-actions]');
+             const bar = document.querySelector('header');
+             const trail = document.querySelector('main ol[aria-label]');
+             const box = row ? row.getBoundingClientRect() : null;
+             const barBox = bar ? bar.getBoundingClientRect() : null;
+             const trailBox = trail ? trail.getBoundingClientRect() : null;
+             const controls = row ? [...row.querySelectorAll('button, a')] : [];
+             const paddingTop = region ? Number.parseFloat(getComputedStyle(region).paddingTop) : 0;
+             const barBottom = barBox ? barBox.bottom : 0;
+             const trailTop = trailBox ? trailBox.top : 0;
+             return {
+               present: !!row,
+               items: row ? row.children.length : 0,
+               controls: controls.length,
+               unnamed: controls.filter((control) =>
+                 ((control.getAttribute('aria-label') ?? control.textContent ?? '').trim() === ''),
+               ).length,
+               left: Math.round(box ? box.left : 0),
+               right: Math.round(box ? box.right : 0),
+               clientWidth: document.documentElement.clientWidth,
+               overflow: row ? row.scrollWidth - row.clientWidth : 0,
+               gap: Math.round(trailTop - barBottom),
+               paddingTop: Math.round(paddingTop),
+               barBottom: Math.round(barBottom),
+               barHeight: Math.round(barBox ? barBox.height : 0),
+               mainTop: Math.round(region ? region.getBoundingClientRect().top : 0),
+               trailTop: Math.round(trailTop),
+             };
+           })(),
+         )`,
+      );
+
+    it('keeps every section’s contextual actions inside the row, named, and off the trail’s line', async () => {
+      for (const locale of ['en', 'fa'] as const) {
+        for (const [width, height] of [
+          [1440, 900],
+          [390, 844],
+        ] as const) {
+          const where = `${locale} at ${width}px`;
+          await session.setViewport(width, height);
+          await startIn(locale);
+          const gaps = new Set<number>();
+
+          for (const section of NAV_SECTIONS) {
+            await visitIn(locale, section.id);
+            // A box still animating is waited on rather than sampled: the section fades up into
+            // place, so the geometry below is read once the surface has stopped moving.
+            await session.waitFor(
+              `['none', 'matrix(1, 0, 0, 1, 0, 0)'].includes(
+                 getComputedStyle(document.querySelector('main > div')).transform,
+               )`,
+              `${section.id} to settle at its own origin`,
+            );
+            const state = await pageActions();
+            const expected = SECTIONS_WITH_ACTIONS.includes(section.id);
+
+            // The audit, rendered: a section keeps the row it had, and no section invents one.
+            expect(
+              state.present,
+              `${section.id} ${expected ? 'lost' : 'grew'} its contextual actions for ${where}`,
+            ).toBe(expected);
+            if (state.present) {
+              expect(
+                state.items,
+                `${section.id} draws an empty action row for ${where}`,
+              ).toBeGreaterThan(0);
+              // Named controls: an icon-only action carries its own name, and a text control is its
+              // own (the row never introduces an unnamed button for a page to inherit).
+              expect(
+                state.unnamed,
+                `${section.id} has an action with no accessible name for ${where}`,
+              ).toBe(0);
+              // The row wraps rather than scrolling: no control is pushed out of the row's own box,
+              // and the row never leaves the window.
+              expect(
+                state.overflow,
+                `${section.id}'s action row overflows sideways for ${where}`,
+              ).toBeLessThanOrEqual(1);
+              expect(
+                state.left >= 0 && state.right <= state.clientWidth,
+                `${section.id}'s action row left the document for ${where}: ` +
+                  `${state.left}..${state.right} of ${state.clientWidth}`,
+              ).toBe(true);
+            }
+
+            // The trail has not moved: its offset under the top bar is the region's own top padding,
+            // and that is the same number on every section — a page with a row of actions and a page
+            // without one put their context in the same place.
+            expect(
+              state.gap,
+              `${section.id} started its context ${state.gap}px below the top bar for ${where}, ` +
+                `not the region's own ${state.paddingTop}px`,
+            ).toBe(state.paddingTop);
+            gaps.add(state.gap);
+          }
+
+          expect(
+            [...gaps],
+            `the top bar to context-row gap differs between sections for ${where}`,
+          ).toHaveLength(1);
+        }
+      }
+
+      // The keyboard reaches the actions with a real key press, and the reader can see where it is.
+      // The richest row in the product is the journal's (status, export, new entry).
+      await session.setViewport(1440, 900);
+      await startIn('en');
+      await visit('journal');
+      let reached: { focusVisible: boolean; outline: string } | null = null;
+      for (let step = 0; step < 60 && reached === null; step += 1) {
+        await session.pressKey('Tab');
+        const reading = await session.evaluateJson<{
+          inRow: boolean;
+          focusVisible: boolean;
+          outline: string;
+        }>(
+          `JSON.stringify(
+             (() => {
+               const element = document.activeElement;
+               const style = element ? getComputedStyle(element) : null;
+               return {
+                 inRow: !!element && !!element.closest('[data-page-actions]'),
+                 focusVisible: !!element && element.matches(':focus-visible'),
+                 outline: style ? style.outlineStyle : 'none',
+               };
+             })(),
+           )`,
+        );
+        if (reading.inRow) {
+          reached = { focusVisible: reading.focusVisible, outline: reading.outline };
+        }
+      }
+      expect(reached, 'the keyboard never reached the page’s contextual actions').not.toBeNull();
+      expect(reached?.focusVisible, 'an action took focus without the browser showing it').toBe(
+        true,
+      );
+      expect(reached?.outline, 'the focus ring was not painted on the action').not.toBe('none');
+
+      await startIn(null);
+    }, 300_000);
+
+    /* ------------------------------------------------------------------ */
     /* The contextual trail, as the browser renders it (Phase 8.5.2)       */
     /* ------------------------------------------------------------------ */
 

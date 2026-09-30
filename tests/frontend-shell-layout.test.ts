@@ -688,3 +688,96 @@ describe('the contextual breadcrumb trail', () => {
     expect(persian).toMatch(/'shell\.breadcrumbNav': 'مسیر صفحه'/);
   });
 });
+
+/**
+ * Phase 8.5.3 — the page's contextual actions, laid out in one shared row.
+ *
+ * The header's `actions` slot has existed since 8.5.1, and nine of the fourteen sections already put
+ * something in it — status chips, and on four of them a real page-level operation. This phase does
+ * not invent a second system for them: it names the row (`PageActions`), states its behaviour once
+ * (wrapping, no geometry of its own, no control of its own), and holds the pages to handing it
+ * children rather than re-deciding how a row of controls sits. What the slot *contains* stays the
+ * pages' audit, which the browser suite verifies against the rendered result.
+ */
+describe('the page’s contextual actions', () => {
+  const PAGE_ACTIONS = 'web/src/app/PageActions.tsx';
+  const PAGE_HEADER = 'web/src/app/PageHeader.tsx';
+
+  const pages = (): string[] =>
+    readdirSync('web/src/pages')
+      .filter((name) => name.endsWith('.tsx'))
+      .map((name) => `web/src/pages/${name}`);
+
+  it('is one row, drawn by the header, and no page lays out its own', () => {
+    const header = strip(read(PAGE_HEADER));
+    // The header renders the row rather than inlining one, which is what keeps a page's controls
+    // and the row that holds them from drifting apart.
+    expect(header).toMatch(/<PageActions>/);
+    expect(header).not.toMatch(/flex flex-wrap items-center gap-2/);
+    // And no page re-implements it: the pages hand children to the slot, they do not decide how a
+    // row of actions sits.
+    for (const file of pages()) {
+      const source = strip(read(file));
+      expect(source, `${file} draws its own action row`).not.toMatch(/<PageActions/);
+      expect(source, `${file} repeats the action row’s own class list`).not.toMatch(
+        /flex min-w-0 flex-wrap items-center gap-2/,
+      );
+    }
+  });
+
+  it('wraps instead of overflowing, and declares no geometry or control of its own', () => {
+    const actions = strip(read(PAGE_ACTIONS));
+    // The hook the browser suite finds the row by, rather than a div guessed from its class list.
+    expect(actions).toMatch(/data-page-actions/);
+    // Wrapping with a zero minimum is the mobile behaviour: it stacks rather than overflowing, and
+    // there is no breakpoint at which the row is hidden.
+    expect(actions).toMatch(/flex min-w-0 flex-wrap items-center gap-2/);
+    expect(actions).not.toMatch(/\b(?:sm|md|lg|xl):hidden\b/);
+    // No geometry of its own to break against text it did not expect: no fixed or arbitrary size,
+    // no absolute positioning, no clipping, and no negative margin.
+    expect(actions).not.toMatch(/\b(?:h|w|min-w|max-w|min-h)-\[/);
+    // `min-w-0` is the one width-ish utility the row is allowed (it is what lets it shrink), so the
+    // numeric-width check is made against the row with that single class set aside.
+    expect(actions.replace(/min-w-0/g, '')).not.toMatch(/\bw-\d/);
+    expect(actions).not.toMatch(/overflow-hidden|-m[tblrxy]-/);
+    expect(actions).not.toMatch(/\b(?:absolute|sticky|fixed)\b/);
+    expect(actions).not.toMatch(PHYSICAL_UTILITY);
+    // And it introduces no control of its own: the buttons and chips come from the design system,
+    // so a page's hierarchy is the page's choice and only the arrangement is shared.
+    expect(actions).not.toMatch(/<Button|<button|<Badge/);
+  });
+
+  it('leaves no icon-only control in a page unnamed', () => {
+    // The design system already requires a name for an icon-only button (`IconButton`'s `label`);
+    // this holds the pages to it, in the vocabulary they use for their contextual actions.
+    for (const file of pages()) {
+      const source = read(file);
+      const tagPattern = /<IconButton\b([^>]*)>/g;
+      let tag: RegExpExecArray | null;
+      while ((tag = tagPattern.exec(source)) !== null) {
+        expect(tag[1], `${file} has an icon-only control with no accessible name`).toMatch(
+          /\blabel=/,
+        );
+      }
+    }
+  });
+
+  it('pins the context to the row’s top, so a tall row of actions cannot drag it down', () => {
+    // The header row aligns the actions to its end (they sat on the context block's baseline when a
+    // page drew a title). The context block itself is `self-start`: the row is only as tall as its
+    // tallest item, so without this a section with actions pushes the trail further from the top bar
+    // than a section without — which is exactly what the browser case caught, 19px of it on the
+    // dashboard.
+    const header = strip(read(PAGE_HEADER));
+    expect(header).toMatch(/min-w-0 self-start/);
+    expect(header).toMatch(/flex flex-wrap items-end justify-between/);
+  });
+
+  it('composes the page’s own controls, not a second button vocabulary', () => {
+    // The pages' contextual rows are built from the same `Button`/`Badge`/`Tooltip` the rest of the
+    // product uses — nothing in the app layer introduces a control, and `PageActions` names none.
+    const actions = strip(read(PAGE_ACTIONS));
+    expect(actions).not.toMatch(/variant=|size=|IconButton|Button\b/);
+    expect(read(PAGE_HEADER)).toMatch(/import \{ PageActions \} from '\.\/PageActions'/);
+  });
+});

@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.5.2.1
+# Application Shell — Phases 7.1.1 through 8.5.3
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -1526,3 +1526,87 @@ Performance entry; no route, navigation or shell region changed; the top bar's t
 untouched; no page's content, cards or feature-level descriptions were redesigned; no mock data, dependency
 or animation was introduced; no `overflow:hidden`, fixed height or positioning hack was used; and Page
 Actions was not begun.
+
+## 20. Phase 8.5.3 — the page's contextual actions, one shared row
+
+The header's `actions` slot has existed since Phase 8.5.1, and nine of the fourteen sections already
+put something in it. This phase does not add a second system for them. It names the row
+([`web/src/app/PageActions.tsx`](../web/src/app/PageActions.tsx)), states its behaviour in one place —
+the order, the wrap, the accessible name, the vocabulary — and holds the pages to handing it children
+rather than re-deciding how a row of controls sits. No control, variant, size or icon is introduced:
+the buttons and chips are the ones the pages already used, from the design system.
+
+### 20.1 The audit, across all fourteen sections
+
+| Section      | What the context row carries                                                                        | Verdict                                                           |
+| ------------ | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Dashboard    | `read-only` chip; **Refresh view**                                                                  | status + a page operation — kept                                  |
+| AI Workspace | `model not connected`, agent-state chips                                                            | status context — kept                                             |
+| Memory       | `provenance required`, `preview data` chips                                                         | status context — kept                                             |
+| Research     | `approval-gated`, `preview data` chips                                                              | status context — kept                                             |
+| Journal      | `record only — no execution`, `preview data` chips; **Export** (secondary), **New entry** (primary) | status + two page operations — kept                               |
+| Portfolio    | —                                                                                                   | its operations are tab- and record-scoped — none added            |
+| Evaluation   | —                                                                                                   | refreshing a decision list is per-tab, in content — none added    |
+| Trading Lab  | `read-only`, `execution impossible` chips                                                           | status context — kept                                             |
+| Academy      | curriculum-level chip                                                                               | status context — kept                                             |
+| Exams        | `no runner connected`, `preview data` chips                                                         | status context — kept                                             |
+| Activity     | connection state; `loopback only` chip; **Connect**/**Disconnect**                                  | status + a page operation — kept                                  |
+| Usage        | —                                                                                                   | the balance is read from the store — none added                   |
+| Profile      | —                                                                                                   | its operations are per-form and live in error states — none added |
+| Settings     | —                                                                                                   | the preferences _are_ the content — none added                    |
+
+Four sections have a genuine page-level operation (dashboard's refresh, the journal's export and
+new-entry, activity's connect/disconnect); five carry status context; five have nothing, and nothing was
+invented for them — no mock action, no speculative feature, and no duplicate of anything the top bar
+already offers. A page with a real operation reads as one commitment plus context rather than a row of
+equally loud buttons: the journal's primary entry point is the only `primary` control in any row.
+
+### 20.2 One row, and the bug the geometry check found
+
+The row is `flex min-w-0 flex-wrap items-center gap-2` under a `data-page-actions` hook, so the browser
+suite finds it rather than guessing at a div by its class list (the rail already does this with
+`data-nav-id`). Wrapping with a zero minimum is the whole responsive strategy: four Persian-labelled
+controls stack onto a second line instead of pushing the page sideways, nothing is hidden at a
+breakpoint, and no fixed width, height, absolute position or negative margin exists to break against.
+The actions stay at the inline end of the header row, which follows the document's direction, and the
+icons keep their positions because every icon is `aria-hidden` and every control is a real `button`.
+
+Verifying the geometry across all fourteen sections found a real regression, introduced in Phase
+8.5.2.1 and invisible until it was measured: the header row aligns its items to the end, and the row is
+only as tall as its tallest item — so once the pages stopped drawing a title, a tall row of actions was
+dragging the trail _down_. The dashboard's trail sat 19px further from the top bar than the portfolio's.
+The fix is one class on the shared component: the context block is `self-start`, so it keeps the
+region's own top padding on every section whatever sits beside it, while the actions keep the
+end-alignment that a titled page relies on. The offline suite now holds that class, and the browser
+case measures the trail's offset on all fourteen sections and refuses to let it differ.
+
+### 20.3 What was verified
+
+| Check                                                                                   | Where                                  | Result  |
+| --------------------------------------------------------------------------------------- | -------------------------------------- | ------- |
+| The audited set, rendered: nine sections keep their row, five never grow one            | `tests/browser/e2e.test.ts` (new case) | pass    |
+| Every control in every row has an accessible name, at both widths and in both languages | same case                              | pass    |
+| The row never overflows itself or the document; no control is pushed out of it          | same case                              | pass    |
+| The trail's offset is the region's own top padding, identical on all fourteen sections  | same case                              | pass    |
+| The keyboard reaches an action with real key presses, and the focus ring is painted     | same case                              | pass    |
+| One row, drawn by the header; no page lays out its own or repeats its class list        | `frontend-shell-layout.test.ts`        | 46/46   |
+| No geometry, no control and no button vocabulary in the row itself                      | `frontend-shell-layout.test.ts`        | pass    |
+| The context block is pinned to the row's top (`self-start`)                             | `frontend-shell-layout.test.ts`        | pass    |
+| Every icon-only control in a page carries a name                                        | `frontend-shell-layout.test.ts`        | pass    |
+| The whole node suite                                                                    | `npm test`                             | 1955/92 |
+| The whole browser suite                                                                 | `tests/browser/e2e.test.ts`            | 88/88   |     | Types, formatting and the production build | `typecheck`, `typecheck:web`, `format:check`, `build:web` | pass |
+
+One run of the browser suite failed transiently in a case this phase does not touch — `never spends the
+reader's rail choice on a window that cannot honour it`, at its own setup, where it presses the rail's
+expand control and the press did not land. It passes standalone and passed on the next full run, so it is
+recorded as the suite's own timing sensitivity around the rail's transition rather than as a regression
+from this phase: nothing here reads or writes the rail, its width or its preference. The phase's own case
+and the full suite are green on the run above.
+
+### 20.4 What was not changed
+
+No section was added, removed, renamed or reordered; Portfolio and Evaluation stay separate and there
+is no Performance entry; no route, navigation or shell region changed; the top bar, the rail and the
+trail are untouched; no page title or page-level description returned; no page's content was
+redesigned; no mock data, dependency or animation was introduced; and no `overflow:hidden`, fixed
+height, viewport hack or positioning hack was used. Page 8.5.4 was not begun.

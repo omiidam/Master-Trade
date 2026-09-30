@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
+import { PageActions } from './PageActions';
 
 /**
  * The contextual page header: one shared place for a page's context, identity and actions.
@@ -34,7 +35,10 @@ import { cn } from '../lib/cn';
  *
  * The layout is a logical-property flex row that wraps, so long Persian text takes a second line
  * and the actions drop beneath it rather than overflowing the column; there is no fixed height
- * anywhere in it to break against text it did not expect.
+ * anywhere in it to break against text it did not expect. The actions are drawn by the shared
+ * `PageActions` row (Phase 8.5.3) rather than by a div of this component's own, so how a page's
+ * controls wrap, order and name themselves is stated in one place; the context block is `self-start`
+ * so a row taller than the trail cannot drag the trail down the row.
  */
 /** The fields the contextual header draws — every one optional, drawn only when given. */
 export interface PageHeaderProps {
@@ -55,7 +59,13 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <header className={cn('flex flex-wrap items-end justify-between gap-3', className)}>
-      <div className="min-w-0">
+      {/* `self-start` pins the context to the row's top. The row is `items-end` so the actions sit
+          on the context block's baseline when the block is the taller one (the titled case), but the
+          row is only as tall as its tallest item: once the sections stopped drawing a title, a tall
+          actions row was dragging the trail *down* — 19px further from the top bar on the dashboard
+          than on a section with no actions at all. Aligning the context to the start keeps its
+          offset the region's own padding on every section, whatever the row beside it contains. */}
+      <div className="min-w-0 self-start">
         {breadcrumb}
         {title ? (
           <h2 className="text-heading font-semibold tracking-tight text-text">{title}</h2>
@@ -66,7 +76,7 @@ export function PageHeader({
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <PageActions>{actions}</PageActions> : null}
     </header>
   );
 }
