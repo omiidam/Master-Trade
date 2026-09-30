@@ -358,7 +358,13 @@ describe('the navigation is positioned honestly', () => {
     // term in it.
     const shell = read(SHELL);
     const main = shell.slice(shell.indexOf('<main'), shell.indexOf('</main>'));
-    expect(main).toMatch(/cn\('flex-1', SHELL_GUTTER, density === 'compact' \? 'py-4' : 'py-5'\)/);
+    // Phase 8.5.2.1 made the rhythm asymmetric — one spacing step tighter above the page's
+    // context row (the top bar already carries the section's name), the old step kept below so
+    // the run to the footer is unchanged. `pt`/`pb` are how it is stated; the bottom padding is
+    // the old `py` value, so the content region's footprint below the page is what it was.
+    expect(main).toMatch(
+      /cn\('flex-1', SHELL_GUTTER, density === 'compact' \? 'pt-3 pb-4' : 'pt-4 pb-5'\)/,
+    );
     // …and no part of the content region answers to the drawer or to the rail's mode.
     expect(main).not.toMatch(/sidebarOpen|layout\.mode|layout\.isDrawer/);
   });
@@ -516,20 +522,22 @@ describe('the contextual page header', () => {
     }
   });
 
-  it('keeps every field optional but the title, and draws only what it is given', () => {
+  it('keeps every field optional, and draws only what it is given', () => {
     const header = read(PAGE_HEADER);
-    // The props the phase names, on the one component that owns them.
+    // The props the phase names, on the one component that owns them. Every field is optional
+    // since the de-duplication pass (8.5.2.1): the shell already states the section's identity,
+    // so a header is drawn for the context a page actually has — never a title it invents.
     for (const field of ['title', 'description', 'breadcrumb', 'actions']) {
       expect(header, `PageHeader has no ${field}`).toMatch(new RegExp(`\\b${field}\\??:`));
     }
-    // Optional means absent until a page hands the field something: a header with no description
-    // draws no description paragraph, and one with no actions draws no action row. (The breadcrumb
-    // slot renders what it is given — the landmark belongs to the breadcrumb itself, below.)
+    // Optional means absent until a page hands the field something: a header with no title draws
+    // no heading, no description draws no paragraph, and no actions draws no action row. (The
+    // breadcrumb slot renders what it is given — the list's name belongs to the breadcrumb.)
+    // Whitespace-tolerant: prettier puts the conditional's `<h2>` on its own line.
+    expect(header).toMatch(/title \? \(\s*<h2/);
     expect(header).toMatch(/description \? \(/);
     expect(header).toMatch(/actions \? /);
     expect(header).toMatch(/\{breadcrumb\}/);
-    // The one required field is the title.
-    expect(header).toMatch(/title: string/);
   });
 
   it('stays inside the workspace column, without becoming a second shell or a second scroll', () => {

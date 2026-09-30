@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { MessageKey } from '../i18n/index.js';
 import { cn } from '../lib/cn';
 import { BreadcrumbTrail } from './Breadcrumb';
-import { PageHeader } from './PageHeader';
+import { PageHeader, type PageHeaderProps } from './PageHeader';
 import { navTrail, type NavCrumb } from '../config/navigation.js';
 import { useUiStore } from '../store/ui';
 import { SHELL_COLUMN } from './shellLayout';
@@ -23,6 +23,15 @@ import { SHELL_COLUMN } from './shellLayout';
  * directly — its own `trail`, and the derived default is set aside, not merged: the current place
  * stays the last word, and the group context stays out of the way of a page that knows a longer
  * story. A page that hands the slot its own `breadcrumb` node draws exactly that.
+ *
+ * Every field here is optional (Phase 8.5.2.1) — the frame draws the header it is given rather
+ * than a title it invents. A page that passes `title` claims a genuinely distinct name; the
+ * fourteen sections pass none, because their identity is the top bar's and the trail's already,
+ * and a third drawing of it is repetition, not information. They pass no `description` either:
+ * the top bar's subtitle is the one explanation of a section, and a second copy under the trail
+ * was density rather than context. The slots remain for a page with something the chrome does not
+ * say — a real subpage name, or a sentence about a surface the shell knows nothing about — and
+ * actions and a custom breadcrumb node compose the same way.
  */
 export function Workspace({
   title,
@@ -32,11 +41,7 @@ export function Workspace({
   trail,
   children,
   className,
-}: {
-  title: string;
-  description?: string;
-  actions?: ReactNode;
-  breadcrumb?: ReactNode;
+}: PageHeaderProps & {
   /** A page's own, deeper trail; the default derives from the current section. */
   trail?: readonly NavCrumb[];
   children: ReactNode;

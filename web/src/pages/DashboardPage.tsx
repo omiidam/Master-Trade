@@ -91,8 +91,6 @@ export function DashboardPage() {
 
   return (
     <Workspace
-      title={msg('dashboard.trainingDashboard')}
-      description={msg('dashboardPage.progressStudyMetricsAndReadOnlyChartsEveryFigure')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>

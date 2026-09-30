@@ -100,10 +100,7 @@ export function SettingsPage() {
   const shell = useShellStatus();
 
   return (
-    <Workspace
-      title={msg('settings.settings')}
-      description={msg('settingsPage.appearanceDirectionProvidersAndTheSafetyPostureOf')}
-    >
+    <Workspace>
       <Tabs
         items={TABS.map((item) => ({
           id: item.id,

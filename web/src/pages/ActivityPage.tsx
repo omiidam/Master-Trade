@@ -169,8 +169,6 @@ export function ActivityPage() {
 
   return (
     <Workspace
-      title={msg('realtime.activity')}
-      description={msg('activityPage.theRealtimeEventStreamAndTheBackgroundTaskQueue')}
       actions={
         <>
           <ConnectionStatus state={state} detail={snapshot?.detail} compact />

@@ -95,14 +95,6 @@ const TABS = [
   },
 ] as const;
 
-/** The page's own name, read from the catalogue like its description is — see `EvaluationPage` for why. */
-function title(): string {
-  return msg('shell.nav.portfolio.label');
-}
-function description(): string {
-  return msg('portfolio.description');
-}
-
 export function PortfolioPage() {
   const status = usePortfolioStore((state) => state.status);
   const view = usePortfolioStore((state) => state.view);
@@ -135,7 +127,7 @@ export function PortfolioPage() {
 
   if (status === 'idle' || status === 'loading') {
     return (
-      <Workspace title={title()} description={description()}>
+      <Workspace>
         <Grid columns={3}>
           {[0, 1, 2].map((index) => (
             <Card key={index}>
@@ -153,7 +145,7 @@ export function PortfolioPage() {
 
   if (status === 'unavailable') {
     return (
-      <Workspace title={title()} description={description()}>
+      <Workspace>
         <ErrorState
           severity="info"
           title={msg('portfolio.noPortfolioToShow')}
@@ -165,7 +157,7 @@ export function PortfolioPage() {
 
   if (status === 'error' || view === null) {
     return (
-      <Workspace title={title()} description={description()}>
+      <Workspace>
         <ErrorState
           title={msg('portfolio.couldNotReadThePortfolio')}
           description={error?.message ?? 'The request failed without a reason.'}
@@ -183,7 +175,7 @@ export function PortfolioPage() {
   const blocked = view.readiness.filter((decision) => decision.readiness === 'BLOCKED');
 
   return (
-    <Workspace title={title()} description={description()}>
+    <Workspace>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={view.declared ? 'primary' : 'info'}>
           {view.declared ? `declared · version ${view.version}` : 'not declared yet'}

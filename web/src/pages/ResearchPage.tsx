@@ -102,8 +102,6 @@ export function ResearchPage() {
 
   return (
     <Workspace
-      title={msg('research.research')}
-      description={msg('researchPage.experimentsThatTestAProposedRuleAgainstEvidence')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>

@@ -153,10 +153,7 @@ export function ProfilePage() {
 
   if (status === 'idle' || status === 'loading') {
     return (
-      <Workspace
-        title={msg('profile.profile')}
-        description={msg('profilePage.yourDeclaredTradingContextWhatYouHaveTold')}
-      >
+      <Workspace>
         <Grid columns={3}>
           {[0, 1, 2].map((index) => (
             <Card key={index}>
@@ -174,10 +171,7 @@ export function ProfilePage() {
 
   if (status === 'unavailable') {
     return (
-      <Workspace
-        title={msg('profile.profile')}
-        description={msg('profilePage.yourDeclaredTradingContextWhatYouHaveTold')}
-      >
+      <Workspace>
         <ErrorState
           severity="info"
           title={msg('profile.noProfileToShowYet')}
@@ -189,10 +183,7 @@ export function ProfilePage() {
 
   if (status === 'error' || profile === null || assessment === null) {
     return (
-      <Workspace
-        title={msg('profile.profile')}
-        description={msg('profilePage.yourDeclaredTradingContextWhatYouHaveTold')}
-      >
+      <Workspace>
         <ErrorState
           title={msg('profile.couldNotReadTheProfile')}
           description={error?.message ?? 'The request failed without a reason.'}
@@ -213,10 +204,7 @@ export function ProfilePage() {
   }, {});
 
   return (
-    <Workspace
-      title={msg('profile.profile')}
-      description={msg('profilePage.yourDeclaredTradingContextWhatYouHaveTold')}
-    >
+    <Workspace>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="outline" dot>
           {profile.contextSet ? `Context version ${profile.version}` : 'No context saved yet'}

@@ -69,8 +69,6 @@ export function AcademyPage() {
 
   return (
     <Workspace
-      title={msg('academy.academy')}
-      description={msg('academyPage.aSixMonthCurriculumFromMarketMechanicsToIndependent')}
       actions={
         <Badge tone="info" icon={<Target size={12} aria-hidden />}>
           {mockProgress.level}

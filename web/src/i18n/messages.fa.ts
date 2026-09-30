@@ -70,8 +70,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   // academyPage ─────────────────────────────────────────────────
   'academyPage.aFailedReadIsReportedWithItsTyped':
     'خواندن ناموفق با کد تایپ‌شده‌اش گزارش می‌شود، نه با فهرست خالی، چون دوره خالی و دوره خوانده‌نشدنی کنش‌های متفاوتی می‌طلبند.',
-  'academyPage.aSixMonthCurriculumFromMarketMechanicsToIndependent':
-    'دوره‌ای شش‌ماهه از مکانیک بازار تا فعالیت مستقل. درس‌ها بر اساس پیش‌نیاز باز می‌شوند؛ آزمون‌ها به‌صورت قطعی تصحیح می‌شوند.',
   'academyPage.curriculumCouldNotBeRead': 'دوره آموزشی خوانده نشد',
   'academyPage.eachModuleListsItsFocusAreasLockedModules':
     'هر ماژول حوزه‌های تمرکز خود را فهرست می‌کند. ماژول‌های قفل وقتی پیش‌نیازها کامل شوند باز می‌شوند.',
@@ -174,8 +172,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'جریان رویداد تنها از طریق یک WebSocket احراز هویت‌شده روی رابط loopback باز می‌شود.',
   'activityPage.theFourTransitionsTheQueueDefinesAndWhat':
     'چهار گذاری که صف تعریف می‌کند، و آنچه رابط برای هر یک نشان می‌دهد.',
-  'activityPage.theRealtimeEventStreamAndTheBackgroundTaskQueue':
-    'جریان رویداد بلادرنگ و صف کارهای پس‌زمینه. رویدادها یک نوع قرارداد، یک توالی، یک منبع و یک شناسه همبستگی حمل می‌کنند؛ کارها از صفی که آن‌ها را اجرا می‌کند خوانده می‌شوند. هیچ‌کدام از این سطوح برای ثبت یا اجرای چیزی وجود ندارد.',
   'activityPage.theResultIsStoredAndTheProgressRow':
     'نتیجه ذخیره می‌شود و سطر پیشرفت باقی می‌ماند تا منقضی شود.',
   'activityPage.theStatusIsRecordedInTheRowSo':
@@ -218,8 +214,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'agentWorkspacePage.budgetUsed': 'بودجه مصرف‌شده',
   'agentWorkspacePage.chainOfThoughtIsNeverDisplayedRequestedOrStored':
     'زنجیره فکر هرگز نمایش داده، درخواست یا ذخیره نمی‌شود — پاسخ یا یک خلاصه ساختاریافته است یا یک نوبت ناموفق.',
-  'agentWorkspacePage.conversationWithTheTrainingAgentAnswersSeparateFact':
-    'گفت‌وگو با عامل تمرینی. پاسخ‌ها واقعیت را از تحلیل، فرضیه و عدم‌قطعیت جدا می‌کنند و هر عدد از یک ابزار قطعی می‌آید.',
   'agentWorkspacePage.dataMarketDataWithAMandatoryProvenance':
     'داده — داده بازار با برچسب منشأ اجباری',
   'agentWorkspacePage.deniedTheRunIsBlockedWithAReason':
@@ -421,8 +415,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'درس‌های کامل‌شده و آزمون‌های تصحیح‌شده به‌محض اضافه شدن بخش ماندگارسازی اینجا ظاهر می‌شوند.',
   'dashboardPage.emptyIsAValidStateItIs': 'خالی یک حالت معتبر است — گفته می‌شود، پنهان نمی‌شود.',
   'dashboardPage.overview': 'نمای کلی',
-  'dashboardPage.progressStudyMetricsAndReadOnlyChartsEveryFigure':
-    'پیشرفت، معیارهای مطالعه و نمودارهای فقط‌خواندنی. هر رقم زیر، داده پیش‌نمایش نمونه‌وار است که بر اساس مدل‌های نمای بک‌اند تایپ شده.',
   'dashboardPage.reloadsTheLayoutSkeletonNoJobIsQueued':
     'اسکلت چیدمان را دوباره بارگذاری می‌کند. در این فاز هیچ کاری در صف قرار نمی‌گیرد.',
   'dashboardPage.rollUpsFromTheProductModulesEachFigureIs':
@@ -591,8 +583,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'evaluation.couldNotReadYourDecisions': 'تصمیم‌های شما خوانده نشد',
   'evaluation.decidedBy': '· تصمیم‌گیرنده',
   'evaluation.declared': 'اعلام‌شده ·',
-  'evaluation.description':
-    'آنچه تصمیم گرفتید را ثبت کنید، ببینید قیمت‌های ثبت‌شده چه می‌گویند رخ داده است — و چه چیزی سنجیده نشده — و بخوانید که این سامانه ادعا می‌کند با آن چه می‌تواند بکند و چه نمی‌تواند. هیچ‌چیز اینجا پیش‌بینی نمی‌شود و هیچ تصمیمی نمره نمی‌گیرد.',
   'evaluation.eachStateIsComputedOnThe':
     'هر وضعیت روی سرور و از اعلام‌های خودتان و از آنچه قابلیت می‌گوید نیاز دارد محاسبه می‌شود. دسترس‌پذیری و آمادگی دو ادعای جدا هستند، پس قابلیتی که ساخته نشده است همین را می‌گوید، به‌جای آنکه ورودی‌هایی بخواهد که نمی‌تواند از آن‌ها استفاده کند.',
   'evaluation.evaluationRecorded': 'ارزیابی ثبت شد',
@@ -832,8 +822,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'تلاشی که بدون کار تصحیح ارسال شود در حالت انتظار می‌ماند و به‌عنوان در انتظار برچسب می‌خورد، نه امتیازدار.',
   'examsPage.anUntouchedCategoryIsStatedPlainlyRatherThan':
     'یک دسته دست‌نخورده صریح گفته می‌شود، نه پشت یک صفر پنهان.',
-  'examsPage.assessmentScoringAndMistakeReviewAcrossTheSixMonth':
-    'ارزیابی، نمره‌دهی و بازبینی اشتباه‌ها در طول دوره شش‌ماهه. تصحیح مبتنی بر روبریک و قطعی است؛ مدل نتایج را توضیح می‌دهد اما هرگز قبولی یا رد را تعیین نمی‌کند.',
   'examsPage.closestAttempt74': 'نزدیک‌ترین تلاش: 74%',
   'examsPage.directionIsAnInputToTheSetupNot': 'جهت ورودی ستاپ است، نه خروجی بودجه ریسک.',
   'examsPage.everyStateTheModuleMustRenderWithThe':
@@ -1418,8 +1406,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'journalPage.complianceNote': 'یادداشت پایبندی',
   'journalPage.everyChartStatesItsScopeAndEveryOne':
     'هر نمودار دامنه‌اش را اعلام می‌کند و همه قابل بزرگ‌نمایی به تمام‌صفحه هستند.',
-  'journalPage.everyRecordItsPlanItsRiskWhetherThe':
-    'هر سابقه، طرحش، ریسکش، اینکه قواعد رعایت شدند یا نه و چه چیزی آموخت. دفتر معاملات سابقه‌ای از تصمیم‌ها است، نه یک تابلوی امتیاز — پس حجم نمونه همراه هر نرخ می‌آید و یک مقدار غایب غایب می‌ماند.',
   'journalPage.everyRecordThatRequiredAReviewHasOne':
     'هر سابقه‌ای که بازبینی لازم داشت، بازبینی دارد. این حالت دست‌یافتنی است — خطا نیست.',
   'journalPage.exportIsNotConnectedInThisPhaseThe':
@@ -1960,8 +1946,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'memoryPage.trustState': 'وضعیت اعتماد',
   'memoryPage.unverifiedRecordsMayBeUsedAsContextBut':
     'سوابق تأییدنشده می‌توانند به‌عنوان بافت استفاده شوند، اما به‌عنوان عدم‌قطعیت برچسب می‌خورند و هرگز نمی‌توانند به‌عنوان واقعیت ارائه شوند.',
-  'memoryPage.whatTheAgentMayUseWhereEachClaim':
-    'آنچه عامل می‌تواند استفاده کند، هر ادعا از کجا آمده و چقدر قابل اعتماد است. بازیابی هرگز متن تأییدنشده را به واقعیت تبدیل نمی‌کند.',
   'memoryPage.whereTheRecordCameFromAnIndependent':
     'سابقه از کجا آمده — پرسشی مستقل از این‌که چقدر قابل اعتماد است',
   // memoryTimeline ──────────────────────────────────────────────
@@ -2012,8 +1996,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'portfolio.dataQuality': 'کیفیت داده',
   'portfolio.decidedBy': 'تصمیم‌گیرنده',
   'portfolio.declareTheComposition': 'ترکیب را اعلام کنید',
-  'portfolio.description':
-    'ترکیبی که اعلام کرده‌اید، ارزش‌گذاری‌شده با کد قطعی — با نام بردن از هر شکاف، نه پر کردن آن.',
   'portfolio.dismiss': 'رد کردن',
   'portfolio.eGVOO': 'مثلاً VOO',
   'portfolio.engineVerdict': 'حکم موتور:',
@@ -2304,8 +2286,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'ذخیره ترجیحات نخستین نسخه بافت شما را می‌سازد.',
   'profilePage.theAgentMayOnlyUseYourDeclaredContext':
     'عامل فقط می‌تواند بافت اعلام‌شده شما را به‌عنوان ورودی استفاده کند. هرگز در آن نمی‌نویسد و هرگز یک خالی را با پیش‌فرض پر نمی‌کند.',
-  'profilePage.yourDeclaredTradingContextWhatYouHaveTold':
-    'بافت معاملاتی اعلام‌شده شما: آنچه به Master Trade گفته‌اید، و آنچه هنوز باز است.',
   // quality ─────────────────────────────────────────────────────
   'quality.assessed': 'سنجیده‌شده',
   'quality.blocking': 'بازدارنده',
@@ -2649,8 +2629,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'هر کارت فرضیه‌اش را پیش از اعدادش اعلام می‌کند.',
   'researchPage.experiments': 'آزمایش‌ها',
   'researchPage.experimentsEvaluated': 'آزمایش‌های ارزیابی‌شده',
-  'researchPage.experimentsThatTestAProposedRuleAgainstEvidence':
-    'آزمایش‌هایی که یک قاعده پیشنهادی را در برابر شواهد می‌آزمایند. معیارها از کد قطعی روی مجموعه‌داده‌ای ثابت می‌آیند؛ یک قاعده بدون تأیید انسانی ثبت‌شده نمی‌تواند فعال شود.',
   'researchPage.timeline': 'خط زمانی',
   // retryState ──────────────────────────────────────────────────
   'retryState.gaveUp': 'رها شد',
@@ -2776,8 +2754,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'یک اسکلت تا زمان خواندن تنظیمات از دیسک یا از پوسته، چیدمان را نگه می‌دارد، تا با رسیدن آن‌ها چیزی نجهد.',
   'settingsPage.aStateIsOnlyShownWhenASurface':
     'یک حالت فقط زمانی نشان داده می‌شود که سطحی واقعاً بتواند به آن برسد؛ افزودن حالت چهارم در اینجا به معنای افزودن یک رفتار است، نه یک تصویر.',
-  'settingsPage.appearanceDirectionProvidersAndTheSafetyPostureOf':
-    'ظاهر، جهت، ارائه‌دهنده‌ها و وضعیت ایمنی ایستگاه کاری. رمزها در مدار کلید سیستم‌عامل‌اند — تنظیمات فقط ارجاع نگه می‌دارد.',
   'settingsPage.auditRetention': 'نگهداری رد حسابرسی',
   'settingsPage.authenticatedWebSocketLoopbackOnlyTheActivityPageOpe':
     'WebSocket احراز هویت‌شده، فقط loopback. صفحه فعالیت وقتی نشستی وجود دارد آن را باز می‌کند.',
@@ -3104,8 +3080,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'رد یا شکست با کد تایپ‌شده‌اش نشان داده می‌شود: عملیات ردشده و ابزار در دسترس نبودن پاسخ‌های متفاوتی‌اند و نباید یکسان خوانده شوند.',
   'tradingLabPage.aToolCallIsARoundTripThese':
     'یک فراخوانی ابزار یک رفت‌وبرگشت است. این‌ها دو حالتی هستند که پس از آن می‌آیند؛ حالت خالی پیش از فراخوانی همان پنل بالاست.',
-  'tradingLabPage.aTrainingSurfaceForReviewingPracticeSetupsAnd':
-    'سطحی تمرینی برای بازبینی ستاپ‌های تمرینی و ریاضی ریسک. فقط‌خواندنی: در هیچ‌جای این برنامه ورود سفارش، اتصال کارگزار یا مسیر اجرا وجود ندارد.',
   'tradingLabPage.approvalWorkflowLandsWithThePersistenceSliceThe':
     'گردش کار تأیید همراه بخش ماندگارسازی می‌آید؛ دروازه در بک‌اند از قبل اعمال شده است.',
   'tradingLabPage.noButtonOnThisPageCanArmAnything':
@@ -3164,7 +3138,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'usage.current': 'جاری',
   'usage.declaredCapabilities': 'قابلیت‌های اعلام‌شده',
   'usage.defaultNotRecorded': 'پیش‌فرض، ثبت‌نشده',
-  'usage.description': 'طرح شما، سهم اعتبار شما، هزینهٔ هر قابلیت و آنچه واقعاً مصرف شده است.',
   'usage.everyCapabilityThePlatformDeclaresWhether':
     'هر قابلیتی که سامانه اعلام می‌کند، چه ساخته شده باشد و چه نه. قابلیتی که ساخته نشده و قابلیتی که در طرح شما نیست دو پاسخ متفاوت‌اند و هرگز با یک عبارت نمایش داده نمی‌شوند.',
   'usage.everyInvocationIncludingTheOnesThat':

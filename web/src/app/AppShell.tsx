@@ -55,13 +55,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        {/* The region's inset is the window's (`SHELL_GUTTER`) and only its vertical rhythm answers to
-            `density` — so tightening the workspace for a reader moves nothing sideways, and the page
-            below begins at the same edge as the title above it. */}
+        {/* The region's inset is the window's (`SHELL_GUTTER`) and only its vertical rhythm answers
+            to `density` — so tightening the workspace for a reader moves nothing sideways, and the
+            page below begins at the same edge as the title above it.
+
+            The rhythm is deliberately asymmetric (Phase 8.5.2.1): the top padding is the breathing
+            space between the top bar and the page's context row — one spacing step tighter than
+            before, because the section's name is drawn once up there and the context row under it
+            is context, not a second title — while the bottom padding keeps the old step, so the
+            distance to the footer is unchanged. The gap between the context row and the page's
+            content is the workspace column's own (`gap-5`), and is not touched by this. */}
         <main
           id="workspace-main"
           tabIndex={-1}
-          className={cn('flex-1', SHELL_GUTTER, density === 'compact' ? 'py-4' : 'py-5')}
+          className={cn('flex-1', SHELL_GUTTER, density === 'compact' ? 'pt-3 pb-4' : 'pt-4 pb-5')}
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.div

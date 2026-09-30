@@ -125,8 +125,6 @@ export function ExamsPage() {
 
   return (
     <Workspace
-      title={msg('exams.examinations')}
-      description={msg('examsPage.assessmentScoringAndMistakeReviewAcrossTheSixMonth')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>

@@ -211,8 +211,6 @@ export function JournalPage() {
 
   return (
     <Workspace
-      title={msg('journal.tradingJournal')}
-      description={msg('journalPage.everyRecordItsPlanItsRiskWhetherThe')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>

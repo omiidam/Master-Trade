@@ -86,14 +86,6 @@ const TABS = [
   },
 ] as const;
 
-/** The page's own name, read from the catalogue like its description is — see `EvaluationPage` for why. */
-function title(): string {
-  return msg('shell.nav.usage.label');
-}
-function description(): string {
-  return msg('usage.description');
-}
-
 export function UsagePage() {
   const status = useUsageStore((state) => state.status);
   const usage = useUsageStore((state) => state.usage);
@@ -121,7 +113,7 @@ export function UsagePage() {
 
   if (status === 'idle' || status === 'loading') {
     return (
-      <Workspace title={title()} description={description()}>
+      <Workspace>
         <Grid columns={3}>
           {[0, 1, 2].map((index) => (
             <Card key={index}>
@@ -139,7 +131,7 @@ export function UsagePage() {
 
   if (status === 'unavailable') {
     return (
-      <Workspace title={title()} description={description()}>
+      <Workspace>
         <ErrorState
           severity="info"
           title={msg('usage.noUsageToShow')}
@@ -151,7 +143,7 @@ export function UsagePage() {
 
   if (status === 'error' || usage === null) {
     return (
-      <Workspace title={title()} description={description()}>
+      <Workspace>
         <ErrorState
           title={msg('usage.couldNotReadUsage')}
           description={error?.message ?? 'The request failed without a reason.'}
@@ -174,7 +166,7 @@ export function UsagePage() {
   );
 
   return (
-    <Workspace title={title()} description={description()}>
+    <Workspace>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="primary">{usage.plan.displayName}</Badge>
         <Badge tone={usage.durable ? 'outline' : 'warning'}>

@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.5.2
+# Application Shell — Phases 7.1.1 through 8.5.2.1
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -1448,3 +1448,81 @@ its landmark and currency; no page content was redesigned; no dependency was add
 page exists — the deeper structures (Recommendation → Detail, Lesson → Detail, Exam → Result) remain
 structural examples that `extendNavTrail` is shaped for, not pages that were built; no animation, viewport
 hack, fixed height or `overflow:hidden` was used. Page Actions was not begun.
+
+## 19. Phase 8.5.2.1 — the page's identity, stated once
+
+The shell already said where the reader was, three times over: the top bar's `<h1>` named the section, the
+trail named it again as its current crumb, and every page drew an `<h2>` that restated it ("Training
+dashboard" under _Dashboard_, "Trading Journal" under _Journal_) over a sentence of explanation. This phase
+audits that repetition and removes it — not the context, and not the pages: the identity stays in the top bar
+and the trail, the explanation stays in the top bar's subtitle, and the page's own headings and feature-level
+descriptions are untouched.
+
+### 19.1 The audit, across all fourteen sections
+
+Every page-level title was read against the section the shell names. **All fourteen restated it**: nine were
+literal repeats (`Portfolio` over Portfolio, `Evaluation`, `Academy`, `Activity`, `Usage`, `Profile`,
+`Settings`, `AI workspace` over _AI Workspace_, `Trading lab` over _Trading Lab_) and four were paraphrases of
+the same section (`Training dashboard`, `Knowledge memory`, `Trading Journal`, `Examinations`). None was a
+genuinely distinct subpage name, so none was kept. The page descriptions were read the other way round: every
+one was a real sentence about the page's data, but the top bar already carried a subtitle for the section
+(`shell.nav.<section>.description`), so the page-level copy was the same idea drawn twice directly under the
+trail — the layer was removed, and with it the fourteen catalogue keys that existed only for it.
+
+What was _not_ touched is the point of the audit: `Portfolio` remains its own architecture and `Evaluation`
+remains separate from it; no section was added, renamed, reordered or split and there is no Performance
+entry; the `Section` headings pages draw inside their content keep the document outline
+(`h1` top bar → `h2` page sections → `h3` card titles), and feature-level descriptions — a card's, a metric's,
+a form's, an error state's — are exactly where they were.
+
+### 19.2 What changed in the frame
+
+`PageHeader`'s fields are now **all optional** (Phase 8.5.1 had one required field, the title): a header
+with nothing to say draws nothing, and the title is drawn only when a page hands one — the slot a future
+distinct subpage will use. `Workspace` passes its fields straight through, and the fourteen sections hand it
+neither a title nor a description. The result on every page is the trail, then the content, with the
+workspace column's own `gap-5` between them — the same gap the row used before, so the first card sits where
+it always did.
+
+The vertical rhythm of the content region is now deliberately asymmetric: `<main>` declares `pt-3 pb-4`
+(compact) / `pt-4 pb-5` (comfortable) instead of a symmetric `py`. The smaller top step is the breathing
+space between the top bar and the trail — reduced because the trail is context under a name the bar already
+states, not a second title — while the bottom step is unchanged, so the run to the footer is what it was, and
+the breadcrumb-to-content gap is not part of this at all (it is the column's `gap-5`). No negative margin, no
+absolute positioning, no transform: the adjustment is the region's own padding, in the spacing scale the rest
+of the shell uses, and it applies to all fourteen sections because it is the frame's, not a page's.
+
+### 19.3 What was verified
+
+| Check                                                                                                                | Where                                                                   | Result  |
+| -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------- |
+| Every section's identity = the word its entry shows, no `<h1>` in `main`, the document's one `<h1>` is the top bar's | `tests/browser/e2e.test.ts` (rewritten header case)                     | pass    |
+| No section draws a description paragraph; the top bar's subtitle remains                                             | `tests/browser/e2e.test.ts` (same case)                                 | pass    |
+| Page-swap waits key on the trail's current crumb, not a page heading                                                 | `tests/browser/e2e.test.ts` (`visitIn`, history walks, quick-nav waits) | pass    |
+| The mirrored subtitle keeps its start-edge alignment in both directions                                              | `tests/browser/e2e.test.ts` (direction case)                            | pass    |
+| The asymmetric rhythm: comfortable `16`, compact `12`, and _only_ the rhythm changes                                 | `tests/browser/e2e.test.ts` (density case)                              | pass    |
+| All fields optional, title drawn only when given; the frame's trail is the default                                   | `frontend-shell-layout.test.ts`                                         | 41/41   |
+| No page name or description drawn from a literal; both catalogues in step                                            | `tests/ui-language.test.ts`                                             | 17/17   |
+| The whole node suite                                                                                                 | `npm test`                                                              | 1950/92 |
+| The whole browser suite                                                                                              | `tests/browser/e2e.test.ts`                                             | 87/87   |
+| Types, formatting and the production build                                                                           | `typecheck`, `typecheck:web`, `format:check`, `build:web`               | pass    |
+
+Two of the suite's own probes had to move with the change, and both were re-pointed at something the reader
+can still see: the cases that waited for a page by its header heading now wait for the trail's current crumb
+(rendered by the frame inside the page's keyed subtree, so it is the same page-swap signal), and the mirror
+case measures the top bar's subtitle where it used to measure the page title. One seven-second tooltip case
+needed its pointer to travel to the top bar rather than to a content heading, because the shortest path to
+the content passed through the tooltip itself and kept it open.
+
+One failure seen twice during these runs is _not_ this phase's: `marks every trade on its start edge, and
+keeps the row menu inside the window` fails intermittently on a sub-pixel follow offset (the same case and
+the same assertion, before and after the change, and green on the runs either side). It is recorded here as
+the standing flake the suite already knows, not as a regression — the final run of this phase is 87/87.
+
+### 19.4 What was not changed
+
+No section was added, removed, renamed or reordered; Portfolio and Evaluation stay separate and there is no
+Performance entry; no route, navigation or shell region changed; the top bar's title and subtitle are
+untouched; no page's content, cards or feature-level descriptions were redesigned; no mock data, dependency
+or animation was introduced; no `overflow:hidden`, fixed height or positioning hack was used; and Page
+Actions was not begun.

@@ -161,8 +161,6 @@ export function MemoryPage() {
 
   return (
     <Workspace
-      title={msg('memory.knowledgeMemory')}
-      description={msg('memoryPage.whatTheAgentMayUseWhereEachClaim')}
       actions={
         <>
           <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>

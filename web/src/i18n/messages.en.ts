@@ -67,8 +67,6 @@ export const EN_MESSAGES = {
   // academyPage ─────────────────────────────────────────────────
   'academyPage.aFailedReadIsReportedWithItsTyped':
     'A failed read is reported with its typed code instead of an empty list, because an empty curriculum and an unreadable one demand different actions.',
-  'academyPage.aSixMonthCurriculumFromMarketMechanicsToIndependent':
-    'A six-month curriculum from market mechanics to independent operation. Lessons unlock by prerequisite; examinations are graded deterministically.',
   'academyPage.curriculumCouldNotBeRead': 'Curriculum could not be read',
   'academyPage.eachModuleListsItsFocusAreasLockedModules':
     'Each module lists its focus areas. Locked modules unlock when prerequisites are complete.',
@@ -171,8 +169,6 @@ export const EN_MESSAGES = {
     'The event stream opens over an authenticated WebSocket on the loopback interface only.',
   'activityPage.theFourTransitionsTheQueueDefinesAndWhat':
     'The four transitions the queue defines, and what the UI shows for each.',
-  'activityPage.theRealtimeEventStreamAndTheBackgroundTaskQueue':
-    'The realtime event stream and the background-task queue. Events carry a contract type, a sequence, a source and a correlation id; jobs are read from the queue that runs them. Neither surface exists to place or execute anything.',
   'activityPage.theResultIsStoredAndTheProgressRow':
     'The result is stored and the progress row is left behind to expire.',
   'activityPage.theStatusIsRecordedInTheRowSo':
@@ -215,8 +211,6 @@ export const EN_MESSAGES = {
   'agentWorkspacePage.budgetUsed': 'Budget used',
   'agentWorkspacePage.chainOfThoughtIsNeverDisplayedRequestedOrStored':
     'Chain-of-thought is never displayed, requested or stored — the answer is a structured summary or a failed turn.',
-  'agentWorkspacePage.conversationWithTheTrainingAgentAnswersSeparateFact':
-    'Conversation with the training agent. Answers separate fact from analysis, hypothesis and uncertainty, and every number comes from a deterministic tool.',
   'agentWorkspacePage.dataMarketDataWithAMandatoryProvenance':
     'Data — market data with a mandatory provenance label',
   'agentWorkspacePage.deniedTheRunIsBlockedWithAReason':
@@ -421,8 +415,6 @@ export const EN_MESSAGES = {
     'Completed lessons and graded exams will appear here as soon as the persistence slice lands.',
   'dashboardPage.emptyIsAValidStateItIs': 'Empty is a valid state — it is stated, not hidden.',
   'dashboardPage.overview': 'Overview',
-  'dashboardPage.progressStudyMetricsAndReadOnlyChartsEveryFigure':
-    'Progress, study metrics and read-only charts. Every figure below is illustrative preview data typed against the backend view models.',
   'dashboardPage.reloadsTheLayoutSkeletonNoJobIsQueued':
     'Reloads the layout skeleton. No job is queued in this phase.',
   'dashboardPage.rollUpsFromTheProductModulesEachFigureIs':
@@ -596,8 +588,6 @@ export const EN_MESSAGES = {
   'evaluation.couldNotReadYourDecisions': 'Could not read your decisions',
   'evaluation.decidedBy': '· decided by',
   'evaluation.declared': 'declared ·',
-  'evaluation.description':
-    'Record what you decided, see what the recorded prices say happened — and what could not be measured — and read what the platform claims it can and cannot do with it. Nothing here is predicted, and no decision is graded.',
   'evaluation.eachStateIsComputedOnThe':
     'Each state is computed on the server from your own declarations and from what the capability declares it needs. Availability and readiness are separate claims, so a capability that is not built says so instead of asking you for inputs it could not use.',
   'evaluation.evaluationRecorded': 'Evaluation recorded',
@@ -837,8 +827,6 @@ export const EN_MESSAGES = {
     'An attempt submitted without a grading job stays pending and is labelled as pending, not scored.',
   'examsPage.anUntouchedCategoryIsStatedPlainlyRatherThan':
     'An untouched category is stated plainly rather than hidden behind a zero.',
-  'examsPage.assessmentScoringAndMistakeReviewAcrossTheSixMonth':
-    'Assessment, scoring and mistake review across the six-month curriculum. Grading is rubric-based and deterministic; the model explains results but never decides pass or fail.',
   'examsPage.closestAttempt74': 'closest attempt: 74%',
   'examsPage.directionIsAnInputToTheSetupNot':
     'Direction is an input to the setup, not an output of the risk budget.',
@@ -1432,8 +1420,6 @@ export const EN_MESSAGES = {
   'journalPage.complianceNote': 'Compliance note',
   'journalPage.everyChartStatesItsScopeAndEveryOne':
     'Every chart states its scope, and every one can be expanded to full screen.',
-  'journalPage.everyRecordItsPlanItsRiskWhetherThe':
-    'Every record, its plan, its risk, whether the rules held and what it taught. A journal is a record of decisions, not a scoreboard — so sample size travels with every rate, and a missing value stays missing.',
   'journalPage.everyRecordThatRequiredAReviewHasOne':
     'Every record that required a review has one. This state is reachable — it is not an error.',
   'journalPage.exportIsNotConnectedInThisPhaseThe':
@@ -1987,8 +1973,6 @@ export const EN_MESSAGES = {
   'memoryPage.trustState': 'Trust state',
   'memoryPage.unverifiedRecordsMayBeUsedAsContextBut':
     'Unverified records may be used as context, but they are labelled uncertainty and can never be presented as fact.',
-  'memoryPage.whatTheAgentMayUseWhereEachClaim':
-    'What the agent may use, where each claim came from and how much it may be trusted. Retrieval never turns unverified text into fact.',
   'memoryPage.whereTheRecordCameFromAnIndependent':
     'Where the record came from — an independent question from how much it is trusted',
   // memoryTimeline ──────────────────────────────────────────────
@@ -2040,8 +2024,6 @@ export const EN_MESSAGES = {
   'portfolio.dataQuality': 'Data quality',
   'portfolio.decidedBy': 'decided by',
   'portfolio.declareTheComposition': 'Declare the composition',
-  'portfolio.description':
-    'The composition you have declared, valued by deterministic code — with every gap named rather than filled.',
   'portfolio.dismiss': 'Dismiss',
   'portfolio.eGVOO': 'e.g. VOO',
   'portfolio.engineVerdict': 'engine verdict:',
@@ -2335,8 +2317,6 @@ export const EN_MESSAGES = {
     'Saving preferences creates the first version of your context.',
   'profilePage.theAgentMayOnlyUseYourDeclaredContext':
     'The agent may only use your declared context as input. It never writes to it, and it never fills a blank with a default.',
-  'profilePage.yourDeclaredTradingContextWhatYouHaveTold':
-    'Your declared trading context: what you have told Master Trade, and what is still open.',
   // quality ─────────────────────────────────────────────────────
   'quality.assessed': 'assessed',
   'quality.blocking': 'Blocking',
@@ -2680,8 +2660,6 @@ export const EN_MESSAGES = {
     'Each card states its hypothesis before its numbers.',
   'researchPage.experiments': 'Experiments',
   'researchPage.experimentsEvaluated': 'Experiments evaluated',
-  'researchPage.experimentsThatTestAProposedRuleAgainstEvidence':
-    'Experiments that test a proposed rule against evidence. Metrics come from deterministic code over a fixed data set; a rule cannot become active without a recorded human approval.',
   'researchPage.timeline': 'Timeline',
   // retryState ──────────────────────────────────────────────────
   'retryState.gaveUp': 'Gave up',
@@ -2806,8 +2784,6 @@ export const EN_MESSAGES = {
     'A skeleton holds the layout while settings are read from disk or from the shell, so nothing jumps when they arrive.',
   'settingsPage.aStateIsOnlyShownWhenASurface':
     'A state is only shown when a surface can actually reach it; adding a fourth state here would mean adding a behaviour, not a picture.',
-  'settingsPage.appearanceDirectionProvidersAndTheSafetyPostureOf':
-    'Appearance, direction, providers and the safety posture of the workstation. Secrets live in the OS keychain — configuration holds references only.',
   'settingsPage.auditRetention': 'Audit retention',
   'settingsPage.authenticatedWebSocketLoopbackOnlyTheActivityPageOpe':
     'Authenticated WebSocket, loopback only. The Activity page opens it when a session exists.',
@@ -3140,8 +3116,6 @@ export const EN_MESSAGES = {
     'A refusal or a failure is shown with its typed code: a denied operation and an unavailable tool are different answers and must not read the same.',
   'tradingLabPage.aToolCallIsARoundTripThese':
     'A tool call is a round trip. These are the two states that follow it; the empty pre-call state is the panel above.',
-  'tradingLabPage.aTrainingSurfaceForReviewingPracticeSetupsAnd':
-    'A training surface for reviewing practice setups and risk math. Read-only: there is no order entry, no broker connection and no execution path anywhere in this application.',
   'tradingLabPage.approvalWorkflowLandsWithThePersistenceSliceThe':
     'Approval workflow lands with the persistence slice; the gate is already enforced in the backend.',
   'tradingLabPage.noButtonOnThisPageCanArmAnything':
@@ -3200,8 +3174,6 @@ export const EN_MESSAGES = {
   'usage.current': 'Current',
   'usage.declaredCapabilities': 'Declared capabilities',
   'usage.defaultNotRecorded': 'Default, not recorded',
-  'usage.description':
-    'Your plan, your credit allowance, what each capability costs and what has actually been consumed.',
   'usage.everyCapabilityThePlatformDeclaresWhether':
     'Every capability the platform declares, whether or not it exists yet. A capability that is not built and one that is not in your plan are different answers, and they are never shown with the same words.',
   'usage.everyInvocationIncludingTheOnesThat':

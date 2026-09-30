@@ -96,22 +96,28 @@ const WIDTHS: readonly (readonly [number, number])[] = [
 /**
  * The heading each navigation entry must produce, read from the running application.
  *
- * This is a contract, not a snapshot: the sidebar says "Memory" and the page must be
- * titled "Knowledge memory". Asserting the pair means a page whose header drifts away
- * from the entry that opens it fails here, and the expected values were taken from the
- * rendered app rather than guessed from the source.
+ * This is a contract, not a snapshot: the sidebar says "Memory" and the page it opens must name
+ * itself the same word. Since Phase 8.5.2.1 the pages draw no `<h2>` of their own — the identity
+ * is the top bar's `<h1>` and the trail's last crumb, both read from the same catalogue — so the
+ * page-swap signal the waits key on is the trail's current (last) crumb: it is rendered by the
+ * frame inside the page's keyed subtree, so it swaps with the page exactly the way the header
+ * heading used to, and it comes from the navigation model rather than a page's own copy.
+ *
+ * `EXPECTED_HEADINGS` below stays as the English snapshot of the words the shell draws for each
+ * entry — it is what fails if a section's wording drifts. The values were taken from the running
+ * app rather than guessed from the source.
  */
 const EXPECTED_HEADINGS: Record<string, string> = {
-  dashboard: 'Training dashboard',
-  agent: 'AI workspace',
-  memory: 'Knowledge memory',
+  dashboard: 'Dashboard',
+  agent: 'AI Workspace',
+  memory: 'Memory',
   research: 'Research',
-  journal: 'Trading Journal',
+  journal: 'Journal',
   portfolio: 'Portfolio',
   evaluation: 'Evaluation',
   academy: 'Academy',
-  exams: 'Examinations',
-  lab: 'Trading lab',
+  exams: 'Exams',
+  lab: 'Trading Lab',
   activity: 'Activity',
   usage: 'Usage',
   profile: 'Profile',
@@ -119,32 +125,34 @@ const EXPECTED_HEADINGS: Record<string, string> = {
 };
 
 /**
- * The *key* each page is titled from, so the same contract can be checked in either language.
+ * The *key* each page's identity is drawn from, so the same contract can be checked in either
+ * language.
  *
- * `EXPECTED_HEADINGS` above is a snapshot of the English copy and stays one — it is what fails if a page's
- * wording drifts. This map is the other half of the same contract: it says *where* that word comes from, so
- * the suite can also ask the Persian interface whether the page it opens is headed by the word the entry
- * that opened it shows. Which is a different question, and the one that caught three pages declaring
- * `const TITLE = 'Evaluation'` while the sidebar beside them said «ارزیابی».
+ * `EXPECTED_HEADINGS` above is a snapshot of the English copy and stays one — it is what fails if a
+ * section's wording drifts. This map is the other half of the same contract: it says *where* that
+ * word comes from, so the suite can also ask the Persian interface whether the page it opens is
+ * named by the word the entry that opened it shows. Which is a different question, and the one that
+ * caught three pages declaring `const TITLE = 'Evaluation'` while the sidebar beside them said
+ * «ارزیابی».
  */
 const HEADING_KEYS = {
-  dashboard: 'dashboard.trainingDashboard',
-  agent: 'agent.aIWorkspace',
-  memory: 'memory.knowledgeMemory',
-  research: 'research.research',
-  journal: 'journal.tradingJournal',
+  dashboard: 'shell.nav.dashboard.label',
+  agent: 'shell.nav.agent.label',
+  memory: 'shell.nav.memory.label',
+  research: 'shell.nav.research.label',
+  journal: 'shell.nav.journal.label',
   portfolio: 'shell.nav.portfolio.label',
   evaluation: 'shell.nav.evaluation.label',
-  academy: 'academy.academy',
-  exams: 'exams.examinations',
-  lab: 'lab.tradingLab',
-  activity: 'realtime.activity',
+  academy: 'shell.nav.academy.label',
+  exams: 'shell.nav.exams.label',
+  lab: 'shell.nav.lab.label',
+  activity: 'shell.nav.activity.label',
   usage: 'shell.nav.usage.label',
-  profile: 'profile.profile',
-  settings: 'settings.settings',
+  profile: 'shell.nav.profile.label',
+  settings: 'shell.nav.settings.label',
 } as const satisfies Record<string, MessageKey>;
 
-/** The heading a page must carry, in the language the interface is being read in. */
+/** The section identity a page must carry, in the language the interface is being read in. */
 function headingFor(locale: UiLocale, id: string): string {
   const key = (HEADING_KEYS as Record<string, MessageKey>)[id];
   if (!key) throw new Error(`no heading key recorded for ${id}`);
@@ -265,7 +273,10 @@ interface RenderedPageHeader {
   h1: number;
   h2: number;
   h3: number;
-  title: string;
+  /** The document-wide count of `<h1>` elements — the top bar's is the document's one. */
+  documentH1: number;
+  /** The page's identity as the trail's current crumb states it. */
+  identity: string;
   description: string;
   headerLeft: number;
   headerRight: number;
@@ -353,8 +364,8 @@ suite('the Product Foundation in a real browser', () => {
 
     await session.clickNav(translate(locale, section.labelKey));
     await session.waitFor(
-      `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(expected)}`,
-      `the ${translate(locale, section.labelKey)} page (heading "${expected}") to be rendered`,
+      `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '') === ${JSON.stringify(expected)}`,
+      `the ${translate(locale, section.labelKey)} page (identity "${expected}") to be rendered`,
     );
   }
 
@@ -385,7 +396,9 @@ suite('the Product Foundation in a real browser', () => {
   }
 
   const heading = (): Promise<string> =>
-    session.evaluate<string>(`document.querySelector('main h2')?.textContent?.trim() ?? ''`);
+    session.evaluate<string>(
+      `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '')`,
+    );
 
   /** A navigation entry's label, in the language this suite reads the interface in. */
   function labelOf(id: string): string {
@@ -1427,13 +1440,15 @@ suite('the Product Foundation in a real browser', () => {
     /* ------------------------------------------------------------------ */
 
     /**
-     * The page's identity row, measured where a source rule cannot reach.
+     * The page's context row, measured where a source rule cannot reach.
      *
      * The offline suites hold `PageHeader`'s *shape*; this case holds what the layout engine does
-     * with it: that every page still renders exactly one identity heading under the top bar's own
-     * `<h1>`, that the description a page hands the header is drawn and drawn inside the column,
-     * and that the header's own row never leaves the document's client area — at the widest and
-     * narrowest widths, in both directions, where the mirror puts the actions on the other side.
+     * with it: that no page draws an `<h1>` of its own while the top bar's is the document's one,
+     * that the identity the trail states is the word the opening entry shows, that no page draws a
+     * description paragraph into the row (Phase 8.5.2.1 — the top bar's subtitle is the one
+     * explanation, and a second one under the trail was redundancy), and that the header's own row
+     * never leaves the document's client area — at the widest and narrowest widths, in both
+     * directions, where the mirror puts the actions on the other side.
      */
     it('renders one identity heading per page, with its context drawn inside the column', async () => {
       /** The document's heading outline, plus the header row's own box, in one round trip. */
@@ -1444,20 +1459,22 @@ suite('the Product Foundation in a real browser', () => {
                const levels = [...document.querySelectorAll('main h1, main h2, main h3')].map(
                  (item) => item.tagName.toLowerCase(),
                );
-               const h2 = document.querySelector('main h2');
-               const description = h2?.parentElement?.querySelector(':scope > p');
-               const box = h2?.closest('header')?.getBoundingClientRect();
+               const description = document.querySelector('main header p');
+               const box = document.querySelector('main header');
                const column = document.querySelector('main > div');
                const columnBox = column?.getBoundingClientRect();
+               const boxRect = box?.getBoundingClientRect();
+               const trail = document.querySelector('ol[aria-label] li:last-child');
                return {
                  h1: levels.filter((level) => level === 'h1').length,
                  h2: levels.filter((level) => level === 'h2').length,
                  h3: levels.filter((level) => level === 'h3').length,
-                 title: (h2?.textContent ?? '').trim(),
+                 documentH1: document.querySelectorAll('h1').length,
+                 identity: (trail?.textContent ?? '').trim(),
                  description: (description?.textContent ?? '').trim(),
-                 headerLeft: Math.round(box?.left ?? 0),
-                 headerRight: Math.round(box?.right ?? 0),
-                 headerHeight: Math.round(box?.height ?? 0),
+                 headerLeft: Math.round(boxRect?.left ?? 0),
+                 headerRight: Math.round(boxRect?.right ?? 0),
+                 headerHeight: Math.round(boxRect?.height ?? 0),
                  columnLeft: Math.round(columnBox?.left ?? 0),
                  columnRight: Math.round(columnBox?.right ?? 0),
                  clientWidth: document.documentElement.clientWidth,
@@ -1480,15 +1497,21 @@ suite('the Product Foundation in a real browser', () => {
             await visitIn(locale, section.id);
             const state = await pageHeader();
 
-            // One identity heading per page, and it is an `<h2>`: the document's `<h1>` belongs to
-            // the top bar, so a page that renders an `<h1>` of its own would be two documents
-            // claiming the same reader.
+            // No page draws an `<h1>` of its own: the document's `<h1>` is the top bar's, and it
+            // is the document's only one. The pages draw no title heading at all since Phase
+            // 8.5.2.1 — the section's identity is the top bar's and the trail's last crumb, so
+            // what outline `main` has belongs to its own sections' headings, which start at the
+            // `<h2>` the `Section` component renders.
             expect(state.h1, `${section.id} renders an h1 of its own for ${where}`).toBe(0);
             expect(
-              state.h2,
-              `${section.id} renders no page heading for ${where}`,
-            ).toBeGreaterThanOrEqual(1);
-            expect(state.title, `${section.id} drew an empty title for ${where}`).not.toBe('');
+              state.documentH1,
+              `the document lost its one h1 on ${section.id} for ${where}`,
+            ).toBe(1);
+            // The page's identity, as the trail states it, is the word the entry that opened the
+            // page shows — in the language the page is being read in.
+            expect(state.identity, `${section.id} drew no identity for ${where}`).toBe(
+              headingFor(locale, section.id),
+            );
 
             // The header row stays inside the column that frames the page — the workspace's own
             // frame — and inside the document, at both edges, in either direction.
@@ -1509,15 +1532,20 @@ suite('the Product Foundation in a real browser', () => {
         }
       }
 
-      // A page that hands the header a description gets it drawn: the settings page names its
-      // host card's context, and the paragraph is read with the title it belongs to.
+      // No page hands the header a description any more: the explanation lives once, in the top
+      // bar's subtitle, and a paragraph under the trail would repeat it. The row draws the trail
+      // and — when a page has actions — nothing else.
       await session.setViewport(1440, 900);
       await startIn('en');
       await visit('settings');
       const described = await pageHeader();
-      expect(described.description, 'the settings page handed the header no description').not.toBe(
+      expect(described.description, 'the settings page still draws a description paragraph').toBe(
         '',
       );
+      const topbarSubtitle = await session.evaluate<string>(
+        `(document.querySelector('header p')?.textContent ?? '').trim()`,
+      );
+      expect(topbarSubtitle, 'the top bar lost its subtitle').not.toBe('');
 
       // Handed back in the language the rest of the file reads the interface in.
       await startIn(null);
@@ -1629,7 +1657,7 @@ suite('the Product Foundation in a real browser', () => {
       expect((await breadcrumbState()).last).toBe(labelOf('settings'));
       await session.traverseHistory('back');
       await session.waitFor(
-        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'portfolio'))}`,
+        `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'portfolio'))}`,
         'Back to land on the portfolio page',
       );
       expect((await breadcrumbState()).last, 'Back moved the shell but not the trail').toBe(
@@ -1637,7 +1665,7 @@ suite('the Product Foundation in a real browser', () => {
       );
       await session.traverseHistory('forward');
       await session.waitFor(
-        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'settings'))}`,
+        `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'settings'))}`,
         'Forward to land on the settings page',
       );
       expect((await breadcrumbState()).last, 'Forward moved the shell but not the trail').toBe(
@@ -2265,7 +2293,7 @@ suite('the Product Foundation in a real browser', () => {
     const openSettings = async (locale: UiLocale): Promise<void> => {
       await session.clickNav(translate(locale, 'shell.nav.settings.label'));
       await session.waitFor(
-        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(translate(locale, 'shell.nav.settings.label'))}`,
+        `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '') === ${JSON.stringify(translate(locale, 'shell.nav.settings.label'))}`,
         'the Settings page',
       );
       await session.waitFor(
@@ -2523,7 +2551,7 @@ suite('the Product Foundation in a real browser', () => {
     const pageHeading = (): Promise<HeadingReport | null> =>
       session.evaluateJson<HeadingReport | null>(`
         (() => {
-          const heading = document.querySelector('main h2');
+          const heading = document.querySelector('header p');
           if (!heading) return JSON.stringify(null);
           const range = document.createRange();
           range.selectNodeContents(heading);
@@ -2599,7 +2627,7 @@ suite('the Product Foundation in a real browser', () => {
       expect(english.railLeft).toBeLessThan(english.viewport / 2);
       expect(englishRow?.label).toBe(translate('en', 'shell.nav.dashboard.label'));
       expect(englishRow?.fromLeft).toBeLessThan(englishRow?.fromRight ?? -1);
-      // The heading is aligned to the *start* of the line, which in English is the left edge...
+      // The subtitle is aligned to the *start* of the line, which in English is the left edge...
       expect(englishHeading?.direction).toBe('ltr');
       expect(englishHeading?.textAlign).toBe('start');
       expect(englishHeading?.slackLeft).toBeLessThanOrEqual(1);
@@ -2624,8 +2652,8 @@ suite('the Product Foundation in a real browser', () => {
       // آموزش», which is the pair the page-rendering cases above hold every entry to.
       expect(persianRow?.label).toBe(translate('fa', 'shell.nav.dashboard.label'));
       expect(persianRow?.fromRight).toBeLessThan(persianRow?.fromLeft ?? -1);
-      // And the heading is still aligned to the start of its line, which is now the right edge.
-      expect(persianHeading?.text).toBe(headingFor('fa', 'dashboard'));
+      // And the subtitle is still aligned to the start of its line, which is now the right edge.
+      expect(persianHeading?.text).toBe(translate('fa', 'shell.nav.dashboard.description'));
       expect(persianHeading?.direction).toBe('rtl');
       expect(persianHeading?.textAlign).toBe('start');
       expect(persianHeading?.slackRight).toBeLessThanOrEqual(1);
@@ -3774,11 +3802,11 @@ suite('the Product Foundation in a real browser', () => {
       expect(await pressDensity(translate('en', 'settings.comfortable'))).toBe(true);
       await visit('dashboard');
       await session.waitFor(
-        `Math.round(parseFloat(getComputedStyle(document.querySelector('main')).paddingTop)) === 20`,
+        `Math.round(parseFloat(getComputedStyle(document.querySelector('main')).paddingTop)) === 16`,
         'the workspace to settle comfortable',
       );
       const comfortable = await workspace();
-      expect(comfortable.top, 'the comfortable workspace is not the roomy one').toBe(20);
+      expect(comfortable.top, 'the comfortable workspace is not the roomy one').toBe(16);
 
       // The reader tightens the workspace from the card that offers it.
       await visit('settings');
@@ -3786,7 +3814,7 @@ suite('the Product Foundation in a real browser', () => {
       expect(await pressDensity(translate('en', 'settings.compact'))).toBe(true);
       await visit('dashboard');
       await session.waitFor(
-        `Math.round(parseFloat(getComputedStyle(document.querySelector('main')).paddingTop)) === 16`,
+        `Math.round(parseFloat(getComputedStyle(document.querySelector('main')).paddingTop)) === 12`,
         'the workspace to tighten',
       );
 
@@ -3853,7 +3881,7 @@ suite('the Product Foundation in a real browser', () => {
                const column = region.querySelector('div[class*="max-w-"]');
                return {
                  rail: Math.round(document.querySelector('aside').getBoundingClientRect().width),
-                 title: Math.round(region.querySelector('h2').getBoundingClientRect().left),
+                 title: Math.round(region.querySelector('header > div > *').getBoundingClientRect().left),
                  column: Math.round(column.getBoundingClientRect().left),
                };
              })(),
@@ -4211,7 +4239,7 @@ suite('the Product Foundation in a real browser', () => {
 
       await session.pressKey('Enter');
       await session.waitFor(
-        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', chosen))}`,
+        `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', chosen))}`,
         `the ${chosen} page to be rendered from the keyboard`,
       );
       // The entry says it is current, and it is the entry that was activated.
@@ -4430,8 +4458,9 @@ suite('the Product Foundation in a real browser', () => {
       expect(tooltip).toContain(labelOf('portfolio'));
       expect(tooltip).toContain(description);
 
-      // And it goes away when the pointer does.
-      expect(await session.hover('main h2')).toBe(true);
+      // And it goes away when the pointer does — moved to the top bar, above and beyond the
+      // tooltip's reach, so the path there cannot cross the tooltip and keep it alive.
+      expect(await session.hover('header')).toBe(true);
       await session.waitFor(
         `document.querySelectorAll('[role="tooltip"]').length === 0`,
         'the tooltip to close when the pointer leaves the entry',
@@ -4671,7 +4700,7 @@ suite('the Product Foundation in a real browser', () => {
       expect(await ask('evaluation')).toEqual(['evaluation']);
       await session.pressKey('Enter');
       await session.waitFor(
-        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'evaluation'))}`,
+        `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'evaluation'))}`,
         'the Evaluation page to be rendered from the palette',
       );
       // The palette leaves with the choice rather than sitting over the page it opened, and the rail —
@@ -4701,7 +4730,7 @@ suite('the Product Foundation in a real browser', () => {
       expect(last).not.toBe('');
       await session.pressKey('Enter');
       await session.waitFor(
-        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', last))}`,
+        `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', last))}`,
         `the ${last} page to be rendered from the keyboard`,
       );
       await session.waitFor(
@@ -4827,7 +4856,7 @@ suite('the Product Foundation in a real browser', () => {
           session.evaluateJson(
             `JSON.stringify(
                (() => {
-                 const box = document.querySelector('main h2').getBoundingClientRect();
+                 const box = document.querySelector('ol[aria-label] li:last-child').getBoundingClientRect();
                  return { left: Math.round(box.left), width: Math.round(box.width) };
                })(),
              )`,
@@ -4924,7 +4953,7 @@ suite('the Product Foundation in a real browser', () => {
       );
       await session.pressKey('Enter');
       await session.waitFor(
-        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'settings'))}`,
+        `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'settings'))}`,
         'the Settings page to be rendered from the phone palette',
       );
       // Both surfaces are gone and the page is what is on screen.
@@ -4992,7 +5021,7 @@ suite('the Product Foundation in a real browser', () => {
     /** Wait until the page behind `id` is the one on screen, in the language in use. */
     const landsOn = (id: string, locale: UiLocale = 'en'): Promise<void> =>
       session.waitFor(
-        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(
+        `(document.querySelector('ol[aria-label] li:last-child')?.textContent?.trim() ?? '') === ${JSON.stringify(
           headingFor(locale, id),
         )}`,
         `the ${id} page to be the one on screen after the walk`,
@@ -5223,7 +5252,7 @@ suite('the Product Foundation in a real browser', () => {
                columnLeft: Math.round(column.left),
                columnWidth: Math.round(column.width),
                barHeight: Math.round(document.querySelector('header').getBoundingClientRect().height),
-               titleTop: Math.round(region.querySelector('h2').getBoundingClientRect().top),
+               titleTop: Math.round(region.querySelector('header > div > *').getBoundingClientRect().top),
              };
            })(),
          )`,

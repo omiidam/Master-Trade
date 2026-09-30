@@ -87,8 +87,6 @@ export function AgentWorkspacePage() {
 
   return (
     <Workspace
-      title={msg('agent.aIWorkspace')}
-      description={msg('agentWorkspacePage.conversationWithTheTrainingAgentAnswersSeparateFact')}
       actions={
         <>
           <Badge tone="ai" icon={<Sparkles size={12} aria-hidden />}>

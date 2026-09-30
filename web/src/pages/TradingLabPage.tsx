@@ -55,8 +55,6 @@ export function TradingLabPage() {
 
   return (
     <Workspace
-      title={msg('lab.tradingLab')}
-      description={msg('tradingLabPage.aTrainingSurfaceForReviewingPracticeSetupsAnd')}
       actions={
         <>
           <Badge tone="outline" icon={<Lock size={12} aria-hidden />}>

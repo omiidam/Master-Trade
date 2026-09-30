@@ -232,13 +232,16 @@ describe('the subscription that makes the switch work', () => {
     for (const file of walk('web/src/pages')) {
       expect(read(file), file).not.toMatch(/const TITLE = ['"]/);
     }
-    // And the three that were affected now read the word the entry that opens them does.
-    for (const [page, key] of [
-      ['EvaluationPage', 'shell.nav.evaluation.label'],
-      ['PortfolioPage', 'shell.nav.portfolio.label'],
-      ['UsagePage', 'shell.nav.usage.label'],
-    ] as const satisfies readonly (readonly [string, MessageKey])[]) {
-      expect(read(`web/src/pages/${page}.tsx`), page).toContain(key);
+    // Since Phase 8.5.2.1 the fourteen sections draw no title of their own — the top bar's `<h1>`
+    // and the trail's last crumb already carry the section's identity, from the same catalogue —
+    // so this contract narrows to what the pages still draw: descriptions and headings, all through
+    // `msg()`. The keys the former titles used stay in the catalogues; the shell (top bar, rail,
+    // trail) still reads them from there, and each keeps its Persian word.
+    for (const key of [
+      'shell.nav.evaluation.label',
+      'shell.nav.portfolio.label',
+      'shell.nav.usage.label',
+    ] as const satisfies readonly MessageKey[]) {
       expect(translate('fa', key), `${key} has no Persian word`).not.toBe(translate('en', key));
     }
   });
