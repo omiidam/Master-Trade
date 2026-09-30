@@ -18,6 +18,12 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { BREAKPOINTS } from '../web/src/design/tokens.js';
 import {
+  NAV_SECTIONS,
+  extendNavTrail,
+  navTrail,
+  type NavCrumb,
+} from '../web/src/config/navigation.js';
+import {
   COMPACT_SHELL_QUERY,
   MOBILE_SHELL_QUERY,
   SHELL_MODES,
@@ -517,10 +523,11 @@ describe('the contextual page header', () => {
       expect(header, `PageHeader has no ${field}`).toMatch(new RegExp(`\\b${field}\\??:`));
     }
     // Optional means absent until a page hands the field something: a header with no description
-    // draws no description paragraph, and one with no actions draws no action row.
+    // draws no description paragraph, and one with no actions draws no action row. (The breadcrumb
+    // slot renders what it is given — the landmark belongs to the breadcrumb itself, below.)
     expect(header).toMatch(/description \? \(/);
     expect(header).toMatch(/actions \? /);
-    expect(header).toMatch(/breadcrumb \? \(/);
+    expect(header).toMatch(/\{breadcrumb\}/);
     // The one required field is the title.
     expect(header).toMatch(/title: string/);
   });
@@ -557,13 +564,119 @@ describe('the contextual page header', () => {
     expect(header).toMatch(/max-w-3xl/);
   });
 
-  it('announces the breadcrumb slot as a navigation named from the catalogue', () => {
-    const header = read(PAGE_HEADER);
-    // The slot is a landmark only when it exists, and the name is the interface's own — the same
-    // rule the rail's control was held to in 8.3.4. (Whitespace-tolerant: prettier may wrap the
-    // attributes across lines, and the contract is the markup, not the line breaks.)
-    expect(header).toMatch(/<nav\s+aria-label=\{msg\('shell\.pageBreadcrumb'\)\}/s);
-    expect(read('web/src/i18n/messages.en.ts')).toMatch(/'shell\.pageBreadcrumb'/);
-    expect(read('web/src/i18n/messages.fa.ts')).toMatch(/'shell\.pageBreadcrumb'/);
+  it('renders the breadcrumb slot as it is given, without claiming navigation of its own', () => {
+    const header = strip(read(PAGE_HEADER));
+    // The slot renders the node it is handed and nothing else: the list's name belongs to the
+    // breadcrumb component, and the header adds no landmark around it.
+    expect(header).toMatch(/\{breadcrumb\}/);
+    expect(header).not.toMatch(/<nav/);
+    // And the trail's own name lives in both catalogues, on the component that owns the list.
+    const breadcrumb = read('web/src/app/Breadcrumb.tsx');
+    expect(breadcrumb).toMatch(/aria-label=\{label \?\? msg\('shell\.breadcrumbNav'\)\}/);
+    expect(read('web/src/i18n/messages.en.ts')).toMatch(/'shell\.breadcrumbNav'/);
+    expect(read('web/src/i18n/messages.fa.ts')).toMatch(/'shell\.breadcrumbNav'/);
+  });
+});
+
+/**
+ * Phase 8.5.2 — the contextual trail, drawn from the model the sidebar is drawn from.
+ *
+ * The shell is path-less by decision, so a breadcrumb here is *context*, not a route history: the
+ * one real hierarchy the product has is the navigation's own group → section, and the trail is
+ * derived from that declaration rather than from a second mapping a page could get wrong. The
+ * contract below holds the derivation to the model, the component to the semantics, and the frame
+ * to the subordination rule (trail above title, title unchanged).
+ */
+describe('the contextual breadcrumb trail', () => {
+  const BREADCRUMB = 'web/src/app/Breadcrumb.tsx';
+
+  const pages = (): string[] =>
+    readdirSync('web/src/pages')
+      .filter((name) => name.endsWith('.tsx'))
+      .map((name) => `web/src/pages/${name}`);
+
+  it('derives every section’s trail from the navigation model, not from a second mapping', () => {
+    // The derivation is a function of the declaration the sidebar already renders, so the two
+    // cannot disagree: one group crumb ahead of the section's own, for each of the fourteen.
+    for (const section of NAV_SECTIONS) {
+      const trail = navTrail(section.id);
+      expect(trail, `${section.id} drew the wrong trail length`).toHaveLength(2);
+      expect(trail[0]?.id, `${section.id} is not preceded by its own group`).toBe(section.group);
+      expect(trail[1]?.id, `${section.id} is not the trail's last word`).toBe(section.id);
+    }
+    // Portfolio and Evaluation are separate architectures: each is the last word of its own trail,
+    // and neither appears in the other's.
+    const portfolio = navTrail('portfolio').map((crumb) => crumb.id);
+    const evaluation = navTrail('evaluation').map((crumb) => crumb.id);
+    expect(portfolio).toContain('portfolio');
+    expect(portfolio).not.toContain('evaluation');
+    expect(evaluation).toContain('evaluation');
+    expect(evaluation).not.toContain('portfolio');
+  });
+
+  it('makes no crumb navigable while the shell has no parent route', () => {
+    // The trail is honest about what exists: a group heading is a place the rail draws, not a
+    // destination, and the section crumb is where the reader already is. The day a detail page has
+    // a real parent, its own crumb arrives with `navigable: true` — not this one.
+    for (const section of NAV_SECTIONS) {
+      for (const crumb of navTrail(section.id)) {
+        expect(crumb.navigable, `${crumb.id} claims a destination it does not have`).toBe(false);
+      }
+    }
+  });
+
+  it('extends a trail without consuming it, keeping the section ahead of the deeper context', () => {
+    // The shape a detail page will hand over: a real parent and a real destination behind it.
+    const deeper: readonly NavCrumb[] = [
+      { id: 'detail', labelKey: 'shell.group.workspace', navigable: true },
+    ];
+    const extended = extendNavTrail('portfolio', deeper);
+    expect(extended.map((crumb) => crumb.id)).toEqual(['workspace', 'portfolio', 'detail']);
+    // And the original trail is untouched: extension composes, it does not mutate.
+    expect(navTrail('portfolio')).toHaveLength(2);
+  });
+
+  it('is one component, semantic, subordinate, and direction-honest', () => {
+    const breadcrumb = strip(read(BREADCRUMB));
+    // A labelled ordered list — semantic and readable, but *not* a navigation landmark and not a
+    // currency claim: the shell's rail is the one landmark that offers destinations and the one
+    // announcer of where the reader is, and a second of either is redundancy the suite refuses.
+    expect(breadcrumb).toMatch(/<ol\s+aria-label=/);
+    expect(breadcrumb).not.toMatch(/<nav/);
+    expect(breadcrumb).not.toMatch(/aria-current/);
+    // Navigable is the crumb's property, rendered as a button only when a destination exists.
+    expect(breadcrumb).toMatch(/item\.navigable && onNavigate/);
+    // The separator is the named next-chevron, which points at the end of the line in either
+    // direction — never a transform, never a physical utility.
+    expect(breadcrumb).toMatch(/<ForwardIcon/);
+    expect(breadcrumb).not.toMatch(PHYSICAL_UTILITY);
+    // Subordinate to the title: caption-sized, faint, and it declares no height of its own.
+    expect(breadcrumb).toMatch(/text-caption/);
+    expect(breadcrumb).not.toMatch(/\bh-\[|min-h-\[/);
+    // It wraps rather than hides: no `overflow-hidden` and no breakpoint that removes it.
+    expect(breadcrumb).toMatch(/flex-wrap/);
+    expect(breadcrumb).not.toMatch(/overflow-hidden/);
+    expect(breadcrumb).not.toMatch(/\b(?:sm|md|lg|xl):hidden\b/);
+  });
+
+  it('is drawn by the frame inside the header, from the page the store says the reader is on', () => {
+    const workspace = strip(read(WORKSPACE));
+    // The frame feeds the header's slot: one landmark, inside the header row, not a second row
+    // beside it and not a wrapper landmark around it.
+    expect(workspace).toMatch(/breadcrumb=\{breadcrumb \?\? <WorkspaceBreadcrumb/);
+    expect(workspace).toMatch(/navTrail\(page\)/);
+    expect(workspace).toMatch(/useUiStore/);
+    // And no page renders the breadcrumb component directly, which is how a second hierarchy
+    // would start: the trail is the frame's, inherited.
+    for (const file of pages()) {
+      expect(strip(read(file)), `${file} draws its own breadcrumb`).not.toMatch(/<Breadcrumb/);
+    }
+  });
+
+  it('names the landmark in both catalogues, and no page duplicates the trail', () => {
+    const english = read('web/src/i18n/messages.en.ts');
+    const persian = read('web/src/i18n/messages.fa.ts');
+    expect(english).toMatch(/'shell\.breadcrumbNav': 'Breadcrumb'/);
+    expect(persian).toMatch(/'shell\.breadcrumbNav': 'مسیر صفحه'/);
   });
 });

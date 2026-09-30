@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.5.1
+# Application Shell — Phases 7.1.1 through 8.5.2
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -1376,3 +1376,75 @@ No page was redesigned and no card form was touched; no section was added, renam
 or shell region was altered; no dependency was added; no mock data exists; no animation was introduced; no
 fixed height, viewport hack or `overflow:hidden` was used. The header is the row that was already being drawn,
 held by contract in both the offline suites and the browser.
+
+## 18. Phase 8.5.2 — the breadcrumb trail, derived from the model
+
+Phase 8.5.1 named the header and left its breadcrumb slot empty. This phase fills the slot — not with a
+second navigation system, but with a trail read out of the one navigation model the shell already has:
+`navTrail(id)` ([`web/src/config/navigation.ts`](../web/src/config/navigation.ts)) derives every section's
+context from `NAV_GROUPS` and `findNavSection` — group crumb, then section crumb — so the breadcrumb and the
+sidebar can never disagree, because they are the same data rendered twice.
+
+### 18.1 One component, one mapping, no page duplication
+
+[`web/src/app/Breadcrumb.tsx`](../web/src/app/Breadcrumb.tsx) is the single implementation: `Breadcrumb`
+renders a labelled ordered list of crumbs with `ForwardIcon` separators between them (never after the last),
+and `BreadcrumbTrail` maps a trail of `NavCrumb` label keys through `msg()`. `Workspace` derives the trail
+from the store's current page with a `WorkspaceBreadcrumb` helper and passes it into `PageHeader`'s existing
+slot — the trail lives inside the header row, not a second row beneath it, so no vertical space is added and
+the trail stays visually subordinate to the `<h2>` title. No page renders `Breadcrumb` directly; the frame
+gives every section its trail with zero page edits. For future detail pages, `extendNavTrail(id, deeper)`
+composes the derived trail with page-specific deeper crumbs — parent, subsection, detail — without a second
+mapping.
+
+Because the shell is path-less (§7: one History-API file, state-only `pushState`, no routes), a section's
+parents are contexts, not links: both crumbs render as text with `navigable: false`. The `NavCrumb.navigable`
+flag exists so a future detail page with a real parent route can hand `navigable: true` crumbs and receive
+clickable parents through `onNavigate` — the component supports navigation without inventing a route for one.
+The current (last) crumb is always plain emphasized text: the page you are on is not a link, and it makes no
+currency claim (no `aria-current`) because the sidebar's `aria-current="page"` is the shell's one and only.
+
+### 18.2 Context, not a landmark
+
+The first cut rendered the trail as `<nav aria-label>` with `aria-current="page"` — and broke two standing
+invariants the suite holds document-wide: exactly one `<nav>` landmark (the rail's) and exactly one
+`aria-current="page"`. That failure was the design review: the trail is context, not a wayfinder, so the
+landmark and the currency claim belong to the sidebar alone. `Breadcrumb` is instead a labelled `<ol>`
+(`shell.breadcrumbNav` — "Breadcrumb" / «مسیر صفحه»), the separators are `aria-hidden`, and the list is
+directed by the document's direction through the shared `Directional` icon — correct in both RTL and LTR
+without a transform. The slot is rendered as it is given: `PageHeader` draws `{breadcrumb}` bare, owning no
+landmark of its own, so the 8.5.1 record's `<nav>` slot description is superseded by this one.
+
+Responsive behaviour is intentional wrapping, not hiding: the list is `flex flex-wrap min-w-0` at every width,
+so long Persian hierarchies wrap onto a second line inside the header row rather than forcing horizontal
+overflow — held in the browser on all fourteen sections in en and fa at 1440px and 390px, with the trail box
+asserted inside the document bounds. There is no `overflow:hidden`, no fixed height, no breakpoint that
+removes the trail on mobile.
+
+### 18.3 What was verified
+
+| Check                                                                                           | Where                                                     | Result  |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------- |
+| Trail derivation for all 14 sections, group → section, Portfolio ≠ Evaluation                   | `frontend-shell-layout.test.ts` (new describe)            | 6 new   |
+| No crumb navigable while no parent route; `extendNavTrail` composition                          | `frontend-shell-layout.test.ts`                           | pass    |
+| Component contract: labelled `<ol>`, no `<nav>`, no `aria-current`, buttons only when navigable | `frontend-shell-layout.test.ts`                           | 41/41   |
+| Frame integration: store-derived trail in the slot, no page inlining                            | `frontend-shell-layout.test.ts`                           | pass    |
+| Rendered trail in step with the sidebar, 14 sections × en/fa × 1440/390, plus Back/Forward walk | `tests/browser/e2e.test.ts` (new case)                    | pass    |
+| Trail inside document bounds, no horizontal overflow, at both widths                            | `tests/browser/e2e.test.ts` (same case)                   | pass    |
+| The whole node suite                                                                            | `npm test`                                                | 1950/92 |
+| The whole browser suite                                                                         | `tests/browser/e2e.test.ts`                               | 87/87   |
+| Types, formatting and the production build                                                      | `typecheck`, `typecheck:web`, `format:check`, `build:web` | pass    |
+
+One suite-driven rework is recorded honestly: the first implementation used a `<nav>` landmark and
+`aria-current`, failed the two standing document-wide invariants above, and was rebuilt as the labelled list
+this phase ships — the full browser run after the rework is the one in the table (87/87, including the
+otherwise-flaky trade-history menu case, which passed this run).
+
+### 18.4 What was not changed
+
+No section was added, renamed, reordered or split (Portfolio and Evaluation remain separate, and there is no
+Performance entry); no route or navigation semantics changed; the shell remains path-less and the rail keeps
+its landmark and currency; no page content was redesigned; no dependency was added; no mock data or detail
+page exists — the deeper structures (Recommendation → Detail, Lesson → Detail, Exam → Result) remain
+structural examples that `extendNavTrail` is shaped for, not pages that were built; no animation, viewport
+hack, fixed height or `overflow:hidden` was used. Page Actions was not begun.

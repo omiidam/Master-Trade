@@ -214,6 +214,61 @@ export function findNavSection(id: AppPageId): NavSection {
   return section;
 }
 
+/** One crumb of a page's contextual trail — the position, never the route. */
+export interface NavCrumb {
+  /**
+   * A string, deliberately wider than the section and group ids: a *deeper* trail's crumbs are
+   * not places the navigation model knows about (a recommendation, a study, a lesson), so their
+   * identity is the caller's to name. The model's own crumbs still carry real ids.
+   */
+  readonly id: string;
+  /** The key the crumb's name is read from — the interface language decides the words. */
+  readonly labelKey: MessageKey;
+  /**
+   * Whether a real destination sits behind the crumb.
+   *
+   * The shell is path-less by decision (Phase 8.2.4): sections are states, not addresses, and the
+   * only real hierarchy today is the sidebar's own group → section — a heading, not a place. So a
+   * group crumb is context (navigable: false), and a section crumb is where the reader *is* rather
+   * than a link to follow. A future detail page — Portfolio → Recommendation → Detail — hands the
+   * trail its own crumb with a real destination behind it, and this flag is what lets the
+   * breadcrumb render that one as navigable without turning every label into a button.
+   */
+  readonly navigable: boolean;
+}
+
+/**
+ * The contextual trail a section sits at the end of, from the navigation model itself.
+ *
+ * One home, on purpose: the trail is *derived* from the group the section already belongs to, so
+ * there is no second hierarchy to keep in step with the sidebar, and no page carries its own
+ * breadcrumb data. The section crumb is last, the group crumb before it — the same order the rail
+ * draws them in, read from the same declaration. A deeper trail (Section → Subsection → Detail)
+ * composes this with the extra crumbs *prepended before* the section's, so the group stays the
+ * outermost context and the current place stays the last word.
+ */
+export function navTrail(id: AppPageId): readonly NavCrumb[] {
+  const section = findNavSection(id);
+  const group = NAV_GROUPS.find((item) => item.id === section.group);
+  if (!group) throw new Error(`Unknown navigation group: ${section.group}`);
+  return [
+    { id: group.id, labelKey: group.labelKey, navigable: false },
+    { id: section.id, labelKey: section.labelKey, navigable: false },
+  ];
+}
+
+/**
+ * Extend a section's trail with a deeper context, for the detail pages a later phase adds.
+ *
+ * The extension goes *after* the section crumb, because the section is the parent the reader came
+ * from — `Portfolio → Recommendation → Detail` reads outward-in, the same direction the trail
+ * already reads. Nothing here creates a page or a route: the caller hands the crumbs, and the
+ * function only guarantees the section's own context stays ahead of them.
+ */
+export function extendNavTrail(id: AppPageId, deeper: readonly NavCrumb[]): readonly NavCrumb[] {
+  return [...navTrail(id), ...deeper];
+}
+
 /** Shown in the topbar: the user must never mistake preview data for real data. */
 export function previewNotice(): string {
   return msg('shell.previewNotice');

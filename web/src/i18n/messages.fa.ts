@@ -2882,6 +2882,7 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'shell.search': 'جست‌وجو',
   'shell.searchArrivesWithTheAPILayer': 'جست‌وجو همراه لایهٔ API در فاز ۳٫۳ می‌آید',
   'shell.searchLessonsSessionsNotes': 'جست‌وجو در درس‌ها، نشست‌ها، یادداشت‌ها',
+  'shell.breadcrumbNav': 'مسیر صفحه',
   'shell.pageBreadcrumb': 'موقعیت صفحه',
   'shell.skipToWorkspaceContent': 'پرش به محتوای فضای کار',
   'shell.theseGuaranteesAreAssertedAtStart':

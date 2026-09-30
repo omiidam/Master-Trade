@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { msg } from '../i18n/index.js';
 import { cn } from '../lib/cn';
 
 /**
@@ -15,6 +14,10 @@ import { cn } from '../lib/cn';
  * page renders one identity heading, not a second competing one. Spacing above and below is the
  * workspace column's own rhythm (`gap-5`): the header declares no vertical padding of its own,
  * which is what keeps a page's header and its first card one grid apart rather than two.
+ *
+ * The `breadcrumb` slot is rendered *as it is given*, above the title and subordinate to it — the
+ * landmark it carries is the breadcrumb's own (`Breadcrumb` renders the labelled `<nav>`), so this
+ * component adds no wrapper and no second landmark around it.
  *
  * The layout is a logical-property flex row that wraps, so a long Persian title takes a second
  * line and the actions drop beneath the title rather than overflowing the column; there is no
@@ -36,14 +39,7 @@ export function PageHeader({
   return (
     <header className={cn('flex flex-wrap items-end justify-between gap-3', className)}>
       <div className="min-w-0">
-        {breadcrumb ? (
-          <nav
-            aria-label={msg('shell.pageBreadcrumb')}
-            className="mb-1 flex flex-wrap items-center gap-2 text-caption text-text-faint"
-          >
-            {breadcrumb}
-          </nav>
-        ) : null}
+        {breadcrumb}
         <h2 className="text-heading font-semibold tracking-tight text-text">{title}</h2>
         {description ? (
           <p className="mt-0.5 max-w-3xl text-caption text-text-muted">{description}</p>

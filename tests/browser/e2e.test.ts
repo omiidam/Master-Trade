@@ -243,6 +243,21 @@ interface SurfaceState {
 }
 
 /**
+ * The contextual trail as the browser resolved it: the crumbs in order, which one is current,
+ * whether any became a control, and the row's box against the document that holds it.
+ */
+interface RenderedBreadcrumb {
+  count: number;
+  crumbs: { text: string; current: boolean }[];
+  last: string;
+  currentCount: number;
+  hasButtons: boolean;
+  left: number;
+  right: number;
+  clientWidth: number;
+}
+
+/**
  * The page header as the browser resolved it: the document's heading outline inside `main`, the
  * title and description the header drew, and the row's own box against the column that frames it.
  */
@@ -1502,6 +1517,131 @@ suite('the Product Foundation in a real browser', () => {
       const described = await pageHeader();
       expect(described.description, 'the settings page handed the header no description').not.toBe(
         '',
+      );
+
+      // Handed back in the language the rest of the file reads the interface in.
+      await startIn(null);
+    }, 300_000);
+
+    /* ------------------------------------------------------------------ */
+    /* The contextual trail, as the browser renders it (Phase 8.5.2)       */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * The trail as drawn, and the sidebar's current entry, in one round trip.
+     *
+     * Reading both together is the point: the trail is a fact about where the shell is, the same
+     * fact the rail's `aria-current` states, so the case holds the two to each other rather than
+     * to a table — a trail that drifts from the sidebar is a second navigation system, and this is
+     * the measurement that refuses one.
+     */
+    const breadcrumbState = (): Promise<RenderedBreadcrumb> =>
+      session.evaluateJson<RenderedBreadcrumb>(
+        `JSON.stringify(
+           (() => {
+             const nav = document.querySelector('ol[aria-label]');
+             const crumbs = [...(nav?.querySelectorAll(':scope > li') ?? [])].map((item) => {
+               const text = (item.textContent ?? '').trim();
+               return { text };
+             });
+             const box = nav?.getBoundingClientRect();
+             return {
+               count: crumbs.length,
+               crumbs,
+               last: crumbs[crumbs.length - 1]?.text ?? '',
+               currentCount: crumbs.filter((crumb) => crumb.current).length,
+               hasButtons: (nav?.querySelectorAll('button').length ?? 0) > 0,
+               left: Math.round(box?.left ?? 0),
+               right: Math.round(box?.right ?? 0),
+               clientWidth: document.documentElement.clientWidth,
+             };
+           })(),
+         )`,
+      );
+
+    it('draws the trail the navigation model derives, in step with the sidebar, in both directions', async () => {
+      for (const locale of ['en', 'fa'] as const) {
+        for (const [width, height] of [
+          [1440, 900],
+          [390, 844],
+        ] as const) {
+          const where = `${locale} at ${width}px`;
+          await session.setViewport(width, height);
+          await startIn(locale);
+
+          for (const section of NAV_SECTIONS) {
+            await visitIn(locale, section.id);
+            const state = await breadcrumbState();
+            const label = translate(locale, section.labelKey);
+            const group = translate(locale, `shell.group.${section.group}` as MessageKey);
+
+            // Two crumbs: the group the model puts the section in, then the section itself.
+            expect(state.count, `${section.id} drew the wrong trail for ${where}`).toBe(2);
+            expect(state.crumbs[0]?.text, `${section.id}'s group crumb is wrong for ${where}`).toBe(
+              group,
+            );
+            expect(state.last, `${section.id}'s own crumb is wrong for ${where}`).toBe(label);
+
+            // No crumb makes a currency claim: the rail's entry is the one `aria-current="page"`
+            // in the document — the suite holds that invariant document-wide, and the trail is
+            // context rather than a second announcer of position.
+            expect(
+              state.currentCount,
+              `a crumb claimed currency for ${section.id} at ${where}`,
+            ).toBe(0);
+            // No crumb is a button: the shell has no parent route, so no crumb may pretend to one.
+            expect(state.hasButtons, `the trail drew a control for ${section.id} at ${where}`).toBe(
+              false,
+            );
+
+            // The trail agrees with the rail: the entry the sidebar calls current is the one the
+            // trail ends with. This is the anti-second-navigation-system assertion — and it is
+            // asked where the rail exists, because below the mobile breakpoint the navigation is
+            // the closed drawer, whose `aria-current` is measured by the drawer cases.
+            if (width >= 768) {
+              const railId = await session.evaluate<string>(
+                `document.querySelector('aside nav button[aria-current="page"]')?.getAttribute('data-nav-id') ?? ''`,
+              );
+              expect(railId, `the trail and the rail disagree for ${where}`).toBe(section.id);
+            }
+
+            // The trail stays inside the document at both edges — the wrap is how it fits, not a
+            // hidden row and not an overflow.
+            expect(
+              state.left >= 0 && state.right <= state.clientWidth,
+              `the trail left the document for ${section.id} (${where}): ` +
+                `${state.left}..${state.right} in ${state.clientWidth}`,
+            ).toBe(true);
+          }
+        }
+      }
+
+      // Back and Forward move the trail with the shell: the trail reads the store, so it follows
+      // a traversal the way it follows a click — without its own history of anything. The shell is
+      // started fresh at this width first (a viewport change out of the phone is a new document,
+      // not a resized one), and the walk is reset, so the steps it measures are these.
+      await session.setViewport(1440, 900);
+      await startIn('en');
+      await session.resetNavigationHistory();
+      await visit('portfolio');
+      expect((await breadcrumbState()).last).toBe(labelOf('portfolio'));
+      await visit('settings');
+      expect((await breadcrumbState()).last).toBe(labelOf('settings'));
+      await session.traverseHistory('back');
+      await session.waitFor(
+        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'portfolio'))}`,
+        'Back to land on the portfolio page',
+      );
+      expect((await breadcrumbState()).last, 'Back moved the shell but not the trail').toBe(
+        labelOf('portfolio'),
+      );
+      await session.traverseHistory('forward');
+      await session.waitFor(
+        `(document.querySelector('main h2')?.textContent?.trim() ?? '') === ${JSON.stringify(headingFor('en', 'settings'))}`,
+        'Forward to land on the settings page',
+      );
+      expect((await breadcrumbState()).last, 'Forward moved the shell but not the trail').toBe(
+        labelOf('settings'),
       );
 
       // Handed back in the language the rest of the file reads the interface in.
