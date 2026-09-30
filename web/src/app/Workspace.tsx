@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
+import { PageHeader } from './PageHeader';
 import { SHELL_COLUMN } from './shellLayout';
 
 /**
@@ -10,31 +11,36 @@ import { SHELL_COLUMN } from './shellLayout';
  *
  * The column's width is `SHELL_COLUMN` rather than a literal here, because it is not this component's
  * number: the top bar above it and the footer below it are held to the same edge (Phase 8.3.1).
+ *
+ * The header row is the shared `PageHeader` (Phase 8.5.1): one implementation of the contextual
+ * page header, drawn here so every page that renders this frame inherits it. `Workspace` keeps
+ * passing the same three fields it always has, so pages change nothing — and a page that needs a
+ * context row richer than these fields composes `PageHeader` itself rather than growing a second
+ * header implementation.
  */
 export function Workspace({
   title,
   description,
   actions,
+  breadcrumb,
   children,
   className,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  breadcrumb?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn(SHELL_COLUMN, 'flex flex-col gap-5', className)}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-heading font-semibold tracking-tight text-text">{title}</h2>
-          {description ? (
-            <p className="mt-0.5 max-w-3xl text-caption text-text-muted">{description}</p>
-          ) : null}
-        </div>
-        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-      </div>
+      <PageHeader
+        title={title}
+        description={description}
+        actions={actions}
+        breadcrumb={breadcrumb}
+      />
       {children}
     </div>
   );

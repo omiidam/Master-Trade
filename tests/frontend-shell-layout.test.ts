@@ -480,3 +480,90 @@ describe('the width is the shell’s decision', () => {
     }
   });
 });
+
+/**
+ * Phase 8.5.1 — the contextual page header, one implementation for the fourteen sections.
+ *
+ * Every page already began with the same row — a title, sometimes a description, sometimes
+ * actions — drawn inline by the shared `Workspace` frame. This phase names that row: `PageHeader`,
+ * one component the frame renders and a page can compose directly. The contract below holds the
+ * *one* implementation to the properties the phase demands; the header sits inside the workspace
+ * column, so nothing here redraws the shell or touches its geometry.
+ */
+describe('the contextual page header', () => {
+  const PAGE_HEADER = 'web/src/app/PageHeader.tsx';
+
+  const pages = (): string[] =>
+    readdirSync('web/src/pages')
+      .filter((name) => name.endsWith('.tsx'))
+      .map((name) => `web/src/pages/${name}`);
+
+  it('is one implementation, drawn by the frame rather than duplicated by pages', () => {
+    const workspace = strip(read(WORKSPACE));
+    // The frame names the component rather than inlining the row again — the duplicate-implementation
+    // rule is about markup, so the assertion is about markup too.
+    expect(workspace).toMatch(/<PageHeader\b/);
+    expect(workspace).not.toMatch(/<h2/);
+    // And no page draws a page-level header of its own: identity flows through the shared one.
+    for (const file of pages()) {
+      expect(strip(read(file)), `${file} draws its own page header`).not.toMatch(/<h2/);
+    }
+  });
+
+  it('keeps every field optional but the title, and draws only what it is given', () => {
+    const header = read(PAGE_HEADER);
+    // The props the phase names, on the one component that owns them.
+    for (const field of ['title', 'description', 'breadcrumb', 'actions']) {
+      expect(header, `PageHeader has no ${field}`).toMatch(new RegExp(`\\b${field}\\??:`));
+    }
+    // Optional means absent until a page hands the field something: a header with no description
+    // draws no description paragraph, and one with no actions draws no action row.
+    expect(header).toMatch(/description \? \(/);
+    expect(header).toMatch(/actions \? /);
+    expect(header).toMatch(/breadcrumb \? \(/);
+    // The one required field is the title.
+    expect(header).toMatch(/title: string/);
+  });
+
+  it('stays inside the workspace column, without becoming a second shell or a second scroll', () => {
+    const header = strip(read(PAGE_HEADER));
+    // A `<header>` landmark is page-level identity, not chrome: no sticky, no fixed, no z-index of
+    // its own — those are the shell's regions, and the header is not one.
+    expect(header).not.toMatch(/sticky|fixed|\bz-\[/);
+    // And it never decides its own width: the column it lives in is the shell's decision (8.3.3),
+    // so the header neither writes a width literal nor names the column constant.
+    expect(header).not.toMatch(/\b(?:max-w-\[|min-w-\[|max-w-screen|w-\[\d)/);
+    expect(header).not.toMatch(/SHELL_COLUMN/);
+  });
+
+  it('keeps one identity heading per page, under the top bar’s document heading', () => {
+    const header = strip(read(PAGE_HEADER));
+    const topbar = strip(read(TOPBAR));
+    // The document's `<h1>` is the top bar's; the page's identity is an `<h2>` under it. A second
+    // `<h1>` on a page would be two documents claiming the same reader.
+    expect(topbar).toMatch(/<h1/);
+    expect(header).toMatch(/<h2/);
+    expect(header).not.toMatch(/<h1/);
+  });
+
+  it('writes the direction with logical properties, and the description as a text measure', () => {
+    const header = read(PAGE_HEADER);
+    // Wrapping, not hiding: `flex-wrap` is how a long Persian title survives, and no fixed height
+    // is declared that the wrap could break against.
+    expect(header).toMatch(/flex flex-wrap/);
+    expect(header).not.toMatch(/\bh-\[|min-h-\[/);
+    expect(strip(header)).not.toMatch(PHYSICAL_UTILITY);
+    // The description's cap is the named text measure the width suite already sanctions.
+    expect(header).toMatch(/max-w-3xl/);
+  });
+
+  it('announces the breadcrumb slot as a navigation named from the catalogue', () => {
+    const header = read(PAGE_HEADER);
+    // The slot is a landmark only when it exists, and the name is the interface's own — the same
+    // rule the rail's control was held to in 8.3.4. (Whitespace-tolerant: prettier may wrap the
+    // attributes across lines, and the contract is the markup, not the line breaks.)
+    expect(header).toMatch(/<nav\s+aria-label=\{msg\('shell\.pageBreadcrumb'\)\}/s);
+    expect(read('web/src/i18n/messages.en.ts')).toMatch(/'shell\.pageBreadcrumb'/);
+    expect(read('web/src/i18n/messages.fa.ts')).toMatch(/'shell\.pageBreadcrumb'/);
+  });
+});

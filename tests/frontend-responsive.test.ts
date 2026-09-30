@@ -119,6 +119,7 @@ describe('the shared responsive frame', () => {
 
   it('caps the frame width instead of fixing it, and lets the header wrap', () => {
     const workspace = read('web/src/app/Workspace.tsx');
+    const header = read('web/src/app/PageHeader.tsx');
     const shell = read('web/src/app/shellLayout.ts');
     // `max-w-` is a cap: below it the frame is fluid. A fixed `w-` would be a container that
     // overflows the moment the viewport is narrower than the number.
@@ -131,7 +132,10 @@ describe('the shared responsive frame', () => {
     // The frame is anchored to the shell's inset rather than centred inside it. A centred column
     // slides sideways the moment the rail collapses, which is the jump this phase removed.
     expect(workspace).not.toMatch(/mx-auto/);
-    expect(workspace).toMatch(/flex-wrap/);
+    // The header is its own component since Phase 8.5.1, and it is the one that must wrap: a long
+    // title takes a second line and the actions drop beneath it rather than overflowing.
+    expect(header).toMatch(/flex-wrap/);
+    expect(header).not.toMatch(/\bh-\[|min-h-\[/);
     // And the frame itself declares no fixed pixel width outside a cap.
     const fixed = workspace.match(FIXED_WIDTH) ?? [];
     expect(

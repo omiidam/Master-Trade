@@ -243,6 +243,25 @@ interface SurfaceState {
 }
 
 /**
+ * The page header as the browser resolved it: the document's heading outline inside `main`, the
+ * title and description the header drew, and the row's own box against the column that frames it.
+ */
+interface RenderedPageHeader {
+  h1: number;
+  h2: number;
+  h3: number;
+  title: string;
+  description: string;
+  headerLeft: number;
+  headerRight: number;
+  headerHeight: number;
+  columnLeft: number;
+  columnRight: number;
+  clientWidth: number;
+  rtl: boolean;
+}
+
+/**
  * The three shell regions' boxes, read in one round trip.
  *
  * `rtl` rides along so the adjacency assertion can be made against the inline-start edge rather
@@ -1387,6 +1406,107 @@ suite('the Product Foundation in a real browser', () => {
       }
       expect(problems).toEqual([]);
     });
+
+    /* ------------------------------------------------------------------ */
+    /* The contextual page header, as the browser renders it (Phase 8.5.1) */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * The page's identity row, measured where a source rule cannot reach.
+     *
+     * The offline suites hold `PageHeader`'s *shape*; this case holds what the layout engine does
+     * with it: that every page still renders exactly one identity heading under the top bar's own
+     * `<h1>`, that the description a page hands the header is drawn and drawn inside the column,
+     * and that the header's own row never leaves the document's client area — at the widest and
+     * narrowest widths, in both directions, where the mirror puts the actions on the other side.
+     */
+    it('renders one identity heading per page, with its context drawn inside the column', async () => {
+      /** The document's heading outline, plus the header row's own box, in one round trip. */
+      const pageHeader = (): Promise<RenderedPageHeader> =>
+        session.evaluateJson<RenderedPageHeader>(
+          `JSON.stringify(
+             (() => {
+               const levels = [...document.querySelectorAll('main h1, main h2, main h3')].map(
+                 (item) => item.tagName.toLowerCase(),
+               );
+               const h2 = document.querySelector('main h2');
+               const description = h2?.parentElement?.querySelector(':scope > p');
+               const box = h2?.closest('header')?.getBoundingClientRect();
+               const column = document.querySelector('main > div');
+               const columnBox = column?.getBoundingClientRect();
+               return {
+                 h1: levels.filter((level) => level === 'h1').length,
+                 h2: levels.filter((level) => level === 'h2').length,
+                 h3: levels.filter((level) => level === 'h3').length,
+                 title: (h2?.textContent ?? '').trim(),
+                 description: (description?.textContent ?? '').trim(),
+                 headerLeft: Math.round(box?.left ?? 0),
+                 headerRight: Math.round(box?.right ?? 0),
+                 headerHeight: Math.round(box?.height ?? 0),
+                 columnLeft: Math.round(columnBox?.left ?? 0),
+                 columnRight: Math.round(columnBox?.right ?? 0),
+                 clientWidth: document.documentElement.clientWidth,
+                 rtl: document.documentElement.dir === 'rtl',
+               };
+             })(),
+           )`,
+        );
+
+      for (const locale of ['en', 'fa'] as const) {
+        for (const [width, height] of [
+          [1440, 900],
+          [390, 844],
+        ] as const) {
+          const where = `${locale} at ${width}px`;
+          await session.setViewport(width, height);
+          await startIn(locale);
+
+          for (const section of NAV_SECTIONS) {
+            await visitIn(locale, section.id);
+            const state = await pageHeader();
+
+            // One identity heading per page, and it is an `<h2>`: the document's `<h1>` belongs to
+            // the top bar, so a page that renders an `<h1>` of its own would be two documents
+            // claiming the same reader.
+            expect(state.h1, `${section.id} renders an h1 of its own for ${where}`).toBe(0);
+            expect(
+              state.h2,
+              `${section.id} renders no page heading for ${where}`,
+            ).toBeGreaterThanOrEqual(1);
+            expect(state.title, `${section.id} drew an empty title for ${where}`).not.toBe('');
+
+            // The header row stays inside the column that frames the page — the workspace's own
+            // frame — and inside the document, at both edges, in either direction.
+            expect(
+              state.headerLeft >= state.columnLeft && state.headerRight <= state.columnRight,
+              `the page header left the column for ${section.id} (${where}): ` +
+                `header ${state.headerLeft}..${state.headerRight} vs column ${state.columnLeft}..${state.columnRight}`,
+            ).toBe(true);
+            expect(
+              state.headerRight <= state.clientWidth,
+              `the page header overflowed the document for ${section.id} (${where})`,
+            ).toBe(true);
+            expect(
+              state.headerHeight,
+              `the page header collapsed for ${section.id} (${where})`,
+            ).toBeGreaterThan(0);
+          }
+        }
+      }
+
+      // A page that hands the header a description gets it drawn: the settings page names its
+      // host card's context, and the paragraph is read with the title it belongs to.
+      await session.setViewport(1440, 900);
+      await startIn('en');
+      await visit('settings');
+      const described = await pageHeader();
+      expect(described.description, 'the settings page handed the header no description').not.toBe(
+        '',
+      );
+
+      // Handed back in the language the rest of the file reads the interface in.
+      await startIn(null);
+    }, 300_000);
 
     it('moves focus into the page with a real key press, and shows it', async () => {
       await session.setViewport(1440, 900);

@@ -2909,6 +2909,7 @@ export const EN_MESSAGES = {
   'shell.safety': 'Safety',
   'shell.safetyDetails': 'Safety details',
   'shell.safetyPosture': 'Safety posture',
+  'shell.pageBreadcrumb': 'Page location',
   'shell.search': 'Search',
   'shell.searchArrivesWithTheAPILayer': 'Search arrives with the API layer in Phase 3.3',
   'shell.searchLessonsSessionsNotes': 'Search lessons, sessions, notes',

@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.4
+# Application Shell — Phases 7.1.1 through 8.5.1
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -1316,3 +1316,63 @@ Evaluation remain separate, and there is no Performance entry); no dependency wa
 was created, no mock data exists; no delay was introduced, no timeout was raised, and nothing is hidden with
 `overflow`. The shell's sources in `web/src/app/` are untouched by this phase — every change is in the test
 suite and this record.
+
+## 17. Phase 8.5.1 — the contextual page header, named
+
+Every page began with the same row — a title under the top bar's heading, sometimes a sentence under the
+title, sometimes controls beside it — and the row was drawn inline by the shared `Workspace` frame. This
+phase did not add a header; it _named_ the one that was already there: `PageHeader`
+([`web/src/app/PageHeader.tsx`](../web/src/app/PageHeader.tsx)), one implementation the frame renders and a
+page can compose directly, with the four fields the pattern needs — `title` (required), `description`,
+`breadcrumb`, `actions` (all optional, drawn only when a page hands them something).
+
+### 17.1 What the naming changed, and what it did not
+
+`Workspace` renders `PageHeader` and passes its own three fields through unchanged, so all fourteen sections
+inherit the shared header **with zero page edits** — and a page that later needs a context row richer than
+these fields composes `PageHeader` itself rather than growing a second implementation. The visual result is
+byte-for-byte the row that was there before: same `flex-wrap items-end` layout, same `text-heading` title,
+same `max-w-3xl` text-measure cap on the description, same gap rhythm. No page was redesigned; the breadcrumb
+slot exists in the API but no page is given one — that is the later phase's work, and this phase deliberately
+does not begin it.
+
+The header stays inside the workspace column and owns none of the shell's jobs: no sticky, no fixed, no
+z-index, no width of its own, no second scroll surface. Vertical spacing is the column's own `gap-5`, so the
+header and the page's first card are one grid apart rather than two — no duplicate padding was created by the
+extraction because the padding never belonged to the row.
+
+### 17.2 The hierarchy the component keeps
+
+The document's `<h1>` is the top bar's — one per document, wherever the reader is standing. A page's identity
+is an `<h2>` under it, which is what `PageHeader` renders; the offline suite holds the top bar to `<h1>` and
+the header to `<h2>` and no `<h1>`, and the browser case counts the headings the DOM actually renders on allourteen pages: zero `<h1>` inside `main`, at least one `<h2>`, in both languages at 1440px and 390px. The
+description stays a `<p>` beside the title it belongs to, readable by assistive technology by construction;
+the breadcrumb slot is a `<nav>` named from the catalogue (`shell.pageBreadcrumb` — "Page location" /
+«موقعیت صفحه») that renders only when a page passes content for it.
+
+### 17.3 What was verified
+
+| Check                                                             | Where                                                     | Result  |
+| ----------------------------------------------------------------- | --------------------------------------------------------- | ------- |
+| One implementation, drawn by the frame, no page inlining its own  | `frontend-shell-layout.test.ts`                           | 6 new   |
+| Fields, wrapping, logical properties, heading level, breadcrumb   | `frontend-shell-layout.test.ts`                           | 35/35   |
+| Token vocabulary probe follows the code into the new file         | `frontend-design-foundations.test.ts`                     | pass    |
+| The wrap contract held on the component that owns it              | `frontend-responsive.test.ts`                             | pass    |
+| Rendered hierarchy + header geometry, 14 pages × en/fa × 1440/390 | `tests/browser/e2e.test.ts` (new case)                    | pass    |
+| The whole node suite                                              | `npm test`                                                | 1944/92 |
+| The whole browser suite                                           | `tests/browser/e2e.test.ts`                               | 86/86   |
+| Types, formatting and the production build                        | `typecheck`, `typecheck:web`, `format:check`, `build:web` | pass    |
+
+Two failures during the phase were the suite's own prose and line breaks, not the component: the offline
+scans initially read this record's subject words (`fixed`, `<h1>`) out of the new file's comments until the
+scans used the suite's own `strip()` convention, and prettier's attribute wrapping moved a `<nav>` onto
+several lines until its regex grew whitespace-tolerant. Both were fixed by making the _assertions_ honest,
+not the component — the component's markup never changed.
+
+### 17.4 What was not changed
+
+No page was redesigned and no card form was touched; no section was added, renamed, reordered or split
+(Portfolio and Evaluation remain separate, and there is no Performance entry); no route, navigation semantics
+or shell region was altered; no dependency was added; no mock data exists; no animation was introduced; no
+fixed height, viewport hack or `overflow:hidden` was used. The header is the row that was already being drawn,
+held by contract in both the offline suites and the browser.

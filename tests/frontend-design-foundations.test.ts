@@ -536,7 +536,7 @@ describe('no component writes a value at the call site', () => {
       ['web/src/components/Button.tsx', /shadow-glow-control/],
       ['web/src/components/Badge.tsx', /border-danger-border/],
       ['web/src/components/Skeleton.tsx', /surface-sheen/],
-      ['web/src/app/Workspace.tsx', /text-heading/],
+      ['web/src/app/PageHeader.tsx', /text-heading/],
       ['web/src/components/exams/ScoreCard.tsx', /text-display/],
       ['web/src/components/journal/JournalStatCard.tsx', /text-metric/],
       ['web/src/components/research/MetricsPanel.tsx', /text-figure/],
