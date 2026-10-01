@@ -395,6 +395,12 @@ export const EN_MESSAGES = {
   'dashboard.basedOnAttempts': 'Based on recorded attempts',
   'dashboard.serverDerived': 'Derived on the server from your own records.',
   'dashboard.refresh': 'Refresh',
+  'dashboard.learningProgress': 'Learning progress',
+  'dashboard.learningProgressNote':
+    'What the record says is known, beside the course and lesson it is being learned in.',
+  'dashboard.gaps': 'Gaps and mistakes',
+  'dashboard.gapsNote':
+    'The assessments that sit lowest, and the patterns that keep recurring — the study list.',
   'dashboard.marketAnalysis': 'Market analysis',
   'dashboard.marketAnalysisSummaryOnly':
     'A summary surface for now: the analysis engine arrives with the market-intelligence module, and this card will read from it.',

@@ -490,3 +490,34 @@ export {
   STATE_LABEL,
   STATE_TONE,
 } from './capabilities';
+
+// The dashboard overview (Phase 9.3.1). The eight sections the overview composes, each of which
+// renders the server's payload and states its own empty case — plus the two forms they are built
+// from (a KPI plate, a domain roster and its ranked twin). The page keeps the bands and the
+// grids, so a card here never decides its own width.
+export {
+  AgentLevelSection,
+  CourseLessonSection,
+  DomainMasteryBars,
+  ExamScoreSection,
+  KnowledgeMasterySection,
+  MarketSummarySection,
+  MetricPlate,
+  RankedDomainList,
+  RecentErrorsSection,
+  StreakSection,
+  WeakAreasSection,
+} from './dashboard';
+export type {
+  AgentLevelSectionProps,
+  CourseLessonSectionProps,
+  DomainMasteryBarsProps,
+  ExamScoreSectionProps,
+  KnowledgeMasterySectionProps,
+  MarketSummarySectionProps,
+  MetricPlateProps,
+  RankedDomainListProps,
+  RecentErrorsSectionProps,
+  StreakSectionProps,
+  WeakAreasSectionProps,
+} from './dashboard';

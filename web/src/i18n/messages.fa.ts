@@ -398,6 +398,12 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'dashboard.basedOnAttempts': 'بر اساس تلاش‌های ثبت‌شده',
   'dashboard.serverDerived': 'روی سرور از رکوردهای خودتان به‌دست آمده است.',
   'dashboard.refresh': 'بازخوانی',
+  'dashboard.learningProgress': 'پیشرفت یادگیری',
+  'dashboard.learningProgressNote':
+    'آنچه رکورد می‌گوید می‌دانید، در کنار دوره و درسی که در آن یاد می‌گیرید.',
+  'dashboard.gaps': 'شکاف‌ها و خطاها',
+  'dashboard.gapsNote':
+    'ارزیابی‌هایی که پایین‌ترین‌اند و الگوهایی که تکرار می‌شوند — فهرست مطالعه.',
   'dashboard.marketAnalysis': 'تحلیل بازار',
   'dashboard.marketAnalysisSummaryOnly':
     'در حال حاضر یک سطح خلاصه است: موتور تحلیل همراه ماژول هوش بازار می‌آید و این کارت از آن خواهد خواند.',
