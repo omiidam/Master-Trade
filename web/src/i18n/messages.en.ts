@@ -375,6 +375,26 @@ export const EN_MESSAGES = {
   'dashboard.lessonInProgress': 'In progress',
   'dashboard.levelIsTheCurriculumStage':
     'The level is the stage the curriculum declares, not a score.',
+  'dashboard.nothingYet': 'Nothing yet',
+  'dashboard.noProgressRecordedYet':
+    'No learning progress is recorded for this account yet. Completing a lesson or scoring an examination will start it.',
+  'dashboard.attemptsOne': 'attempt',
+  'dashboard.attemptsMany': 'attempts',
+  'dashboard.streakDays': 'Consecutive days with recorded learning activity, up to today.',
+  'dashboard.streakZero':
+    'No recorded learning activity yet. The streak counts consecutive days and starts at your first recorded day.',
+  'dashboard.noErrorsRecorded':
+    'No mistake patterns recorded. Empty is a stated fact, not a hidden one.',
+  'dashboard.noWeakAreaYet':
+    'No domain has been assessed yet, so there is nothing to rank. Weak areas come from the same rows as mastery.',
+  'dashboard.marketSeriesUnavailable':
+    'The deployment holds no market series yet. This card reads the same data the analysis will.',
+  'dashboard.couldNotReadTheDashboard': 'The dashboard could not be read.',
+  'dashboard.tryAgain': 'Try again',
+  'dashboard.noDashboardToShowYet': 'No dashboard to show yet',
+  'dashboard.basedOnAttempts': 'Based on recorded attempts',
+  'dashboard.serverDerived': 'Derived on the server from your own records.',
+  'dashboard.refresh': 'Refresh',
   'dashboard.marketAnalysis': 'Market analysis',
   'dashboard.marketAnalysisSummaryOnly':
     'A summary surface for now: the analysis engine arrives with the market-intelligence module, and this card will read from it.',

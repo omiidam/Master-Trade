@@ -58,6 +58,7 @@ import {
   type UsageSubscriptionBody,
 } from './schemas.js';
 import type { AnalysisReadinessDecision } from '../quality/readiness.js';
+import type { DashboardReadData } from '../frontend/viewModels.js';
 import type { DecisionReadinessDecision, EvaluationReadiness } from '../decisions/readiness.js';
 import type {
   DecisionEvaluationReason,
@@ -313,6 +314,30 @@ export interface JobViewData {
   updatedAt: string;
   cancellable: boolean;
 }
+
+/* ------------------------------------------------------------------ */
+/* Dashboard read (Phase 9.2)                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * `GET /v1/dashboard`
+ *
+ * One coherent read of the caller's own learning record, in the shape the
+ * dashboard's eight surfaces render. It takes no identifier of any kind — the
+ * principal is the only subject there is — so reading another account's learning,
+ * evaluation or activity data is not expressible. Sections with nothing to report
+ * are `null` or empty arrays: a stated absence, never a fabricated value.
+ */
+const dashboardReadRoute: ApiRoute<Record<string, unknown> | undefined, DashboardReadData> = {
+  id: 'dashboard.read',
+  method: 'GET',
+  path: '/v1/dashboard',
+  version: API_VERSION,
+  operation: 'dashboard.read',
+  auth: 'required',
+  summary: "Read the authenticated user's own learning dashboard metrics.",
+  validateBody: zodValidator(emptyBodySchema),
+};
 
 /**
  * Job routes. They expose *status*, never the ability to start arbitrary work: a
@@ -1027,6 +1052,7 @@ export const API_ROUTES: readonly AnyApiRoute[] = [
   decisionWriteRoute,
   decisionEvaluateRoute,
   capabilityReadRoute,
+  dashboardReadRoute,
   usageStatusRoute,
   usageHistoryRoute,
   usageAdjustRoute,

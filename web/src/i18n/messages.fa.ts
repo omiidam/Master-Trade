@@ -378,6 +378,26 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'dashboard.lessonInProgress': 'در حال گذراندن',
   'dashboard.levelIsTheCurriculumStage':
     'سطح، مرحله‌ای است که برنامهٔ درسی اعلام می‌کند، نه یک نمره.',
+  'dashboard.nothingYet': 'هنوز چیزی نیست',
+  'dashboard.noProgressRecordedYet':
+    'هنوز هیچ پیشرفت یادگیری برای این حساب ثبت نشده است. کامل‌کردن یک درس یا گرفتن نمرهٔ یک آزمون آن را آغاز می‌کند.',
+  'dashboard.attemptsOne': 'تلاش',
+  'dashboard.attemptsMany': 'تلاش',
+  'dashboard.streakDays': 'روزهای پیاپی با فعالیت یادگیری ثبت‌شده، تا امروز.',
+  'dashboard.streakZero':
+    'هنوز فعالیت یادگیری ثبت‌شده‌ای نیست. زنجیره روزهای پیاپی را می‌شمارد و از نخستین روز ثبت‌شدهٔ شما آغاز می‌شود.',
+  'dashboard.noErrorsRecorded':
+    'الگوی خطایی ثبت نشده است. خالی یک گفتهٔ صریح است، نه یک پنهان‌کاری.',
+  'dashboard.noWeakAreaYet':
+    'هنوز هیچ حوزه‌ای ارزیابی نشده، پس چیزی برای رتبه‌بندی نیست. نقاط ضعف از همان ردیف‌های تسلط می‌آیند.',
+  'dashboard.marketSeriesUnavailable':
+    'این استقرار هنوز سری دادهٔ بازار ندارد. این کارت همان داده‌ای را می‌خواند که تحلیل خواهد خواند.',
+  'dashboard.couldNotReadTheDashboard': 'داشبورد خوانده نشد.',
+  'dashboard.tryAgain': 'دوباره تلاش کن',
+  'dashboard.noDashboardToShowYet': 'هنوز داشبوردی برای نمایش نیست',
+  'dashboard.basedOnAttempts': 'بر اساس تلاش‌های ثبت‌شده',
+  'dashboard.serverDerived': 'روی سرور از رکوردهای خودتان به‌دست آمده است.',
+  'dashboard.refresh': 'بازخوانی',
   'dashboard.marketAnalysis': 'تحلیل بازار',
   'dashboard.marketAnalysisSummaryOnly':
     'در حال حاضر یک سطح خلاصه است: موتور تحلیل همراه ماژول هوش بازار می‌آید و این کارت از آن خواهد خواند.',

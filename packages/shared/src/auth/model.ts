@@ -52,6 +52,12 @@ function op(
 /** Complete operation catalogue. Anything absent is denied. */
 export const OPERATIONS = {
   'progress.read': op('progress.read', 'normal', false, 'Read learning progress'),
+  'dashboard.read': op(
+    'dashboard.read',
+    'normal',
+    false,
+    "Read the authenticated user's own learning dashboard metrics",
+  ),
   'lesson.read': op('lesson.read', 'normal', false, 'Open a lesson'),
   'lesson.complete': op('lesson.complete', 'normal', false, 'Mark a lesson complete'),
   'exam.start': op('exam.start', 'normal', false, 'Start an examination'),
@@ -182,6 +188,9 @@ export function assertNoHardlineOperations(): void {
 
 const student: OperationId[] = [
   'progress.read',
+  // The dashboard is a read of the caller's own learning record; it takes no subject
+  // parameter, so there is nothing to point at another account.
+  'dashboard.read',
   'lesson.read',
   'lesson.complete',
   'exam.start',
@@ -240,6 +249,9 @@ const owner: OperationId[] = ALL_OPERATION_IDS;
 
 const observer: OperationId[] = [
   'progress.read',
+  // Reading one's own dashboard is a read; it grants nothing that is not already
+  // readable through the routes this role holds.
+  'dashboard.read',
   'lesson.read',
   'agent.history.read',
   'memory.read',

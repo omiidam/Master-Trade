@@ -39,6 +39,7 @@ import type {
   UsageHistoryData,
   UsageStatusData,
 } from '@shared/api/contracts';
+import type { DashboardReadData } from '@shared/frontend/viewModels';
 import type { PortfolioDocumentBody } from '@shared/portfolio/model';
 import type { AnalysisType } from '@shared/quality/readiness';
 import type {
@@ -348,6 +349,17 @@ export class ApiClient {
    */
   async getCapabilities(): Promise<CapabilitiesViewData> {
     return this.request<CapabilitiesViewData>('GET', '/v1/capabilities');
+  }
+
+  /**
+   * The caller's own learning dashboard, in one coherent read.
+   *
+   * Every figure is the server's derivation from the caller's records; the sections with nothing
+   * to report arrive as `null` or empty arrays, and the page renders that absence rather than
+   * inventing a zero.
+   */
+  async getDashboard(): Promise<DashboardReadData> {
+    return this.request<DashboardReadData>('GET', '/v1/dashboard');
   }
 
   /** One request, one typed outcome. */

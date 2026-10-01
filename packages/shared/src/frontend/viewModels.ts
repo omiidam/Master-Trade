@@ -80,6 +80,101 @@ export interface ProgressView {
   examAverage: number | null;
 }
 
+/* ------------------------------------------------------------------ */
+/* Dashboard read model (Phase 9.2)                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The dashboard's data contract.
+ *
+ * One authenticated read of the caller's own learning record, in the shape the
+ * eight dashboard surfaces render. Every section is *nullable by meaning* rather
+ * than by accident: `null` is a stated fact — "no attempt has been scored", "the
+ * lesson list has no lesson in progress" — and the interface renders that fact,
+ * while a missing field would read as an error and a fabricated zero would read
+ * as data. No field here is a number the client computes: percentages, means and
+ * counts arrive as the server derived them from the stored rows.
+ */
+
+/**
+ * A learning domain's mastery, as the mean of the user's best examination
+ * scores in that domain. `attemptCount` rides along so "a high share of a small
+ * sample" is visible rather than hidden.
+ */
+export interface DomainMasteryView {
+  domain: string;
+  /** Mean of best scores, 0..100. Present only when at least one attempt exists. */
+  masteryPercent: number | null;
+  attemptCount: number;
+}
+
+/** The caller's course and lesson, as two separately labelled facts. */
+export interface DashboardCourseView {
+  /** The course (curriculum module) currently in progress. */
+  course: { id: string; title: string; lessonsTotal: number } | null;
+  /** The lesson currently in progress inside it, when there is one. */
+  lesson: { id: string; title: string; status: 'in-progress' } | null;
+}
+
+/** The most recent scored examination attempt, or `null` when none exists. */
+export interface DashboardExamView {
+  examId: string;
+  examTitle: string;
+  /** The attempt's own score, not the exam's best. */
+  scorePercent: number;
+  passed: boolean;
+  attemptedAt: string;
+  attemptCount: number;
+}
+
+/** One recurring mistake pattern, as the assessment rows recorded it. */
+export interface DashboardErrorView {
+  id: string;
+  topic: string;
+  occurrences: number;
+  lastSeenAt: string;
+}
+
+/** The one card the dashboard draws for the market analysis. Entry point, not engine. */
+export interface DashboardMarketView {
+  symbol: string;
+  timeframe: string;
+  /** Never hidden: the reader always knows what kind of data this is. */
+  dataProvenance: DataProvenance;
+  /** The newest bar's time, or `null` when the deployment holds no series. */
+  lastBarAt: string | null;
+  barCount: number;
+}
+
+export interface DashboardMetricsView {
+  /** The level the curriculum declares for the caller, or `null` before any progress exists. */
+  agentLevel: string | null;
+  /** One entry per learning domain, weakest first. */
+  knowledgeMastery: DomainMasteryView[];
+  course: DashboardCourseView;
+  examScore: DashboardExamView | null;
+  /** The domains whose mean sits lowest, from `knowledgeMastery` itself. */
+  weakAreas: DomainMasteryView[];
+  /** The most recent mistake patterns, newest first, bounded to three. */
+  recentErrors: DashboardErrorView[];
+  /** Consecutive days with a recorded learning activity, up to today. */
+  learningStreakDays: number;
+  marketAnalysis: DashboardMarketView;
+  /** When this reading was taken, so a cached render can say how old it is. */
+  asOf: string;
+}
+
+/**
+ * The dashboard read, exactly as the API returns it.
+ *
+ * `capability` restates the structural guarantee above: this surface reads and never writes.
+ */
+export interface DashboardReadData {
+  capability: 'read-only';
+  metrics: DashboardMetricsView;
+  note: string;
+}
+
 export interface DashboardView {
   /** Structural guarantee: the dashboard is read-only, always. */
   capability: 'read-only';

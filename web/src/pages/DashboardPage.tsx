@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { CircleAlert, Clock, Flame, GraduationCap, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Badge, ProvenanceBadge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -11,156 +11,173 @@ import {
   CardTile,
   CardTitle,
 } from '../components/Card';
-import { ChartAdapter } from '../components/charts/ChartAdapter';
-import { ProgressIndicator } from '../components/exams/ProgressIndicator';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { MetricBar } from '../components/journal/MetricBar';
+import { SkeletonCard } from '../components/Skeleton';
 import { Reveal } from '../components/Reveal';
 import { Tooltip } from '../components/Tooltip';
 import { Grid, Workspace } from '../app/Workspace';
-import {
-  MOCK_GENERATED_AT,
-  mockBars,
-  mockCurriculum,
-  mockDashboard,
-  mockLessons,
-  mockProgress,
-  mockStudyMetrics,
-} from '../mock/data';
-import {
-  mockExamAttempts,
-  mockExamCategories,
-  mockExamDefinitions,
-  mockMistakes,
-  summariseExamProgress,
-  type ExamCategory,
-} from '../mock/exams';
+import type {
+  DashboardMetricsView,
+  DashboardErrorView as DashboardErrorRow,
+} from '@shared/frontend/viewModels';
 import { formatPercent, formatRelative, formatTimestamp } from '../lib/format';
+import { useDashboardStore } from '../store/dashboard';
 import { useUiStore } from '../store/ui';
 import { msg } from '../i18n/index.js';
 
 /**
- * A learning domain the assessments have actually scored.
+ * The training dashboard, reading the caller's own metrics from the API.
  *
- * Mastery and weak areas are both derived from the examination categories, and neither may
- * average a gap: a domain with no attempt is *unassessed*, which is a different statement from
- * a low score, so it is filtered out here rather than being read as a zero further down.
- */
-type AssessedDomain = ExamCategory & { averageScore: number };
-
-function assessedDomains(): AssessedDomain[] {
-  return mockExamCategories
-    .filter((domain): domain is AssessedDomain => domain.averageScore !== null)
-    .sort((a, b) => a.averageScore - b.averageScore);
-}
-
-/**
- * The training dashboard.
+ * The eight surfaces keep the Phase 9.1 composition — three metric plates, the mastery
+ * frame beside the one featured card, the two gap surfaces, the market summary — but
+ * every figure now arrives from `GET /v1/dashboard` through the dashboard store, the
+ * same session resolution every authenticated surface reuses. The page computes
+ * nothing: percentages, means, the level and the streak are the server's derivation,
+ * and a section with nothing to report arrives as `null` or an empty array, which each
+ * card renders as its stated empty state rather than as a zero.
  *
- * Eight surfaces, each answering one question about where the reader stands: the level the
- * curriculum declares, the mastery the assessments recorded, the course and lesson that are open,
- * the latest scored examination, the domains sitting lowest, the mistake patterns those
- * assessments produced, the review streak, and a summary of the market analysis. Every figure is
- * read from the existing module data — curriculum, examinations, assessment attempts and mistake
- * patterns — and every surface that can be empty states why it is empty rather than drawing a
- * zero: a domain nobody attempted, a lesson not yet started and a blank attempt history are
- * different facts, and they are kept different here.
- *
- * The sections are deliberately not one card repeated eight times: the three figures a reader
- * scans are metric plates, mastery and the current context are a data frame beside the one
- * featured card, the two gap surfaces are frames of their own, and the market analysis is a
- * full-width window onto the chart. "Refresh view" replays that layout — remounting the content
- * replays its entrance — and queues no job, which is what its own tooltip says.
+ * The four states the store can report are all drawn: `loading` as skeletons that hold
+ * the finished layout's shape (so data arriving moves nothing), `unavailable` as the
+ * honest reason there is nothing to show, `error` with its typed code and a retry, and
+ * `ready` as the metrics themselves.
  */
 export function DashboardPage() {
   const setPage = useUiStore((state) => state.setPage);
-  const [viewEpoch, setViewEpoch] = useState(0);
+  const status = useDashboardStore((state) => state.status);
+  const dashboard = useDashboardStore((state) => state.dashboard);
+  const unavailableReason = useDashboardStore((state) => state.unavailableReason);
+  const error = useDashboardStore((state) => state.error);
+  const load = useDashboardStore((state) => state.load);
 
-  /** The stage the curriculum declares, and the lesson it says is open. */
-  const currentModule =
-    mockCurriculum.find((module) => module.status === 'in-progress') ??
-    mockCurriculum.find((module) => module.status !== 'complete');
-  const currentLesson = mockLessons.find((lesson) => lesson.status === 'in-progress');
-  const streakMetric = mockStudyMetrics.find((metric) => metric.id === 'streak');
+  useEffect(() => {
+    if (status === 'idle') void load();
+  }, [status, load]);
 
-  /** Mastery, weakest first, and the domains the assessments have not reached yet. */
-  const assessed = assessedDomains();
-  const weakDomains = assessed.slice(0, 2);
-  const unassessedDomains = mockExamCategories.filter((domain) => domain.averageScore === null);
-
-  /** The latest attempt that produced a score: a void attempt is an abandonment, not a zero. */
-  const scoredAttempts = mockExamAttempts
-    .filter((attempt) => attempt.outcome !== 'void')
-    .slice()
-    .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
-  const latestAttempt = scoredAttempts[scoredAttempts.length - 1];
-  const latestExam = mockExamDefinitions.find((exam) => exam.id === latestAttempt?.examId);
-  const latestCategory = mockExamCategories.find(
-    (category) => category.id === latestExam?.categoryId,
+  // The context row is the page's, not a state's: it renders in every state, because
+  // "read-only" and "reload" describe the surface, not one branch of it.
+  const actions = (
+    <>
+      <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>
+        read-only
+      </Badge>
+      <Tooltip content={msg('dashboard.serverDerived')}>
+        <Button
+          variant="secondary"
+          leadingIcon={<RefreshCw size={14} aria-hidden />}
+          onClick={() => void load()}
+        >
+          {msg('dashboard.refresh')}
+        </Button>
+      </Tooltip>
+    </>
   );
 
-  /** The mistakes the assessments recorded, most recent first, bounded to the recent ones. */
-  const recentErrors = [...mockMistakes]
-    .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt))
-    .slice(0, 3);
-
-  const examProgress = summariseExamProgress();
+  let body: ReactNode;
+  if (status === 'idle' || status === 'loading') {
+    // The skeletons mirror the ready layout's blocks, so the first paint holds the
+    // same shape the data will fill — nothing below moves when the read lands.
+    body = (
+      <>
+        <Grid columns={3}>
+          {[0, 1, 2].map((index) => (
+            <SkeletonCard key={index} rows={4} />
+          ))}
+        </Grid>
+        <Grid columns={2}>
+          {[0, 1].map((index) => (
+            <SkeletonCard key={index} rows={5} />
+          ))}
+        </Grid>
+      </>
+    );
+  } else if (status === 'unavailable') {
+    body = (
+      <ErrorState
+        severity="info"
+        title={msg('dashboard.noDashboardToShowYet')}
+        description={`${unavailableReason ?? msg('dashboard.noProgressRecordedYet')} ${msg('dashboard.serverDerived')}`}
+      />
+    );
+  } else if (status === 'error' || dashboard === null) {
+    body = (
+      <ErrorState
+        title={msg('dashboard.couldNotReadTheDashboard')}
+        description={error?.message ?? msg('dashboard.noProgressRecordedYet')}
+        code={error?.code}
+        action={
+          <Button size="sm" variant="secondary" onClick={() => void load()}>
+            {msg('dashboard.tryAgain')}
+          </Button>
+        }
+      />
+    );
+  } else {
+    body = <DashboardRead metrics={dashboard.metrics} onOpen={setPage} />;
+  }
 
   return (
-    <Workspace
-      actions={
-        <>
-          <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>
-            read-only
-          </Badge>
-          <Tooltip content={msg('dashboardPage.reloadsTheLayoutSkeletonNoJobIsQueued')}>
-            <Button
-              variant="secondary"
-              leadingIcon={<RefreshCw size={14} aria-hidden />}
-              onClick={() => setViewEpoch((epoch) => epoch + 1)}
-            >
-              Refresh view
-            </Button>
-          </Tooltip>
-        </>
-      }
-    >
-      {/* The key is the whole of "Refresh view": remounting replays the sections' entrance and
-          re-derives every figure from the same rows, with no job queued and no timer waited on. */}
-      <div key={viewEpoch} className="flex flex-col gap-5">
+    <Workspace actions={actions}>
+      <div className="flex flex-col gap-5">{body}</div>
+    </Workspace>
+  );
+}
+
+/**
+ * The ready layout. Separated from the state plumbing above so the ready branch owns
+ * only the eight surfaces and their empty states.
+ */
+function DashboardRead({
+  metrics,
+  onOpen,
+}: {
+  metrics: DashboardMetricsView;
+  onOpen: (page: 'academy' | 'exams') => void;
+}) {
+  const { course, lesson } = metrics.course;
+  const totalAttempts = metrics.knowledgeMastery.reduce(
+    (sum, domain) => sum + domain.attemptCount,
+    0,
+  );
+
+  return (
+    <>
+      <div className="flex flex-col gap-5">
         {/* The three figures a reader scans: identity, habit, evaluation. */}
         <Reveal index={0}>
           <Grid columns={3}>
             <Card surface="metric">
               <CardHeader
                 divider
-                actions={
-                  currentModule ? (
-                    <Badge tone="primary">
-                      {msg('dashboard.module')}{' '}
-                      <span className="num">
-                        {currentModule.month} / {mockCurriculum.length}
-                      </span>
-                    </Badge>
-                  ) : null
-                }
+                actions={course ? <Badge tone="primary">{msg('dashboard.module')}</Badge> : null}
               >
                 <div>
                   <CardTitle className="text-body">{msg('dashboard.agentLevel')}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <span className="text-metric text-text">{mockProgress.level}</span>
-                <ProgressIndicator
-                  value={mockProgress.lessonsComplete}
-                  max={mockProgress.lessonsTotal}
-                  label={msg('academy.lessonsComplete2')}
-                />
+                {metrics.agentLevel === null ? (
+                  <EmptyState
+                    title={msg('dashboard.nothingYet')}
+                    description={msg('dashboard.noProgressRecordedYet')}
+                  />
+                ) : (
+                  <>
+                    <span className="text-metric text-text">{metrics.agentLevel}</span>
+                    <p className="text-caption text-text-faint">
+                      <span className="num">{totalAttempts}</span>{' '}
+                      {totalAttempts === 1
+                        ? msg('dashboard.attemptsOne')
+                        : msg('dashboard.attemptsMany')}{' '}
+                      {msg('dashboard.basedOnAttempts')}
+                    </p>
+                  </>
+                )}
               </CardContent>
               <CardFooter className="text-caption text-text-faint">
                 <span>{msg('dashboard.levelIsTheCurriculumStage')}</span>
-                <Button size="sm" variant="ghost" onClick={() => setPage('academy')}>
+                <Button size="sm" variant="ghost" onClick={() => onOpen('academy')}>
                   {msg('dashboard.openAcademy')}
                 </Button>
               </CardFooter>
@@ -169,32 +186,29 @@ export function DashboardPage() {
             <Card surface="metric">
               <CardHeader divider>
                 <div>
-                  <CardTitle className="text-body">
-                    {streakMetric?.label ?? msg('data.reviewStreak')}
-                  </CardTitle>
-                  <CardDescription>{streakMetric?.hint}</CardDescription>
+                  <CardTitle className="text-body">{msg('data.reviewStreak')}</CardTitle>
+                  <CardDescription>{msg('dashboard.streakDays')}</CardDescription>
                 </div>
-                {streakMetric ? (
-                  <Badge tone="primary">
-                    <span className="num">{streakMetric.delta}</span>
-                  </Badge>
-                ) : null}
               </CardHeader>
               <CardContent className="flex items-end justify-between gap-3">
-                {streakMetric ? (
+                {metrics.learningStreakDays === 0 ? (
+                  <EmptyState
+                    icon={<Clock size={20} aria-hidden />}
+                    title={msg('dashboard.nothingYet')}
+                    description={msg('dashboard.streakZero')}
+                  />
+                ) : (
                   <span className="text-metric text-text">
-                    <span className="num">{streakMetric.value}</span>{' '}
+                    <span className="num">{metrics.learningStreakDays}</span>{' '}
                     <span className="text-caption text-text-muted">{msg('data.days')}</span>
                   </span>
-                ) : (
-                  <span className="text-metric text-text">—</span>
                 )}
                 <span className="text-text-faint" aria-hidden>
                   <Flame size={16} />
                 </span>
               </CardContent>
               <CardFooter className="text-caption text-text-faint">
-                <span>{msg('dashboard.vsPrevious30Days')}</span>
+                <span>{msg('dashboard.streakDays')}</span>
               </CardFooter>
             </Card>
 
@@ -202,25 +216,28 @@ export function DashboardPage() {
               <CardHeader divider>
                 <div>
                   <CardTitle className="text-body">{msg('dashboard.latestExamScore')}</CardTitle>
-                  {latestExam ? <CardDescription>{latestExam.title}</CardDescription> : null}
+                  {metrics.examScore ? (
+                    <CardDescription>{metrics.examScore.examTitle}</CardDescription>
+                  ) : null}
                 </div>
-                {latestAttempt ? (
-                  <Badge tone={latestAttempt.outcome === 'passed' ? 'primary' : 'danger'}>
-                    {latestAttempt.outcome === 'passed'
+                {metrics.examScore ? (
+                  <Badge tone={metrics.examScore.passed ? 'primary' : 'danger'}>
+                    {metrics.examScore.passed
                       ? msg('dashboard.attemptPassed')
                       : msg('dashboard.attemptFailed')}
                   </Badge>
                 ) : null}
               </CardHeader>
               <CardContent>
-                {latestAttempt && latestCategory ? (
+                {metrics.examScore ? (
                   <>
                     <span className="num text-metric text-text">
-                      {formatPercent(latestAttempt.score, 0)}
+                      {formatPercent(metrics.examScore.scorePercent, 1)}
                     </span>
                     <p className="mt-2 text-caption text-text-muted">
-                      {latestCategory.label} ·{' '}
-                      <span className="num">{formatTimestamp(latestAttempt.submittedAt)}</span>
+                      <span className="num">{metrics.examScore.attemptCount}</span>{' '}
+                      {msg('dashboard.attempts')} ·{' '}
+                      <span className="num">{formatTimestamp(metrics.examScore.attemptedAt)}</span>
                     </p>
                   </>
                 ) : (
@@ -232,11 +249,8 @@ export function DashboardPage() {
                 )}
               </CardContent>
               <CardFooter className="text-caption text-text-faint">
-                <span>
-                  <span className="num">{latestExam?.attempts ?? 0}</span>{' '}
-                  {msg('dashboard.attempts')} · {msg('dashboard.rubricScoredNeverModelJudged')}
-                </span>
-                <Button size="sm" variant="ghost" onClick={() => setPage('exams')}>
+                <span>{msg('dashboard.rubricScoredNeverModelJudged')}</span>
+                <Button size="sm" variant="ghost" onClick={() => onOpen('exams')}>
                   {msg('dashboard.openExams')}
                 </Button>
               </CardFooter>
@@ -252,8 +266,8 @@ export function DashboardPage() {
                 divider
                 actions={
                   <Badge tone="outline">
-                    <span className="num">{examProgress.attempted}</span>{' '}
-                    {msg('dashboard.attempted')}
+                    <span className="num">{metrics.knowledgeMastery.length}</span>{' '}
+                    {msg('dashboard.patterns')}
                   </Badge>
                 }
               >
@@ -263,23 +277,26 @@ export function DashboardPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {mockExamCategories.map((domain) => (
-                  <div key={domain.id} className="space-y-1">
+                {metrics.knowledgeMastery.length === 0 ? (
+                  <EmptyState
+                    title={msg('dashboard.nothingYet')}
+                    description={msg('dashboard.noProgressRecordedYet')}
+                  />
+                ) : (
+                  metrics.knowledgeMastery.map((domain) => (
                     <MetricBar
-                      label={domain.label}
+                      key={domain.domain}
+                      label={domain.domain}
                       value={
-                        domain.averageScore === null ? '—' : formatPercent(domain.averageScore, 1)
+                        domain.masteryPercent === null
+                          ? '—'
+                          : formatPercent(domain.masteryPercent, 1)
                       }
-                      share={domain.averageScore === null ? 0 : domain.averageScore / 100}
-                      hint={domain.description}
+                      share={domain.masteryPercent === null ? 0 : domain.masteryPercent / 100}
+                      hint={`${domain.attemptCount} ${msg('dashboard.attempts')}`}
                     />
-                    {domain.averageScore === null ? (
-                      <p className="text-caption text-text-faint">
-                        {msg('dashboard.notAttemptedYet')}
-                      </p>
-                    ) : null}
-                  </div>
-                ))}
+                  ))
+                )}
               </CardContent>
               <CardFooter className="text-caption text-text-faint">
                 <span>{msg('dashboard.masteryIsTheMeanOfBestScores')}</span>
@@ -290,31 +307,29 @@ export function DashboardPage() {
               <CardHeader divider>
                 <div>
                   <CardTitle>{msg('dashboard.currentCourseAndLesson')}</CardTitle>
-                  {currentModule ? (
-                    <CardDescription>{currentModule.summary}</CardDescription>
-                  ) : null}
+                  <CardDescription>{msg('dashboard.serverDerived')}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {currentModule ? (
+                {course ? (
                   <CardTile as="section" aria-label={msg('dashboard.course')} className="space-y-1">
                     <p className="text-caption font-medium text-text-faint">
                       {msg('dashboard.course')}
                     </p>
-                    <p className="text-body font-semibold text-text">{currentModule.title}</p>
+                    <p className="text-body font-semibold text-text">{course.title}</p>
                     <p className="text-caption text-text-muted">
-                      <span className="num">{currentModule.lessons}</span> {msg('academy.lessons')}
+                      <span className="num">{course.lessonsTotal}</span> {msg('academy.lessons')}
                     </p>
                   </CardTile>
                 ) : (
                   <EmptyState title={msg('dashboard.noCourseInProgress')} />
                 )}
-                {currentLesson ? (
+                {lesson ? (
                   <CardTile as="section" aria-label={msg('dashboard.lesson')} className="space-y-1">
                     <p className="text-caption font-medium text-text-faint">
                       {msg('dashboard.lesson')}
                     </p>
-                    <p className="text-body font-semibold text-text">{currentLesson.title}</p>
+                    <p className="text-body font-semibold text-text">{lesson.title}</p>
                     <Badge tone="info">{msg('dashboard.lessonInProgress')}</Badge>
                   </CardTile>
                 ) : (
@@ -327,7 +342,7 @@ export function DashboardPage() {
                 )}
               </CardContent>
               <CardFooter className="text-caption text-text-faint">
-                <span>{msg('dashboardPage.rollUpsFromTheProductModulesEachFigureIs')}</span>
+                <span>{msg('dashboard.basedOnAttempts')}</span>
               </CardFooter>
             </Card>
           </Grid>
@@ -344,30 +359,26 @@ export function DashboardPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {weakDomains.length === 0 ? (
+                {metrics.weakAreas.length === 0 ? (
                   <EmptyState
                     title={msg('dashboard.noWeakAreasYet')}
-                    hint={msg('dashboardPage.emptyIsAValidStateItIs')}
+                    hint={msg('dashboard.noWeakAreaYet')}
                   />
                 ) : (
-                  <>
-                    {weakDomains.map((domain, index) => (
-                      <MetricBar
-                        key={domain.id}
-                        label={domain.label}
-                        value={formatPercent(domain.averageScore, 1)}
-                        share={domain.averageScore / 100}
-                        tone={index === 0 ? 'warning' : 'info'}
-                        hint={domain.description}
-                      />
-                    ))}
-                    {unassessedDomains.length > 0 ? (
-                      <p className="text-caption text-text-faint">
-                        {msg('dashboard.notYetAssessed')}:{' '}
-                        {unassessedDomains.map((domain) => domain.label).join(' · ')}
-                      </p>
-                    ) : null}
-                  </>
+                  metrics.weakAreas.map((domain, index) => (
+                    <MetricBar
+                      key={domain.domain}
+                      label={domain.domain}
+                      value={
+                        domain.masteryPercent === null
+                          ? '—'
+                          : formatPercent(domain.masteryPercent, 1)
+                      }
+                      share={domain.masteryPercent === null ? 0 : domain.masteryPercent / 100}
+                      tone={index === 0 ? 'warning' : 'info'}
+                      hint={`${domain.attemptCount} ${msg('dashboard.attempts')}`}
+                    />
+                  ))
                 )}
               </CardContent>
               <CardFooter className="text-caption text-text-faint">
@@ -380,7 +391,8 @@ export function DashboardPage() {
                 divider
                 actions={
                   <Badge tone="warning">
-                    <span className="num">{recentErrors.length}</span> {msg('dashboard.patterns')}
+                    <span className="num">{metrics.recentErrors.length}</span>{' '}
+                    {msg('dashboard.patterns')}
                   </Badge>
                 }
               >
@@ -392,38 +404,29 @@ export function DashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {recentErrors.length === 0 ? (
+                {metrics.recentErrors.length === 0 ? (
                   <EmptyState
                     icon={<CircleAlert size={20} aria-hidden />}
                     title={msg('exams.nothingMissedYet')}
-                    description={msg(
-                      'mistakeAnalysisCard.mistakePatternsAppearOnceAGradedAttemptHas',
-                    )}
-                    hint={msg('mistakeAnalysisCard.emptyIsStatedNotHidden')}
+                    description={msg('dashboard.noErrorsRecorded')}
+                    hint={msg('dashboardPage.emptyIsAValidStateItIs')}
                   />
                 ) : (
                   <ol className="space-y-3">
-                    {recentErrors.map((error) => {
-                      const category = mockExamCategories.find(
-                        (candidate) => candidate.id === error.categoryId,
-                      );
-                      return (
-                        <li key={error.id} className="space-y-1">
-                          <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <p className="text-body text-text">{error.topic}</p>
-                            <span className="num shrink-0 text-caption text-text-muted">
-                              {error.occurrences} {msg('exams.misses')}{' '}
-                              {formatPercent(error.share * 100, 0)} {msg('exams.ofMisses')}
-                            </span>
-                          </div>
-                          <p className="text-caption text-text-muted">{error.note}</p>
-                          <p className="text-caption text-text-faint">
-                            {category?.label} {msg('exams.lastSeen')}{' '}
-                            <span className="num">{formatTimestamp(error.lastSeenAt)}</span>
-                          </p>
-                        </li>
-                      );
-                    })}
+                    {metrics.recentErrors.map((error: DashboardErrorRow) => (
+                      <li key={error.id} className="space-y-1">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <p className="text-body text-text">{error.topic}</p>
+                          <span className="num shrink-0 text-caption text-text-muted">
+                            {error.occurrences} {msg('exams.misses')}
+                          </span>
+                        </div>
+                        <p className="text-caption text-text-faint">
+                          {msg('exams.lastSeen')}{' '}
+                          <span className="num">{formatTimestamp(error.lastSeenAt)}</span>
+                        </p>
+                      </li>
+                    ))}
                   </ol>
                 )}
               </CardContent>
@@ -439,51 +442,42 @@ export function DashboardPage() {
           <Card surface="data">
             <CardHeader
               divider
-              actions={<ProvenanceBadge provenance={mockDashboard.dataProvenance} />}
+              actions={<ProvenanceBadge provenance={metrics.marketAnalysis.dataProvenance} />}
             >
               <div>
                 <CardTitle className="text-body">{msg('dashboard.marketAnalysis')}</CardTitle>
                 <CardDescription>
-                  <span className="num">{mockDashboard.symbol}</span> ·{' '}
-                  <span className="num">{mockDashboard.timeframe}</span>
+                  <span className="num">{metrics.marketAnalysis.symbol}</span> ·{' '}
+                  <span className="num">{metrics.marketAnalysis.timeframe}</span>
                 </CardDescription>
               </div>
             </CardHeader>
             <CardContent>
-              <ChartAdapter
-                bars={mockBars}
-                symbol={mockDashboard.symbol}
-                timeframe={mockDashboard.timeframe}
-                provenance={mockDashboard.dataProvenance}
-                source="synthetic-generator"
-                updatedAt={mockDashboard.lastUpdated}
-                height={260}
+              {/*
+               * A series is drawn only from the numbers the read handed over, and the
+               * read hands over none yet: it reports `barCount: 0` and no last bar. So the
+               * card says exactly that instead of charting a local sample under a real
+               * symbol — an invented bar here would be indistinguishable from a measured
+               * one, which is worse than an empty card on this surface.
+               */}
+              <EmptyState
+                title={msg('dashboard.nothingYet')}
+                description={msg('dashboard.marketSeriesUnavailable')}
+                hint={msg('dashboard.marketAnalysisSummaryOnly')}
               />
             </CardContent>
             <CardFooter className="text-caption text-text-faint">
               <span>{msg('dashboard.marketAnalysisSummaryOnly')}</span>
-              <span className="num">{formatRelative(mockDashboard.lastUpdated)}</span>
+              <span className="num">{formatRelative(metrics.asOf)}</span>
             </CardFooter>
           </Card>
         </Reveal>
 
-        <ErrorState
-          severity="info"
-          title={msg('dashboard.previewData')}
-          description={msg('dashboardPage.thisDashboardIsNotConnectedToTheBackend')}
-          code="PREVIEW_FIXTURE"
-          action={
-            <span className="inline-flex items-center gap-1.5 text-caption">
-              Real figures will come from deterministic backend tools, never from the model.
-            </span>
-          }
-        />
-
         <p className="text-caption text-text-faint">
-          {msg('dashboard.previewGenerated')} {formatRelative(MOCK_GENERATED_AT)} ·{' '}
-          {formatTimestamp(MOCK_GENERATED_AT)}
+          {msg('dashboard.serverDerived')} ·{' '}
+          <span className="num">{formatTimestamp(metrics.asOf)}</span>
         </p>
       </div>
-    </Workspace>
+    </>
   );
 }

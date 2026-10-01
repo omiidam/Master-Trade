@@ -168,6 +168,20 @@ export class AcademyRepository {
     );
   }
 
+  /** Authored content reads, bounded: the dashboard groups per-user rows against
+   * these maps instead of joining per row, so one read of each replaces N+1. */
+  allCurricula(limit = 100): Promise<CurriculumRow[]> {
+    return this.curricula.findMany({}, { orderBy: 'created_at', direction: 'asc', limit });
+  }
+
+  allLessons(limit = 2_000): Promise<LessonRow[]> {
+    return this.lessons.findMany({}, { orderBy: 'order_index', direction: 'asc', limit });
+  }
+
+  allExams(limit = 1_000): Promise<ExamRow[]> {
+    return this.exams.findMany({}, { orderBy: 'created_at', direction: 'asc', limit });
+  }
+
   /* ------------------------------------------------------------- progress */
 
   /**
@@ -293,6 +307,19 @@ export class AcademyRepository {
       });
     }
     return [...byExam.entries()].map(([examId, value]) => ({ examId, ...value }));
+  }
+
+  /**
+   * The user's attempts newest first. One indexed read over the caller's own rows;
+   * the dashboard derives "latest scored", the exam's attempt count and the
+   * streak's activity days from this single read rather than asking the database
+   * once per exam.
+   */
+  recentAttempts(userId: string, limit = 200): Promise<ExamAttemptRow[]> {
+    return this.attempts.findMany(
+      { user_id: userId },
+      { orderBy: 'created_at', direction: 'desc', limit },
+    );
   }
 }
 

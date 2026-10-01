@@ -63,6 +63,7 @@ import {
   decisionWriteHandler,
 } from './handlers/decision.js';
 import { capabilityReadHandler } from './handlers/capability.js';
+import { dashboardReadHandler } from './handlers/dashboard.js';
 import { portfolioReadHandler, portfolioWriteHandler } from './handlers/portfolio.js';
 import { profileReadHandler, profileWriteHandler } from './handlers/profile.js';
 import { decideReadiness, loadContext, qualityAssessHandler } from './handlers/quality.js';
@@ -484,6 +485,13 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     'capability.read': capabilityReadHandler({
       repositories: deps.repositories,
       marketData,
+      now: deps.now,
+    }) as AnyHandler,
+    // The dashboard read: one coherent payload of the caller's own learning record.
+    // It reuses the repositories the other routes already hold, and it takes no
+    // subject, so there is no parameter another account could be named by.
+    'dashboard.read': dashboardReadHandler({
+      repositories: deps.repositories,
       now: deps.now,
     }) as AnyHandler,
     'usage.read': usageStatusHandler({ usage, now: deps.now }) as AnyHandler,
