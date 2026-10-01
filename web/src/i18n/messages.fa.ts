@@ -2686,6 +2686,9 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'این صفحه در مرورگر اجرا می‌شود، پس نه sidecar محلی برای دریافت جریان وجود دارد و نه مدار کلیدی برای نگه داشتن نشست.',
   'session.vITEMTAPIURLIsSetButVITEMTSESSIONTOKENIsNot':
     'VITE_MT_API_URL تنظیم شده اما VITE_MT_SESSION_TOKEN تنظیم نشده است.',
+  'session.theLocalApiIsNotAnswering': 'API محلی پاسخ نمی‌دهد، پس هنوز چیزی برای خواندن نیست.',
+  'session.startItWithNpmRunApi':
+    'آن را با `npm run api` اجرا کنید؛ پیش‌نمای مرورگر خودش محلی وارد می‌شود و به پوستهٔ دسکتاپ نیازی ندارد.',
   // settings ────────────────────────────────────────────────────
   'settings.advanced': 'پیشرفته',
   'settings.aiProviders': 'ارائه‌دهندگان هوش مصنوعی',

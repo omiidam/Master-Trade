@@ -2714,6 +2714,10 @@ export const EN_MESSAGES = {
     'This page is running in a browser, so there is no local sidecar to stream from and no keychain to hold a session.',
   'session.vITEMTAPIURLIsSetButVITEMTSESSIONTOKENIsNot':
     'VITE_MT_API_URL is set but VITE_MT_SESSION_TOKEN is not.',
+  'session.theLocalApiIsNotAnswering':
+    'The local API is not answering, so there is nothing to read yet.',
+  'session.startItWithNpmRunApi':
+    'Start it with `npm run api`; the browser preview signs in locally, so no desktop shell is needed.',
   // settings ────────────────────────────────────────────────────
   'settings.advanced': 'Advanced',
   'settings.aiProviders': 'AI providers',

@@ -34,6 +34,7 @@ export const KNOWN_ENV_KEYS = [
   'MASTER_TRADE_LOG_LEVEL',
   'MASTER_TRADE_DB_FILE',
   'MASTER_TRADE_SESSION_TTL_MINUTES',
+  'MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN',
   'MASTER_TRADE_AUDIT_RETENTION_DAYS',
   'MASTER_TRADE_AI_PROVIDER',
   'MASTER_TRADE_AI_MODEL',
@@ -113,6 +114,15 @@ const envSchema = z.strictObject({
   MASTER_TRADE_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).optional(),
   MASTER_TRADE_DB_FILE: z.string().min(1).max(1_024).optional(),
   MASTER_TRADE_SESSION_TTL_MINUTES: z.coerce.number().int().min(1).max(43_200).optional(),
+  /**
+   * Whether `POST /v1/session/local` may issue a session. Off unless set to exactly
+   * `true`, because it is the one setting that lets a caller become a principal without
+   * the shell's keychain. The API stays loopback-only either way.
+   */
+  MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN: z
+    .enum(['true', 'false'])
+    .transform((value) => value === 'true')
+    .optional(),
   MASTER_TRADE_AUDIT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3_650).optional(),
   MASTER_TRADE_AI_PROVIDER: z
     .enum(['scripted', 'openai', 'anthropic', 'local-openai-compatible'])
@@ -223,6 +233,14 @@ export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): AppConf
   if (values.MASTER_TRADE_SESSION_TTL_MINUTES !== undefined) {
     auth.sessionTtlMinutes = values.MASTER_TRADE_SESSION_TTL_MINUTES;
   }
+  // Local sign-in exists exactly when there is no shell to sign in through. A shell-hosted
+  // API (one started with a launch token) keeps it off, because the shell hands out sessions
+  // there and a second door would only widen the attack surface; a standalone API has no
+  // shell, so its only local client is the browser preview, and refusing it would leave the
+  // authenticated surfaces with nothing to read. The explicit environment value wins either
+  // way, and the boot log reports whichever decision was taken.
+  auth.allowAnonymousLocalLogin =
+    values.MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN ?? api.shellToken === null;
 
   const overrides: ConfigOverrides = { api, ai, database, observability, auth };
   return resolveConfig(overrides);

@@ -40,6 +40,7 @@ import type {
   UsageStatusData,
 } from '@shared/api/contracts';
 import type { DashboardReadData } from '@shared/frontend/viewModels';
+import type { LocalSessionData } from '@shared/api/contracts';
 import type { PortfolioDocumentBody } from '@shared/portfolio/model';
 import type { AnalysisType } from '@shared/quality/readiness';
 import type {
@@ -58,7 +59,12 @@ import type { TradingContext } from '@shared/profile/model';
 /** Where the API is, and what may talk to it. */
 export interface ApiConnection {
   baseUrl: string;
-  token: string;
+  /**
+   * The session credential. `null` is only legitimate for the call that obtains one:
+   * `startLocalSession()`. Every other method sends it as a bearer token, and a client built
+   * without one will be refused by the pipeline rather than acting unauthenticated.
+   */
+  token: string | null;
   /** Present only inside the desktop shell, where the sidecar is token-gated. */
   shellToken?: string | null;
 }
@@ -362,6 +368,19 @@ export class ApiClient {
     return this.request<DashboardReadData>('GET', '/v1/dashboard');
   }
 
+  /**
+   * Start a local session.
+   *
+   * The one request this client makes **without** a credential, because it is the request
+   * that produces one: a browser preview has no shell to hand it a session, so it asks the
+   * local API for one directly. The route is anonymous by necessity and the deployment
+   * decides whether it answers at all — a refusal arrives as an `ApiError` carrying the
+   * server's own reason, which the caller renders instead of retrying.
+   */
+  async startLocalSession(): Promise<LocalSessionData> {
+    return this.request<LocalSessionData>('POST', '/v1/session/local');
+  }
+
   /** One request, one typed outcome. */
   private async request<T>(
     method: 'GET' | 'POST' | 'PUT',
@@ -370,11 +389,16 @@ export class ApiClient {
   ): Promise<T> {
     const correlationId = this.ids.correlationId();
     const headers: Record<string, string> = {
-      authorization: `Bearer ${this.connection.token}`,
       [CORRELATION_ID_HEADER]: correlationId,
       'x-api-version': API_VERSION,
       accept: 'application/json',
     };
+    // Credentials travel in headers, and only when there is one to send. A request without
+    // a token is not an attempt to act unauthenticated — it is the sign-in call, and the
+    // pipeline decides what an absent credential is allowed to reach.
+    if (this.connection.token !== null) {
+      headers.authorization = `Bearer ${this.connection.token}`;
+    }
     if (options.body !== undefined) headers['content-type'] = 'application/json';
     if (this.connection.shellToken) headers[SHELL_TOKEN_HEADER] = this.connection.shellToken;
 

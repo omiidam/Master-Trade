@@ -19,8 +19,7 @@
 import { create } from 'zustand';
 import type { DashboardReadData } from '@shared/frontend/viewModels';
 import { ApiClient, ApiError } from '../api/client.js';
-import { useRealtimeStore } from '../realtime/store.js';
-import { msg } from '../i18n/index.js';
+import { clientForApiSession } from '../api/session.js';
 
 export type DashboardStatus = 'idle' | 'loading' | 'ready' | 'unavailable' | 'error';
 
@@ -43,30 +42,17 @@ export interface DashboardStoreState {
 }
 
 /**
- * Build a client from the session the realtime store resolved, or report why not.
+ * Build the client this surface reads through, or report why there is none.
  *
- * Exported for tests. It is the same resolution every authenticated store reuses —
- * `clientForProfile` is the canonical builder and this is a re-export of its logic
- * through the profile module's own export, so there is still exactly one answer.
+ * The session comes from `clientForApiSession`, which resolves what *reads the API* — a
+ * pinned environment token, the shell's own handshake, or a local sign-in — rather than what
+ * opens the event stream. It used to reuse the realtime store's resolution, and that was the
+ * defect the browser showed: the stream's credential lives in the shell's keychain, so
+ * outside the shell this page could not read anything and reported the stream's reason for
+ * it. Reading and streaming are two questions, and this page only asks the first.
  */
 export async function clientForDashboard(): Promise<ApiClient | { reason: string }> {
-  const realtime = useRealtimeStore.getState();
-  if (realtime.resolution === null) {
-    await realtime.initialize();
-  }
-  const resolution = useRealtimeStore.getState().resolution;
-
-  if (resolution === null) {
-    return { reason: msg('profile.theSessionHasNotBeenResolvedYet') };
-  }
-  if (resolution.status === 'unavailable') {
-    return { reason: `${resolution.detail} ${resolution.action}` };
-  }
-  return new ApiClient({
-    baseUrl: resolution.apiBaseUrl,
-    token: resolution.token,
-    ...(resolution.shellToken ? { shellToken: resolution.shellToken } : {}),
-  });
+  return clientForApiSession();
 }
 
 /** Turn a failure into something the page can render without leaking a stack. */

@@ -24,7 +24,10 @@
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { AppError } from '../../packages/shared/src/core/errors.js';
-import { CORRELATION_ID_HEADER } from '../../packages/shared/src/api/contracts.js';
+import {
+  API_VERSION_HEADER,
+  CORRELATION_ID_HEADER,
+} from '../../packages/shared/src/api/contracts.js';
 import { SHELL_TOKEN_HEADER } from '../../packages/shared/src/core/headers.js';
 import { SlidingWindowRateLimiter } from '../../packages/shared/src/core/rateLimit.js';
 import type { Logger } from '../../packages/shared/src/core/logging.js';
@@ -53,15 +56,24 @@ export { isLoopbackOrigin };
 /**
  * Headers a cross-origin caller is allowed to send: names, not values.
  *
- * The two product headers come from `core/headers.ts` rather than being spelled here, so
- * the allow-list cannot drift from the names the desktop shell actually sends — the test
+ * The product headers come from the modules that declare them rather than being spelled
+ * here, so the allow-list cannot drift from the names the clients actually send — the test
  * that found this list disagreeing with `SHELL_TOKEN_HEADER` is why it is written this way.
+ *
+ * `x-api-version` is on the list because **every** client sends it: it is the version gate,
+ * so a request without it is refused before routing. Leaving it out meant no browser client
+ * could call this API at all — the preflight answered 204, the browser then blocked the real
+ * request on the header it had not been allowed to send, and the failure surfaced in the UI
+ * as "the local API is not answering" when the API was answering every curl. A local API
+ * whose only clients are same-origin is not local-only by design; it is browser-unreachable
+ * by omission.
  */
 const ALLOWED_REQUEST_HEADERS = [
   'authorization',
   'content-type',
   SHELL_TOKEN_HEADER,
   CORRELATION_ID_HEADER,
+  API_VERSION_HEADER,
 ].join(', ');
 
 /** Headers a cross-origin caller may read back. */

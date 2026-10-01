@@ -64,9 +64,16 @@ Local-first desktop authentication:
    by the `maintenance.cleanup` job.
 3. Optional OS-keychain unlock: the shell's `SecureStore` holds a device secret
    that unlocks the local profile without re-typing a password.
-4. `config.auth.allowAnonymousLocalLogin` defaults to `false`; anonymous access
-   is never enabled by accident because `assertSafeConfig()` rejects unsafe
-   combinations only, and this flag is explicit.
+4. `config.auth.allowAnonymousLocalLogin` decides whether `POST /v1/session/local`
+   may issue a session, and the default follows who is supposed to sign in: a
+   **shell-hosted** API (started with a launch token) keeps it off, because the
+   shell hands out sessions there; a **standalone** API (`npm run api`) turns it
+   on, because its only local client is the browser preview and a shell that does
+   not exist cannot be the way in. `MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN`
+   overrides either way, and `bootWarnings()` reports the decision. The route
+   mints an ordinary session through `SessionService`, takes no subject parameter
+   (so it can only ever issue the workstation account's own session), and the API
+   still refuses every non-loopback caller before a handler runs.
 
 Session rules enforced in code (`isSessionActive`): expired sessions are denied
 everywhere, including real-time subscriptions. Session ids are treated as

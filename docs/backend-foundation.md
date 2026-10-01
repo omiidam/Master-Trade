@@ -208,9 +208,12 @@ reads `process.env`.
 
 `bootWarnings()` reports conditions that do not block start-up but must be
 visible: no shell token configured, a non-scripted provider with no adapter
-registered, a relative storage root, and `allowAnonymousLocalLogin` (which the
-HTTP server deliberately does **not** honour, because a socket-only client cannot
-prove "local user").
+registered, a relative storage root, and `allowAnonymousLocalLogin` — reported
+when it is **on**, because the warning that matters is the one about a door that
+is open. The setting governs `POST /v1/session/local`, which issues an ordinary
+session so a browser preview can read the API without the desktop shell; it is on
+exactly when no shell is supervising the process (see
+[api-auth.md](./api-auth.md) §2), and off in a shell-hosted launch.
 
 ## 10. Health checks
 

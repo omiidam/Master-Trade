@@ -51,6 +51,18 @@ function op(
 
 /** Complete operation catalogue. Anything absent is denied. */
 export const OPERATIONS = {
+  /**
+   * Starting a local session. Anonymous by construction and granted to no role — the
+   * route that mints the credential cannot be gated by one — so it is listed here for the
+   * catalogue's completeness, and a deployment that has not enabled local sign-in is the
+   * thing that refuses it.
+   */
+  'session.local': op(
+    'session.local',
+    'normal',
+    false,
+    'Start a local session for the workstation account',
+  ),
   'progress.read': op('progress.read', 'normal', false, 'Read learning progress'),
   'dashboard.read': op(
     'dashboard.read',

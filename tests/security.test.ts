@@ -31,6 +31,7 @@ import {
 import { DEFAULT_CONFIG, resolveConfig } from '../src/core/config.js';
 import { API_ROUTES } from '../packages/shared/src/api/contracts.js';
 import { SHELL_TOKEN_HEADER } from '../packages/shared/src/core/headers.js';
+import { API_VERSION_HEADER, CORRELATION_ID_HEADER } from '../packages/shared/src/api/contracts.js';
 import { InMemoryFileStorage, sanitizeFilename } from '../src/storage/files.js';
 import {
   AppError,
@@ -144,10 +145,17 @@ describe('cross-origin policy', () => {
     });
     expect(response.statusCode).toBe(204);
     expect(response.headers['access-control-allow-methods']).toContain('GET');
-    expect(response.headers['access-control-allow-headers']).toContain('authorization');
+    const allowed = String(response.headers['access-control-allow-headers']);
+    expect(allowed).toContain('authorization');
     // The shell token header is allowed through explicitly, because the desktop shell must
     // be able to send it; a wildcard would have allowed every header including future ones.
-    expect(response.headers['access-control-allow-headers']).toContain(SHELL_TOKEN_HEADER);
+    expect(allowed).toContain(SHELL_TOKEN_HEADER);
+    // And every header a *browser* client sends has to be on that list, or the preflight
+    // passes and the real request is then blocked in the browser — which is how the API came
+    // to be unreachable from the preview even though every curl to it succeeded. The version
+    // gate and the correlation id are sent on every request by the frontend client.
+    expect(allowed).toContain(API_VERSION_HEADER);
+    expect(allowed).toContain(CORRELATION_ID_HEADER);
     await server.close();
   });
 

@@ -1008,6 +1008,43 @@ const usageSubscriptionRoute: ApiRoute<UsageSubscriptionBody, UsageAdminData> = 
   validateBody: zodValidator(usageSubscriptionBodySchema),
 };
 
+/**
+ * What a local sign-in returns: the credential, once, and who it belongs to.
+ *
+ * The token is the only copy the server will ever hand out — `SessionService` keeps a
+ * hash — so a caller that loses it signs in again rather than recovering it.
+ */
+export interface LocalSessionData {
+  token: string;
+  /** The account the session was issued to, and the roles it carries. */
+  principal: { id: string; roles: readonly string[] };
+  issuedAt: string;
+  expiresAt: string;
+  note: string;
+}
+
+/**
+ * Local sign-in: the route a browser preview uses to get a session without the shell.
+ *
+ * Anonymous by necessity — it is the route that *produces* the credential every other
+ * route requires — so it is the deployment that decides whether it exists at all:
+ * `auth.allowAnonymousLocalLogin` is off by default and this route refuses with
+ * `FORBIDDEN` while it is. It issues an ordinary session through the ordinary
+ * `SessionService`, so everything downstream (authorization, per-user scoping, expiry)
+ * behaves exactly as it does for a session the desktop shell obtained; the route adds
+ * no subject parameter, so a caller can never ask for another account's session.
+ */
+const localSessionRoute: ApiRoute<Record<string, unknown> | undefined, LocalSessionData> = {
+  id: 'session.local',
+  method: 'POST',
+  path: '/v1/session/local',
+  version: API_VERSION,
+  operation: 'session.local',
+  auth: 'anonymous',
+  summary: 'Start a local session for the workstation account, when the deployment allows it.',
+  validateBody: zodValidator(emptyBodySchema),
+};
+
 const healthRoute: ApiRoute<Record<string, unknown> | undefined, { status: string }> = {
   id: 'system.health',
   method: 'GET',
@@ -1041,6 +1078,7 @@ export type ReadinessRouteQuery = ReadinessQuery;
 export const API_ROUTES: readonly AnyApiRoute[] = [
   healthRoute,
   readinessRoute,
+  localSessionRoute,
   profileReadRoute,
   profileWriteRoute,
   qualityAssessRoute,
@@ -1104,6 +1142,19 @@ export function findRouteByPath(method: HttpMethod, url: string): AnyApiRoute | 
 }
 
 /**
+ * The one anonymous route allowed to be more than a read.
+ *
+ * The catalogue's rule is that an unauthenticated caller may never cause a state change, so
+ * anonymous routes are `GET` only. Local sign-in is the single exception, and it has to be:
+ * a session is exactly the thing that cannot be obtained while authenticated, because the
+ * route that issues it is the only route that can run without one. It is bounded in every
+ * other direction — it exists only when the deployment enables it, the API refuses callers
+ * that are not on the loopback interface, the operation is in the deny-by-default catalogue,
+ * and it takes no subject parameter, so it can only ever mint the workstation's own session.
+ */
+export const ANONYMOUS_WRITE_ROUTE_IDS: readonly string[] = ['session.local'];
+
+/**
  * Structural checks on the catalogue. Called at server start-up so a mistake in
  * routing or versioning is a boot failure, not an incident.
  */
@@ -1118,8 +1169,16 @@ export function assertApiCatalogue(): void {
     if (!route.path.startsWith(`${API_PATH_PREFIX}/`)) {
       throw new Error(`Route ${route.id} must be versioned under ${API_PATH_PREFIX}`);
     }
-    if (route.auth === 'anonymous' && route.method !== 'GET') {
-      throw new Error(`Route ${route.id} is anonymous but not read-only`);
+    if (
+      route.auth === 'anonymous' &&
+      route.method !== 'GET' &&
+      !ANONYMOUS_WRITE_ROUTE_IDS.includes(route.id)
+    ) {
+      throw new Error(
+        `Route ${route.id} is anonymous but not read-only. An unauthenticated caller must not ` +
+          `be able to change state; the only declared exception is ` +
+          `${ANONYMOUS_WRITE_ROUTE_IDS.join(', ')}.`,
+      );
     }
   }
 }

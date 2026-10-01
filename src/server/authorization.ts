@@ -54,9 +54,14 @@ export interface PipelineDeps {
   idFactory?: IdFactory;
   now?: () => number;
   /**
-   * Whether `auth.allowAnonymousLocalLogin` is honoured. The HTTP server never
-   * honours it (a socket-only client has no way to prove "local user"), and says
-   * so instead of silently ignoring the setting.
+   * Whether this pipeline may treat an absent credential as a local principal.
+   *
+   * Nothing sets it, and nothing should: the HTTP pipeline authenticates a bearer token and
+   * never infers a principal from the transport, because a socket-only client has no way to
+   * prove "local user". The setting that is about local access,
+   * `auth.allowAnonymousLocalLogin`, is honoured by a *route* instead (`session.local` mints
+   * a normal session through `SessionService`), so the identity of a caller still comes from
+   * a token on every request and this field stays unused.
    */
   honourAnonymousLogin?: boolean;
 }

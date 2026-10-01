@@ -54,6 +54,7 @@ import { installSecurity, type InstalledSecurity } from './security.js';
 import { logRequestCompleted, createLogging, type ServerLogging } from './logging.js';
 import { agentChatHandler } from './handlers/agent.js';
 import { healthHandler, readinessHandler } from './handlers/health.js';
+import { localSessionHandler } from './handlers/session.js';
 import { jobCancelHandler, jobGetHandler, jobListHandler } from './handlers/jobs.js';
 import {
   decisionEvaluateHandler,
@@ -176,7 +177,7 @@ export function bootWarnings(config: AppConfig): string[] {
   const warnings: string[] = [];
   if (config.auth.allowAnonymousLocalLogin) {
     warnings.push(
-      'auth.allowAnonymousLocalLogin is true but the HTTP server does not honour it: every protected route requires a session token.',
+      'auth.allowAnonymousLocalLogin is true: POST /v1/session/local will issue a session to any caller that can reach the loopback port, without the shell token. Turn it off when the desktop shell is the only client.',
     );
   }
   if (config.ai.primary.provider !== 'scripted') {
@@ -409,6 +410,7 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
   const handlers: Record<string, AnyHandler> = {
     'system.health': healthHandler(health, config),
     'system.readiness': readinessHandler(health, config),
+    'session.local': localSessionHandler({ sessions, config }) as AnyHandler,
     'agent.chat': agentChatHandler(agent, eventBus, readinessFor, {
       service: usage,
       featureId: 'agent.chat',

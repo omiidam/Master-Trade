@@ -13,6 +13,8 @@ import { AppError } from '../../packages/shared/src/core/errors.js';
 import { redactString, redactValue } from '../../packages/shared/src/core/logging.js';
 import { CredentialVault, InjectedEnvironmentStorage } from '../desktop/credential-vault.js';
 import { SecureCredentialStore } from '../desktop/secure-store.js';
+import { loadConfigFromEnv } from '../config/loader.js';
+import { openDatabase, type DatabaseHandle } from '../db/index.js';
 import { createServer, type ServerDeps, type ServerInstance } from './app.js';
 
 /** A minimal write target, so the refusal path is testable without a real stderr. */
@@ -72,20 +74,51 @@ export async function startServer(
   const credentials = credentialChannel(env);
   const credentialMetadata = await credentials.load();
 
+  /**
+   * Open the database this process answers from, unless one was injected.
+   *
+   * The API used to start without a data layer at all: `deps.repositories` stayed undefined,
+   * so every repository-backed route answered `PROVIDER_UNAVAILABLE` and only the process-local
+   * surfaces (health, an in-memory job queue) worked. `npm run api` therefore served a dashboard
+   * that could not exist no matter what the client did, which is half of why the browser showed
+   * an empty read. Opening it here — through the same `openDatabase` the CLI uses, so the schema
+   * is migrated identically — is what makes "the server derives these metrics from the caller's
+   * own rows" true for the process the browser actually talks to.
+   *
+   * The configuration is resolved once, here, so the database and the server are opened from the
+   * same one (`createServer` would otherwise resolve its own copy from the ambient environment).
+   */
+  const resolvedConfig = deps.config ?? loadConfigFromEnv(env);
+  let database: DatabaseHandle | null = null;
+  if (deps.repositories === undefined) {
+    database = await openDatabase({ config: resolvedConfig, now: deps.now });
+  }
+
   // Constructing the server runs the preconditions, which may refuse. Nothing has
   // logged yet at that point, so the refusal is reported here before it propagates.
   let instance: ServerInstance;
   try {
     instance = createServer({
       ...deps,
+      config: resolvedConfig,
+      ...(database === null ? {} : { repositories: database.repositories }),
       resolveSecret: deps.resolveSecret ?? ((ref) => credentials.resolve(ref)),
     });
   } catch (error) {
     reportBootRefusal(error);
+    if (database !== null) await database.close();
     throw error;
   }
 
   const { app, config, logger } = instance;
+
+  if (database !== null) {
+    logger.info(
+      'database opened',
+      { engine: config.database.engine, describe: database.describe() },
+      'database.opened',
+    );
+  }
 
   // Metadata only: which credentials exist, and why one does not. The logger redacts anything
   // sensitive-looking as a second line, but there is nothing sensitive in this record to redact.
@@ -133,6 +166,7 @@ export async function startServer(
     // restarts this process cannot find a value reachable in the one it stopped.
     credentials.clear();
     await instance.close();
+    if (database !== null) await database.close();
   };
   process.once('SIGINT', () => void shutdown('SIGINT'));
   process.once('SIGTERM', () => void shutdown('SIGTERM'));
