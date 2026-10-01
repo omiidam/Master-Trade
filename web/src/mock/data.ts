@@ -292,7 +292,9 @@ export const mockStudyMetrics: readonly StudyMetric[] = [
     get label(): string {
       return msg('data.reviewStreak');
     },
-    value: '11 days',
+    // The unit is not baked into the figure: the dashboard renders the count and takes the word
+    // "days" from the catalogue, so the figure reads correctly in either language.
+    value: '11',
     delta: '+3',
     trend: 'up',
     get hint(): string {

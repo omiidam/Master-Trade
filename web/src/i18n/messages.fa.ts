@@ -363,53 +363,49 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'connectionStatus.preparing': 'آماده‌سازی',
   'connectionStatus.reconnecting': 'اتصال دوباره',
   // dashboard ───────────────────────────────────────────────────
-  'dashboard.aResultNeverActivatesARule': 'یک نتیجه هرگز خودبه‌خود قاعده‌ای را فعال نمی‌کند.',
+  'dashboard.agentLevel': 'سطح دستیار',
   'dashboard.attempted': 'تلاش‌شده',
+  'dashboard.attemptFailed': 'مردود',
+  'dashboard.attemptPassed': 'قبول',
   'dashboard.attempts': 'تلاش',
   'dashboard.chartAdapter': 'آداپتور نمودار',
   'dashboard.complete': 'کامل ·',
-  'dashboard.consistentReviewHabit11ConsecutiveDays':
-    'عادت بازبینی پیوسته: ۱۱ روز پیاپی با نشست نوشته‌شده.',
-  'dashboard.dashboardSections': 'بخش‌های داشبورد',
-  'dashboard.emptyState': 'وضعیت خالی',
-  'dashboard.examAverageDippedOnTheSecond': 'میانگین آزمون در دومین تلاش ماژول ریسک افت کرد.',
-  'dashboard.examPerformance': 'عملکرد آزمون',
-  'dashboard.growthIsNotMasteryUnverifiedRows':
-    'رشد به‌معنای تسلط نیست: رکوردهای تأییدنشده هم شمرده می‌شوند.',
-  'dashboard.knowledgeAssessmentAndResearch': 'دانش، ارزیابی و پژوهش',
+  'dashboard.course': 'دوره',
+  'dashboard.currentCourseAndLesson': 'دوره و درس کنونی',
   'dashboard.knowledgeMastery': 'تسلط بر دانش',
-  'dashboard.loadingState': 'وضعیت بارگذاری',
-  'dashboard.memoryGrowth': 'رشد حافظه',
-  'dashboard.mock': 'نمونه',
-  'dashboard.noSessionsRecordedYet': 'هنوز نشستی ثبت نشده است',
-  'dashboard.oneJournalEntryMissingAnExplicit': 'یک ورودی دفتر معاملات فاقد سطح ابطال صریح است.',
+  'dashboard.latestExamScore': 'آخرین نمرهٔ آزمون',
+  'dashboard.lesson': 'درس',
+  'dashboard.lessonInProgress': 'در حال گذراندن',
+  'dashboard.levelIsTheCurriculumStage':
+    'سطح، مرحله‌ای است که برنامهٔ درسی اعلام می‌کند، نه یک نمره.',
+  'dashboard.marketAnalysis': 'تحلیل بازار',
+  'dashboard.marketAnalysisSummaryOnly':
+    'در حال حاضر یک سطح خلاصه است: موتور تحلیل همراه ماژول هوش بازار می‌آید و این کارت از آن خواهد خواند.',
+  'dashboard.masteryIsTheMeanOfBestScores':
+    'تسلط، میانگین بهترین نمره‌ها در هر آزمون است؛ حوزه‌ای که تلاشی نداشته باشد ارزیابی‌نشده است، نه صفر.',
+  'dashboard.module': 'ماژول',
+  'dashboard.noCourseInProgress': 'دوره‌ای در حال گذراندن نیست',
+  'dashboard.noExamScoredYet': 'هنوز آزمونی نمره‌گذاری نشده است',
+  'dashboard.noLessonInProgress': 'درسی در حال گذراندن نیست',
+  'dashboard.noWeakAreasYet': 'هنوز نقطهٔ ضعفی برای نشان‌دادن نیست',
+  'dashboard.notAttemptedYet': 'هنوز تلاشی ثبت نشده است',
+  'dashboard.notYetAssessed': 'هنوز ارزیابی نشده',
+  'dashboard.openAcademy': 'آکادمی را باز کن',
   'dashboard.openExams': 'آزمون‌های باز',
-  'dashboard.openHistory': 'تاریخچه را باز کن',
-  'dashboard.openMemory': 'حافظه را باز کن',
-  'dashboard.openResearch': 'پژوهش را باز کن',
-  'dashboard.passedOf': 'قبول‌شده از',
-  'dashboard.pending': 'در انتظار',
+  'dashboard.patterns': 'الگو',
   'dashboard.previewData': 'دادهٔ پیش‌نمایش',
   'dashboard.previewGenerated': 'تولید پیش‌نمایش',
-  'dashboard.recentAgentAndSystemEvents': 'رویدادهای تازهٔ دستیار و سامانه',
-  'dashboard.recordsAddedInTheLastMonth': 'رکوردهای افزوده‌شده در ماه گذشته',
-  'dashboard.recordsVerified': 'رکورد تأییدشده',
+  'dashboard.recentErrors': 'خطاهای اخیر',
   'dashboard.researchProgress': 'پیشرفت پژوهش',
-  'dashboard.riskFirstFramingAppearsInEvery':
-    'چارچوب ریسک‌محور در هر ورودی دفتر معاملات این ماه دیده می‌شود.',
   'dashboard.rubricScoredNeverModelJudged': 'نمره‌گذاری با شیوه‌نامه، هرگز با داوری مدل.',
-  'dashboard.running': 'در حال اجرا',
-  'dashboard.scheduledEvaluationHasNotRun': 'ارزیابی زمان‌بندی‌شده اجرا نشده است',
-  'dashboard.skeletonsAreUsedWhileAQuery':
-    'اسکلت‌های بارگذاری تا زمانی که پرس‌وجویی در جریان است نمایش داده می‌شوند؛ تپش آن‌ها به prefers-reduced-motion احترام می‌گذارد.',
-  'dashboard.strengths': 'نقاط قوت',
-  'dashboard.theShapeOfTheActivityLog': 'ساختار گزارش فعالیت: شناسهٔ همبستگی، کنشگر، رویداد، شواهد',
-  'dashboard.tradesEvaluated': 'معامله ارزیابی‌شده',
-  'dashboard.trainingDashboard': 'داشبورد آموزش',
+  'dashboard.theThreeMostRecent': 'سه الگوی اخیر؛ تحلیل کامل در صفحهٔ آزمون‌ها است.',
   'dashboard.trainingEquityCurve': 'منحنی سرمایهٔ آموزشی',
-  'dashboard.verifiedMeansAHumanOrTool': 'تأییدشده یعنی انسان یا ابزاری آن را بررسی کرده است.',
   'dashboard.vsPrevious30Days': 'در مقابل ۳۰ روز پیش',
-  'dashboard.watchList': 'فهرست پایش',
+  'dashboard.weakAreas': 'نقاط ضعف',
+  'dashboard.weakestDomainsFirst':
+    'حوزه‌هایی که بهترین نمره‌هایشان پایین‌تر است، از همان ردیف‌های ارزیابی.',
+  'dashboard.weakIsTheLowestMean':
+    'ضعف یعنی پایین‌ترین میانگین بهترین نمره‌ها — نشانه‌ای برای مطالعه، هرگز یک حکم.',
   // dashboardPage ───────────────────────────────────────────────
   'dashboardPage.completedLessonsAndGradedExamsWillAppearHere':
     'درس‌های کامل‌شده و آزمون‌های تصحیح‌شده به‌محض اضافه شدن بخش ماندگارسازی اینجا ظاهر می‌شوند.',
@@ -420,8 +416,6 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'dashboardPage.rollUpsFromTheProductModulesEachFigureIs':
     'تجمیع‌ها از ماژول‌های محصول. هر رقم نمونه‌وار است و هر کارت می‌گوید چه چیزی را نمی‌تواند به شما بگوید.',
   'dashboardPage.stateExamples': 'نمونه‌های حالت',
-  'dashboardPage.theEvaluationHarnessIsInPlaceTheScheduler':
-    'بستر ارزیابی آماده است؛ زمان‌بندی که آن را در صف می‌گذارد همراه با صف کارهای ماندگار می‌آید.',
   'dashboardPage.thisDashboardIsNotConnectedToTheBackend':
     'این داشبورد به بک‌اند متصل نیست. پیشرفت، معیارها و نمودارها نمونه‌وارند و بر اساس مدل‌های نمای نهایی تایپ شده‌اند.',
   // data ────────────────────────────────────────────────────────
@@ -431,6 +425,7 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'data.chartReading': 'خواندن نمودار',
   'data.consecutiveDaysWithACompletedReviewSession': 'روزهای پیاپی با یک نشست بازبینی کامل‌شده',
   'data.contextAssembly': 'مونتاژ بافت',
+  'data.days': 'روز',
   'data.deterministicDefaultUsedWhenNoHostedProviderIs':
     'پیش‌فرض قطعی که وقتی هیچ ارائه‌دهنده میزبانی تنظیم نشده استفاده می‌شود.',
   'data.draftKeptAsACounterExampleTheReasonTo':

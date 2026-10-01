@@ -131,7 +131,6 @@ describe('page context', () => {
     const owners: readonly (readonly [string, string])[] = [
       ['AcademyPage', 'academy'],
       ['ActivityPage', 'activity'],
-      ['DashboardPage', 'dashboard'],
       ['EvaluationPage', 'evaluation'],
       ['ExamsPage', 'exams'],
       ['JournalPage', 'journal'],

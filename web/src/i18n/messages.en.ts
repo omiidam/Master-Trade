@@ -360,56 +360,50 @@ export const EN_MESSAGES = {
   'connectionStatus.preparing': 'Preparing',
   'connectionStatus.reconnecting': 'Reconnecting',
   // dashboard ───────────────────────────────────────────────────
-  'dashboard.aResultNeverActivatesARule': 'A result never activates a rule by itself.',
+  'dashboard.agentLevel': 'Agent level',
   'dashboard.attempted': 'attempted',
+  'dashboard.attemptFailed': 'Failed',
+  'dashboard.attemptPassed': 'Passed',
   'dashboard.attempts': 'attempts',
   'dashboard.chartAdapter': 'chart adapter',
   'dashboard.complete': 'complete ·',
-  'dashboard.consistentReviewHabit11ConsecutiveDays':
-    'Consistent review habit: 11 consecutive days with a written session.',
-  'dashboard.dashboardSections': 'Dashboard sections',
-  'dashboard.emptyState': 'Empty state',
-  'dashboard.examAverageDippedOnTheSecond':
-    'Exam average dipped on the second risk module attempt.',
-  'dashboard.examPerformance': 'Exam performance',
-  'dashboard.growthIsNotMasteryUnverifiedRows':
-    'Growth is not mastery: unverified rows still count.',
-  'dashboard.knowledgeAssessmentAndResearch': 'Knowledge, assessment and research',
+  'dashboard.course': 'Course',
+  'dashboard.currentCourseAndLesson': 'Current course and lesson',
   'dashboard.knowledgeMastery': 'Knowledge mastery',
-  'dashboard.loadingState': 'Loading state',
-  'dashboard.memoryGrowth': 'Memory growth',
-  'dashboard.mock': 'mock',
-  'dashboard.noSessionsRecordedYet': 'No sessions recorded yet',
-  'dashboard.oneJournalEntryMissingAnExplicit':
-    'One journal entry missing an explicit invalidation level.',
+  'dashboard.latestExamScore': 'Latest exam score',
+  'dashboard.lesson': 'Lesson',
+  'dashboard.lessonInProgress': 'In progress',
+  'dashboard.levelIsTheCurriculumStage':
+    'The level is the stage the curriculum declares, not a score.',
+  'dashboard.marketAnalysis': 'Market analysis',
+  'dashboard.marketAnalysisSummaryOnly':
+    'A summary surface for now: the analysis engine arrives with the market-intelligence module, and this card will read from it.',
+  'dashboard.masteryIsTheMeanOfBestScores':
+    'Mastery is the mean of best scores per examination; a domain with no attempts is unassessed, not zero.',
+  'dashboard.module': 'Module',
+  'dashboard.noCourseInProgress': 'No course in progress',
+  'dashboard.noExamScoredYet': 'No examination has been scored yet',
+  'dashboard.noLessonInProgress': 'No lesson in progress',
+  'dashboard.noWeakAreasYet': 'No weak area to flag yet',
+  'dashboard.notAttemptedYet': 'Not attempted yet',
+  'dashboard.notYetAssessed': 'Not yet assessed',
+  'dashboard.openAcademy': 'Open academy',
   'dashboard.openExams': 'Open exams',
-  'dashboard.openHistory': 'Open history',
-  'dashboard.openMemory': 'Open memory',
-  'dashboard.openResearch': 'Open research',
-  'dashboard.passedOf': 'passed of',
-  'dashboard.pending': 'pending',
+  'dashboard.patterns': 'patterns',
   'dashboard.previewData': 'Preview data',
   'dashboard.previewGenerated': 'Preview generated',
-  'dashboard.recentAgentAndSystemEvents': 'Recent agent and system events',
-  'dashboard.recordsAddedInTheLastMonth': 'Records added in the last month',
-  'dashboard.recordsVerified': 'records verified',
+  'dashboard.recentErrors': 'Recent errors',
   'dashboard.researchProgress': 'Research progress',
-  'dashboard.riskFirstFramingAppearsInEvery':
-    'Risk-first framing appears in every journal entry this month.',
   'dashboard.rubricScoredNeverModelJudged': 'Rubric-scored, never model-judged.',
-  'dashboard.running': 'running',
-  'dashboard.scheduledEvaluationHasNotRun': 'Scheduled evaluation has not run',
-  'dashboard.skeletonsAreUsedWhileAQuery':
-    'Skeletons are used while a query is in flight; the pulse respects prefers-reduced-motion.',
-  'dashboard.strengths': 'Strengths',
-  'dashboard.theShapeOfTheActivityLog':
-    'The shape of the activity log: correlation id, actor, event, evidence',
-  'dashboard.tradesEvaluated': 'trades evaluated',
-  'dashboard.trainingDashboard': 'Training dashboard',
+  'dashboard.theThreeMostRecent':
+    'The three most recent patterns; the full analysis lives on the exams page.',
   'dashboard.trainingEquityCurve': 'Training equity curve',
-  'dashboard.verifiedMeansAHumanOrTool': 'Verified means a human or tool checked it.',
   'dashboard.vsPrevious30Days': 'vs. previous 30 days',
-  'dashboard.watchList': 'Watch list',
+  'dashboard.weakAreas': 'Weak areas',
+  'dashboard.weakestDomainsFirst':
+    'The domains whose best scores sit lowest, from the same assessment rows.',
+  'dashboard.weakIsTheLowestMean':
+    'Weak is the lowest mean of best scores — a place to study, never a verdict.',
   // dashboardPage ───────────────────────────────────────────────
   'dashboardPage.completedLessonsAndGradedExamsWillAppearHere':
     'Completed lessons and graded exams will appear here as soon as the persistence slice lands.',
@@ -420,8 +414,6 @@ export const EN_MESSAGES = {
   'dashboardPage.rollUpsFromTheProductModulesEachFigureIs':
     'Roll-ups from the product modules. Each figure is illustrative and each card states what it cannot tell you.',
   'dashboardPage.stateExamples': 'State examples',
-  'dashboardPage.theEvaluationHarnessIsInPlaceTheScheduler':
-    'The evaluation harness is in place; the scheduler that enqueues it arrives with the durable job queue.',
   'dashboardPage.thisDashboardIsNotConnectedToTheBackend':
     'This dashboard is not connected to the backend. Progress, metrics and charts are illustrative and typed against the final view models.',
   // data ────────────────────────────────────────────────────────
@@ -432,6 +424,7 @@ export const EN_MESSAGES = {
   'data.consecutiveDaysWithACompletedReviewSession':
     'Consecutive days with a completed review session',
   'data.contextAssembly': 'Context assembly',
+  'data.days': 'days',
   'data.deterministicDefaultUsedWhenNoHostedProviderIs':
     'Deterministic default used when no hosted provider is configured.',
   'data.draftKeptAsACounterExampleTheReasonTo':
