@@ -79,13 +79,18 @@ const suite = BROWSER === null ? describe.skip : describe;
 /**
  * The viewport widths the Product Foundation commits to.
  *
- * Two desktops, two tablets (both orientations, because a 768-wide *portrait* tablet and
- * a 1024-wide *landscape* one exercise different breakpoint edges), and three phones
- * including 375 — the narrowest width the design must survive.
+ * Two desktops, two laptops, two tablets (both orientations, because a 768-wide *portrait* tablet
+ * and a 1024-wide *landscape* one exercise different breakpoint edges), and three phones including
+ * 375 — the narrowest width the design must survive. The laptop band (1100–1279) shares no width
+ * with either desktop, and 1100 is the narrowest width that still draws the expanded rail (the shell
+ * is compact from 1099px down), so it is the breakpoint edge a laptop case has to survive — a
+ * regression below it would otherwise be measured on a desktop or a tablet and never on a laptop.
  */
 const WIDTHS: readonly (readonly [number, number])[] = [
   [1920, 1080],
   [1440, 900],
+  [1200, 800],
+  [1100, 800],
   [1024, 768],
   [768, 1024],
   [430, 932],

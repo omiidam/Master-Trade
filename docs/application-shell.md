@@ -1,4 +1,4 @@
-# Application Shell — Phases 7.1.1 through 8.5.3
+# Application Shell — Phases 7.1.1 through 8.5.4
 
 The layout foundation of the workstation: **Top Bar, Sidebar, Main Content**. Phase 7.1.1 adds no
 region and changes no arrangement — the shell has existed since Phase 3.2 and every phase since has
@@ -1610,3 +1610,75 @@ is no Performance entry; no route, navigation or shell region changed; the top b
 trail are untouched; no page title or page-level description returned; no page's content was
 redesigned; no mock data, dependency or animation was introduced; and no `overflow:hidden`, fixed
 height, viewport hack or positioning hack was used. Page 8.5.4 was not begun.
+
+## 21. Phase 8.5.4 — Integration, Accessibility & Regression QA
+
+The three components this phase-set added — the contextual header (8.5.1), the trail (8.5.2) and the shared
+actions row (8.5.3) — each arrived with their own cases. This phase asked the different question: whether
+they, the top bar and the content surface hold _together_, at every declared width, in both directions and
+under the keyboard, and whether any assertion was weaker than the invariant it names or missing entirely. It
+added no feature, route, navigation item or control, and changed no source file under `web/src/`: the audit
+found the integrations already held, and the one thing it did change is a test fixture that never reached a
+laptop.
+
+### 21.1 The audit, dimension by dimension
+
+| Dimension                                | What holds it                                                                                                                                                            | Result       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
+| Page Header                              | `renders one identity heading per page, with its context drawn inside the column`                                                                                        | pass         |
+| Breadcrumb                               | `draws the trail the navigation model derives, in step with the sidebar, in both directions`                                                                             | pass         |
+| Page Actions                             | `keeps every section’s contextual actions inside the row, named, and off the trail’s line`                                                                               | pass         |
+| Top Bar hierarchy                        | the same header case’s document-wide `<h1>` count; `keeps the shell’s geometry while the stream changes its word`                                                        | pass         |
+| Content spacing                          | the actions case’s `gap === region paddingTop` on all fourteen sections; `starts every section at its own origin`                                                        | pass         |
+| Desktop / Laptop / Tablet / Mobile / 390 | `never scrolls sideways at …`, `keeps the three regions one arrangement …`, `keeps every control big enough to touch at phone widths`                                    | pass (§21.2) |
+| RTL / LTR                                | `mirrors the shell and the page from the interface language alone`, `lays every page out right-to-left at desktop, tablet and phone sizes`, the edge/signed-figure cases | pass         |
+| Keyboard, focus, accessible labels       | `names every control and every image the browser paints`, `moves focus into the page with a real key press, and shows it`, `keeps every control it offers reachable …`   | pass         |
+| Overflow, clipping, overlap              | `never scrolls sideways at …`, `does not clip rendered text at phone widths`, `never widens the page at any width`, `never becomes a second scroll surface`              | pass         |
+
+### 21.2 The one gap the audit found, and its fix
+
+Every dimension above was already held by a case — with one exception. The committed viewport set `WIDTHS`,
+which three cases iterate (the sideways-scroll sweep, the three-region arrangement and the stream-word height
+case), listed two desktops, two tablets and three phones, and **no laptop**: 1920, 1440, 1024, 768, 430, 390, 375. The laptop band (1100–1279) shares no width with either desktop or either tablet, and 1100 is the
+narrowest width that still draws the expanded rail — the shell is compact from 1099px down — so the breakpoint
+edge the QA list names as Laptop was the one width no case rendered. A regression in the header, the trail or
+the actions between 1100 and 1279 would have been measured on a desktop and on a tablet and never once on a
+laptop.
+
+The fix is the fixture, not a source file: `WIDTHS` gains `[1200, 800]` and `[1100, 800]`, so the
+sideways-scroll sweep, the arrangement case and the stream-word case all render a laptop, in both directions,
+and the 1100px expanded-rail edge is measured rather than assumed. Nothing is asserted differently — the same
+claims now cover two more widths — and no viewport workaround, overflow hack or new case was invented.
+
+Before the widths were committed they were measured directly: all fourteen sections, in both languages, at
+1280, 1200, 1100, 1099, 1024, 900, 800 and 768, reported no element past its edge and no text clipped without
+an ellipsis. The 1100 and 1200 sweeps are now held permanently; the rest confirmed the band was already sound.
+
+### 21.3 What was verified
+
+| Check                                                   | Where                                                     | Result   |
+| ------------------------------------------------------- | --------------------------------------------------------- | -------- |
+| The whole node suite                                    | `npm test`                                                | 1955/92  |
+| The whole browser suite                                 | `tests/browser/e2e.test.ts`                               | 90 cases |
+| The two new laptop widths                               | `never scrolls sideways at 1200x800` / `1100x800`         | pass     |
+| The arrangement and stream-word cases at the new widths | `tests/browser/e2e.test.ts`                               | pass     |
+| Types, formatting and the production build              | `typecheck`, `typecheck:web`, `format:check`, `build:web` | pass     |
+
+### 21.4 Known: the pre-existing intermittence, unchanged
+
+Two known flakes stand, and neither is touched by this phase. The trade-history menu case (`marks every trade
+on its start edge, and keeps the row menu inside the window`) still fails intermittently at its own
+relative-distance check — `expected 5 to be less than or equal to 1` — the same case §14.6, §16.4 and §19.3
+record; it passes standalone, and its honest fix remains a wait on the invariant rather than on the weaker
+non-overlap condition. And one full run of this phase produced an _infrastructure_ flake, not an assertion:
+`never scrolls sideways at 430x932` timed out after 8000ms in `goto` waiting for the page to render — the
+slowest tail of an eight-minute suite — and passes standalone. Neither case reads anything this phase changed.
+
+### 21.5 What was not changed
+
+No file under `web/src/` was touched: not the top bar, the rail, the header, the trail, the actions row or the
+content surface. No section, route or navigation entry was added, removed or reordered; no page title or
+page-level description returned; the Breadcrumb → content spacing is unchanged; no assertion was weakened or
+rewritten; no delay, timeout, `overflow:hidden`, fixed height, viewport-specific workaround or positioning
+hack was introduced; and no mock data, dependency or animation was added. The phase's only changes are the
+committed viewport fixture and this record.
