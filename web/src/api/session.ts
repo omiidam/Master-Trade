@@ -26,7 +26,7 @@
  * came from, and none of them is the live stream.
  */
 
-import { ApiClient, ApiError } from './client.js';
+import { ApiClient, ApiError, type ApiConnection } from './client.js';
 import { SESSION_TOKEN_KEY, resolveRealtimeSession } from '../realtime/session.js';
 import { apiHandshake, inDesktopShell, shellBridge } from '../desktop/bridge.js';
 import { msg } from '../i18n/index.js';
@@ -47,14 +47,32 @@ export interface ApiSession {
 export type ApiSessionResolution =
   { status: 'ready'; session: ApiSession } | { status: 'unavailable'; reason: string };
 
+/**
+ * The frontend environment, as Vite defines it at build time.
+ *
+ * Declared here rather than relied on through `import.meta.env` directly: the repository-root
+ * tsconfig has no `vite/client` types, and this module is imported by the node suite
+ * (`tests/frontend-api-session.test.ts` drives it with a stubbed `fetch`), so an undeclared
+ * `import.meta.env` compiles in the app and then fails `npm run typecheck`. One typed
+ * accessor keeps both honest.
+ */
+interface FrontendEnvironment {
+  VITE_MT_API_URL?: string;
+  VITE_MT_SESSION_TOKEN?: string;
+}
+
+function frontendEnvironment(): FrontendEnvironment {
+  return (import.meta as { env?: FrontendEnvironment }).env ?? {};
+}
+
 /** The configured API base URL: the environment's, or the documented loopback default. */
 export function apiBaseUrl(): string {
-  const configured = import.meta.env.VITE_MT_API_URL as string | undefined;
+  const configured = frontendEnvironment().VITE_MT_API_URL;
   return configured !== undefined && configured !== '' ? configured : DEFAULT_API_BASE_URL;
 }
 
 function environmentToken(): string | null {
-  const token = import.meta.env.VITE_MT_SESSION_TOKEN as string | undefined;
+  const token = frontendEnvironment().VITE_MT_SESSION_TOKEN;
   return token !== undefined && token !== '' ? token : null;
 }
 
@@ -103,7 +121,7 @@ export async function resolveApiSession(): Promise<ApiSessionResolution> {
         }
       },
       devOverride: {
-        apiBaseUrl: import.meta.env.VITE_MT_API_URL,
+        apiBaseUrl: frontendEnvironment().VITE_MT_API_URL,
         token: environmentToken() ?? undefined,
       },
     });
@@ -143,15 +161,50 @@ function describeSessionFailure(error: unknown, baseUrl: string): string {
   return error instanceof Error ? error.message : msg('session.theLocalApiIsNotAnswering');
 }
 
-/** Build the client a read surface uses, or report why there is none. */
+/**
+ * Build the client a read surface uses, or report why there is none.
+ *
+ * The client is handed the way to replace a credential the server refuses, because it is the
+ * only thing that can: a session goes stale for reasons the reader cannot see — the API was
+ * restarted while the page stayed open, the token reached its TTL, the session was revoked —
+ * and the cached one is then refused on every read. Without this the page went to
+ * `unavailable` and *stayed* there through every retry, because nothing ever dropped the dead
+ * token: `resetApiSession` existed for exactly this caller and had none.
+ */
 export async function clientForApiSession(): Promise<ApiClient | { reason: string }> {
   const resolution = await resolveApiSession();
   if (resolution.status === 'unavailable') return { reason: resolution.reason };
-  return new ApiClient({
-    baseUrl: resolution.session.baseUrl,
-    token: resolution.session.token,
-    shellToken: resolution.session.shellToken,
-  });
+  const session = resolution.session;
+  return new ApiClient(
+    {
+      baseUrl: session.baseUrl,
+      token: session.token,
+      shellToken: session.shellToken,
+    },
+    { reauthorize: () => renewRefusedSession(session) },
+  );
+}
+
+/**
+ * Obtain a credential to retry a refused read with.
+ *
+ * The cached session is dropped first, unconditionally: it is the one the server just
+ * refused, and re-resolving against it would only hand back the same token. What comes back
+ * depends on which door this page came through — a fresh local sign-in in a browser preview,
+ * the shell's current secret inside the shell, or the pinned environment token.
+ *
+ * `null` means there is nothing new to try, and the caller reports the refusal instead of
+ * repeating it: the pinned token *is* the operator's declared credential, so a deployment
+ * that refuses it has answered, and a shell that returns the same secret it just had is not
+ * a second chance. A retry is only worth making with a different credential.
+ */
+async function renewRefusedSession(refused: ApiSession): Promise<ApiConnection | null> {
+  resetApiSession();
+  const resolution = await resolveApiSession();
+  if (resolution.status === 'unavailable') return null;
+  const renewed = resolution.session;
+  if (renewed.token === refused.token) return null;
+  return { baseUrl: renewed.baseUrl, token: renewed.token, shellToken: renewed.shellToken };
 }
 
 export { SESSION_TOKEN_KEY };

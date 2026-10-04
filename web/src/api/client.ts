@@ -6,7 +6,7 @@
  * from `src/api/contracts.ts` and `src/core/errors.ts`. When the server changes a
  * code, this file stops compiling — which is the point.
  *
- * Three rules it keeps:
+ * Four rules it keeps:
  *
  *   1. **Credentials travel in headers, never in a URL.** The session token goes in
  *      `Authorization: Bearer`, the per-launch shell token in the header the access
@@ -18,6 +18,11 @@
  *      reading state, declaring context or asking a question: jobs, profile, input
  *      quality, readiness. There is no order route to call, and `POST /v1/jobs` does
  *      not exist — enqueueing background work stays server-side.
+ *   4. **A refused credential is renewed, once.** A 401 means the session in hand is no
+ *      longer one the server knows — the API was restarted under a page that outlived it,
+ *      the token expired, the session was revoked. Reading is recoverable there: the session
+ *      layer can mint another credential, so this client asks for one and replays the request
+ *      exactly once, instead of telling the reader to reload the window.
  */
 
 import {
@@ -149,17 +154,37 @@ interface ApiClientDeps {
   idFactory?: IdFactory;
   /** Set when the caller already knows the shell token for this launch. */
   shellToken?: string | null;
+  /**
+   * Replace a credential the server has refused, and answer with the one to retry with.
+   *
+   * `null` means no *different* credential is available — a pinned environment token, a
+   * shell handing back the same keychain secret, or an API that is not answering at all.
+   * The request is then failed rather than replayed, so a deployment that refuses every
+   * session still answers on the first try and cannot be driven into a loop.
+   *
+   * It lives in the session layer, which is the only thing that knows how a credential is
+   * obtained; this client only knows how to ask for a new one.
+   */
+  reauthorize?: () => Promise<ApiConnection | null>;
 }
 
 export class ApiClient {
-  private readonly connection: ApiConnection;
+  /**
+   * What this client authenticates with.
+   *
+   * Mutable because a renewed credential replaces the refused one: a request that was
+   * turned away must be retried with the new token, and every request after it too.
+   */
+  private connection: ApiConnection;
   private readonly fetchImpl: typeof fetch;
   private readonly ids: IdFactory;
+  private readonly reauthorize: () => Promise<ApiConnection | null>;
 
   constructor(connection: ApiConnection, deps: ApiClientDeps = {}) {
     this.connection = connection;
     this.fetchImpl = deps.fetch ?? globalThis.fetch.bind(globalThis);
     this.ids = deps.idFactory ?? new IdFactory({ prefix: 'ui' });
+    this.reauthorize = deps.reauthorize ?? (async () => null);
   }
 
   /** Readiness, unauthenticated by design. Used to tell "down" from "not allowed". */
@@ -381,11 +406,12 @@ export class ApiClient {
     return this.request<LocalSessionData>('POST', '/v1/session/local');
   }
 
-  /** One request, one typed outcome. */
+  /** One request, one typed outcome. `replayed` guards the single renewal retry. */
   private async request<T>(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
     options: { body?: unknown } = {},
+    replayed = false,
   ): Promise<T> {
     const correlationId = this.ids.correlationId();
     const headers: Record<string, string> = {
@@ -418,6 +444,17 @@ export class ApiClient {
         status: ERROR_STATUS.PROVIDER_UNAVAILABLE,
         correlationId,
       });
+    }
+
+    // A refused credential is the one failure this client repairs itself: ask the session
+    // layer for a fresh one and replay, once. A refusal with nothing new to offer falls
+    // through to the typed error below, which is the honest answer.
+    if (response.status === 401 && !replayed) {
+      const renewed = await this.reauthorize();
+      if (renewed !== null) {
+        this.connection = renewed;
+        return this.request<T>(method, path, options, true);
+      }
     }
 
     let envelope: ApiResponse<T> | null = null;
