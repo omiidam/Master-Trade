@@ -184,10 +184,17 @@ describe('navigation on the narrowest screen', () => {
   it('hides the collapse control where there is nothing to collapse to', () => {
     const sidebar = read('web/src/app/Sidebar.tsx');
     const hook = read('web/src/app/useShellLayout.ts');
-    // The control is rendered only where the rail can be collapsed — a laptop or a desktop — so a
+    // The control is *withheld* where the rail cannot be collapsed — a tablet or a phone — so a
     // pointer-sized control never becomes the only way to read the navigation.
-    expect(sidebar).toMatch(/canCollapse \?/);
-    expect(sidebar).toMatch(/canCollapse=\{layout\.canCollapse\}/);
+    //
+    // It used to be withheld by not being mounted (`canCollapse ? … : null`), which made the control's
+    // presence wait on a media query the browser may answer hundreds of milliseconds after the
+    // viewport has already moved: a window that could honour the choice was meanwhile showing no way
+    // to make it. So the withholding is now the CSS boundary itself, and a press is refused at the
+    // same boundary as a second line of defence. The case is about the guarantee, so that is what is
+    // asserted — and the guarantee is now held twice rather than once.
+    expect(sidebar).toMatch(/max-\[\d+px\]:hidden/);
+    expect(sidebar).toMatch(/if \(!window\.matchMedia\(COMPACT_SHELL_QUERY\)\.matches\)/);
     expect(hook).toMatch(/canCollapse: canCollapseRail\(mode\)/);
     expect(sidebar).toContain('aria-label');
   });

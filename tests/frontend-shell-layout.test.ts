@@ -178,8 +178,24 @@ describe('the four widths the shell must survive', () => {
     expect(read(SHELL_LAYOUT)).toMatch(/SHELL_WIDTHS = \{/);
     // No region declares its own breakpoint any more: the three files read the mode, they do not
     // compute it.
+    //
+    // The rail's collapse control is the one thing a region still has to express as a width, and
+    // it is not a concession — it is a *consequence* of the fix that control must exist at the
+    // moment the window allows it, rather than a moment after a media query gets around to telling
+    // React. So the width is checked against the model rather than waved through: a region may name
+    // a boundary, and only a boundary the model declares. Written as `min-[…]`/`max-[…]` as well as
+    // `max-width:` because the same rule in a different notation is the same rule, and a guard a
+    // region can walk around by changing how it spells its class is not a guard.
+    const declared = new Set([SHELL_WIDTHS.tablet - 1, SHELL_WIDTHS.desktop]);
     for (const file of [SHELL, SIDEBAR, TOPBAR]) {
-      expect(read(file), `${file} declares its own breakpoint`).not.toMatch(/max-width:\s*\d+px/);
+      const source = read(file);
+      expect(source, `${file} declares its own breakpoint`).not.toMatch(/max-width:\s*\d+px/);
+      for (const match of source.matchAll(/(?:min|max)-\[(\d+)px\]/g)) {
+        expect(
+          declared.has(Number(match[1])),
+          `${file} names ${match[1]}px, which is not a boundary the model declares`,
+        ).toBe(true);
+      }
     }
   });
 
@@ -193,9 +209,22 @@ describe('the four widths the shell must survive', () => {
     // already guess from it.
     expect(sidebar).toMatch(/<Tooltip content=\{entryTooltip\(section\)\} side=\{railSide\}>/);
     expect(sidebar).toMatch(/msg\(section\.descriptionKey\)/);
-    // The collapse control is rendered only where the rail can be collapsed — never on a tablet,
-    // where it is already an icon rail, and never on a phone, where there is no rail.
-    expect(sidebar).toMatch(/canCollapse \?/);
+    // The collapse control is never *offered* where the rail cannot be collapsed — not on a tablet,
+    // where it is already an icon rail, and not on a phone, where there is no rail.
+    //
+    // It used to be asserted as `canCollapse ? … : null`, and that mechanism was the defect: mounting
+    // the control conditionally made its existence wait on a media query React is told about
+    // whenever the browser gets round to it — measured at ~410ms here — so a window wide enough to
+    // honour the reader's rail choice could be showing no way to change it at all. What the case is
+    // really about is the guarantee, not the way it was kept, so the guarantee is now stated three
+    // ways instead of one, and each is stronger than a `?` that was in the source:
+    //
+    //   1. it is *withheld* below the model's own boundary, by the same query CSS evaluates;
+    //   2. a press is *refused* below that boundary, so nothing can spend the standing preference;
+    //   3. and the boundary both of those use is the model's, never a number written beside it.
+    expect(sidebar).toMatch(/max-\[\d+px\]:hidden/);
+    expect(sidebar).toMatch(/if \(!window\.matchMedia\(COMPACT_SHELL_QUERY\)\.matches\)/);
+    expect(sidebar).toMatch(/COMPACT_SHELL_QUERY/);
     expect(read(SHELL_HOOK)).toMatch(/canCollapse: canCollapseRail\(mode\)/);
     // And what that control *says* comes from the catalogue like everything beside it. It was the
     // last accessible name in the chrome written as an English literal, so in a Persian interface the

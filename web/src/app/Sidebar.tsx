@@ -32,6 +32,7 @@ import { useUiStore } from '../store/ui';
 import { CardTile } from '../components/Card';
 import { msg, useTextDirection } from '../i18n/index.js';
 import { useShellLayout } from './useShellLayout';
+import { COMPACT_SHELL_QUERY } from './shellLayout';
 import { QUICK_NAV_KEYS, quickNavShortcut } from './navSearch';
 
 /**
@@ -400,7 +401,7 @@ function SidebarSafety({ collapsed, railSide }: { collapsed: boolean; railSide: 
  * width is the one thing the reader controls, and it is the only part of the shell that moves when
  * that preference flips.
  */
-function SidebarRail({ collapsed, canCollapse }: { collapsed: boolean; canCollapse: boolean }) {
+function SidebarRail({ collapsed }: { collapsed: boolean }) {
   const toggleSidebar = useUiStore((state) => state.toggleSidebar);
   const direction = useTextDirection();
   const railSide: RailSide = direction === 'rtl' ? 'left' : 'right';
@@ -418,21 +419,52 @@ function SidebarRail({ collapsed, canCollapse }: { collapsed: boolean; canCollap
             accessible name); expanded the wordmark sits beside it, which is the only
             place the product's name needs to be announced once. */}
         <BrandLockup markSize={36} markOnly={collapsed} />
-        {canCollapse ? (
-          <IconButton
-            // The shell's own control names itself in the interface language, like every other
-            // control around it. It was the last accessible name in the chrome written in English
-            // whatever the interface was being read in, which left the one control that changes the
-            // shape of the shell as the only thing in a Persian screen a reader could not read.
-            label={msg(collapsed ? 'sidebar.expandSidebar' : 'sidebar.collapseSidebar')}
-            variant="ghost"
-            size="icon"
-            className="ms-auto"
-            onClick={toggleSidebar}
-          >
-            <PanelStartIcon size={16} />
-          </IconButton>
-        ) : null}
+        {/* Always rendered, and *offered* only where the window can honour the choice.
+
+            It used to be mounted only when `canCollapse` was true, and that made the control's
+            existence depend on a JavaScript boolean the shell can only learn from a media query —
+            which the browser is free to answer late. Measured in this product: resizing from a
+            tablet back to a laptop, `resize` ran immediately while the matching `matchMedia`
+            `change` arrived ~410ms later, and for that whole window the shell believed it was
+            still a tablet. The rail was already at the width that honours the reader's choice
+            while offering no way to change it, so a window that could expand the rail had no
+            expand control until an unrelated, arbitrarily-timed event landed.
+
+            The boundary belongs to CSS now, and it is the model's own: `max-[1099px]` is one pixel
+            below `SHELL_WIDTHS.tablet` (1100), which is where `canCollapseRail` stops being true.
+            `display: none` is not a softer "hidden" — it takes the control out of the layout and
+            out of the accessibility tree, so a phone or a tablet is still offered nothing, which
+            is the rule this rail has always kept.
+
+            The click is guarded as well as the appearance, because those are two different claims:
+            hiding says the reader is not offered a choice this window cannot honour, and the guard
+            is what stops a press from *spending* the standing preference anyway. A rail that only
+            hid the control would let any other path through — a keyboard activation, a scripted
+            click — rewrite a choice the window had no room to honour.
+
+            The guard asks the *same query the CSS asked*, read live, at the moment of the press.
+            It deliberately does not use `canCollapse` from the hook: that value is the one that
+            arrives late, and refusing a press because of it would trade a missing control for a
+            control that silently does nothing. `matchMedia(...).matches` is read from the viewport
+            as it is now, so the decision and the appearance cannot disagree. */}
+        <IconButton
+          // The shell's own control names itself in the interface language, like every other
+          // control around it. It was the last accessible name in the chrome written in English
+          // whatever the interface was being read in, which left the one control that changes the
+          // shape of the shell as the only thing in a Persian screen a reader could not read.
+          label={msg(collapsed ? 'sidebar.expandSidebar' : 'sidebar.collapseSidebar')}
+          variant="ghost"
+          size="icon"
+          // One pixel below `SHELL_WIDTHS.tablet`, which is `COMPACT_SHELL_QUERY` — the same
+          // boundary the press below is guarded on, and the width at which the rail stops being
+          // the reader's to change.
+          className="ms-auto max-[1099px]:hidden"
+          onClick={() => {
+            if (!window.matchMedia(COMPACT_SHELL_QUERY).matches) toggleSidebar();
+          }}
+        >
+          <PanelStartIcon size={16} />
+        </IconButton>
       </div>
 
       <QuickNavTrigger collapsed={collapsed} railSide={railSide} />
@@ -639,5 +671,5 @@ export function Sidebar() {
     return <SidebarDrawer open={sidebarOpen} onOpenChange={setSidebarOpen} />;
   }
 
-  return <SidebarRail collapsed={layout.rail === 'collapsed'} canCollapse={layout.canCollapse} />;
+  return <SidebarRail collapsed={layout.rail === 'collapsed'} />;
 }
