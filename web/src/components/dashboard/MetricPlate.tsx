@@ -12,6 +12,15 @@
  * The form is `surface="metric"`: raised, corner-cut, the hardest edge in the system. That is
  * deliberate — a metric is an object you could pick up, and the plate that carries the figure
  * should read as more lifted than the panels that explain it.
+ *
+ * Four things here exist so a *row* of plates aligns, which is the only way a KPI strip works: the
+ * density is stated rather than inherited from the surface, the definition line is reserved whether
+ * or not this plate has one, the body grows to fill the space between the two reserved bands, and
+ * the note area is held to two lines so a caveat that wraps does not shorten its neighbour's body.
+ * A strip whose figures sit at three different heights makes the reader measure instead of compare.
+ *
+ * The footer therefore renders even when it is empty: it is part of the plate's shape, and a plate
+ * that dropped it would have a taller body than the plates beside it.
  */
 
 import type { ReactNode } from 'react';
@@ -47,23 +56,37 @@ export function MetricPlate({
   action,
 }: MetricPlateProps) {
   return (
-    <Card surface="metric" className="flex flex-col">
+    // `cozy` rather than the surface's own `compact`: the plates share this row with the panels
+    // below, and one inner rhythm across the page is what lets a title here and a title there
+    // start on the same line. The face is untouched — only the density is stated.
+    <Card surface="metric" density="cozy" className="flex flex-col">
       <CardHeader divider actions={badge ?? null}>
         <div>
           <CardTitle className="text-body">{label}</CardTitle>
-          {description ? <CardDescription>{description}</CardDescription> : null}
+          {/* The definition line is part of the plate's shape, not an optional extra: a plate
+              without one still reserves the line, so a strip of plates has one header height and
+              its figures begin together. The spacer is aria-hidden and carries no text. */}
+          {description ? (
+            <CardDescription>{description}</CardDescription>
+          ) : (
+            <CardDescription aria-hidden>{'\u00a0'}</CardDescription>
+          )}
         </div>
       </CardHeader>
-      <CardContent className="flex-1 space-y-2">
-        {value === undefined ? (empty ?? null) : value}
+      <CardContent className="flex flex-1 flex-col gap-2">
+        {value === undefined ? (
+          <div className="flex flex-1 flex-col [&>*]:grow">{empty ?? null}</div>
+        ) : (
+          value
+        )}
         {detail ? <div className="text-caption text-text-muted">{detail}</div> : null}
       </CardContent>
-      {note || action ? (
-        <CardFooter className="text-caption text-text-faint">
-          {note ? <span>{note}</span> : <span />}
-          {action ?? null}
-        </CardFooter>
-      ) : null}
+      <CardFooter className="text-caption text-text-faint">
+        {/* Two caption lines, in the caption's own unit: `lh` is this element's line height, so the
+            reserve follows the token rather than restating it as a pixel count. */}
+        <span className="min-h-[2lh]">{note ?? ''}</span>
+        {action ?? null}
+      </CardFooter>
     </Card>
   );
 }

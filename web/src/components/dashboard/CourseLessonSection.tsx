@@ -6,6 +6,11 @@
  * comes out of this card, and because it is the only section whose content is a *place* rather
  * than a figure. Course and lesson are two wells inside it (`CardTile`) so the pair stays one
  * card — they are one destination: a lesson means little without the course it belongs to.
+ *
+ * Its density is stated so the featured panel and the data frame beside it begin their titles on the
+ * same line; the accent flood is what makes this card the subject of the screen, and it does not
+ * need an extra 8px of padding to say so. The two wells share the body evenly, so the pair reads as
+ * one balanced pair whether each holds a course or an empty state.
  */
 
 import {
@@ -32,14 +37,14 @@ export interface CourseLessonSectionProps {
 
 export function CourseLessonSection({ course, lesson }: CourseLessonSectionProps) {
   return (
-    <Card surface="featured" className="flex flex-col">
+    <Card surface="featured" density="cozy" className="flex flex-col">
       <CardHeader divider>
         <div>
           <CardTitle>{msg('dashboard.currentCourseAndLesson')}</CardTitle>
           <CardDescription>{msg('dashboard.serverDerived')}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 space-y-3">
+      <CardContent className="flex flex-1 flex-col gap-3 [&>*]:grow [&>*]:basis-0">
         {course === null ? (
           <EmptyState title={msg('dashboard.noCourseInProgress')} />
         ) : (

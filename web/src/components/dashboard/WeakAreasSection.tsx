@@ -4,7 +4,8 @@
  * The same rows as mastery, asked a different question: not "how much do I know" but "what do I
  * open next". So this card draws ranks rather than shares (see `RankedDomainList`) and uses a
  * `data` surface with a quieter frame than the featured card, because it is a follow-up to
- * reading, not the place the screen points at.
+ * reading, not the place the screen points at. Its density is stated so it lines up with the card
+ * it is read beside.
  */
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../Card';
@@ -20,14 +21,14 @@ export interface WeakAreasSectionProps {
 
 export function WeakAreasSection({ domains }: WeakAreasSectionProps) {
   return (
-    <Card surface="data" className="flex flex-col">
+    <Card surface="data" density="cozy" className="flex flex-col">
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">{msg('dashboard.weakAreas')}</CardTitle>
           <CardDescription>{msg('dashboard.weakestDomainsFirst')}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className="flex flex-1 flex-col [&>*]:grow">
         {domains.length === 0 ? (
           <EmptyState
             title={msg('dashboard.noWeakAreasYet')}

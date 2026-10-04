@@ -11,6 +11,13 @@
  * series is held yet. It draws no chart — the read reports `barCount: 0`, and a curve assembled
  * from local numbers under a real symbol would be indistinguishable from a measured one. When
  * the API starts serving bars, this card is where they arrive.
+ *
+ * It states its density for the same reason the panels above do: a page whose cards each inherit a
+ * different inner rhythm has no left edge for the eye to follow down it.
+ *
+ * The "summary surface" caveat is stated once, in the footer, which is the band this page puts
+ * caveats in. It used to be passed to the empty state as its hint as well, so the card printed the
+ * same sentence twice — once inside the well and once directly beneath it.
  */
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../Card';
@@ -29,7 +36,7 @@ export interface MarketSummarySectionProps {
 
 export function MarketSummarySection({ market, asOf }: MarketSummarySectionProps) {
   return (
-    <Card className="flex flex-col">
+    <Card density="cozy" className="flex flex-col">
       <CardHeader divider actions={<ProvenanceBadge provenance={market.dataProvenance} />}>
         <div>
           <CardTitle className="text-body">{msg('dashboard.marketAnalysis')}</CardTitle>
@@ -39,11 +46,10 @@ export function MarketSummarySection({ market, asOf }: MarketSummarySectionProps
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className="flex flex-1 flex-col [&>*]:grow">
         <EmptyState
           title={msg('dashboard.nothingYet')}
           description={msg('dashboard.marketSeriesUnavailable')}
-          hint={msg('dashboard.marketAnalysisSummaryOnly')}
         />
       </CardContent>
       <CardFooter className="text-caption text-text-faint">

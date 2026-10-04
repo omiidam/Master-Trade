@@ -6,6 +6,8 @@
  * frequency and its date — "order blocks" is a topic, "order blocks, 4 misses, last seen
  * Tuesday" is a study session. The count badge in the header reports how many patterns the card
  * is showing out of the server's list, so the section never implies the list is complete.
+ *
+ * The density is stated so the timeline shares its inner rhythm with the ranked list beside it.
  */
 
 import { CircleAlert } from 'lucide-react';
@@ -31,7 +33,7 @@ export interface RecentErrorsSectionProps {
 
 export function RecentErrorsSection({ errors }: RecentErrorsSectionProps) {
   return (
-    <Card surface="data" className="flex flex-col">
+    <Card surface="data" density="cozy" className="flex flex-col">
       <CardHeader
         divider
         actions={
@@ -45,7 +47,7 @@ export function RecentErrorsSection({ errors }: RecentErrorsSectionProps) {
           <CardDescription>{msg('exams.patternsComeFromStoredAttemptResults')}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className="flex flex-1 flex-col [&>*]:grow">
         {errors.length === 0 ? (
           <EmptyState
             icon={<CircleAlert size={20} aria-hidden />}
