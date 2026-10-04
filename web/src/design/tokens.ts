@@ -22,18 +22,72 @@ export interface ThemeDefinition {
   id: string;
   name: string;
   mode: 'dark' | 'light';
-  /** The product is a desktop workstation: no light theme in this phase. */
+  /** The attribute the theme is selected by, on the document element. */
+  attribute: string;
   notes: string;
 }
 
-export const THEME: ThemeDefinition = {
-  id: 'master-trade-dark',
-  name: 'Workstation Dark',
-  mode: 'dark',
-  get notes(): string {
-    return msg('tokens.premiumDarkFintechThemeLightThemeDeferredTokens');
+/**
+ * The themes, and the only two.
+ *
+ * Both are the *same* token names: `[data-theme='light']` in `global.css` redeclares every colour
+ * `@theme` declares and nothing more, which is what makes them interchangeable through one API
+ * rather than two. A component written today against `--color-surface` renders correctly in both
+ * without naming either, and a component written tomorrow inherits both for free.
+ *
+ * The selector is an *attribute*, not a class, for the reason the language preference is keyed off
+ * `:lang(fa)` rather than `[dir='rtl']`: the theme is a stated fact about the surface, and an
+ * attribute is the thing a stylesheet, a test and a support conversation can all point at.
+ */
+export const THEMES: readonly ThemeDefinition[] = [
+  {
+    id: 'master-trade-dark',
+    name: 'Workstation Dark',
+    mode: 'dark',
+    attribute: 'dark',
+    get notes() {
+      return msg('tokens.premiumDarkFintechThemeLightThemeDeferredTokens');
+    },
   },
-};
+  {
+    id: 'master-trade-light',
+    name: 'Workstation Light',
+    mode: 'light',
+    attribute: 'light',
+    get notes() {
+      return msg('tokens.premiumDarkFintechThemeLightThemeDeferredTokens');
+    },
+  },
+];
+
+/** The theme the product opens in. */
+export const DEFAULT_THEME_ID = 'master-trade-dark';
+
+/**
+ * The neutral ladder, in the order a reader meets it.
+ *
+ * Settings shows these as live swatches rather than the palette's old five accent chips, because
+ * after Phase 9 the accent chips would have been five greys in a row and the neutral ladder is the
+ * honest answer to "what colours is this?". The list is read from the stylesheet at render time
+ * through `var(--…)`, so it follows the active theme without knowing which one is active.
+ */
+export const THEME_LADDER: readonly string[] = [
+  '--color-bg',
+  '--color-surface',
+  '--color-surface-raised',
+  '--color-border',
+  '--color-text-muted',
+  '--color-text',
+] as const;
+
+/** What the palette is, in one sentence, for the reader rather than for a reviewer. */
+export const THEME_NOTES = (() => {
+  try {
+    return msg('tokens.premiumDarkFintechThemeLightThemeDeferredTokens');
+  } catch {
+    return 'Grayscale only: every surface, ink and state is a step on one lightness axis.';
+  }
+})();
 
 /**
  * The families, in the order the stylesheet declares them.
@@ -487,48 +541,58 @@ export const CONTROL_FACES: readonly ControlFace[] = [
 /* ------------------------------------------------------------------------ */
 
 /**
- * The neutral axis.
+ * Every colour the stylesheet may declare, for the grayscale contract to check.
  *
- * Every surface, border and text step in the product is the same material, and lightness does all
- * the work: depth reads as distance from the viewer rather than as a second colour creeping in.
- * That is a claim the suite can check, because a hue that drifts is exactly how a palette becomes
- * "a collection of colours" one edit at a time.
+ * **This is the list that makes "grayscale only" a fact rather than an intention.** The old
+ * `NEUTRAL_AXIS` named ten neutral tokens and left the six accent families, their wells and their
+ * rims entirely unchecked — a brand cyan and a danger red both passed, because the contract was
+ * only ever about the *background*. This list names every `--color-*` declaration in `@theme`, so
+ * the suite walks the whole palette and fails on the first one that acquires a hue.
  *
- * **Phase 8 moved the axis from a blue-black to a true dark grey, and the bound moved with it.**
- * The ladder used to be a narrow blue-black — hue 210–222, saturation 10–46 — which made hue the
- * load-bearing constraint: every neutral agreed on a hue and only lightness varied. The retheme
- * replaced it with greys that are near-achromatic by intent (`#111212`, `#2e2e2e`, `#4a4a4a` are
- * at 0–3% saturation), and two tokens carry a little more (#3a4447 at 10.1%, #f4f7f9 at 29.4%).
- *
- * For a material this neutral, **saturation is the axis and hue is not** — a grey at 0% saturation
- * has no hue to hold, so constraining it would constrain nothing real. The hue band is therefore
- * widened to cover the whole cool half of the wheel and it means one specific thing: *no neutral is
- * pushed into the magenta/purple half, where it would stop reading as a material and start reading
- * as a sixth state colour* — the purple quarter is where `--color-ai` and the epistemic labels
- * live, and a surface that drifted there would blur the line between the room and the news.
- *
- * The saturation ceiling is unchanged at 46% and is now the whole contract, and for the first
- * time it is a *ceiling with a floor at zero*: at or under 46%, a neutral cannot drift into a hue
- * of its own, and it cannot go fully saturated either. The floor exists because the old band had a
- * non-zero low end and the new ladder includes true greys; without it the axis would forbid
- * exactly the values the brief asked for.
+ * The one thing deliberately absent is the *values*: they live in `web/src/styles/global.css` and
+ * are read from there, which is the point of a single source of truth — this file cannot assert a
+ * palette is grey if it is not the file that declares the palette.
  */
-export const NEUTRAL_AXIS = {
-  hue: [0, 210] as const,
-  saturation: [0, 46] as const,
-  tokens: [
-    '--color-bg',
-    '--color-bg-elevated',
-    '--color-surface',
-    '--color-surface-raised',
-    '--color-surface-sunken',
-    '--color-border',
-    '--color-border-strong',
-    '--color-text',
-    '--color-text-muted',
-    '--color-text-faint',
-  ],
-} as const;
+export const THEME_COLOR_TOKENS: readonly string[] = [
+  // Surfaces.
+  '--color-bg',
+  '--color-bg-elevated',
+  '--color-surface',
+  '--color-surface-raised',
+  '--color-surface-sunken',
+  // Edges and ink.
+  '--color-border',
+  '--color-border-strong',
+  '--color-text',
+  '--color-text-muted',
+  '--color-text-faint',
+  // The brand, and each of its well and rim.
+  '--color-primary',
+  '--color-primary-strong',
+  '--color-primary-fg',
+  '--color-primary-soft',
+  '--color-primary-soft-hover',
+  '--color-primary-border',
+  // The five states, and each of their wells and rims.
+  '--color-info',
+  '--color-info-soft',
+  '--color-info-border',
+  '--color-success',
+  '--color-success-soft',
+  '--color-success-border',
+  '--color-warning',
+  '--color-warning-soft',
+  '--color-warning-border',
+  '--color-danger',
+  '--color-danger-strong',
+  '--color-danger-fg',
+  '--color-danger-soft',
+  '--color-danger-border',
+  '--color-ai',
+  '--color-ai-soft',
+  '--color-ai-border',
+  '--color-focus',
+] as const;
 
 /**
  * A colour family: a base, the well and edge that go with it, and where it sits on the wheel.
@@ -551,9 +615,18 @@ export interface AccentFamily {
   base: string;
   soft?: string;
   border?: string;
-  relationship: 'brand' | 'analogous' | 'complementary';
-  /** The hue the family is built on; the suite re-derives it from the stylesheet and compares. */
-  hue: number;
+  /**
+   * Where this family's ink sits on the lightness axis, 0 (black) to 1 (white) — and the reason
+   * this field replaced the `hue` and `relationship` it used to carry.
+   *
+   * A hue is the one thing a grayscale palette cannot have: a 0%-saturation grey has no hue to
+   * record, so `hue: 190` on `#e8e8e8` would be a number about nothing, and a test that re-derived
+   * it from the stylesheet would be checking that a fiction stayed fictional. What *is* real, and
+   * what now has to carry the load hue used to, is the position on the single remaining axis: the
+   * suite reads this, reads the stylesheet, and holds the two together — which is what keeps a
+   * state from quietly collapsing onto its neighbour now that colour can no longer tell them apart.
+   */
+  lightness: number;
 }
 
 export const ACCENT_FAMILIES: readonly AccentFamily[] = [
@@ -562,65 +635,84 @@ export const ACCENT_FAMILIES: readonly AccentFamily[] = [
     base: '--color-primary',
     soft: '--color-primary-soft',
     border: '--color-primary-border',
-    relationship: 'brand',
-    hue: 190,
+    // The brightest ink on the axis. In a coloured palette the brand was the loudest hue; here it
+    // is simply the top of the value scale, and a filled primary control is a near-white block.
+    lightness: 0.91,
   },
   {
     role: 'information',
     base: '--color-info',
     soft: '--color-info-soft',
     border: '--color-info-border',
-    relationship: 'analogous',
-    hue: 215,
+    lightness: 0.72,
   },
   {
     role: 'reasoning',
     base: '--color-ai',
     soft: '--color-ai-soft',
     border: '--color-ai-border',
-    relationship: 'analogous',
-    hue: 258,
+    lightness: 0.81,
   },
   {
     role: 'confirmation',
     base: '--color-success',
     soft: '--color-success-soft',
     border: '--color-success-border',
-    // Analogous rather than opposite, and that is the whole 7.2.2 story: confirmation used to sit
-    // *seven* degrees from the brand, which made one hue wear two names. It is a neighbouring green
-    // now, moved far enough round the wheel to read as its own colour while staying in the brand's
-    // family — the `relationship` states the geometry, `role` states the job.
-    relationship: 'analogous',
-    hue: 152,
+    // The old comment here was about moving confirmation *seven* degrees off the brand, so that
+    // one hue could not wear two names. That defect cannot recur by hue, and the suite below now
+    // prevents it the only way that still means something: no two state inks may sit within
+    // `MIN_LIGHTNESS_SEPARATION` of one another.
+    lightness: 0.62,
   },
   {
     role: 'caution',
     base: '--color-warning',
     soft: '--color-warning-soft',
     border: '--color-warning-border',
-    relationship: 'complementary',
-    hue: 38,
+    lightness: 0.59,
   },
   {
     role: 'loss',
     base: '--color-danger',
     soft: '--color-danger-soft',
     border: '--color-danger-border',
-    relationship: 'complementary',
-    hue: 2,
+    // Darker than the caution above it, and *not* because dark means bad: it is the one state that
+    // owns a filled destructive surface, and a dark fill is what lets `--color-danger-fg` be a
+    // light label. The ordering is a typographic decision, and it is stated here so that the next
+    // person to reach for a red does not mistake it for a semantic ranking.
+    lightness: 0.64,
   },
 ];
 
 /**
- * The brand's hue, and how far a semantic colour has to stay from it.
+ * The grayscale contract: how close to grey a theme colour is allowed to be, in *both* themes.
  *
- * Phase 7.2.2 moved the brand here because it was *seven* degrees from `--color-success` — two names
- * for one green, which is the failure mode this number exists to prevent. Twenty degrees is the
- * floor at which a state and the accent stop being confusable at a glance; the closest pair today
- * is information at twenty-five.
+ * This replaces the hue-band axis the palette used to be held to, and it is a strictly stronger
+ * rule rather than a looser one. The old contract said the neutrals shared a narrow hue band; it
+ * said nothing at all about the six accent families, which were free to be any colour on the
+ * wheel. This one covers **every** colour token the stylesheet declares — neutrals, states,
+ * aliases and all — and forbids hue on any of them.
+ *
+ * The ceiling is 3% saturation rather than 0, and the reason is one of the brief's own values:
+ * `#111212`, the named primary background, is *one 255th* of blue away from neutral — 17, 18, 18 —
+ * which HSL puts at 2.9% only because it is measured on such a dark value. Rather than round the
+ * brief's number out of the record, the contract is set where the brief's own palette already sits.
+ * It is still tight enough that the rule has teeth: `#3a4447`, the secondary surface the brief
+ * also names, measured 10% and was therefore rewritten as `#404040`, and anything a reader could
+ * actually see as a colour is far outside 3%.
  */
-export const BRAND_HUE = 190;
-export const MIN_HUE_SEPARATION = 20;
+export const MAX_THEME_SATURATION = 3;
+
+/**
+ * How far apart two state inks have to be, in relative luminance, to be told apart.
+ *
+ * This is the successor to `MIN_HUE_SEPARATION`, and it exists because losing hue transfers a job
+ * to it. Twenty degrees of hue gap used to mean "these two are different colours"; twenty thousandths
+ * of relative luminance now has to mean "these two are different greys". The suite holds every
+ * family against every other, so two states cannot collapse into the same block of the palette
+ * just because nothing coloured them apart any more.
+ */
+export const MIN_LIGHTNESS_SEPARATION = 0.02;
 
 /**
  * How the interface states a condition, and what each state is allowed to mean.

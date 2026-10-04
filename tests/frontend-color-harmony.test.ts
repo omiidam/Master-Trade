@@ -30,12 +30,13 @@ import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   ACCENT_FAMILIES,
-  BRAND_HUE,
   CONTRAST_RULES,
-  MIN_HUE_SEPARATION,
-  NEUTRAL_AXIS,
+  MAX_THEME_SATURATION,
+  MIN_LIGHTNESS_SEPARATION,
   SEMANTIC_USAGE,
   STATE_ON_FILL_RULES,
+  THEME_COLOR_TOKENS,
+  THEMES,
 } from '../web/src/design/tokens.js';
 
 const STYLESHEET = join('web', 'src', 'styles', 'global.css');
@@ -44,9 +45,10 @@ const CSS = readFileSync(STYLESHEET, 'utf8');
 /** The stylesheet with its comments removed, so a token named in prose is not a declaration. */
 const CODE = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
 
-function themeBlock(css: string): string {
-  const start = css.indexOf('@theme {');
-  expect(start, 'the stylesheet declares no @theme block').toBeGreaterThan(-1);
+/** Every balanced block that begins at `selector`, which is how a theme is found in the file. */
+function themeBlock(css: string, selector: string): string {
+  const start = css.indexOf(selector);
+  expect(start, `the stylesheet declares no ${selector} block`).toBeGreaterThan(-1);
   let depth = 0;
   for (let index = css.indexOf('{', start); index < css.length; index += 1) {
     if (css[index] === '{') depth += 1;
@@ -55,11 +57,11 @@ function themeBlock(css: string): string {
       if (depth === 0) return css.slice(start, index + 1);
     }
   }
-  throw new Error('the @theme block is not closed');
+  throw new Error(`${selector} is not closed`);
 }
 
 const DECLARED = new Map<string, string>();
-for (const match of themeBlock(CODE).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) {
+for (const match of themeBlock(CODE, '@theme {').matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) {
   const name = match[1];
   const declaration = match[2];
   if (name !== undefined && declaration !== undefined) {
@@ -67,10 +69,36 @@ for (const match of themeBlock(CODE).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)
   }
 }
 
-/** A hex token's value, or a failure naming the token that is missing. */
+/**
+ * The light theme's declarations, read from its own block.
+ *
+ * Reading it is the point: the claim "the two themes are interchangeable through one token API" is
+ * not a claim about this file, it is a claim about the stylesheet, and a suite that only ever read
+ * `@theme` would be asserting the manifest's opinion rather than the product's behaviour.
+ */
+const LIGHT_DECLARED = new Map<string, string>();
+for (const match of themeBlock(CODE, "[data-theme='light']").matchAll(
+  /(--[a-z0-9-]+)\s*:\s*([^;]+);/gi,
+)) {
+  const name = match[1];
+  const declaration = match[2];
+  if (name !== undefined && declaration !== undefined) {
+    LIGHT_DECLARED.set(name, declaration.trim());
+  }
+}
+
+/** A hex token's value in the default (dark) theme, or a failure naming the missing token. */
 function value(token: string): string {
   const declared = DECLARED.get(token);
   expect(declared, `${token} is not declared in ${STYLESHEET}`).toBeDefined();
+  expect(declared, `${token} is not a hex colour`).toMatch(/^#[0-9a-f]{6}$/);
+  return declared ?? '';
+}
+
+/** The same token's value in the light theme. */
+function lightValue(token: string): string {
+  const declared = LIGHT_DECLARED.get(token);
+  expect(declared, `${token} is not restated for the light theme in ${STYLESHEET}`).toBeDefined();
   expect(declared, `${token} is not a hex colour`).toMatch(/^#[0-9a-f]{6}$/);
   return declared ?? '';
 }
@@ -159,83 +187,97 @@ describe('Task 1 — the accents are one harmony on one wheel', () => {
     }
   });
 
-  it('re-derives every declared hue from the stylesheet', () => {
-    // The manifest saying `hue: 190` is worth nothing unless the stylesheet agrees, so the suite
-    // reads the hex and computes it. A tolerance of 2 degrees absorbs rounding, not drift.
+  it('re-derives every declared lightness from the stylesheet', () => {
+    // The manifest saying `lightness: 0.91` is worth nothing unless the stylesheet agrees, so the
+    // suite reads the hex and computes it. A tolerance absorbs rounding, not drift.
     for (const family of ACCENT_FAMILIES) {
-      const measured = hsl(value(family.base)).hue;
+      const measured = hsl(value(family.base)).lightness / 100;
       expect(
-        Math.abs(measured - family.hue),
-        `${family.base} is ${measured} degrees, the manifest says ${family.hue}`,
-      ).toBeLessThanOrEqual(2);
+        Math.abs(measured - family.lightness),
+        `${family.base} is ${(measured * 100).toFixed(1)}% lightness, the manifest says ${(family.lightness * 100).toFixed(1)}%`,
+      ).toBeLessThanOrEqual(0.02);
     }
   });
 
-  it('has exactly one brand, at the hue the separation rule measures against', () => {
-    const brands = ACCENT_FAMILIES.filter((family) => family.relationship === 'brand');
-    expect(brands).toHaveLength(1);
-    expect(brands[0]?.base).toBe('--color-primary');
-    expect(brands[0]?.hue).toBe(BRAND_HUE);
-    expect(hsl(value('--color-primary')).hue).toBe(BRAND_HUE);
-  });
-
-  it('keeps every other accent far enough from the brand to be its own colour', () => {
-    // The defect this exists to prevent, in one number: brand and confirmation were seven degrees
-    // apart. Twenty is the floor at which a state stops reading as the accent wearing a hat, and it
-    // is a floor on the *pair*, so neither token can move closer without failing.
-    const brand = hsl(value('--color-primary')).hue;
-    for (const family of ACCENT_FAMILIES) {
-      if (family.relationship === 'brand') continue;
-      const gap = hueGap(hsl(value(family.base)).hue, brand);
-      expect(
-        gap,
-        `${family.base} is ${gap} degrees from the brand (--color-primary)`,
-      ).toBeGreaterThanOrEqual(MIN_HUE_SEPARATION);
-    }
-  });
-
-  it('states each relationship as the angle it actually is', () => {
-    // `analogous` is a neighbouring hue and `complementary` is one past the far side, so the word in
-    // the manifest is checkable rather than editorial. This is what caught confirmation being
-    // classified as complementary while sitting 38 degrees from the brand.
-    const brand = hsl(value('--color-primary')).hue;
-    for (const family of ACCENT_FAMILIES) {
-      if (family.relationship === 'brand') continue;
-      const gap = hueGap(hsl(value(family.base)).hue, brand);
-      if (family.relationship === 'analogous') {
-        expect(gap, `${family.base} is ${gap} degrees and is not analogous`).toBeLessThan(90);
-      } else {
+  it('holds every colour in the palette to the grayscale ceiling, in both themes', () => {
+    // This is the rule the whole retheme exists to enforce, and it is stated over *every* colour
+    // token rather than over the ten neutrals. The old contract only ever spoke about the
+    // background, which is precisely how a brand cyan and a danger red both passed: nobody was
+    // checking them. `THEME_COLOR_TOKENS` is now the whole palette, so the first token to acquire a
+    // hue fails here whichever theme it happened in.
+    expect(THEME_COLOR_TOKENS.length).toBeGreaterThanOrEqual(30);
+    for (const token of THEME_COLOR_TOKENS) {
+      for (const [name, read] of [
+        ['dark', value],
+        ['light', lightValue],
+      ] as const) {
+        const { saturation } = hsl(read(token));
         expect(
-          gap,
-          `${family.base} is ${gap} degrees and is not complementary`,
-        ).toBeGreaterThanOrEqual(90);
+          saturation,
+          `${token} is ${saturation}% saturated in the ${name} theme, and this palette is grayscale only`,
+        ).toBeLessThanOrEqual(MAX_THEME_SATURATION);
       }
     }
-    // Both relationships are actually used, or one of them is a word with no meaning.
-    const used = new Set(ACCENT_FAMILIES.map((family) => family.relationship));
-    expect([...used].sort()).toEqual(['analogous', 'brand', 'complementary']);
   });
 
-  it('builds the neutrals on one axis rather than scattering them', () => {
-    // Every non-state surface, edge and ink shares a narrow band of hue and a bounded saturation:
-    // that is what makes a dark interface read as one material. Widen either and the greys start
-    // looking tinted against each other.
-    const [lowHue, highHue] = NEUTRAL_AXIS.hue;
-    const [lowSaturation, highSaturation] = NEUTRAL_AXIS.saturation;
-    expect(NEUTRAL_AXIS.tokens.length).toBeGreaterThanOrEqual(10);
-    for (const token of NEUTRAL_AXIS.tokens) {
-      const { hue, saturation } = hsl(value(token));
-      expect(hue, `${token} is ${hue} degrees, outside the neutral axis`).toBeGreaterThanOrEqual(
-        lowHue,
-      );
-      expect(hue, `${token} is ${hue} degrees, outside the neutral axis`).toBeLessThanOrEqual(
-        highHue,
-      );
+  it('declares the same tokens in both themes, so a component inherits both', () => {
+    // The requirement "new components must not require manual theme-specific styling" is not a
+    // convention anybody can be asked to follow — it is this assertion. A token the light theme
+    // forgets to restate would render dark inside a light page, and the only thing standing
+    // between that and a shipped interface is this list.
+    const darkColours = new Set(THEME_COLOR_TOKENS);
+    for (const token of darkColours) lightValue(token);
+    // And the light theme adds nothing the dark one does not have, which is what stops a component
+    // being written against a light-only token that no longer works when the reader goes back.
+    for (const token of LIGHT_DECLARED.keys()) {
+      if (!token.startsWith('--color-')) continue;
       expect(
-        saturation,
-        `${token} is ${saturation}% saturated, which is a tint and not a neutral`,
-      ).toBeLessThanOrEqual(highSaturation);
-      expect(saturation).toBeGreaterThanOrEqual(lowSaturation);
+        DECLARED.has(token),
+        `the light theme declares ${token}, which the default theme does not`,
+      ).toBe(true);
+    }
+    // Every theme the manifest names is a theme the stylesheet can actually select.
+    for (const theme of THEMES) {
+      expect(theme.attribute, 'a theme with no attribute cannot be selected').toMatch(
+        /^(dark|light)$/,
+      );
+    }
+  });
+
+  it('keeps every state a distinct step on the axis, since nothing else can tell them apart', () => {
+    // The defect this replaces: brand and confirmation were seven degrees apart, so one hue wore
+    // two names. In a grayscale palette that failure mode cannot recur by hue — and a subtler
+    // version of it can: two states drifting onto the same value and becoming the same block of
+    // the palette. The gap is checked on the *pair*, over every family against every other, so no
+    // two inks may collapse together however they got there.
+    const bases = ACCENT_FAMILIES.map((family) => ({ family, hex: value(family.base) }));
+    for (let i = 0; i < bases.length; i += 1) {
+      for (let j = i + 1; j < bases.length; j += 1) {
+        const a = bases[i];
+        const b = bases[j];
+        if (a === undefined || b === undefined) continue;
+        const gap = Math.abs(luminance(a.hex) - luminance(b.hex));
+        expect(
+          gap,
+          `${a.family.role} (${a.family.base}) and ${b.family.role} (${b.family.base}) are ${gap.toFixed(3)} apart, under the ${MIN_LIGHTNESS_SEPARATION} floor — nothing but lightness tells them apart now`,
+        ).toBeGreaterThanOrEqual(MIN_LIGHTNESS_SEPARATION);
+      }
+    }
+  });
+
+  it('gives the brand the brightest ink, so emphasis has somewhere to go', () => {
+    // With no hue to lead with, the only thing that can read as "the accent" is being the extreme.
+    // A brand that sat mid-ladder would leave nothing louder than it for a filled control to be,
+    // and the hierarchy would collapse.
+    const brand = ACCENT_FAMILIES.find((family) => family.role === 'brand');
+    expect(brand?.base).toBe('--color-primary');
+    const brandLuminance = luminance(value('--color-primary'));
+    for (const family of ACCENT_FAMILIES) {
+      if (family.role === 'brand') continue;
+      expect(
+        luminance(value(family.base)),
+        `${family.base} is louder than the brand, so nothing can lead`,
+      ).toBeLessThan(brandLuminance);
     }
   });
 });
@@ -310,15 +352,20 @@ describe('Task 3 — the semantic vocabulary', () => {
   });
 
   it('keeps every state distinguishable from the brand, not merely different', () => {
-    // "Different token" is not "different colour". Every outcome state is measured on the wheel
-    // against the brand's hue, so a state that drifted back towards the accent fails here.
-    const brand = hsl(value('--color-primary')).hue;
+    // "Different token" is not "different value". This used to measure every outcome state against
+    // the brand's *hue* on the wheel; with no hue left to measure, it measures the thing that now
+    // decides whether two things look alike — their relative luminance. A state that drifted back
+    // onto the accent fails here, which is the same defect the hue version caught, caught by the
+    // only means the palette still has.
+    const brand = luminance(value('--color-primary'));
     for (const state of ['positive', 'negative', 'warning', 'information']) {
       const usage = SEMANTIC_USAGE.find((candidate) => candidate.state === state);
-      const gap = hueGap(hsl(value(usage?.ink ?? '--color-text')).hue, brand);
-      expect(gap, `${state} sits ${gap} degrees from the brand`).toBeGreaterThanOrEqual(
-        MIN_HUE_SEPARATION,
-      );
+      expect(usage, `${state} is missing`).toBeDefined();
+      const gap = Math.abs(luminance(value(usage?.ink ?? '--color-text')) - brand);
+      expect(
+        gap,
+        `${state} sits ${gap.toFixed(3)} from the brand in luminance`,
+      ).toBeGreaterThanOrEqual(MIN_LIGHTNESS_SEPARATION);
     }
   });
 });

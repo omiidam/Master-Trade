@@ -12,7 +12,8 @@ import { translate } from '../web/src/i18n/index.js';
 import {
   ALL_TOKEN_VARIABLES,
   REQUIRED_TOKEN_GROUPS,
-  THEME,
+  DEFAULT_THEME_ID,
+  THEMES,
   TOKEN_GROUPS,
 } from '../web/src/design/tokens.js';
 import { assertNoExecutionControls } from '../packages/shared/src/frontend/viewModels.js';
@@ -120,9 +121,32 @@ describe('frontend shell', () => {
 
   it('declares every design token the UI is allowed to reference', () => {
     expect(TOKEN_GROUPS.map((group) => group.group)).toEqual([...REQUIRED_TOKEN_GROUPS]);
-    expect(THEME.mode).toBe('dark');
-
+    // Every theme the manifest offers must be *selectable* in the stylesheet, and the product must
+    // still open dark. Phase 9 replaced the single `THEME` with `THEMES` precisely because one theme
+    // is no longer the whole story.
+    //
+    // The two are deliberately asymmetric and this is what pins that down: the dark theme is the
+    // *base* — Tailwind emits `@theme` as `:root`, so dark is what the document gets with no
+    // selector at all — and every other theme is an override of those same custom property names.
+    // Writing a `[data-theme='dark']` block as well would mean 27 values declared twice, and the
+    // copy is exactly the drift a single source of truth exists to prevent. So the assertion is
+    // that the base declares the colours, and that each non-default theme overrides them.
     const css = readFileSync(join(web, 'src', 'styles', 'global.css'), 'utf8');
+    expect(THEMES.find((theme) => theme.id === DEFAULT_THEME_ID)?.mode).toBe('dark');
+    for (const theme of THEMES) {
+      if (theme.mode === 'dark') {
+        expect(css, 'the dark theme must be the @theme base, not an override').toContain(
+          '@theme {',
+        );
+        continue;
+      }
+      expect(css, `the stylesheet cannot select ${theme.id}`).toContain(
+        `[data-theme='${theme.attribute}']`,
+      );
+    }
+    // And the browser's own controls follow the theme, or a light page renders dark scrollbars.
+    expect(css).toMatch(/\[data-theme='light'\]\s*\{[^}]*color-scheme: light/);
+
     const missing = ALL_TOKEN_VARIABLES.filter((variable) => !css.includes(variable));
     expect(missing).toEqual([]);
   });

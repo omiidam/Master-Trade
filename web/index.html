@@ -47,23 +47,24 @@
         It exists so the window never flashes an empty frame, and so the first thing on
         screen is the product's own name rather than a blank rectangle.
 
-        These four hexes are a second home for the palette, and it is a *necessary* one: they
-        have to exist before the stylesheet does, so they cannot read `var(--color-…)`. They
-        are the values `@theme` declares for the same roles — `--color-bg`, `--color-text`,
-        `--color-border`, `--color-text-muted` — and Phase 8 changed all four when the product
-        moved off blue-black. Keep them in step: the one thing worse than a boot splash in the
-        old colours is a boot splash in the old colours *after* the app has loaded new ones.
+        **Phase 9: the palette left this block, and deliberately so.**
+
+        Until now this block declared four hexes and called them "a necessary second home for the
+        palette". That was true when there was one theme and it is false now: a hardcoded background
+        here cannot know which of two themes the reader chose, so a light-theme reader was served a
+        dark first frame over a light page — and because unlayered author CSS beats any `@layer`,
+        it kept winning *after* the stylesheet loaded too. The measurement that found it: with
+        `data-theme="light"` on the document, `body`'s computed background was still #111212.
+
+        The splash no longer needs to paint a background at all. `global.css` is imported by
+        `main.tsx`, which means it is in the document before the first paint, and
+        `applyDocumentTheme` runs before React renders — so the theme is already correct by the
+        time a pixel is drawn, from one source. What remains here is layout for the splash alone:
+        no colour, no palette, nothing that a theme could contradict.
       */
       html,
       body {
         margin: 0;
-        /* `background-color`, deliberately not the `background` shorthand. Unlayered author styles
-           beat any `@layer`, so a shorthand here would reset `background-image` to `none` and
-           silently delete the stylesheet's whole background treatment — the engineering grid and
-           the three accent washes in `@layer base`. Naming only the colour keeps this a genuine
-           first-paint fallback and lets the real background through once the CSS lands. */
-        background-color: #111212;
-        color: #f4f7f9;
       }
       #brand-boot {
         display: flex;
@@ -83,7 +84,7 @@
         width: 72px;
         height: 72px;
         border-radius: 12px;
-        border: 1px solid #4a4a4a;
+        border: 1px solid currentColor;
       }
       #brand-boot p {
         margin: 0;
@@ -91,7 +92,6 @@
         letter-spacing: 0.01em;
       }
       #brand-boot span {
-        color: #a6b1b7;
         font-size: 12px;
       }
     </style>

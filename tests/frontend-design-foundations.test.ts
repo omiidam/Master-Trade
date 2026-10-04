@@ -43,7 +43,8 @@ import {
   SPACING_NAMESPACE,
   SPACING_SCALE,
   TAILWIND_SPACING_NAMESPACE,
-  THEME,
+  DEFAULT_THEME_ID,
+  THEMES,
   TOKEN_GROUPS,
   TYPE_SCALE,
 } from '../web/src/design/tokens.js';
@@ -63,9 +64,9 @@ const CSS = readFileSync(STYLESHEET, 'utf8');
 const CODE = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
 
 /** The `@theme { … }` block, matched by brace so a nested block cannot truncate it. */
-function themeBlock(css: string): string {
-  const start = css.indexOf('@theme {');
-  expect(start, 'the stylesheet declares no @theme block').toBeGreaterThan(-1);
+function themeBlock(css: string, selector = '@theme {'): string {
+  const start = css.indexOf(selector);
+  expect(start, `the stylesheet declares no ${selector} block`).toBeGreaterThan(-1);
   let depth = 0;
   for (let index = css.indexOf('{', start); index < css.length; index += 1) {
     if (css[index] === '{') depth += 1;
@@ -81,10 +82,15 @@ const THEME_BLOCK = themeBlock(CODE);
 
 /** Every variable the theme declares, with its value whitespace-normalised. */
 function declared(): Map<string, string> {
+  return declarationsOf(THEME_BLOCK);
+}
+
+/** The same scan, over any block — which is how the light theme is read. */
+function declarationsOf(block: string): Map<string, string> {
   const found = new Map<string, string>();
   const declaration = /(--[a-z0-9-]+)\s*:\s*([^;]+);/gi;
   let match: RegExpExecArray | null;
-  while ((match = declaration.exec(THEME_BLOCK)) !== null) {
+  while ((match = declaration.exec(block)) !== null) {
     const name = match[1];
     const value = match[2];
     if (name !== undefined && value !== undefined) {
@@ -95,6 +101,15 @@ function declared(): Map<string, string> {
 }
 
 const DECLARED = declared();
+
+/**
+ * What the light theme restates.
+ *
+ * A second theme is only real if the stylesheet declares its values, so this reads the block rather
+ * than trusting the manifest's list of themes — the same reason the inventory above is read from
+ * the stylesheet and not from `design/tokens.ts`.
+ */
+const LIGHT_DECLARED = declarationsOf(themeBlock(CODE, "[data-theme='light']"));
 
 /** `--text-metric--line-height` and friends: theme *inputs*, consumed to generate a utility. */
 const MODIFIER = /^(--[a-z0-9-]+)--(line-height|font-weight|letter-spacing)$/;
@@ -137,6 +152,13 @@ function value(token: string): string {
   return found ?? '';
 }
 
+/** The same token's value in the light theme. */
+function lightValue(token: string): string {
+  const found = LIGHT_DECLARED.get(token);
+  expect(found, `${token} is not restated for the light theme in ${STYLESHEET}`).toBeDefined();
+  return found ?? '';
+}
+
 /** A token declared as a rem length, in rem. */
 function rem(token: string): number {
   const declaredValue = value(token);
@@ -172,9 +194,20 @@ describe('the inventory is the single list of theme variables', () => {
     expect(new Set(ALL_TOKEN_VARIABLES).size).toBe(ALL_TOKEN_VARIABLES.length);
   });
 
-  it('stays a dark theme', () => {
-    expect(THEME.mode).toBe('dark');
+  it('opens dark, and offers a light theme through the same tokens', () => {
+    // This used to assert one thing — that the product is a dark theme — which was true only
+    // because there was no second theme. Phase 9 adds one, so the claim becomes two: the product
+    // still *opens* dark (a workstation does), and the light theme is a real theme rather than a
+    // comment, which means it is a set of values the stylesheet actually declares.
+    expect(DEFAULT_THEME_ID).toBe(THEMES.find((theme) => theme.id === DEFAULT_THEME_ID)?.id);
+    expect(THEMES.map((theme) => theme.mode)).toEqual(['dark', 'light']);
     expect(value('--color-bg')).toMatch(/^#[0-9a-f]{6}$/);
+    // The two are genuinely different surfaces, not one theme wearing two selectors.
+    expect(lightValue('--color-bg')).not.toBe(value('--color-bg'));
+    // And dark is genuinely dark: a "dark theme" whose field is lighter than its card would make
+    // the elevation ladder in the next block meaningless.
+    expect(luminance(value('--color-bg'))).toBeLessThan(0.02);
+    expect(luminance(lightValue('--color-bg'))).toBeGreaterThan(0.8);
   });
 });
 

@@ -874,7 +874,7 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'experimentTimeline.statusChange': 'تغییر وضعیت',
   // feedbackStates ──────────────────────────────────────────────
   'feedbackStates.aCompletedActionConfirmedItSharesTheBrand':
-    'یک کنش کامل‌شده، تأییدشده. همان سبز برند را دارد و پرشدگی آن از آن متفاوت است.',
+    'یک کنش کامل‌شده، تأییدشده. پله‌ای متمایز روی محور خاکستری نسبت به هر حالت دیگر است.',
   'feedbackStates.aConfirmationRatherThanAReportTheOnly':
     'یک تأیید است، نه یک گزارش. تنها سطح بازخوردی که درخشش دارد، چون یک تصمیم سزاوار وزن بیشتری از یک اطلاع است.',
   'feedbackStates.aFailureReportedWithItsTypedCodeAs':
@@ -2705,6 +2705,8 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'نمودارها و خوانش‌های عددی آگاهانه چپ‌به‌راست می‌مانند: سری‌های زمانی مالی از چپ به راست خوانده می‌شوند.',
   'settings.comfortable': 'راحت',
   'settings.compact': 'فشرده',
+  'settingsPage.workstationDark': 'تیره',
+  'settingsPage.workstationLight': 'روشن',
   'settings.configuration': 'پیکربندی',
   'settings.configurationStoresReferencesSuchAsKeychain':
     'پیکربندی ارجاع‌هایی مانند keychain:llm.openai را ذخیره می‌کند، هرگز خودِ کلیدها را.',
@@ -2943,7 +2945,7 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'در این حالت پیشنهاد نشده، به‌حکم مجوز یا طرح — نه به‌حکم خرابی',
   'tokens.phoneLandscape': 'گوشی افقی',
   'tokens.premiumDarkFintechThemeLightThemeDeferredTokens':
-    'تم تیره حرفه‌ای فین‌تک. تم روشن به تعویق افتاده؛ توکن‌ها معنایی‌اند، پس می‌توان بدون دست‌زدن به کامپوننت‌ها افزودش کرد.',
+    'فقط خاکستری. هر سطح، لبه، متن و حالت یک پله روی یک محور روشنایی است؛ عمق از کنتراست، شفافیت، بلور و سایه می‌آید. هر دو تم همان توکن‌ها را اعلام می‌کنند، پس هر کامپوننتی هر کدام را که فعال باشد به ارث می‌برد.',
   'tokens.presentAndReadableButNotTheCurrentThing': 'موجود و خوانا، اما نه چیز جاری',
   'tokens.radiiByTheKindOfSurfaceMarkInset':
     'شعاع‌ها بر حسب نوع سطح: نشان، تایل داخلی، کنترل، تایل قابل انتخاب، پنل، قرص.',

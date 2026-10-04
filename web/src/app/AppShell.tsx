@@ -8,6 +8,7 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { SHELL_GUTTER } from './shellLayout';
 import { useShellLayout } from './useShellLayout';
+import { useDocumentTheme } from './useDocumentTheme';
 import { usePageHistory } from './usePageHistory';
 import { msg, useDocumentLanguage } from '../i18n/index.js';
 import { cn } from '../lib/cn';
@@ -27,6 +28,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   // One subscription to the interface language, at the top of the tree: it puts the language on `<html lang>`
   // and it is what re-renders every page and every component that reads `msg()` when the switch moves.
   useDocumentLanguage();
+  // The reader's theme, on the document element, for the same reason the language is above: the
+  // attribute is what the stylesheet selects on, so one call repaints the whole product and nothing
+  // in the tree has to know which theme is active.
+  useDocumentTheme();
   // The browser's Back and Forward walk the fourteen sections the reader has visited, and the shell
   // follows them. It is called here, once, for the same reason the language is: a second connection
   // would record every move twice and apply one traversal twice.

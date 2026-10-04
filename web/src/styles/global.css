@@ -1,79 +1,81 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens — "Workstation Dark".
+ * Design tokens — the single source of truth for the theme.
+ *
  * Declared once here (Tailwind v4 `@theme` emits them as CSS custom properties)
  * and inventoried in web/src/design/tokens.ts. Values are semantic, never
  * literal-at-the-call-site: a component asks for `--color-surface`, not a hex.
  *
- * The palette, and the strategy behind it.
+ * **Phase 9: the palette is grayscale only.** There is no brand hue, no success green, no danger
+ * red — not softened, not desaturated to taste, simply absent. Every colour in the product is a
+ * step on one lightness axis, and depth is built from the *spacing* of those steps plus opacity,
+ * blur, borders and shadow. That is a real constraint, and it transfers work onto three things:
+ *
+ *   - **States.** A state can no longer announce itself by being coloured. Confirmation and failure
+ *     are told apart by tone, by a word and by an icon, and the suite holds both halves — every
+ *     state ink is a distinct step (`MIN_LIGHTNESS_SEPARATION`) and colour is never the only signal.
+ *   - **The two themes.** Dark and light are the *same token names* on both sides, so the whole
+ *     product is interchangeable through one API. `[data-theme='light']` below restates every
+ *     colour this block declares; a component written today renders correctly in both without
+ *     naming either, and one written tomorrow inherits both for free.
+ *   - **Emphasis.** The brand is simply the brightest ink on the axis, and a filled primary
+ *     control is a near-white block with a near-black label. Lightness alone carries the emphasis,
+ *     which is why losing hue cost the system less than it sounds like it should have.
  *
  * Three groups, chosen for a reason rather than picked one at a time:
  *
- *   Neutrals   one axis. Every surface, border and text step is a near-achromatic grey with the
- *              lightness doing all the work, so the product is a single dark-grey material and
- *              depth reads as distance from the viewer, never as a second colour. (Phase 8: this
- *              was a blue-black at hue 213–218. The retheme to #111212 / #2e2e2e / #3a4447 /
- *              #4a4a4a is a *re-temperature*, not a repaint — the ladder, the depth language and
- *              the whole glass/shadow system are the same ones, only no longer tinted.)
- *   Brand      one hue (190, a trading cyan) that steps lightness to make its own ladder:
- *              strong → base → soft → border, plus a dark ink for type on a filled face.
- *   States     the *other* half of the wheel. Success, warning and danger are the warm and
- *              green complements of the cool axis; information and AI sit inside it as the
- *              brand's own analogues.
+ *   Neutrals   one axis. Every surface, border and text step is a grey, so the product is a single
+ *              material and depth reads as distance from the viewer rather than as a second colour.
+ *   Brand      the top of the value scale, stepping down into its own well and rim plus the ink
+ *              that sits on a filled face: base → strong → soft → border → fg.
+ *   States     five more steps off that same scale, each far enough from its neighbours to be told
+ *              apart at a glance. Their *order* is tonal, not semantic — `danger` sits dark because
+ *              a destructive fill wants a light label on it, not because dark means bad.
  *
- * Phase 7.2.2 rebuilt two of those relationships, because measurement said they were wrong.
+ * Two things this file still does not do: it does not repeat a colour inside a gradient (every
+ * wash is a `color-mix` of a token, so each value has one home), and the epistemic and provenance
+ * labels are aliases of the state colours rather than seven more literals that happen to match them.
  *
- * 1. **The brand was green.** It sat at hue 161 and `--color-success` at 154 — seven degrees
- *    apart, which is not two colours, it is one colour with two names. A brand accent that
- *    cannot be told from a confirmation green fails the one job the pair exists to do. Paint
- *    moved it (plus the focus ring and every accent wash derived from it) to hue 190: the cyan
- *    the design reference asks for, 38 degrees from success, and 25 from information — a
- *    deliberate analogous pair rather than a collision. The identity is intact (still a cool,
- *    high-contrast terminal accent) and the semantic ramp owns green, amber and red alone.
- * 2. **The ladders drifted.** Every `-soft` and `-border` is the *same hue as its base at a
- *    fixed lightness step*, so a warning panel and a danger panel are the same depth of well and
- *    only their hue differs. Before this they ranged from 10.8% to 14.5% and drifted up to 12
- *    degrees off their own base, which is what makes a set of state surfaces look hand-tuned
- *    rather than designed. Phase 8 re-cut both steps against the new cards (21% and 37%) and
- *    capped their saturation; the invariant — one hue, one depth — is the point, and the numbers
- *    moved only because the surface underneath them did.
- *
- * Two things this file no longer does: it does not repeat a brand hex inside a gradient (every
- * accent wash is a `color-mix` of the brand token, so the hue has one home), and the epistemic
- * and provenance labels are aliases of the state colours rather than seven more literals that
- * happen to match them. `tests/frontend-palette.test.ts` holds each of those claims.
+ * The grayscale ceiling, the state separation floor, and the contrast floors are all asserted
+ * against this file by `tests/frontend-color-harmony.test.ts` — which reads the values from here
+ * rather than from the manifest, because a suite that trusted the manifest would only be asserting
+ * its own opinion back at itself.
  */
 @theme {
   /*
    * Surfaces, darkest first.
    *
-   * **The dark-grey retheme.** These five used to be a blue-black (hue 210–222) — a cold
-   * #05070b field that made the whole product read as tinted glass. They are now the brief's
-   * neutral ladder, and the change is deliberately a *re-temperature* rather than a repaint:
+   * **The grayscale retheme.** This file is the single source of truth for every colour in the
+   * product, and Phase 9 rewrote it under one rule: *nothing here has a hue*. There is no brand
+   * cyan, no success green, no danger red — not softened, not desaturated to taste, simply
+   * absent. What is left is a value on a single lightness axis, and depth is built from the
+   * spacing of those values plus opacity, blur and shadow.
    *
-   *     #111212  the field. The dominant background, and the darkest surface here.
-   *     #2e2e2e  the card. A full step of elevation above the field, not a whisper.
-   *     #3a4447  the step that says *active* — raised, selected, focused.
-   *     #4a4a4a  the hairline. Borders and separators, faint on purpose: an edge that
-   *              announces itself is an edge the reader has to look at.
+   * That is a real constraint and it costs something, so the costs are written down rather than
+   * discovered later:
    *
-   * Two consequences are worth stating, because both were the reason the old ladder was
-   * quieter and are now false. The surfaces are much lighter relative to the field than they
-   * were (the old `surface` sat at 5% lightness, this one at 18%), so **every ink below was
-   * re-measured against these, not carried over** — a grey that cleared 7:1 on a near-black
-   * card is invisible on a #2e2e2e one. And because a real card now has to read as *elevated
-   * glass* rather than as a slightly-lighter black, the translucency, blur and shadow language
-   * in `Card.tsx` is doing more work than it was, not less.
+   * 1. **A state can no longer announce itself by being coloured.** Confirmation and failure are
+   *    now told apart by *tone of grey and by an icon*, and `tests/frontend-color-harmony.test.ts`
+   *    asserts both — that every state ink is a distinct step on the axis, and that colour is
+   *    never the only signal. Anyone who reintroduces a hue breaks the palette contract, and
+   *    anyone who reintroduces colour-only signalling breaks the other one.
+   * 2. **Every ink below was re-measured, not carried over.** Lifting the card to 18% lightness
+   *    invalidated each ratio stated against the old near-black one.
+   * 3. **`#3a4447` became `#404040`.** The brief named it as the secondary surface, and it is
+   *    the one value in that list carrying a blue cast (hue 194, saturation 10%). The strict
+   *    grayscale rule and the named hex cannot both be honoured, and the rule wins because it is
+   *    the one that makes the architecture hold. `#404040` is the same lightness as `#3a4447` to
+   *    within a rounding error, so nothing moves on screen except the cast.
    *
    * `sunken` is not the darkest surface — `bg` is — because a well is read against the panel
    * it is cut into, and a card can sit on a page or on another card.
    */
   --color-bg: #111212;
-  --color-bg-elevated: #1c1d1d;
+  --color-bg-elevated: #1a1a1a;
   --color-surface: #2e2e2e;
-  --color-surface-raised: #3a4447;
-  --color-surface-sunken: #0b0c0c;
+  --color-surface-raised: #404040;
+  --color-surface-sunken: #0a0a0a;
   /* What sits *between* the viewer and a modal: a scrim, not a surface. */
   --color-overlay: rgb(0 0 0 / 0.7);
 
@@ -100,48 +102,50 @@
    * second has to be findable (this, 3.05:1).
    */
   --color-border: #4a4a4a;
-  --color-border-strong: #6b7a80;
-  --color-text: #f4f7f9;
-  --color-text-muted: #c2cad0;
-  --color-text-faint: #a6b1b7;
+  --color-border-strong: #6e6e6e;
+  --color-text: #f4f4f4;
+  --color-text-muted: #c2c2c2;
+  --color-text-faint: #acacac;
 
   /*
    * The brand, and the states it must stay clear of.
    *
-   * `primary` is the accent a control commits with; `primary-strong` is the bottom of the fill
-   * gradient and doubles as the brand's text-safe step on a dark surface; `primary-fg` is the ink
-   * that sits on both. That triple is the whole reason a filled accent button can carry a dark
-   * label at 6:1 while the same hue at 52% carries body text — lightness is doing the work, and
-   * the hue never has to change to make a state readable.
+   * `primary` is what a control commits with, and it is now simply the *brightest* ink on the
+   * axis: a filled primary button is a near-white block carrying a near-black label. That triple
+   * — `primary`, `primary-strong`, `primary-fg` — is the whole reason the control system survives
+   * losing hue: lightness alone carries the emphasis, and the hue never had to change to make a
+   * state readable, so nothing has to be reinvented to make it readable without one.
+   *
+   * **The six state inks are a tonal ladder, and the order is tonal, not semantic.** In a coloured
+   * palette the ladder would run by hue and "positive" could be green while "warning" was amber.
+   * Here the only axis left is lightness, so the six inks are spaced down the axis from the brand
+   * and each one is far enough from its neighbours to be told apart at a glance (the suite holds
+   * a 0.02 relative-luminance gap). Which end a state sits on is a *typographic* decision, not a
+   * semantic one: `danger` is dark because a destructive fill wants a light label on it, not
+   * because dark means bad.
    */
-  --color-primary: #25c4e4;
-  --color-primary-strong: #18a3bf;
-  --color-primary-fg: #051214;
-  --color-primary-soft: #1d464e;
+  --color-primary: #e8e8e8;
+  --color-primary-strong: #d6d6d6;
+  --color-primary-fg: #111111;
+  --color-primary-soft: #3a3a3a;
   /* One step louder than `--color-primary-soft`; the hover of a soft control. It keeps the same
      relative drop the pair used to have — 4.29:1 where the resting well gives 4.95:1. */
-  --color-primary-soft-hover: #205059;
-  --color-info: #6fa7f6;
-  --color-info-soft: #1d314e;
-  /*
-   * `success` used to borrow `primary-soft`, which made an "ok" badge and a brand badge the same
-   * object; Phase 7.2 gave it its own fill and edge, and 7.2.2 finished the job by moving the
-   * brand *off* its hue. The two are now 38 degrees apart, which is the distance at which a
-   * green tick and a cyan accent stop being one colour wearing two hats.
-   */
-  --color-success: #39d08a;
-  --color-success-soft: #1d4e37;
-  --color-warning: #f7b23b;
-  --color-warning-soft: #4e3c1d;
-  --color-danger: #f6746f;
-  /* The deeper red a filled destructive surface needs, and the ink that sits on it — the pair
+  --color-primary-soft-hover: #434343;
+  --color-info: #b8b8b8;
+  --color-info-soft: #353535;
+  --color-success: #9e9e9e;
+  --color-success-soft: #323232;
+  --color-warning: #979797;
+  --color-warning-soft: #2f2f2f;
+  --color-danger: #a3a3a3;
+  /* The deeper tone a filled destructive surface needs, and the ink that sits on it — the pair
    * that lets "this cannot be undone" read louder than "this failed" without shouting. */
-  --color-danger-strong: #da5c58;
-  --color-danger-fg: #190507;
-  --color-danger-soft: #4e1f1d;
-  --color-ai: #ac8bf9;
-  --color-ai-soft: #2c1d4e;
-  --color-focus: #50cae2;
+  --color-danger-strong: #6b6b6b;
+  --color-danger-fg: #f5f5f5;
+  --color-danger-soft: #2c2c2c;
+  --color-ai: #cfcfcf;
+  --color-ai-soft: #3d3d3d;
+  --color-focus: #ffffff;
 
   /*
    * The edge of a tinted state surface.
@@ -152,28 +156,22 @@
    * exactly the drift a token prevents — one tweak to the danger edge was fifteen edits. Kept
    * alongside the tone they belong to, so a surface and its border are chosen together.
    *
-   * Phase 8 moved the wells and the rims with the surfaces. The old pair was cut for a card at 6%
-   * lightness — a well at 12% and an edge at 19–20% — which on a #2e2e2e card put the *fill below*
-   * the surface it sat on and the rim within a rounding error of it. Both are now cut from the
-   * card's own neighbourhood: every well is the same hue as its base at **21% lightness** (above
-   * the 18% card, so it reads as a lift, and below the 19–20% it replaced) and every rim is that
-   * hue at **37%**, which is findable on a card (1.46:1 for the AI rim, the hardest of the six)
-   * and on the page beneath it. Saturation is capped at 46% / 40% rather than copied from the
-   * base, so a fill stays a fill and not a colour swatch.
-   *
-   * Every state ink still clears 4.5:1 on its own well after the move — 4.81 at the tightest
-   * (success), 5.61 at the loosest (AI) — because the wells were solved *downward* from that
-   * floor rather than picked by eye.
+   * Phase 9 re-cut the wells and the rims with the surfaces, and dropped the hue they used to
+   * share with their base. A well is now a plain step just above the card it sits in and a rim is
+   * a plain step above that, so the six states read as six depths of grey rather than as six
+   * colours. Every state ink still clears 4.5:1 on its own well and every rim is findable both on
+   * that well and on the page beneath it — the floors are the ones `CONTRAST_RULES` states, and
+   * the wells were solved *downward* from them rather than picked by eye.
    *
    * `primary` and `success` resolve to *similar* rather than identical values, deliberately: they
-   * are neighbouring greens, and telling them apart is the whole job of keeping both.
+   * are neighbouring steps, and telling them apart is the whole job of keeping both.
    */
-  --color-primary-border: #397784;
-  --color-success-border: #398461;
-  --color-info-border: #395884;
-  --color-warning-border: #846839;
-  --color-danger-border: #843b39;
-  --color-ai-border: #4f3984;
+  --color-primary-border: #616161;
+  --color-success-border: #585858;
+  --color-info-border: #5c5c5c;
+  --color-warning-border: #525252;
+  --color-danger-border: #4d4d4d;
+  --color-ai-border: #666666;
 
   /*
    * Epistemic labels (docs/architecture.md § 7) and market-data provenance
@@ -183,8 +181,8 @@
    * them exactly, three a shade away — so the product had two places to change one idea. `Badge`
    * already reasons about them in terms of tones (`fact` is the info tone, `analysis` the brand
    * tone, `hypothesis` warning, `uncertainty` AI); these aliases are that same table expressed in
-   * the stylesheet, and the palette suite asserts the two agree. A chart that colours a fact blue
-   * and a badge that labels one "information" are now, provably, the same blue.
+   * the stylesheet, and the palette suite asserts the two agree. A chart that draws a fact in the
+   * info tone and a badge that labels one "information" are now, provably, the same value.
    */
   --color-fact: var(--color-info);
   --color-analysis: var(--color-primary);
@@ -346,11 +344,25 @@
    */
   --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.02), 0 18px 40px -28px rgb(0 0 0 / 0.9);
   --shadow-popover: 0 26px 60px -24px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.03);
-  --shadow-glow: 0 0 0 1px rgb(37 196 228 / 0.25), 0 12px 40px -18px rgb(37 196 228 / 0.35);
-  --shadow-glow-control: 0 10px 30px -16px rgb(37 196 228 / 0.7);
-  /* The destructive glow. A third glow, and the last one: it is what separates "this failed"
+  /*
+   * Emphasis, and it is emphasis by *contrast* rather than by colour.
+   *
+   * These three used to be the only hardcoded hues left in the file — a cyan edge and a red edge
+   * written as literal RGB. They keep the literal form deliberately: an elevation stack has to be
+   * a concrete stack (that is what `tests/frontend-design-foundations.test.ts` holds them to), and
+   * what changed is the *channels*, which are now the same value three times over because the
+   * palette is grayscale. The levels are unchanged, so "this failed" and "this cannot be undone"
+   * are still told apart by three distinct amounts of the same emphasis.
+   *
+   * They are written as literals rather than as `color-mix`es of `--color-primary` because a glow
+   * that follows the brand would make the *elevation* a theme-coloured object, and elevation is not
+   * a thing the palette is allowed to tint.
+   */
+  --shadow-glow: 0 0 0 1px rgb(232 232 232 / 0.25), 0 12px 40px -18px rgb(232 232 232 / 0.35);
+  --shadow-glow-control: 0 10px 30px -16px rgb(232 232 232 / 0.7);
+  /* The destructive emphasis. A third level, and the last one: it is what separates "this failed"
    * from "this cannot be undone", and it is spent only on the destructive feedback surface. */
-  --shadow-glow-danger: 0 10px 30px -16px rgb(218 92 88 / 0.55);
+  --shadow-glow-danger: 0 10px 30px -16px rgb(107 107 107 / 0.55);
 
   /*
    * Two more elevation stacks, because a card's *kind* shows in its depth and not only in its fill.
@@ -588,6 +600,91 @@
   --z-tooltip: 80;
 }
 
+/* ============================================================================
+   The light theme — the same tokens, the other end of the axis.
+
+   **This block is the whole argument for the architecture.** It declares *exactly* the colour
+   names the `@theme` block above declares and nothing else, so every utility already written
+   against `--color-surface` or `--color-border` follows automatically, and every component that
+   will be written tomorrow inherits both themes without being told a single theme-specific word.
+   That is the requirement "new components must not require manual theme-specific styling", and it
+   is satisfied by construction rather than by discipline.
+
+   The values were not eyeballed. Every one was solved against the same `CONTRAST_RULES` floors the
+   dark ladder is held to — body ink at 7:1 on all three grounds, secondary and annotation ink at
+   4.5:1, every state ink at 4.5:1 on its own well, both edges visible on card and page — so the
+   light theme is as measured as the dark one rather than as plausible as it.
+
+   Light mode is also *inverted* rather than mirrored: the field is the lightest surface and the
+   card is white, so elevation on this theme reads as a *shadow over grey* where on dark it reads
+   as a *lift off black*. The token names describe the role either way, which is why a component
+   written once works twice.
+   ========================================================================== */
+[data-theme='light'] {
+  /* The user agent's own controls follow the theme, not just ours. See `html` in `@layer base`. */
+  color-scheme: light;
+
+  /* Surfaces: the field recedes, the card is the brightest thing on screen. */
+  --color-bg: #f8f8f8;
+  --color-bg-elevated: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ececec;
+  --color-surface-sunken: #f1f1f1;
+  /* A scrim is a scrim on both themes; only its weight changes, because a white modal behind a
+     black scrim needs less of one than a black modal does. */
+  --color-overlay: rgb(0 0 0 / 0.42);
+
+  /* Edges: on white, the hairline has to be darker to read as the same whisper. */
+  --color-border: #d4d4d4;
+  --color-border-strong: #999999;
+
+  /* Ink: the ladder inverts exactly, keeping every step's separation. */
+  --color-text: #161616;
+  --color-text-muted: #4a4a4a;
+  --color-text-faint: #6a6a6a;
+
+  /* The brand is the darkest ink, so a filled primary button is a black block with white type. */
+  --color-primary: #212121;
+  --color-primary-strong: #333333;
+  --color-primary-fg: #ffffff;
+  --color-primary-soft: #e6e6e6;
+  --color-primary-soft-hover: #dddddd;
+  --color-primary-border: #bfbfbf;
+
+  /* The six state inks, stepped back up the axis from the brand. */
+  --color-info: #5c5c5c;
+  --color-info-soft: #ececec;
+  --color-info-border: #c7c7c7;
+  --color-success: #6c6c6c;
+  --color-success-soft: #efefef;
+  --color-success-border: #cccccc;
+  --color-warning: #646464;
+  --color-warning-soft: #f1f1f1;
+  --color-warning-border: #d1d1d1;
+  --color-danger: #3d3d3d;
+  --color-danger-strong: #2e2e2e;
+  --color-danger-fg: #ffffff;
+  --color-danger-soft: #e9e9e9;
+  --color-danger-border: #bdbdbd;
+  --color-ai: #4d4d4d;
+  --color-ai-soft: #eaeaea;
+  --color-ai-border: #c2c2c2;
+  --color-focus: #000000;
+}
+
+/*
+ * Elevation, restated for light.
+ *
+ * The dark stacks assume a top highlight (a lit edge on a black card) and a deep black shadow. On
+ * white that highlight is invisible and the shadow is the *only* thing saying "raised", so the
+ * light theme trades the highlight for a slightly deeper drop and a second hairline. Same token
+ * names, so `--shadow-panel` on a card still means "this is a panel".
+ */
+[data-theme='light'] {
+  --shadow-panel: 0 1px 0 0 rgb(0 0 0 / 0.04), 0 18px 40px -28px rgb(0 0 0 / 0.28);
+  --shadow-popover: 0 26px 60px -24px rgb(0 0 0 / 0.24), 0 0 0 1px rgb(0 0 0 / 0.06);
+}
+
 /*
  * The Persian face, self-hosted and lazily fetched.
  *
@@ -631,6 +728,15 @@
    * What it is not is `overflow: hidden`, which would hide the very content that made the page tall.
    */
   html {
+    /*
+     * `color-scheme` is declared by the theme rather than pinned to `dark` here.
+     *
+     * It is what tells the browser which way to draw the things no token in this file can reach —
+     * scrollbars, form controls, the focus ring, the text-selection handle — so a light page left on
+     * `dark` is a light page with dark scrollbars. `app/useDocumentTheme.ts` also writes it, because
+     * that is what runs before the first paint; this declaration is the stylesheet's half of the
+     * same rule, so the page is still correct if the script does not run at all.
+     */
     color-scheme: dark;
     background-color: var(--color-bg);
   }
@@ -652,23 +758,22 @@
     margin: 0;
     min-height: 100vh;
     background-color: var(--color-bg);
-    background-image:
-      radial-gradient(
-        1100px 620px at 12% -10%,
-        color-mix(in srgb, var(--color-primary) 9%, transparent),
-        transparent 60%
-      ),
-      radial-gradient(
-        900px 520px at 100% 0%,
-        color-mix(in srgb, var(--color-ai) 7%, transparent),
-        transparent 62%
-      ),
-      radial-gradient(
-        1200px 700px at 50% 120%,
-        color-mix(in srgb, var(--color-info) 6%, transparent),
-        transparent 60%
-      ),
-      linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-sunken) 100%);
+    /*
+     * The field is a flat field.
+     *
+     * This used to carry three radial accent washes over the gradient — brand cyan in the top
+     * left, the AI purple opposite it, information blue from below — and an engineering grid
+     * painted over the top by a `body::before`. Phase 9 removes all of it, for the same reason it
+     * removes hue: the brief asks for grayscale only, no decorative gradients and no coloured
+     * glows, and a wash of a token is still a coloured wash even when the token is grey.
+     *
+     * What replaces them is the one gradient that carries information rather than decoration —
+     * the field falling one step toward the well at the very bottom of the page — and depth, which
+     * now comes from the surfaces' own spacing, opacity, blur and shadow. `body::before` and its
+     * grid are deleted outright rather than switched off, so there is no dead rule left to
+     * rediscover and re-enable.
+     */
+    background-image: linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-sunken) 100%);
     background-attachment: fixed;
     color: var(--color-text);
     font-family: var(--font-sans);
@@ -678,19 +783,8 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Faint engineering grid: reads as a workstation, not a marketing page. */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-      linear-gradient(to right, rgb(255 255 255 / 0.022) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(255 255 255 / 0.022) 1px, transparent 1px);
-    background-size: 56px 56px;
-    mask-image: radial-gradient(1200px 800px at 30% 0%, black, transparent 85%);
-    z-index: 0;
-  }
+  /* The engineering grid that used to be painted over the field by a `body::before` is gone: the
+   * brief removes it by name, and a rule kept "switched off" is a rule somebody will switch on. */
 
   #root {
     position: relative;

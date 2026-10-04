@@ -157,3 +157,55 @@ export function writeDensity(
     return false;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Which of the two themes the reader is looking at (Phase 9)                  */
+/* -------------------------------------------------------------------------- */
+
+/** The theme key, alongside the rail's and the density's. */
+export const THEME_KEY = 'master-trade.shell.theme';
+
+/**
+ * The themes, named here because this module is what writes them down.
+ *
+ * Exactly the density rule, applied to the theme: the vocabulary the reader chooses from and the
+ * vocabulary storage accepts are one union, declared once, so they cannot drift apart. The values
+ * are the `data-theme` attribute values, because that attribute is what the stylesheet actually
+ * selects on — storing the pretty `THEMES` id instead would mean translating in both directions.
+ */
+export type ShellTheme = 'dark' | 'light';
+
+/** What the reader sees when nobody has chosen — and when a choice cannot be understood. */
+const DARK: ShellTheme = 'dark';
+
+/**
+ * The reader's theme, or the product's default.
+ *
+ * The same rule as the rail and the density: only a value this build writes is honoured, and
+ * anything else is the default rather than a state the shell acts on. Storage is untrusted input
+ * here for the same reason it is everywhere else in this file — it is shared with extensions, it
+ * survives across builds that may not know this key, and a half-written value must not become a
+ * theme the product cannot render.
+ */
+export function readTheme(storage: ShellStorage | null = shellStorage()): ShellTheme {
+  if (storage === null) return DARK;
+  try {
+    return storage.getItem(THEME_KEY) === 'light' ? 'light' : DARK;
+  } catch {
+    return DARK;
+  }
+}
+
+/** Write the choice, and report whether it landed, for the same reason the other two do. */
+export function writeTheme(
+  theme: ShellTheme,
+  storage: ShellStorage | null = shellStorage(),
+): boolean {
+  if (storage === null) return false;
+  try {
+    storage.setItem(THEME_KEY, theme);
+    return true;
+  } catch {
+    return false;
+  }
+}

@@ -28,7 +28,7 @@ import { InterfaceStatesPanel } from '../components/InterfaceStates';
 import { TabPanel, Tabs } from '../components/Tabs';
 import { Tooltip } from '../components/Tooltip';
 import { Grid, Workspace } from '../app/Workspace';
-import { THEME } from '../design/tokens';
+import { THEME_LADDER, THEME_NOTES } from '../design/tokens';
 import { useShellStatus } from '../desktop/useShellStatus';
 import { mockBudget, mockProviders, mockSystemStatus } from '../mock/data';
 import { LANGUAGE_PREFERENCES, type LanguagePreference } from '../language/preference';
@@ -94,6 +94,8 @@ export function SettingsPage() {
   const setDirection = useUiStore((state) => state.setDirection);
   const density = useUiStore((state) => state.density);
   const setDensity = useUiStore((state) => state.setDensity);
+  const theme = useUiStore((state) => state.theme);
+  const setTheme = useUiStore((state) => state.setTheme);
   const languagePreference = useUiStore((state) => state.languagePreference);
   const languageStorable = useUiStore((state) => state.languageStorable);
   const setLanguagePreference = useUiStore((state) => state.setLanguagePreference);
@@ -212,31 +214,54 @@ export function SettingsPage() {
               <div>
                 <CardTitle className="text-body">{msg('settings.theme')}</CardTitle>
                 <CardDescription>
-                  {THEME.name} · {THEME.mode}
+                  {theme === 'dark'
+                    ? msg('settingsPage.workstationDark')
+                    : msg('settingsPage.workstationLight')}
                 </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/*
+                The switch, and it is two buttons rather than a dropdown for the reason the density
+                control is: both answers fit, both are standing choices, and a menu that hides the
+                current answer behind a click is a worse control than one that shows both.
+              */}
+              <div className="flex gap-2">
+                <Button
+                  variant={theme === 'dark' ? 'primary' : 'secondary'}
+                  onClick={() => setTheme('dark')}
+                  aria-pressed={theme === 'dark'}
+                >
+                  {msg('settingsPage.workstationDark')}
+                </Button>
+                <Button
+                  variant={theme === 'light' ? 'primary' : 'secondary'}
+                  onClick={() => setTheme('light')}
+                  aria-pressed={theme === 'light'}
+                >
+                  {msg('settingsPage.workstationLight')}
+                </Button>
+              </div>
+              {/*
+                What the palette *is*, rather than what it used to be. This used to list the five
+                accent swatches, which is how a reader could see the brand cyan and the danger red.
+                It now lists the neutral ladder the theme is actually built from, because the
+                interesting fact about this palette is that there is nothing else to list — and the
+                swatches read from the live tokens, so they change when the theme does.
+              */}
               <div className="flex flex-wrap gap-2">
-                {[
-                  ['--color-primary', msg('shell.navPrimary')],
-                  ['--color-info', msg('settingsPage.info')],
-                  ['--color-ai', 'AI'],
-                  ['--color-warning', msg('feedbackStates.warning')],
-                  ['--color-danger', msg('settingsPage.danger')],
-                ].map(([token, label]) => (
+                {THEME_LADDER.map((token) => (
                   <CardTile space="tight" key={token} className="flex items-center gap-2">
                     <span
                       aria-hidden
-                      className="h-4 w-4 rounded-[4px]"
+                      className="h-4 w-4 rounded-[4px] border border-border"
                       style={{ backgroundColor: `var(${token})` }}
                     />
-                    <span className="text-caption text-text-muted">{label}</span>
                     <span className="num text-caption text-text-faint">{token}</span>
                   </CardTile>
                 ))}
               </div>
-              <p className="text-caption text-text-faint">{THEME.notes}</p>
+              <p className="text-caption text-text-faint">{THEME_NOTES}</p>
             </CardContent>
           </Card>
         </TabPanel>

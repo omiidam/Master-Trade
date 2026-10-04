@@ -28,9 +28,12 @@ import { create } from 'zustand';
 import {
   readDensity,
   readSidebarCollapsed,
+  readTheme,
   writeDensity,
   writeSidebarCollapsed,
+  writeTheme,
   type ShellDensity,
+  type ShellTheme,
 } from '../app/shellPreference.js';
 import type { AppPageId } from '../config/navigation.js';
 import {
@@ -55,6 +58,16 @@ import {
 export type Density = ShellDensity;
 
 /**
+ * Which of the two themes the reader is looking at, re-exported under the name this store's
+ * vocabulary has used since Phase 9.
+ *
+ * The vocabulary is the shell preference module's, for the reason `Density` is: this store mirrors
+ * a standing choice, and the module that validates what storage may hold is the module that names
+ * the values it accepts.
+ */
+export type Theme = ShellTheme;
+
+/**
  * The writing-direction preference, re-exported under the name this store has used since Phase 3.
  *
  * The vocabulary itself is the interface layer's (`web/src/i18n/direction.ts`), because the direction is a
@@ -67,6 +80,7 @@ export interface UiState {
   page: AppPageId;
   direction: Direction;
   density: Density;
+  theme: Theme;
   /** The reader's saved choice for the rail: collapsed or expanded, where the width allows it. */
   sidebarCollapsed: boolean;
   /** True while the off-canvas navigation is open. Only mobile renders it, so it is inert elsewhere. */
@@ -90,6 +104,7 @@ export interface UiState {
    */
   toggleDirection: () => void;
   setDensity: (density: Density) => void;
+  setTheme: (theme: Theme) => void;
   setLanguagePreference: (preference: LanguagePreference) => void;
   toggleSidebar: () => void;
   /** Open or close the off-canvas navigation drawer (mobile). */
@@ -134,12 +149,19 @@ const storedSidebarCollapsed = readSidebarCollapsed();
  */
 const storedDensity = readDensity();
 
+/*
+ * The theme, read for the same reason and at the same moment: before the first render, so that the
+ * product opens in the theme the reader chose rather than opening dark and correcting itself.
+ */
+const storedTheme = readTheme();
+
 export const useUiStore = create<UiState>((set) => ({
   page: 'dashboard',
   // `auto`, so that choosing Persian in Settings mirrors the interface without a second control: the
   // direction follows the language until somebody says otherwise.
   direction: DEFAULT_DIRECTION_PREFERENCE,
   density: storedDensity,
+  theme: storedTheme,
   sidebarCollapsed: storedSidebarCollapsed,
   sidebarOpen: false,
   quickNavOpen: false,
@@ -163,6 +185,12 @@ export const useUiStore = create<UiState>((set) => ({
   setDensity: (density) => {
     writeDensity(density);
     set({ density });
+  },
+  // Written as it is chosen, like the density above and for the same reason: a theme is a standing
+  // preference, and there is no commit step for the reader to skip.
+  setTheme: (theme) => {
+    writeTheme(theme);
+    set({ theme });
   },
   // The write happens first and its verdict is the new `languageStorable`: the control shows a
   // remembered choice only when it really was remembered.

@@ -877,7 +877,7 @@ export const EN_MESSAGES = {
   'experimentTimeline.statusChange': 'Status change',
   // feedbackStates ──────────────────────────────────────────────
   'feedbackStates.aCompletedActionConfirmedItSharesTheBrand':
-    'A completed action, confirmed. It shares the brand green and is a distinct fill from it.',
+    'A completed action, confirmed. It is a distinct step on the grayscale axis from every other state.',
   'feedbackStates.aConfirmationRatherThanAReportTheOnly':
     'A confirmation rather than a report. The only feedback surface allowed a glow, because a decision deserves more weight than a notice.',
   'feedbackStates.aFailureReportedWithItsTypedCodeAs':
@@ -2734,6 +2734,8 @@ export const EN_MESSAGES = {
     'Charts and numeric readouts stay LTR on purpose: financial time series are read left-to-right.',
   'settings.comfortable': 'Comfortable',
   'settings.compact': 'Compact',
+  'settingsPage.workstationDark': 'Dark',
+  'settingsPage.workstationLight': 'Light',
   'settings.configuration': 'Configuration',
   'settings.configurationStoresReferencesSuchAsKeychain':
     'Configuration stores references such as keychain:llm.openai, never key values.',
@@ -2974,7 +2976,7 @@ export const EN_MESSAGES = {
     'not offered in this state, by permission or by plan — not broken',
   'tokens.phoneLandscape': 'phone landscape',
   'tokens.premiumDarkFintechThemeLightThemeDeferredTokens':
-    'Premium dark fintech theme. Light theme deferred; tokens are semantic so it can be added without touching components.',
+    'Grayscale only. Every surface, edge, ink and state is a step on one lightness axis; depth comes from contrast, opacity, blur and shadow. Both themes declare the same tokens, so every component inherits whichever one is active.',
   'tokens.presentAndReadableButNotTheCurrentThing':
     'present and readable, but not the current thing',
   'tokens.radiiByTheKindOfSurfaceMarkInset':
