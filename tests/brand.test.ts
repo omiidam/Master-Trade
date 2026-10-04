@@ -203,7 +203,7 @@ describe('identity documents', () => {
       'rel="icon" href="/favicon.ico"',
       'rel="apple-touch-icon" href="/apple-touch-icon.png"',
       'rel="manifest" href="/site.webmanifest"',
-      'name="theme-color" content="#05070b"',
+      'name="theme-color" content="#111212"',
       'property="og:image" content="/og-image.png"',
       'name="twitter:card"',
     ]) {

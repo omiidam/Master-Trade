@@ -489,16 +489,33 @@ export const CONTROL_FACES: readonly ControlFace[] = [
 /**
  * The neutral axis.
  *
- * Every surface, border and text step in the product is the same material: a blue-black whose hue
- * does not move, with lightness doing all the work. That is what makes depth read as distance from
- * the viewer rather than as a second colour creeping in — and it is a claim the suite can check,
- * because a hue that drifts is exactly how a palette becomes "a collection of colours" one edit at
- * a time. The saturation ceiling is what makes these neutrals rather than a tinted theme: at or
- * under 46% and this dark, none of them reads as a hue of its own.
+ * Every surface, border and text step in the product is the same material, and lightness does all
+ * the work: depth reads as distance from the viewer rather than as a second colour creeping in.
+ * That is a claim the suite can check, because a hue that drifts is exactly how a palette becomes
+ * "a collection of colours" one edit at a time.
+ *
+ * **Phase 8 moved the axis from a blue-black to a true dark grey, and the bound moved with it.**
+ * The ladder used to be a narrow blue-black — hue 210–222, saturation 10–46 — which made hue the
+ * load-bearing constraint: every neutral agreed on a hue and only lightness varied. The retheme
+ * replaced it with greys that are near-achromatic by intent (`#111212`, `#2e2e2e`, `#4a4a4a` are
+ * at 0–3% saturation), and two tokens carry a little more (#3a4447 at 10.1%, #f4f7f9 at 29.4%).
+ *
+ * For a material this neutral, **saturation is the axis and hue is not** — a grey at 0% saturation
+ * has no hue to hold, so constraining it would constrain nothing real. The hue band is therefore
+ * widened to cover the whole cool half of the wheel and it means one specific thing: *no neutral is
+ * pushed into the magenta/purple half, where it would stop reading as a material and start reading
+ * as a sixth state colour* — the purple quarter is where `--color-ai` and the epistemic labels
+ * live, and a surface that drifted there would blur the line between the room and the news.
+ *
+ * The saturation ceiling is unchanged at 46% and is now the whole contract, and for the first
+ * time it is a *ceiling with a floor at zero*: at or under 46%, a neutral cannot drift into a hue
+ * of its own, and it cannot go fully saturated either. The floor exists because the old band had a
+ * non-zero low end and the new ladder includes true greys; without it the axis would forbid
+ * exactly the values the brief asked for.
  */
 export const NEUTRAL_AXIS = {
-  hue: [210, 222] as const,
-  saturation: [10, 46] as const,
+  hue: [0, 210] as const,
+  saturation: [0, 46] as const,
   tokens: [
     '--color-bg',
     '--color-bg-elevated',

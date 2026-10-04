@@ -10,9 +10,12 @@
  *
  * Three groups, chosen for a reason rather than picked one at a time:
  *
- *   Neutrals   one axis. Every surface, border and text step sits at hue 213–218 with the
- *              lightness doing all the work, so the product is a single blue-black material and
- *              depth reads as distance from the viewer, never as a second colour.
+ *   Neutrals   one axis. Every surface, border and text step is a near-achromatic grey with the
+ *              lightness doing all the work, so the product is a single dark-grey material and
+ *              depth reads as distance from the viewer, never as a second colour. (Phase 8: this
+ *              was a blue-black at hue 213–218. The retheme to #111212 / #2e2e2e / #3a4447 /
+ *              #4a4a4a is a *re-temperature*, not a repaint — the ladder, the depth language and
+ *              the whole glass/shadow system are the same ones, only no longer tinted.)
  *   Brand      one hue (190, a trading cyan) that steps lightness to make its own ladder:
  *              strong → base → soft → border, plus a dark ink for type on a filled face.
  *   States     the *other* half of the wheel. Success, warning and danger are the warm and
@@ -29,10 +32,12 @@
  *    deliberate analogous pair rather than a collision. The identity is intact (still a cool,
  *    high-contrast terminal accent) and the semantic ramp owns green, amber and red alone.
  * 2. **The ladders drifted.** Every `-soft` and `-border` is the *same hue as its base at a
- *    fixed lightness step* — soft at 12%, border at 19–20% — so a warning panel and a danger
- *    panel are the same depth of well and only their hue differs. Before this they ranged from
- *    10.8% to 14.5% and drifted up to 12 degrees off their own base, which is what makes a set
- *    of state surfaces look hand-tuned rather than designed.
+ *    fixed lightness step*, so a warning panel and a danger panel are the same depth of well and
+ *    only their hue differs. Before this they ranged from 10.8% to 14.5% and drifted up to 12
+ *    degrees off their own base, which is what makes a set of state surfaces look hand-tuned
+ *    rather than designed. Phase 8 re-cut both steps against the new cards (21% and 37%) and
+ *    capped their saturation; the invariant — one hue, one depth — is the point, and the numbers
+ *    moved only because the surface underneath them did.
  *
  * Two things this file no longer does: it does not repeat a brand hex inside a gradient (every
  * accent wash is a `color-mix` of the brand token, so the hue has one home), and the epistemic
@@ -43,14 +48,32 @@
   /*
    * Surfaces, darkest first.
    *
+   * **The dark-grey retheme.** These five used to be a blue-black (hue 210–222) — a cold
+   * #05070b field that made the whole product read as tinted glass. They are now the brief's
+   * neutral ladder, and the change is deliberately a *re-temperature* rather than a repaint:
+   *
+   *     #111212  the field. The dominant background, and the darkest surface here.
+   *     #2e2e2e  the card. A full step of elevation above the field, not a whisper.
+   *     #3a4447  the step that says *active* — raised, selected, focused.
+   *     #4a4a4a  the hairline. Borders and separators, faint on purpose: an edge that
+   *              announces itself is an edge the reader has to look at.
+   *
+   * Two consequences are worth stating, because both were the reason the old ladder was
+   * quieter and are now false. The surfaces are much lighter relative to the field than they
+   * were (the old `surface` sat at 5% lightness, this one at 18%), so **every ink below was
+   * re-measured against these, not carried over** — a grey that cleared 7:1 on a near-black
+   * card is invisible on a #2e2e2e one. And because a real card now has to read as *elevated
+   * glass* rather than as a slightly-lighter black, the translucency, blur and shadow language
+   * in `Card.tsx` is doing more work than it was, not less.
+   *
    * `sunken` is not the darkest surface — `bg` is — because a well is read against the panel
    * it is cut into, and a card can sit on a page or on another card.
    */
-  --color-bg: #05070b;
-  --color-bg-elevated: #080c12;
-  --color-surface: #0b1017;
-  --color-surface-raised: #101823;
-  --color-surface-sunken: #070a0f;
+  --color-bg: #111212;
+  --color-bg-elevated: #1c1d1d;
+  --color-surface: #2e2e2e;
+  --color-surface-raised: #3a4447;
+  --color-surface-sunken: #0b0c0c;
   /* What sits *between* the viewer and a modal: a scrim, not a surface. */
   --color-overlay: rgb(0 0 0 / 0.7);
 
@@ -63,12 +86,24 @@
    * against *every* surface it can sit on (4.89 on a card, 4.57 on a raised panel), which turns
    * "the ladder is ordered" into "every step is legible". `muted` and `text` keep their steps, so
    * the hierarchy is unchanged; only its floor moved.
+   *
+   * Phase 8 lifted all three again, and for the reason above: the retheme put these on much
+   * lighter surfaces, and every ratio in that paragraph was measured against the old ones. The
+   * ink ladder is now #f4f7f9 / #c2cad0 / #a6b1b7, reading 12.62 / 8.18 / 6.20 on a card and
+   * 9.30 / 6.03 / 4.57 on a raised panel — every step clears its floor on the *lightest* thing
+   * it can sit on, not just the average one. `--color-text-muted` and `--color-text-faint` are
+   * kept a clear 1.32:1 and 1.54:1 apart so the three-step hierarchy survives the lift.
+   *
+   * `--color-border-strong` is the one surface-adjacent value the brief did not name, and it is
+   * here for the same reason Phase 7.2.2 gave it: a card's decorative edge and an input's
+   * boundary are not the same edge. The first can whisper (#4a4a4a, 1.53:1 on a card); the
+   * second has to be findable (this, 3.05:1).
    */
-  --color-border: #1b2430;
-  --color-border-strong: #2a3644;
-  --color-text: #e9eef6;
-  --color-text-muted: #8d9aad;
-  --color-text-faint: #758295;
+  --color-border: #4a4a4a;
+  --color-border-strong: #6b7a80;
+  --color-text: #f4f7f9;
+  --color-text-muted: #c2cad0;
+  --color-text-faint: #a6b1b7;
 
   /*
    * The brand, and the states it must stay clear of.
@@ -82,11 +117,12 @@
   --color-primary: #25c4e4;
   --color-primary-strong: #18a3bf;
   --color-primary-fg: #051214;
-  --color-primary-soft: #0f292f;
-  /* One step deeper than `--color-primary-soft`; the hover of a soft control. */
-  --color-primary-soft-hover: #12343a;
+  --color-primary-soft: #1d464e;
+  /* One step louder than `--color-primary-soft`; the hover of a soft control. It keeps the same
+     relative drop the pair used to have — 4.29:1 where the resting well gives 4.95:1. */
+  --color-primary-soft-hover: #205059;
   --color-info: #6fa7f6;
-  --color-info-soft: #112136;
+  --color-info-soft: #1d314e;
   /*
    * `success` used to borrow `primary-soft`, which made an "ok" badge and a brand badge the same
    * object; Phase 7.2 gave it its own fill and edge, and 7.2.2 finished the job by moving the
@@ -94,17 +130,17 @@
    * green tick and a cyan accent stop being one colour wearing two hats.
    */
   --color-success: #39d08a;
-  --color-success-soft: #0f2e20;
+  --color-success-soft: #1d4e37;
   --color-warning: #f7b23b;
-  --color-warning-soft: #2d2211;
+  --color-warning-soft: #4e3c1d;
   --color-danger: #f6746f;
   /* The deeper red a filled destructive surface needs, and the ink that sits on it — the pair
    * that lets "this cannot be undone" read louder than "this failed" without shouting. */
   --color-danger-strong: #da5c58;
   --color-danger-fg: #190507;
-  --color-danger-soft: #2b1214;
+  --color-danger-soft: #4e1f1d;
   --color-ai: #ac8bf9;
-  --color-ai-soft: #1e1532;
+  --color-ai-soft: #2c1d4e;
   --color-focus: #50cae2;
 
   /*
@@ -116,15 +152,28 @@
    * exactly the drift a token prevents — one tweak to the danger edge was fifteen edits. Kept
    * alongside the tone they belong to, so a surface and its border are chosen together.
    *
+   * Phase 8 moved the wells and the rims with the surfaces. The old pair was cut for a card at 6%
+   * lightness — a well at 12% and an edge at 19–20% — which on a #2e2e2e card put the *fill below*
+   * the surface it sat on and the rim within a rounding error of it. Both are now cut from the
+   * card's own neighbourhood: every well is the same hue as its base at **21% lightness** (above
+   * the 18% card, so it reads as a lift, and below the 19–20% it replaced) and every rim is that
+   * hue at **37%**, which is findable on a card (1.46:1 for the AI rim, the hardest of the six)
+   * and on the page beneath it. Saturation is capped at 46% / 40% rather than copied from the
+   * base, so a fill stays a fill and not a colour swatch.
+   *
+   * Every state ink still clears 4.5:1 on its own well after the move — 4.81 at the tightest
+   * (success), 5.61 at the loosest (AI) — because the wells were solved *downward* from that
+   * floor rather than picked by eye.
+   *
    * `primary` and `success` resolve to *similar* rather than identical values, deliberately: they
    * are neighbouring greens, and telling them apart is the whole job of keeping both.
    */
-  --color-primary-border: #17414a;
-  --color-success-border: #1a4d35;
-  --color-info-border: #1a2f4d;
-  --color-warning-border: #47361a;
-  --color-danger-border: #401c1e;
-  --color-ai-border: #2f224f;
+  --color-primary-border: #397784;
+  --color-success-border: #398461;
+  --color-info-border: #395884;
+  --color-warning-border: #846839;
+  --color-danger-border: #843b39;
+  --color-ai-border: #4f3984;
 
   /*
    * Epistemic labels (docs/architecture.md § 7) and market-data provenance
@@ -619,7 +668,7 @@
         color-mix(in srgb, var(--color-info) 6%, transparent),
         transparent 60%
       ),
-      linear-gradient(180deg, var(--color-bg) 0%, #04060a 100%);
+      linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface-sunken) 100%);
     background-attachment: fixed;
     color: var(--color-text);
     font-family: var(--font-sans);
@@ -676,7 +725,9 @@
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #3a4859;
+    /* The thumb is `--color-border-strong`; the hover is one step louder, and it is ink rather
+       than edge — a scrollbar is a control, so it answers to the control ladder. */
+    background: var(--color-text-faint);
     background-clip: content-box;
   }
 

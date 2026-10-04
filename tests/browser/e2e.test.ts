@@ -541,7 +541,7 @@ suite('the Product Foundation in a real browser', () => {
       expect(meta.title).toBe('Master Trade — Workstation Preview');
       expect(meta.applicationName).toBe('Master Trade');
       expect(meta.lang).toBe('en');
-      expect(meta.theme).toBe('#05070b');
+      expect(meta.theme).toBe('#111212');
       expect(meta.colorScheme).toBe('dark');
       // Without this the phone layouts are never browser-tested at all: the page would
       // lay out at a 980 px virtual width and every narrow-screen rule would be inert.
@@ -2127,8 +2127,8 @@ suite('the Product Foundation in a real browser', () => {
       expect(manifest.display).toBe('standalone');
       // The theme colour is what tints the mobile browser chrome; it has to agree with
       // the document metadata or the app flashes white on launch.
-      expect(manifest.theme_color).toBe('#05070b');
-      expect(manifest.background_color).toBe('#05070b');
+      expect(manifest.theme_color).toBe('#111212');
+      expect(manifest.background_color).toBe('#111212');
 
       const icons = manifest.icons ?? [];
       const sizes = icons.map((icon) => icon.sizes);

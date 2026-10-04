@@ -699,10 +699,23 @@ that the accent family still looks like one family.
 
 ### The neutrals are an axis, not a set of greys
 
-Every surface, edge and ink sits inside `NEUTRAL_AXIS`: hue 210–222, saturation 10–46. That
-band is what makes a dark interface read as one material. The suite asserts it token by
-token, so a grey that drifts warmer or more saturated fails rather than quietly tinting
-everything beside it.
+Every surface, edge and ink sits inside `NEUTRAL_AXIS`, and the suite asserts it token by
+token, so a grey that drifts more saturated fails rather than quietly tinting everything
+beside it. What the axis _is_ has changed twice.
+
+Phase 7.2 set it as a **hue** axis: hue 210–222, saturation 10–46, because the ladder was a
+blue-black and every neutral agreed on one hue while only lightness varied. Phase 8 replaced
+that blue-black with the dark-grey ladder (#111212 field, #2e2e2e card, #3a4447 active,
+#4a4a4a hairline) and the axis moved with it, to **saturation 0–46, hue 0–210**.
+
+That is not a loosened band, it is a different constraint, and the difference matters. A
+grey at 0% saturation has no hue to hold, so for a near-achromatic material saturation is
+the only axis that means anything — the ceiling is what stops a surface drifting into a hue
+of its own, and the floor of zero is what lets the true greys the brief asked for exist at
+all. The hue band still earns its place, but it now says one specific thing: _no neutral
+moves into the magenta/purple half of the wheel._ That quarter belongs to `--color-ai` and
+the epistemic labels; a surface that drifted there would blur the line between the room and
+the news.
 
 ### Legibility became a measurement
 

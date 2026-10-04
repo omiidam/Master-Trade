@@ -55,7 +55,7 @@ and nothing else in the pipeline would notice.
 
 **4. Icons are the mark on a flat brand background; the lockup is used once.** A 218 px-wide mark
 fitted to a 16 px favicon leaves the wordmark unreadable, so every icon is the mark alone, centred on
-`#05070b` with a radial fade so the source's studio background does not read as a rectangle. The full
+`#111212` with a radial fade so the source's studio background does not read as a rectangle. The full
 lockup — mark, wordmark, tagline — is used on exactly one surface, the 1200 × 630 Open Graph card,
 because it is the only surface with room for all three parts.
 

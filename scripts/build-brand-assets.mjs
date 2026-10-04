@@ -33,8 +33,17 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(root, 'assets', 'brand', 'master-trade-logo-source.png');
 
-/** Flat brand background. The same value as `theme-color` and the app's `--color-bg`. */
-export const BRAND_BACKGROUND = { r: 5, g: 7, b: 11 };
+/**
+ * Flat brand background. The same value as `theme-color`, the manifest's `background_color` and
+ * the app's `--color-bg`.
+ *
+ * Phase 8 moved it from `#05070b` to `#111212` with the rest of the product, and because ADR-0049
+ * makes this file the *only* place the value is written, the whole icon set is regenerated from
+ * this one line — which is exactly the argument for generating the brand rather than drawing it.
+ * A hand-tinted icon would have been one more home for the background, and the tests that decode
+ * the PNG corner pixels would have caught it.
+ */
+export const BRAND_BACKGROUND = { r: 17, g: 18, b: 18 };
 
 /* ────────────────────────────────────────────────────────────────────────────
  * PNG decoding

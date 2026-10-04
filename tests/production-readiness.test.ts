@@ -356,7 +356,7 @@ describe('every asset a browser is told to fetch is one that ships', () => {
     expect(manifest.scope).toBe('/');
     expect(manifest.display).toBe('standalone');
     // The browser chrome colour must match the first paint, or the splash flashes a lighter frame.
-    expect(manifest.theme_color).toBe('#05070b');
+    expect(manifest.theme_color).toBe('#111212');
     expect(manifest.background_color).toBe(manifest.theme_color);
 
     const purposes = manifest.icons.map((icon) => icon.purpose ?? 'any');

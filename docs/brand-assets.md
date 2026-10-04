@@ -54,7 +54,7 @@ the mark. A crop box that drifts is a logo that gets quietly clipped.
 
 ### Compact mark — icons, launchers, browser chrome
 
-Every file below is the same mark, centred on the brand background (`#05070b`), at a different size.
+Every file below is the same mark, centred on the brand background (`#111212`), at a different size.
 
 | File                               | Size                    | Used by                                           |
 | ---------------------------------- | ----------------------- | ------------------------------------------------- |

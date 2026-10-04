@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#05070b" />
+    <meta name="theme-color" content="#111212" />
     <meta name="application-name" content="Master Trade" />
     <meta
       name="description"
@@ -46,12 +46,24 @@
         no inline scripts, and a splash that needed one could not run in the desktop build.
         It exists so the window never flashes an empty frame, and so the first thing on
         screen is the product's own name rather than a blank rectangle.
+
+        These four hexes are a second home for the palette, and it is a *necessary* one: they
+        have to exist before the stylesheet does, so they cannot read `var(--color-…)`. They
+        are the values `@theme` declares for the same roles — `--color-bg`, `--color-text`,
+        `--color-border`, `--color-text-muted` — and Phase 8 changed all four when the product
+        moved off blue-black. Keep them in step: the one thing worse than a boot splash in the
+        old colours is a boot splash in the old colours *after* the app has loaded new ones.
       */
       html,
       body {
         margin: 0;
-        background: #05070b;
-        color: #e6edf5;
+        /* `background-color`, deliberately not the `background` shorthand. Unlayered author styles
+           beat any `@layer`, so a shorthand here would reset `background-image` to `none` and
+           silently delete the stylesheet's whole background treatment — the engineering grid and
+           the three accent washes in `@layer base`. Naming only the colour keeps this a genuine
+           first-paint fallback and lets the real background through once the CSS lands. */
+        background-color: #111212;
+        color: #f4f7f9;
       }
       #brand-boot {
         display: flex;
@@ -71,7 +83,7 @@
         width: 72px;
         height: 72px;
         border-radius: 12px;
-        border: 1px solid #1c2430;
+        border: 1px solid #4a4a4a;
       }
       #brand-boot p {
         margin: 0;
@@ -79,7 +91,7 @@
         letter-spacing: 0.01em;
       }
       #brand-boot span {
-        color: #7c8a9c;
+        color: #a6b1b7;
         font-size: 12px;
       }
     </style>
