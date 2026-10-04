@@ -36,7 +36,7 @@ export interface MarketSummarySectionProps {
 
 export function MarketSummarySection({ market, asOf }: MarketSummarySectionProps) {
   return (
-    <Card density="cozy" className="flex flex-col">
+    <Card density="cozy" finish="glass" className="flex flex-col">
       <CardHeader divider actions={<ProvenanceBadge provenance={market.dataProvenance} />}>
         <div>
           <CardTitle className="text-body">{msg('dashboard.marketAnalysis')}</CardTitle>

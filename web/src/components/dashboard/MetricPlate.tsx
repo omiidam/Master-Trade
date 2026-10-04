@@ -58,8 +58,10 @@ export function MetricPlate({
   return (
     // `cozy` rather than the surface's own `compact`: the plates share this row with the panels
     // below, and one inner rhythm across the page is what lets a title here and a title there
-    // start on the same line. The face is untouched — only the density is stated.
-    <Card surface="metric" density="cozy" className="flex flex-col">
+    // start on the same line. `finish="glass"` is the one material the whole dashboard is cut to,
+    // which is also what makes the strip read as three plates of one thing rather than as three
+    // cards that happen to be about figures.
+    <Card surface="metric" density="cozy" finish="glass" className="flex flex-col">
       <CardHeader divider actions={badge ?? null}>
         <div>
           <CardTitle className="text-body">{label}</CardTitle>

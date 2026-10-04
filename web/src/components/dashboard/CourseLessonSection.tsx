@@ -11,6 +11,12 @@
  * same line; the accent flood is what makes this card the subject of the screen, and it does not
  * need an extra 8px of padding to say so. The two wells share the body evenly, so the pair reads as
  * one balanced pair whether each holds a course or an empty state.
+ *
+ * `finish="glass"` puts it in the same material as the other seven, which is the one thing the
+ * featured form gives up here: its accent glow. That is the right trade on this page, where every
+ * card is a section of the same report and a glow would say "this one" about a panel the reader was
+ * never meant to treat as a call to action. The subject of the screen is still named by its
+ * position and its size; it is simply no longer lit differently from its neighbours.
  */
 
 import {
@@ -37,7 +43,7 @@ export interface CourseLessonSectionProps {
 
 export function CourseLessonSection({ course, lesson }: CourseLessonSectionProps) {
   return (
-    <Card surface="featured" density="cozy" className="flex flex-col">
+    <Card surface="featured" density="cozy" finish="glass" className="flex flex-col">
       <CardHeader divider>
         <div>
           <CardTitle>{msg('dashboard.currentCourseAndLesson')}</CardTitle>

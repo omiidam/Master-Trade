@@ -21,7 +21,7 @@ export interface WeakAreasSectionProps {
 
 export function WeakAreasSection({ domains }: WeakAreasSectionProps) {
   return (
-    <Card surface="data" density="cozy" className="flex flex-col">
+    <Card surface="data" density="cozy" finish="glass" className="flex flex-col">
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">{msg('dashboard.weakAreas')}</CardTitle>

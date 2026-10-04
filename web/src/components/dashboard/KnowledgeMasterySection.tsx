@@ -25,7 +25,7 @@ export interface KnowledgeMasterySectionProps {
 
 export function KnowledgeMasterySection({ domains }: KnowledgeMasterySectionProps) {
   return (
-    <Card surface="data" density="cozy" className="flex flex-col">
+    <Card surface="data" density="cozy" finish="glass" className="flex flex-col">
       <CardHeader
         divider
         actions={

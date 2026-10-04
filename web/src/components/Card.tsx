@@ -209,6 +209,59 @@ const SURFACE_BORDER: Record<CardSurface, string> = {
 };
 
 /**
+ * The two *finishes* a card can be cut to.
+ *
+ * A finish is not a seventh surface and not another knob on a surface. A surface says what a card
+ * **is** — a figure, a dataset, prose — and the six of them stay exactly six. A finish says what the
+ * card is **made of**, which is a question about the object and not about its job, so every surface
+ * can be asked for it. That separation is the whole reason this is not a seventh surface: a card
+ * cannot be `surface="glass"`, because glass does not know whether it is holding a streak or a
+ * ranked list.
+ */
+export type CardFinish = 'plain' | 'glass';
+
+/**
+ * The glass finish: one translucent face and one edge, shared by whatever surfaces ask for it.
+ *
+ * Written as a branch rather than as classes a call site appends, for the reason every other face
+ * here is written as a branch: `cn` is a plain join that does not resolve conflicts, so a card
+ * carrying both `bg-surface` and `bg-surface/70` would hand the winner to whichever utility the
+ * stylesheet happened to order last. A page that asked for glass on eight cards would get eight
+ * cards whose translucency was decided by the build.
+ *
+ * The four ingredients are the reference's, expressed in this system's own tokens:
+ *
+ *   - **translucent fill** — the surface colour at 70%, so the page's light comes through the card
+ *     instead of stopping at it. `.glass` (14px) already proved the recipe for a fill; a card wants
+ *     more air behind it than a chip does.
+ *   - **a blur** — `backdrop-blur-xl`, which is what makes translucency read as glass rather than as
+ *     a washed-out panel.
+ *   - **the shared lighting** — `panel-gradient` and `edge-highlight`, kept deliberately. Every
+ *     raised surface in this product is lit from the top by those two, and a glass card that dropped
+ *     them would be the one panel in the tree with no top light.
+ *   - **a soft cast** — `shadow-panel`, the same depth a plain card sits at. Glass is about what is
+ *     behind the card, not about how far it floats in front.
+ *
+ * The hover and active states move the fill and the edge and nothing else: no lift, no transform.
+ * A card that moved on hover would drag its whole grid row with it, which is how a row of eight
+ * panels stops being a row.
+ */
+const GLASS_FACE =
+  'bg-surface/70 shadow-panel panel-gradient edge-highlight backdrop-blur-xl ' +
+  'hover:bg-surface/80 active:bg-surface/60';
+
+/**
+ * The glass edge: a hairline of white, faint enough to describe the object's boundary rather than
+ * to draw it.
+ *
+ * `white` rather than a token because that is literally the material being described — light
+ * catching a translucent rim — and it is the one place in the card system where the answer is not a
+ * colour the palette already owns. It is held well under a solid border so the panel still reads
+ * as a boundary at low contrast rather than becoming a highlighted region.
+ */
+const GLASS_BORDER = 'border-white/12 hover:border-white/25 active:border-white/10';
+
+/**
  * What a card is *for*, as one word.
  *
  * Six of them, and they are deliberately not six more knobs: each is a **name for a combination of
@@ -301,6 +354,20 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
   wash?: boolean;
   /** How much air the parts inside get. */
   density?: CardDensity;
+  /**
+   * What the card is made of, as opposed to what it is for.
+   *
+   * The default `plain` is every surface the product has always drawn. `glass` is the translucent
+   * treatment — one fill, one blur, one hairline edge — and it deliberately crosses surfaces: a
+   * screen that wants its cards to read as one material asks for it per card rather than declaring a
+   * new kind of card, so the kinds stay the six the system can reason about.
+   *
+   * It replaces the surface's own face, edge and cast rather than layering over them. A glass card
+   * therefore keeps its density and its anatomy and gives up its bespoke lighting — including the
+   * accent glow `featured` would otherwise carry, because one glow in a row of glass panels would
+   * say "this one" about a card that is no longer meant to be the one.
+   */
+  finish?: CardFinish;
   /** `accent` lights the card from below instead of above. Reserved for a screen's one feature. */
   variant?: CardVariant;
   interactive?: boolean;
@@ -352,6 +419,7 @@ export function Card({
   wash,
   density,
   variant,
+  finish,
   interactive,
   className,
   ...rest
@@ -365,16 +433,24 @@ export function Card({
   const resolvedVariant = variant ?? preset?.variant ?? 'plain';
   const resolvedEmphasis = emphasis ?? preset?.emphasis ?? 'none';
   const resolvedDensity = density ?? preset?.density ?? 'cozy';
+  // A glass card is one material, so it takes the finish's fill, edge and cast instead of the
+  // surface's — including the accent glow, which is the one thing it must not keep: a glow is how a
+  // card says "this one", and every card in a glass row is the same object.
+  const glass = finish === 'glass';
   // The panel shadow comes with the plain face; only the emphasis can add one on top, because a
   // glowing card is still a raised card.
-  const shadow = resolvedEmphasis === 'accent' ? 'shadow-glow' : '';
+  const glow = resolvedEmphasis === 'accent' ? 'shadow-glow' : '';
+  // Two separate questions, asked separately: whether the emphasis asked for the glow, and whether
+  // this card is in a material that declines it.
+  const shadow = glass ? '' : glow;
   // The bespoke face belongs to the surface, but only while the surface is still the thing choosing
   // where the light comes from: an explicit `tone` or `variant` is a caller saying it wants a
   // different placement, and the generic faces are the answer to that. So an override drops the
   // face and keeps everything the surface also decided — its density, and its emphasis.
   const bespoke = surface !== undefined && tone === undefined && variant === undefined;
-  const faceClass =
-    wash === true && resolvedEmphasis !== 'none'
+  const faceClass = glass
+    ? GLASS_FACE
+    : wash === true && resolvedEmphasis !== 'none'
       ? washFace(resolvedTone, resolvedVariant, resolvedEmphasis)
       : bespoke
         ? SURFACE_FACE[surface]
@@ -382,8 +458,9 @@ export function Card({
   // Branchwise rather than as two `border-*` utilities in one join: both set `border-color`, so the
   // winner would be whichever Tailwind emitted last. A stated tone outranks the surface's own edge,
   // because a card in a state keeps the state's colour on its border.
-  const borderClass =
-    resolvedEmphasis !== 'none'
+  const borderClass = glass
+    ? GLASS_BORDER
+    : resolvedEmphasis !== 'none'
       ? EMPHASIS_BORDER[resolvedEmphasis]
       : bespoke
         ? SURFACE_BORDER[surface]

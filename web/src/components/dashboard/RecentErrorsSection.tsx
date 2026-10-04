@@ -33,7 +33,7 @@ export interface RecentErrorsSectionProps {
 
 export function RecentErrorsSection({ errors }: RecentErrorsSectionProps) {
   return (
-    <Card surface="data" density="cozy" className="flex flex-col">
+    <Card surface="data" density="cozy" finish="glass" className="flex flex-col">
       <CardHeader
         divider
         actions={
