@@ -42,6 +42,8 @@ export const LOCK_AREAS = [
   'ai.providerIndependence',
   // Task 1.2: training is its own area — infrastructure, not the request path.
   'ai.training',
+  // Task 1.3: the run harness owns the per-run lifecycle and the ephemeral memory.
+  'ai.harness',
   'desktop.runtime',
   'desktop.security',
   // Phase 3.6: the shell became an implementation, so three areas of its policy
@@ -312,6 +314,26 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     adr: ['ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md'],
     constraint:
       'Continuous learning is refused at validation and must not be scheduled by any backend; the gateway holds no training surface.',
+  },
+  {
+    id: 'DEC-AI-9-RUN-LIFECYCLE',
+    area: 'ai.harness',
+    choice:
+      'AgentRunHarness.run is the single entry point for one bounded run; AgentRunLifecycle is a machine-checked state machine (pending → assembling → calling-model → responding → completed, with failed/cancelled) and every run reaches exactly one terminal state',
+    status: 'locked',
+    adr: ['ADR-0060-agent-run-harness-lifecycle-and-ephemeral-working-memory.md'],
+    constraint:
+      'Failure is a recorded state with the phase it surfaced in, never a dangling run; tool requests are recorded, never executed by the harness.',
+  },
+  {
+    id: 'DEC-AI-10-EPHEMERAL-CONTEXT-RAM',
+    area: 'ai.harness',
+    choice:
+      'WorkingMemory is created inside the run, seeded from the caller-supplied history and the current prompt, and disposed in a finally block on every terminal path',
+    status: 'locked',
+    adr: ['ADR-0060-agent-run-harness-lifecycle-and-ephemeral-working-memory.md'],
+    constraint:
+      'Nothing persists and nothing is shared between runs; disposed memory refuses every read and write; persistent memory is a later phase with its own contract.',
   },
   {
     id: 'DEC-DESKTOP-1-RUNTIME',

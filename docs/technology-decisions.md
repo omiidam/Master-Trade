@@ -43,8 +43,8 @@ Phase 1/2 invariants are unchanged and remain authoritative:
 | AI extension seams    | Six type-only seams in `src/llm/extensionPoints.ts`; nothing implemented, wired or defaulted      | `DEC-AI-4-EXTENSION-SEAMS`    | [0058](./adr/ADR-0058-llm-core-extension-seams-and-request-scoping.md)                                     |
 | AI request scoping    | `LlmRequestScope` on every completion: correlation id + opaque `userId`, never a `Principal`      | `DEC-AI-5-REQUEST-SCOPING`    | [0058](./adr/ADR-0058-llm-core-extension-seams-and-request-scoping.md)                                     |
 | AI no-live-data       | Curated training datasets only; `reviewed-conversation` refused until an approved pipeline exists | `DEC-AI-6-NO-LIVE-DATA`       | [0059](./adr/ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md)          |
-| AI dataset provenance | Provenance + explicit approval on every dataset; content-addressed fingerprints                   | `DEC-AI-7-DATASET-PROVENANCE` | [0059](./adr/ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md)          |
-| AI training ladder    | base / SFT / domain contracts; continuous-learning reserved; `TrainingBackend` injected port      | `DEC-AI-8-TRAINING-LADDER`    | [0059](./adr/ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md)          |
+| AI dataset provenance | Provenance + explicit approval on every dataset; content-addressed fingerprints                   | `DEC-AI-7-DATASET-PROVENANCE` | [0059](./adr/ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md)          |     | AI training ladder | base / SFT / domain contracts; continuous-learning reserved; `TrainingBackend` injected port | `DEC-AI-8-TRAINING-LADDER`        | [0059](./adr/ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md) |
+| AI run lifecycle      | `AgentRunHarness.run` owns each run; machine-checked lifecycle states, failure is a state         | `DEC-AI-9-RUN-LIFECYCLE`      | [0060](./adr/ADR-0060-agent-run-harness-lifecycle-and-ephemeral-working-memory.md)                         |     | AI context RAM     | Ephemeral per-run `WorkingMemory`, disposed on every terminal path, never shared             | `DEC-AI-10-EPHEMERAL-CONTEXT-RAM` | [0060](./adr/ADR-0060-agent-run-harness-lifecycle-and-ephemeral-working-memory.md)                |
 | Desktop runtime       | Tauri 2 shell + TypeScript backend as bundled Node sidecar on loopback                            | `DEC-DESKTOP-1-RUNTIME`       | [0001](./adr/ADR-0001-desktop-shell-tauri.md)                                                              |
 | Desktop security      | Loopback-only + per-launch bearer token, keychain-only secrets, capability allow-list             | `DEC-DESKTOP-2-SECURITY`      | [0001](./adr/ADR-0001-desktop-shell-tauri.md), [0007](./adr/ADR-0007-deny-by-default-auth.md)              |
 | Desktop capabilities  | WebView granted no `shell:`/`fs:`/`path:`/`http:` permission; Rust owns privileged work           | `DEC-DESKTOP-3-CAPABILITIES`  | [0029](./adr/ADR-0029-webview-capability-boundary.md)                                                      |
@@ -463,6 +463,36 @@ trained by this phase:
   runtime, never reachable from the gateway, and required to refuse
   the reserved stage rather than attempt it. The runtime LLM files
   were not modified.
+
+### 4.9 Agent run harness — `DEC-AI-9-RUN-LIFECYCLE`, `DEC-AI-10-EPHEMERAL-CONTEXT-RAM`
+
+`AgentRunHarness.run`
+([ADR-0060](./adr/ADR-0060-agent-run-harness-lifecycle-and-ephemeral-working-memory.md))
+is the single entry point for one bounded agent run. The lifecycle is a
+machine-checked state machine — `pending → assembling → calling-model →
+responding → completed`, with `failed` and `cancelled` reachable from the
+active phases — and every run reaches exactly one terminal state.
+
+- **Ephemeral working memory** (`DEC-AI-10-EPHEMERAL-CONTEXT-RAM`): `WorkingMemory`
+  is created inside the run, holds this run's chat history (caller's
+  prior turns oldest-first, current prompt last) and nothing else, and
+  is disposed in a `finally` block — on success, failure and
+  cancellation alike. After disposal, every read and write throws.
+- **Assembly**: the harness composes system instructions (never
+  dropped), chat history from the run's memory, the user prompt, and
+  caller-supplied runtime context through the existing
+  `assembleContext` — the token budget and priority rules are the
+  product's own. No retrieval, no RAG.
+- **Three-party contract**: harness → context builder is
+  `AgentRunInput` in / `HarnessAssembly` out; context builder → gateway
+  is the existing `AsyncModelAdapter.completeTurn` (the only path to
+  `LlmGateway`, which is unchanged); harness → caller is
+  `AgentRunResult` (status, turn, recorded-but-unexecuted tool
+  requests, failure with phase, timeline, duration).
+- **Later phases attach as observers**: `HarnessRuntimeHooks`
+  (`beforeModelCall`, `afterTurn`, `onRunFailure`, `shouldCancel`) let
+  Memory, Evaluation and Learning read what a run produced and cancel
+  it — never rewrite assembly or answer in place.
 
 ## 5. Desktop
 

@@ -438,3 +438,22 @@ fingerprint, and a versioned `PreferencePair` schema prepares for
 future preference optimization. Execution is an injected
 `TrainingBackend` port the runtime never imports; the gateway holds no
 training surface, asserted by test.
+
+## Task 1.3 — agent run harness
+
+One bounded agent run, owned end to end
+([ADR-0060](./ADR-0060-agent-run-harness-lifecycle-and-ephemeral-working-memory.md)).
+`AgentRunHarness.run` drives a machine-checked lifecycle — pending,
+assembling, calling-model, responding, completed, with failed and
+cancelled — and every run reaches exactly one terminal state
+(`DEC-AI-9-RUN-LIFECYCLE`). Each run gets an ephemeral `WorkingMemory`:
+seeded from the caller's chat history and the current prompt, disposed
+in a `finally` block on every path, refusing all access afterwards,
+shared with nothing (`DEC-AI-10-CONTEXT-RAM`). Assembly composes system
+instructions (never dropped), history, the user prompt and
+caller-supplied runtime context through the existing `assembleContext`;
+the model is reached only through the existing `AsyncModelAdapter`, so
+the real `LlmGateway` is unchanged. Tool requests the model makes are
+recorded and returned, never executed. Later phases attach through
+`HarnessRuntimeHooks` — observational, cancellable, never able to
+rewrite the assembly or answer in place.

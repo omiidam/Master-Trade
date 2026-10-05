@@ -295,6 +295,21 @@ Every deferred capability above now has a named, type-only seam in
 implementing its seam and installing it — the gateway remains the single
 entry point for every LLM request until a phase does.
 
+### The agent run harness (Task 1.3)
+
+`AgentRunHarness.run`
+([ADR-0060](./adr/ADR-0060-agent-run-harness-lifecycle-and-ephemeral-working-memory.md))
+owns one bounded agent run: a machine-checked lifecycle (`pending →
+assembling → calling-model → responding → completed`, with `failed` and
+`cancelled`), an ephemeral per-run `WorkingMemory` disposed on every
+terminal path, and assembly of exactly four things — system instructions
+(never dropped), chat history, the user prompt, and caller-supplied
+runtime context — through the existing `assembleContext`. The model is
+reached only through the existing `AsyncModelAdapter`, so the gateway
+path is unchanged; tool requests come back recorded, never executed.
+Later Memory, Evaluation and Learning systems attach as observational
+hooks (`HarnessRuntimeHooks`), never as behavior changes to the core.
+
 ### The training foundation (Task 1.2)
 
 The `Trainer` seam has a concrete contract now:
