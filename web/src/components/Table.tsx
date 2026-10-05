@@ -206,6 +206,21 @@ export interface TableProps extends HTMLAttributes<HTMLTableElement> {
  * into empty space while every element still measures inside the viewport, which is why the defect
  * is invisible to an element-by-element overflow check. Positioning the scroll container makes it
  * the containing block, so its own clip applies.
+ *
+ * The table is `border-separate` with `border-spacing: 0`, not `border-collapse`, and the reason is
+ * a row's *height* rather than its rules.
+ *
+ * A row states itself with a hairline on its bottom edge (`TableRow`), and under `border-collapse`
+ * that hairline is a **shared** border: the browser draws one line and assigns half of it to each of
+ * the two rows it divides. An interior row therefore carries two half-lines and a row at the edge of
+ * the body carries one, so the first and last rows of a body are half a pixel shorter than the rows
+ * between them — measured on the journal's trade history at 1440×900, ten rows read
+ * `52.5, 53, 53, … 53, 52.5`. Half of a 1px hairline is a fractional row height, and a fraction is a
+ * height that rounds two ways: on some runs the last row measures 52.4999 and reads as 52 where its
+ * nine neighbours read as 53, which is a row grid that is one pixel off for no reason a reader can
+ * see. `border-separate` with zero spacing gives every row its own border box, so the same hairline
+ * is drawn once per row and every row measures the same height — the rules look identical, and the
+ * geometry stops depending on how many borders happen to adjoin a row.
  */
 export function Table({
   label,
@@ -222,7 +237,7 @@ export function Table({
           // No type size of its own: the same frame serves a dense journal grid, a footnote table
           // and a plan comparison, and those are three different sizes. The caller sets it once on
           // the table and the cells inherit, so the size cannot differ cell by cell.
-          className={cn('w-full border-collapse', className)}
+          className={cn('w-full border-separate border-spacing-0', className)}
           style={minWidth === undefined ? undefined : { minWidth: `${minWidth}px` }}
           {...rest}
         >
