@@ -86,12 +86,13 @@ describe('the source of truth', () => {
   it('has its mark inside the declared crop box', () => {
     const source = readSource();
     const measured = measureMarkBox(source);
-    // The box is measured, not guessed: the mark is the only saturated and only bright
-    // region above the wordmark, so a mistake here is a real mistake.
+    // The box is measured, not guessed: the mark is the only bright region of the
+    // source — the ground is the flat brand background — so a mistake here is a real
+    // mistake.
     expect(boxContains(SOURCE_BOXES.mark, measured)).toBe(true);
   });
 
-  it('keeps the declared boxes inside the image, aspect-true, and non-overlapping with the tagline', () => {
+  it('keeps the declared boxes inside the image, aspect-true, and the lockup roomier than the mark', () => {
     for (const [name, box] of Object.entries(SOURCE_BOXES)) {
       expect(box.x0, name).toBeGreaterThanOrEqual(0);
       expect(box.y0, name).toBeGreaterThanOrEqual(0);
@@ -100,7 +101,8 @@ describe('the source of truth', () => {
       expect(box.x1, name).toBeGreaterThan(box.x0);
       expect(box.y1, name).toBeGreaterThan(box.y0);
     }
-    // The lockup is the only box that may include the wordmark and tagline.
+    // The lockup is the only box looser than the mark: it may carry whatever the
+    // source places below the mark, and nothing else may.
     expect(SOURCE_BOXES.lockup.y1).toBeGreaterThan(SOURCE_BOXES.mark.y1);
     expect(SOURCE_BOXES.lockup.x0).toBeLessThan(SOURCE_BOXES.mark.x0);
   });
@@ -120,8 +122,8 @@ describe('the generated set', () => {
     // The maskable variant is deliberately inset, so its bounds are asserted separately.
     for (const entry of ICON_SET.filter((candidate) => candidate.maskable !== true)) {
       const bounds = contentBounds(entry.path);
-      // The mark is wider than it is tall (1.38:1), so a correctly cropped icon fills the
-      // width and about three fifths of the height. A wrong crop box fails this loudly.
+      // The mark is wider than it is tall (1.40:1), so a correctly cropped icon fills the
+      // width and about seven tenths of the height. A wrong crop box fails this loudly.
       expect(bounds.width, `${entry.path} width`).toBeGreaterThan(0.85);
       expect(bounds.height, `${entry.path} height`).toBeGreaterThan(0.45);
       expect(bounds.height, `${entry.path} height`).toBeLessThan(0.78);

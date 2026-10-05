@@ -1,6 +1,15 @@
 # ADR-0049 — the brand is one source, generated rather than drawn
 
 - **Status:** Accepted
+- **Amended 2026-10-05:** the approved source image was replaced with a
+  mark-only emblem — the same MT growth mark, monochrome metallic
+  grayscale, with no raster wordmark and no tagline. The decision is
+  unchanged: one source, everything generated; the crop box is still
+  measured and tested (now by luminance alone, since the new source has
+  no saturated region); icons are still the mark on the flat brand
+  background; the interface wordmark is still live text. One consequence
+  moves: the 1200 × 630 Open Graph card now carries the mark alone,
+  because there is no raster wordmark to compose it with.
 - **Decision id:** `DEC-BRAND-1-ONE-SOURCE-GENERATED`
 - **Phase:** 5.8 (Security, Privacy, Compliance & Brand Identity Foundation)
 - **Supersedes:** the placeholder `M` tile in the navigation rail, and the icon instructions in
@@ -17,7 +26,7 @@ could not see the problem because it never checked that an icon path resolved.
 
 The project now has an approved logo: a mark, a `MASTER TRADE` wordmark and a tagline, delivered as a
 single 1254 × 1254 PNG — a rendered image with a studio background, not a vector, and not broken into
-parts.
+parts. (Amended 2026-10-05: the source is now the mark alone — see the note under Status.)
 
 Three questions had to be settled, and each has a tempting answer that fails later.
 
@@ -51,13 +60,16 @@ that runs a few times a year, trades a readable file in the repository for a dep
 region of the source and the only bright region above the wordmark, so its bounding box is computed
 exactly (`npm run brand:measure`). `tests/brand.test.ts` re-measures on every run and fails if the
 declared box stops containing the mark. A crop box that drifts is a logo that gets quietly clipped,
-and nothing else in the pipeline would notice.
+and nothing else in the pipeline would notice. (Amended 2026-10-05: the replacement source is
+monochrome and carries nothing but the mark, so the measurement locates the mark by luminance
+alone — the ground is the flat brand background.)
 
 **4. Icons are the mark on a flat brand background; the lockup is used once.** A 218 px-wide mark
 fitted to a 16 px favicon leaves the wordmark unreadable, so every icon is the mark alone, centred on
 `#111212` with a radial fade so the source's studio background does not read as a rectangle. The full
 lockup — mark, wordmark, tagline — is used on exactly one surface, the 1200 × 630 Open Graph card,
-because it is the only surface with room for all three parts.
+because it is the only surface with room for all three parts. (Amended 2026-10-05: the replacement
+source carries no raster wordmark or tagline, so the card shows the mark alone.)
 
 **5. The wordmark in the interface is live text.** `BrandLockup` renders the generated mark plus
 `Master Trade` in the product's own type scale, so the name inherits the interface type, mirrors in

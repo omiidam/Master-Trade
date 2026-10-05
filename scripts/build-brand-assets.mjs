@@ -16,9 +16,9 @@
  *
  * The composition rule is fixed and stated in `docs/brand-assets.md`: every icon is the
  * compact mark centred on the brand background, cropped to the mark's own bounding box
- * and faded at the edges by a radial alpha vignette so the source photograph's environment
- * does not read as a rectangle. The full lockup (mark + wordmark + tagline) is used only
- * where there is room to read it: the Open Graph card.
+ * and faded at the edges by a radial alpha vignette so any environment around the mark
+ * does not read as a rectangle. The brand source carries the mark alone — no wordmark,
+ * no tagline — so the Open Graph card shows the mark too, at card size.
  *
  * Usage:
  *   npm run brand:assets          # write the whole set
@@ -396,25 +396,28 @@ export function buildIco(images) {
  */
 export const SOURCE_BOXES = {
   /**
-   * The compact MT mark alone: no wordmark, no tagline. Used for every icon. Measured
-   * extent is x 354–935, y 232–652; these are those bounds plus a ~2% margin so the
-   * mark's own anti-aliased edge is not clipped.
+   * The compact MT growth mark alone: no wordmark, no tagline — the brand source
+   * carries nothing else. Used for every icon. Measured extent is x 199–1054,
+   * y 27–637; these are those bounds plus a ~2% margin so the mark's own
+   * anti-aliased edge is not clipped.
    */
-  mark: { x0: 0.263, y0: 0.166, x1: 0.765, y1: 0.539 },
+  mark: { x0: 0.144, y0: 0.012, x1: 0.856, y1: 0.519 },
   /**
-   * The full lockup: mark, MASTER TRADE wordmark and the tagline. Used for OG cards.
-   * The mark's column bounds are reused, and the box is extended down to include the
-   * tagline (measured to end at y 996).
+   * The mark with room around it, used for OG cards. The brand carries no raster
+   * wordmark or tagline — the product name is live text in the interface — so the
+   * lockup is the mark's box widened by 5% and lowered by 5%, which keeps the
+   * card's composition centred without inventing a second element.
    */
-  lockup: { x0: 0.16, y0: 0.166, x1: 0.83, y1: 0.81 },
+  lockup: { x0: 0.094, y0: 0.002, x1: 0.906, y1: 0.569 },
 };
 
 /**
  * Bounding box of the mark, found by measurement rather than by eye.
  *
- * The mark is the only saturated (blue/teal) region of the source and the only bright
- * region that is not the studio glow along the left edge or the wordmark below it, so it
- * can be located exactly. `--measure` prints this, and `tests/brand.test.ts` asserts the
+ * The mark is the only bright region of the source: the ground is the flat brand
+ * background, so the bright pixels inside the band are the mark and nothing else.
+ * The mark is monochrome, so saturation plays no part in finding it — luminance
+ * alone locates it. `--measure` prints this, and `tests/brand.test.ts` asserts the
  * declared box contains it.
  */
 export function measureMarkBox(image) {
@@ -422,12 +425,12 @@ export function measureMarkBox(image) {
   let y0 = image.height;
   let x1 = 0;
   let y1 = 0;
-  // The mark is the topmost object: the source's own vertical profile puts a clear gap
-  // between it and the wordmark, and the band ends inside that gap.
+  // The mark sits in the upper region of the source, and the band ends well below
+  // it. The limit keeps any content a future source adds below the mark — a
+  // wordmark, a tagline — out of this measurement.
   const bandLimit = Math.round(image.height * 0.55);
   for (let y = 0; y < bandLimit; y += 1) {
     for (let x = 0; x < image.width; x += 1) {
-      if (x < image.width * 0.24) continue; // the source's studio glow lives here
       const i = (y * image.width + x) * 4;
       const max = Math.max(image.data[i], image.data[i + 1], image.data[i + 2]);
       const min = Math.min(image.data[i], image.data[i + 1], image.data[i + 2]);
@@ -522,7 +525,7 @@ export function buildAssets(source) {
   const assets = [];
 
   for (const entry of ICON_SET) {
-    // The wordmark is unreadable at icon sizes, so icons use the mark; maskable icons
+    // Icons use the mark alone — the source carries no wordmark — and maskable icons
     // hold the mark inside the 80% safe zone so a launcher mask cannot clip it.
     const inset = entry.maskable ? Math.round(entry.size * 0.1) : 0;
     const image = tile(mark, entry.size, entry.size, { inset, fade: ICON_FADE });
@@ -544,9 +547,10 @@ export function buildAssets(source) {
     purpose: 'Windows desktop icon: 16–256 px',
   });
 
-  // The Open Graph card is the one surface with room for the full lockup: mark, wordmark
-  // and tagline, centred. The lockup is very nearly square, so the card is a centred
-  // logo on the brand background rather than a logo competing with copy.
+  // The Open Graph card is the one surface sized for the brand: the mark, centred.
+  // The brand carries no raster wordmark — the product name is live text in the
+  // interface — so the card is the mark on the brand background rather than a logo
+  // competing with copy.
   const card = solid(1200, 630, BRAND_BACKGROUND);
   const placed = fit(lockup, 560, 560);
   assets.push({
@@ -597,7 +601,7 @@ function probe(source) {
   );
   console.log(lines.join('\n'));
   console.log(
-    `# = saturated (the blue/teal of the mark)   @ bright   + mid   . dark   ' ' near-black`,
+    `# = saturated (the brand is monochrome, so none should appear)   @ bright   + mid   . dark   ' ' near-black`,
   );
   const measured = measureMarkBox(source);
   const asPixels = (box) =>

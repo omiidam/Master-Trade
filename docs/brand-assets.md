@@ -9,16 +9,18 @@ others do not.
 
 ## 1. The source
 
-|          |                                                                                                  |
-| -------- | ------------------------------------------------------------------------------------------------ |
-| File     | `assets/brand/master-trade-logo-source.png`                                                      |
-| Format   | PNG, 8-bit, RGBA, non-interlaced                                                                 |
-| Size     | 1254 × 1254                                                                                      |
-| Contents | The full lockup: the MT mark, the `MASTER TRADE` wordmark, the tagline, on the studio background |
-| Owner    | The project. Replacing it is the _only_ way to change the brand.                                 |
+|          |                                                                              |
+| -------- | ---------------------------------------------------------------------------- |
+| File     | `assets/brand/master-trade-logo-source.png`                                  |
+| Format   | PNG, 8-bit, RGBA, non-interlaced                                             |
+| Size     | 1254 × 1254                                                                  |
+| Contents | The MT growth mark alone — no wordmark, no tagline — on the brand background |
+| Owner    | The project. Replacing it is the _only_ way to change the brand.             |
 
-It is one file on purpose. The mark, the wordmark and the tagline are all in it, so the lockup
-crop, the mark crop and the icon set can never disagree about what the logo looks like.
+It is one file on purpose: every surface — favicon, launcher, link-preview card — is cut
+from the same artwork, so they can never disagree about what the logo looks like. The
+product's name is **live text** everywhere it appears in the interface (`BrandLockup`),
+not part of the image; the artwork is the mark alone.
 
 **Implemented.**
 
@@ -37,12 +39,12 @@ of the format it accepts is narrow — 8-bit, non-interlaced, RGB or RGBA — an
 exact reason instead of producing a wrong image.
 
 **Where the crop boxes come from.** They are _measured_, not guessed. The mark is the only
-saturated (blue/teal) region of the source and the only bright region above the wordmark, so
+bright region of the source — the ground is the flat brand background — so
 `npm run brand:measure` locates it exactly:
 
 ```
-measured mark box: x 354–936, y 232–653
-declared mark box: x 330–959, y 208–676   (those bounds plus ~2% margin)
+measured mark box: x 199–1055, y 27–598
+declared mark box: x 181–1073, y 15–651   (the metal's own extent, plus ~2% margin)
 ```
 
 `tests/brand.test.ts` re-measures on every run and fails if the declared box ever stops containing
@@ -73,14 +75,15 @@ Every file below is the same mark, centred on the brand background (`#111212`), 
 | `src-tauri/icons/icon.ico`         | 16, 32, 48, 64, 256     | Windows executable                                |
 | `src-tauri/icons/icon.icns`        | —                       | **Planned**: macOS, needs `npm run desktop:icons` |
 
-### Full lockup — the one surface with room for it
+### The mark at card size — the link-preview card
 
 | File                      | Size       | Used by                              |
 | ------------------------- | ---------- | ------------------------------------ |
 | `web/public/og-image.png` | 1200 × 630 | Open Graph and Twitter link previews |
 
-The card is the whole lockup — mark, wordmark, tagline — centred on the brand background, because
-it is the only surface where the wordmark is large enough to read.
+The card is the mark, centred on the brand background. The source carries no raster
+wordmark — the product name is live text in the interface — so the card exists to show the
+mark large enough for its brushed detail to read, not to compose it with type.
 
 ### In-app
 
@@ -89,7 +92,7 @@ it is the only surface where the wordmark is large enough to read.
 | `BrandMark`   | The generated icon at a given size                    | Footer, collapsed navigation rail |
 | `BrandLockup` | The generated icon plus the product name as live text | Navigation header, About dialog   |
 
-The wordmark in the interface is **live text**, not the source image's raster wordmark: it inherits
+The wordmark in the interface is **live text**, not part of the image: it inherits
 the interface type, mirrors correctly in RTL, and stays sharp at any zoom.
 
 **Implemented.**
@@ -100,8 +103,7 @@ Putting the full lockup everywhere is the failure mode this section exists to pr
 
 - **The compact mark** goes anywhere the surface is smaller than roughly 200 px wide, or where the
   product's name is already on screen: favicon, launcher icons, the collapsed navigation rail, the
-  footer, the maskable icon. The wordmark in the source is 795 px wide; below ~120 px it becomes an
-  unreadable grey smear, which is worse than no wordmark.
+  footer, the maskable icon.
 - **The lockup** goes where there is room for both parts to be read: the navigation header when
   expanded, the About dialog, and the link-preview card.
 - **One mark per screen.** The navigation header carries the lockup, so no page adds a second one in
@@ -159,7 +161,7 @@ no public deployment in this phase.
 
 1. Replace `assets/brand/master-trade-logo-source.png` (≥ 1000 × 1000, 8-bit PNG).
 2. `npm run brand:measure` — read the measured mark box.
-3. Update `SOURCE_BOXES.mark` (and `.lockup` if the wordmark moved) in
+3. Update `SOURCE_BOXES.mark` (and `.lockup` if the composition moved) in
    `scripts/build-brand-assets.mjs`.
 4. `npm run brand:assets`, then `npm run desktop:icons` on a machine with the Tauri CLI.
 5. `npm test -- tests/brand.test.ts`.
