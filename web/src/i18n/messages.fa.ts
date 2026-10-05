@@ -398,6 +398,14 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'dashboard.basedOnAttempts': 'بر اساس تلاش‌های ثبت‌شده',
   'dashboard.serverDerived': 'روی سرور از رکوردهای خودتان به‌دست آمده است.',
   'dashboard.refresh': 'بازخوانی',
+  'dashboard.refreshing': 'در حال بازخوانی…',
+  'dashboard.readingTheDashboardAgain':
+    'رکورد شما دوباره خوانده می‌شود؛ همین صفحه سر جایش می‌ماند.',
+  'dashboard.refreshFailedShowingTheLastRead':
+    'خواندن اخیر بازخوانی نشد. آنچه روی صفحه است، خوانشِ {at} است.',
+  'dashboard.showAllDomains': 'هر {count} حوزه را نشان بده',
+  'dashboard.showFewerDomains': 'حوزه‌های کمتری نشان بده',
+  'dashboard.domainsShownOf': '{shown} حوزه از {total} نشان داده شده است',
   'dashboard.learningProgress': 'پیشرفت یادگیری',
   'dashboard.learningProgressNote':
     'آنچه رکورد می‌گوید می‌دانید، در کنار دوره و درسی که در آن یاد می‌گیرید.',
@@ -417,7 +425,12 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'dashboard.notAttemptedYet': 'هنوز تلاشی ثبت نشده است',
   'dashboard.notYetAssessed': 'هنوز ارزیابی نشده',
   'dashboard.openAcademy': 'آکادمی را باز کن',
-  'dashboard.openExams': 'آزمون‌های باز',
+  'dashboard.openActivity': 'فعالیت‌ها را باز کن',
+  'dashboard.openTheCourse': 'دوره را باز کن',
+  'dashboard.openTheCurriculum': 'برنامه درسی را باز کن',
+  'dashboard.openAssessmentHistory': 'تاریخچهٔ آزمون‌ها را باز کن',
+  'dashboard.openMistakeReview': 'بازبینی اشتباه‌ها را باز کن',
+  'dashboard.openExams': 'آزمون‌ها را باز کن',
   'dashboard.patterns': 'الگو',
   'dashboard.previewData': 'دادهٔ پیش‌نمایش',
   'dashboard.previewGenerated': 'تولید پیش‌نمایش',

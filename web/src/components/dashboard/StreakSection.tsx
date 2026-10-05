@@ -17,14 +17,17 @@
 import { Flame } from 'lucide-react';
 import { EmptyState } from '../EmptyState';
 import { MetricPlate } from './MetricPlate';
+import { SectionLink } from './SectionLink';
 import { msg } from '../../i18n/index.js';
 
 export interface StreakSectionProps {
   /** Consecutive days with recorded activity, as the server counted them. */
   days: number;
+  /** Opens Activity, which is where the days behind this count are recorded. */
+  onOpenActivity: () => void;
 }
 
-export function StreakSection({ days }: StreakSectionProps) {
+export function StreakSection({ days, onOpenActivity }: StreakSectionProps) {
   return (
     <MetricPlate
       label={msg('data.reviewStreak')}
@@ -49,6 +52,8 @@ export function StreakSection({ days }: StreakSectionProps) {
         />
       }
       note={msg('dashboard.streakDays')}
+      interactive
+      action={<SectionLink label={msg('dashboard.openActivity')} onOpen={onOpenActivity} />}
     />
   );
 }

@@ -11,17 +11,26 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../Card';
 import { EmptyState } from '../EmptyState';
 import { RankedDomainList } from './RankedDomainList';
+import { SectionLink } from './SectionLink';
 import { msg } from '../../i18n/index.js';
 import type { DomainMasteryView } from '@shared/frontend/viewModels';
 
 export interface WeakAreasSectionProps {
   /** Domains to study, weakest first, as the server ranked them. */
   domains: readonly DomainMasteryView[];
+  /** Opens the curriculum these domains are drawn from. */
+  onOpenAcademy: () => void;
 }
 
-export function WeakAreasSection({ domains }: WeakAreasSectionProps) {
+export function WeakAreasSection({ domains, onOpenAcademy }: WeakAreasSectionProps) {
   return (
-    <Card surface="data" density="cozy" finish="glass" className="flex flex-col">
+    <Card
+      surface="data"
+      density="cozy"
+      finish="glass"
+      interactive
+      className="flex flex-col focus-within:border-border-strong"
+    >
       <CardHeader divider>
         <div>
           <CardTitle className="text-body">{msg('dashboard.weakAreas')}</CardTitle>
@@ -40,6 +49,7 @@ export function WeakAreasSection({ domains }: WeakAreasSectionProps) {
       </CardContent>
       <CardFooter className="text-caption text-text-faint">
         <span>{msg('dashboard.weakIsTheLowestMean')}</span>
+        <SectionLink label={msg('dashboard.openTheCurriculum')} onOpen={onOpenAcademy} />
       </CardFooter>
     </Card>
   );

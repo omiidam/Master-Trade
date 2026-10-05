@@ -43,6 +43,15 @@ export interface MetricPlateProps {
   note?: string;
   /** A way out of an empty plate, or into the page the figure belongs to. */
   action?: ReactNode;
+  /**
+   * Whether this plate answers — the card system's own hover treatment, given to a plate that leads
+   * somewhere.
+   *
+   * Passed through rather than inferred from `action`, because the two answer different questions: a
+   * plate with a way out is not automatically one a reader would press anywhere, and the hover is a
+   * claim about the whole card that only its owner should make.
+   */
+  interactive?: boolean;
 }
 
 export function MetricPlate({
@@ -54,6 +63,7 @@ export function MetricPlate({
   empty,
   note,
   action,
+  interactive = false,
 }: MetricPlateProps) {
   return (
     // `cozy` rather than the surface's own `compact`: the plates share this row with the panels
@@ -61,7 +71,16 @@ export function MetricPlate({
     // start on the same line. `finish="glass"` is the one material the whole dashboard is cut to,
     // which is also what makes the strip read as three plates of one thing rather than as three
     // cards that happen to be about figures.
-    <Card surface="metric" density="cozy" finish="glass" className="flex flex-col">
+    <Card
+      surface="metric"
+      density="cozy"
+      finish="glass"
+      interactive={interactive}
+      // The card lifts on hover; the control inside it is what the keyboard reaches, so the card also
+      // answers when that control takes focus. Without this a reader tabbing through the strip watches
+      // the focus ring land on a button inside a card that has not visibly responded.
+      className="flex flex-col focus-within:border-border-strong"
+    >
       <CardHeader divider actions={badge ?? null}>
         <div>
           <CardTitle className="text-body">{label}</CardTitle>

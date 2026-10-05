@@ -30,6 +30,7 @@ import {
 } from '../Card';
 import { Badge } from '../Badge';
 import { EmptyState } from '../EmptyState';
+import { SectionLink } from './SectionLink';
 import { Clock } from 'lucide-react';
 import { msg } from '../../i18n/index.js';
 import type { DashboardCourseView } from '@shared/frontend/viewModels';
@@ -39,11 +40,19 @@ export interface CourseLessonSectionProps {
   course: DashboardCourseView['course'];
   /** The lesson in progress, or `null`. */
   lesson: DashboardCourseView['lesson'];
+  /** Opens the course and lesson named here. */
+  onOpenAcademy: () => void;
 }
 
-export function CourseLessonSection({ course, lesson }: CourseLessonSectionProps) {
+export function CourseLessonSection({ course, lesson, onOpenAcademy }: CourseLessonSectionProps) {
   return (
-    <Card surface="featured" density="cozy" finish="glass" className="flex flex-col">
+    <Card
+      surface="featured"
+      density="cozy"
+      finish="glass"
+      interactive
+      className="flex flex-col focus-within:border-border-strong"
+    >
       <CardHeader divider>
         <div>
           <CardTitle>{msg('dashboard.currentCourseAndLesson')}</CardTitle>
@@ -79,6 +88,7 @@ export function CourseLessonSection({ course, lesson }: CourseLessonSectionProps
       </CardContent>
       <CardFooter className="text-caption text-text-faint">
         <span>{msg('dashboard.basedOnAttempts')}</span>
+        <SectionLink label={msg('dashboard.openTheCourse')} onOpen={onOpenAcademy} />
       </CardFooter>
     </Card>
   );

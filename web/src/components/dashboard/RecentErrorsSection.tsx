@@ -22,6 +22,7 @@ import {
 } from '../Card';
 import { Badge } from '../Badge';
 import { EmptyState } from '../EmptyState';
+import { SectionLink } from './SectionLink';
 import { formatTimestamp } from '../../lib/format';
 import { msg } from '../../i18n/index.js';
 import type { DashboardErrorView } from '@shared/frontend/viewModels';
@@ -29,11 +30,19 @@ import type { DashboardErrorView } from '@shared/frontend/viewModels';
 export interface RecentErrorsSectionProps {
   /** The most recent mistake patterns, as the server selected them. */
   errors: readonly DashboardErrorView[];
+  /** Opens the mistake review this timeline is three rows of. */
+  onOpenExams: () => void;
 }
 
-export function RecentErrorsSection({ errors }: RecentErrorsSectionProps) {
+export function RecentErrorsSection({ errors, onOpenExams }: RecentErrorsSectionProps) {
   return (
-    <Card surface="data" density="cozy" finish="glass" className="flex flex-col">
+    <Card
+      surface="data"
+      density="cozy"
+      finish="glass"
+      interactive
+      className="flex flex-col focus-within:border-border-strong"
+    >
       <CardHeader
         divider
         actions={
@@ -76,6 +85,7 @@ export function RecentErrorsSection({ errors }: RecentErrorsSectionProps) {
       </CardContent>
       <CardFooter className="text-caption text-text-faint">
         <span>{msg('dashboard.theThreeMostRecent')}</span>
+        <SectionLink label={msg('dashboard.openMistakeReview')} onOpen={onOpenExams} />
       </CardFooter>
     </Card>
   );

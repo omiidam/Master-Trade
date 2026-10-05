@@ -8,10 +8,10 @@
  */
 
 import { GraduationCap } from 'lucide-react';
-import { Button } from '../Button';
 import { Badge } from '../Badge';
 import { EmptyState } from '../EmptyState';
 import { MetricPlate } from './MetricPlate';
+import { SectionLink } from './SectionLink';
 import { formatPercent, formatTimestamp } from '../../lib/format';
 import { msg } from '../../i18n/index.js';
 import type { DashboardExamView } from '@shared/frontend/viewModels';
@@ -55,11 +55,8 @@ export function ExamScoreSection({ exam, onOpenExams }: ExamScoreSectionProps) {
         />
       }
       note={msg('dashboard.rubricScoredNeverModelJudged')}
-      action={
-        <Button size="sm" variant="ghost" onClick={onOpenExams}>
-          {msg('dashboard.openExams')}
-        </Button>
-      }
+      interactive
+      action={<SectionLink label={msg('dashboard.openExams')} onOpen={onOpenExams} />}
     />
   );
 }

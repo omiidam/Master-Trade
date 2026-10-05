@@ -6,10 +6,10 @@
  * is no zero to show instead: the plate says nothing is recorded yet and offers the way to start.
  */
 
-import { Button } from '../Button';
 import { Badge } from '../Badge';
 import { EmptyState } from '../EmptyState';
 import { MetricPlate } from './MetricPlate';
+import { SectionLink } from './SectionLink';
 import { msg } from '../../i18n/index.js';
 
 export interface AgentLevelSectionProps {
@@ -51,11 +51,8 @@ export function AgentLevelSection({
         />
       }
       note={msg('dashboard.levelIsTheCurriculumStage')}
-      action={
-        <Button size="sm" variant="ghost" onClick={onOpenAcademy}>
-          {msg('dashboard.openAcademy')}
-        </Button>
-      }
+      interactive
+      action={<SectionLink label={msg('dashboard.openAcademy')} onOpen={onOpenAcademy} />}
     />
   );
 }

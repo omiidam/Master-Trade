@@ -21,6 +21,9 @@
 export { MetricPlate } from './MetricPlate';
 export type { MetricPlateProps } from './MetricPlate';
 
+export { SectionLink } from './SectionLink';
+export type { SectionLinkProps } from './SectionLink';
+
 export { DomainMasteryBars } from './DomainMasteryBars';
 export type { DomainMasteryBarsProps } from './DomainMasteryBars';
 

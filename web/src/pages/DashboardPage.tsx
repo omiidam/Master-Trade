@@ -22,6 +22,7 @@ import { formatTimestamp } from '../lib/format';
 import { useDashboardStore } from '../store/dashboard';
 import { useUiStore } from '../store/ui';
 import { msg } from '../i18n/index.js';
+import type { AppPageId } from '../config/navigation.js';
 import type { DashboardMetricsView } from '@shared/frontend/viewModels';
 
 /**
@@ -57,6 +58,15 @@ import type { DashboardMetricsView } from '@shared/frontend/viewModels';
  * renders above every state, including the failing ones, where "reload" is what a reader most
  * needs. And `loading` draws the finished layout's shape, so a slow read moves nothing when it
  * lands.
+ *
+ * **A refresh does not tear the page down (9.4).** `load` moves the store to `loading` whether it
+ * is the first read or the fifth, so treating `loading` as "nothing to show" meant every press of
+ * Refresh replaced a finished dashboard with its skeleton — the reader lost the page they were
+ * reading to ask for a newer copy of it. The branch is therefore on *whether there is anything to
+ * show* (`dashboard !== null`) and not on the status alone: skeletons are the first read and
+ * nothing else, and a re-read leaves the finished layout exactly where it is with `aria-busy` set
+ * on it. A refresh that *fails* while the previous reading is still valid is stated rather than
+ * swallowed: the data stays, because it is true, and a notice says which reading it is.
  */
 export function DashboardPage() {
   const setPage = useUiStore((state) => state.setPage);
@@ -70,6 +80,10 @@ export function DashboardPage() {
     if (status === 'idle') void load();
   }, [status, load]);
 
+  // `false` rather than `status !== 'loading'`: a read that is not in flight is not a reason to
+  // offer the control again, and a failed one is — which is the same fact, read the other way round.
+  const reading = status === 'idle' || status === 'loading';
+
   const actions = (
     <>
       <Badge tone="outline" icon={<ShieldCheck size={12} aria-hidden />}>
@@ -79,71 +93,112 @@ export function DashboardPage() {
         <Button
           variant="secondary"
           leadingIcon={<RefreshCw size={14} aria-hidden />}
+          // Disabled for the length of the read, because a second press would start a second read and
+          // the reader would have no way to tell which one the page was showing.
+          disabled={reading}
+          aria-busy={reading}
           onClick={() => void load()}
         >
-          {msg('dashboard.refresh')}
+          {reading ? msg('dashboard.refreshing') : msg('dashboard.refresh')}
         </Button>
       </Tooltip>
     </>
   );
 
   let body: ReactNode;
-  if (status === 'idle' || status === 'loading') {
-    // The shape the data will fill, band for band — not a spinner above a collapsing page.
+  if (dashboard === null) {
+    if (status === 'idle' || status === 'loading') {
+      // The shape the data will fill, band for band — not a spinner above a collapsing page.
+      body = (
+        <>
+          <Grid columns={3}>
+            {[0, 1, 2].map((index) => (
+              <SkeletonCard key={`metrics-${index}`} rows={4} />
+            ))}
+          </Grid>
+          <Grid columns={2}>
+            {[0, 1].map((index) => (
+              <SkeletonCard key={`progress-${index}`} rows={5} />
+            ))}
+          </Grid>
+          <Grid columns={2}>
+            {[0, 1].map((index) => (
+              <SkeletonCard key={`gaps-${index}`} rows={4} />
+            ))}
+          </Grid>
+          <SkeletonCard rows={3} />
+        </>
+      );
+    } else if (status === 'unavailable') {
+      body = (
+        <ErrorState
+          severity="info"
+          title={msg('dashboard.noDashboardToShowYet')}
+          description={`${unavailableReason ?? msg('dashboard.noProgressRecordedYet')} ${msg('dashboard.serverDerived')}`}
+        />
+      );
+    } else if (status === 'error') {
+      body = (
+        <ErrorState
+          title={msg('dashboard.couldNotReadTheDashboard')}
+          description={error?.message ?? msg('dashboard.noProgressRecordedYet')}
+          code={error?.code}
+          action={
+            <Button size="sm" variant="secondary" onClick={() => void load()}>
+              {msg('dashboard.tryAgain')}
+            </Button>
+          }
+        />
+      );
+    } else {
+      // There is no dashboard and no failure to report. The store does not produce this pair, so
+      // rather than assert it cannot happen this states the only honest thing about it — the read
+      // has nothing to show — rather than borrowing the error's wording for a state that is not one.
+      body = (
+        <ErrorState
+          severity="info"
+          title={msg('dashboard.noDashboardToShowYet')}
+          description={msg('dashboard.serverDerived')}
+        />
+      );
+    }
+  } else {
+    // The reading on screen is real, so it stays on screen. These two notes are the only things
+    // either state adds: a re-read says so above the page, and a failed re-read says which reading
+    // the reader is still looking at.
     body = (
       <>
-        <Grid columns={3}>
-          {[0, 1, 2].map((index) => (
-            <SkeletonCard key={`metrics-${index}`} rows={4} />
-          ))}
-        </Grid>
-        <Grid columns={2}>
-          {[0, 1].map((index) => (
-            <SkeletonCard key={`progress-${index}`} rows={5} />
-          ))}
-        </Grid>
-        <Grid columns={2}>
-          {[0, 1].map((index) => (
-            <SkeletonCard key={`gaps-${index}`} rows={4} />
-          ))}
-        </Grid>
-        <SkeletonCard rows={3} />
+        {reading ? (
+          <p role="status" className="text-caption text-text-faint">
+            {msg('dashboard.readingTheDashboardAgain')}
+          </p>
+        ) : null}
+        {status === 'error' ? (
+          <ErrorState
+            title={msg('dashboard.refreshFailedShowingTheLastRead', {
+              at: formatTimestamp(dashboard.metrics.asOf),
+            })}
+            description={error?.message}
+            code={error?.code}
+            action={
+              <Button size="sm" variant="secondary" onClick={() => void load()}>
+                {msg('dashboard.tryAgain')}
+              </Button>
+            }
+          />
+        ) : null}
+        <DashboardOverview metrics={dashboard.metrics} onOpen={(page) => setPage(page)} />
       </>
-    );
-  } else if (status === 'unavailable') {
-    body = (
-      <ErrorState
-        severity="info"
-        title={msg('dashboard.noDashboardToShowYet')}
-        description={`${unavailableReason ?? msg('dashboard.noProgressRecordedYet')} ${msg('dashboard.serverDerived')}`}
-      />
-    );
-  } else if (status === 'error' || dashboard === null) {
-    body = (
-      <ErrorState
-        title={msg('dashboard.couldNotReadTheDashboard')}
-        description={error?.message ?? msg('dashboard.noProgressRecordedYet')}
-        code={error?.code}
-        action={
-          <Button size="sm" variant="secondary" onClick={() => void load()}>
-            {msg('dashboard.tryAgain')}
-          </Button>
-        }
-      />
-    );
-  } else {
-    body = (
-      <DashboardOverview
-        metrics={dashboard.metrics}
-        onOpenAcademy={() => setPage('academy')}
-        onOpenExams={() => setPage('exams')}
-      />
     );
   }
 
   return (
     <Workspace actions={actions}>
-      <div className="flex flex-col gap-5">{body}</div>
+      {/* `aria-busy` on the region rather than on the button: the thing being re-read is the page,
+          and that is what a screen reader should be told is in flight. */}
+      <div className="flex flex-col gap-5" aria-busy={reading}>
+        {body}
+      </div>
     </Workspace>
   );
 }
@@ -153,15 +208,23 @@ export function DashboardPage() {
  *
  * Kept as its own component so the state branches above stay readable, and so the ready branch
  * owns exactly the composition — which sections, in which band, in which grid.
+ *
+ * `onOpen` is one callback rather than a named handler per section, because which section a card
+ * belongs to is a fact about the *record* and each card already knows it: the level and the course
+ * are the curriculum's, the score, the mistakes and the mastery roster are the assessments', and
+ * the streak's days are Activity's. A page that restated that mapping in eight props would be a
+ * second place for it to be wrong.
+ *
+ * The market card is the one card with no way out, and that is deliberate rather than unfinished:
+ * this product's navigation has no market-data section to open, and a card that navigated to the
+ * nearest unrelated page would be a worse lie than a card that simply does not offer one.
  */
 function DashboardOverview({
   metrics,
-  onOpenAcademy,
-  onOpenExams,
+  onOpen,
 }: {
   metrics: DashboardMetricsView;
-  onOpenAcademy: () => void;
-  onOpenExams: () => void;
+  onOpen: (page: AppPageId) => void;
 }) {
   // The evidence line on the level plate: every attempt behind every assessed domain.
   const totalAttempts = metrics.knowledgeMastery.reduce(
@@ -178,10 +241,13 @@ function DashboardOverview({
               level={metrics.agentLevel}
               attempts={totalAttempts}
               inCourse={metrics.course.course !== null}
-              onOpenAcademy={onOpenAcademy}
+              onOpenAcademy={() => onOpen('academy')}
             />
-            <StreakSection days={metrics.learningStreakDays} />
-            <ExamScoreSection exam={metrics.examScore} onOpenExams={onOpenExams} />
+            <StreakSection
+              days={metrics.learningStreakDays}
+              onOpenActivity={() => onOpen('activity')}
+            />
+            <ExamScoreSection exam={metrics.examScore} onOpenExams={() => onOpen('exams')} />
           </Grid>
         </Reveal>
       </Section>
@@ -192,8 +258,15 @@ function DashboardOverview({
       >
         <Reveal index={1}>
           <Grid columns={2}>
-            <KnowledgeMasterySection domains={metrics.knowledgeMastery} />
-            <CourseLessonSection course={metrics.course.course} lesson={metrics.course.lesson} />
+            <KnowledgeMasterySection
+              domains={metrics.knowledgeMastery}
+              onOpenExams={() => onOpen('exams')}
+            />
+            <CourseLessonSection
+              course={metrics.course.course}
+              lesson={metrics.course.lesson}
+              onOpenAcademy={() => onOpen('academy')}
+            />
           </Grid>
         </Reveal>
       </Section>
@@ -201,8 +274,11 @@ function DashboardOverview({
       <Section title={msg('dashboard.gaps')} description={msg('dashboard.gapsNote')}>
         <Reveal index={2}>
           <Grid columns={2}>
-            <WeakAreasSection domains={metrics.weakAreas} />
-            <RecentErrorsSection errors={metrics.recentErrors} />
+            <WeakAreasSection domains={metrics.weakAreas} onOpenAcademy={() => onOpen('academy')} />
+            <RecentErrorsSection
+              errors={metrics.recentErrors}
+              onOpenExams={() => onOpen('exams')}
+            />
           </Grid>
         </Reveal>
       </Section>

@@ -395,6 +395,14 @@ export const EN_MESSAGES = {
   'dashboard.basedOnAttempts': 'Based on recorded attempts',
   'dashboard.serverDerived': 'Derived on the server from your own records.',
   'dashboard.refresh': 'Refresh',
+  'dashboard.refreshing': 'Refreshing…',
+  'dashboard.readingTheDashboardAgain':
+    'Re-reading your record; the page you are on stays where it is.',
+  'dashboard.refreshFailedShowingTheLastRead':
+    'The last read could not be refreshed. What is on screen is the reading from {at}.',
+  'dashboard.showAllDomains': 'Show all {count} domains',
+  'dashboard.showFewerDomains': 'Show fewer domains',
+  'dashboard.domainsShownOf': '{shown} of {total} domains shown',
   'dashboard.learningProgress': 'Learning progress',
   'dashboard.learningProgressNote':
     'What the record says is known, beside the course and lesson it is being learned in.',
@@ -414,6 +422,11 @@ export const EN_MESSAGES = {
   'dashboard.notAttemptedYet': 'Not attempted yet',
   'dashboard.notYetAssessed': 'Not yet assessed',
   'dashboard.openAcademy': 'Open academy',
+  'dashboard.openActivity': 'Open activity',
+  'dashboard.openTheCourse': 'Open the course',
+  'dashboard.openTheCurriculum': 'Open the curriculum',
+  'dashboard.openAssessmentHistory': 'Open the assessment history',
+  'dashboard.openMistakeReview': 'Open mistake review',
   'dashboard.openExams': 'Open exams',
   'dashboard.patterns': 'patterns',
   'dashboard.previewData': 'Preview data',
