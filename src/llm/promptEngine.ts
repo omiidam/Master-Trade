@@ -220,10 +220,10 @@ export class PromptEngine {
     }
     let systemBody = input.template.body;
     for (const slot of slots) {
-      systemBody = systemBody.replace(
-        new RegExp(`\\{${slot}\\}`, 'g'),
-        input.templateParams[slot] ?? '',
-      );
+      // A function replacer, deliberately: a string replacement would
+      // interpolate `$&`/`$1`-style sequences inside the parameter itself,
+      // so a trusted parameter would not render verbatim.
+      systemBody = systemBody.replaceAll(`{${slot}}`, () => input.templateParams[slot] ?? '');
     }
 
     // Layer 2: developer instructions — product-owned, never user text.

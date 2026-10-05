@@ -154,6 +154,16 @@ describe('prompt engine', () => {
     expect(v2Bundle.systemMessage).not.toContain('DEVELOPER:');
   });
 
+  it('renders template parameters verbatim, including $-sequences', () => {
+    const engine = new PromptEngine();
+    const tricky = 'use the price table: costs are $& per $1 trade — {instructions} stays a slot';
+    const bundle = engine.compose(
+      input({ templateParams: { instructions: tricky, developerInstructions: 'x' } }),
+    );
+    expect(bundle.systemMessage).toContain(tricky);
+    expect(bundle.systemMessage).not.toContain('{instructions}\n');
+  });
+
   it('is pure: same input, same bundle', () => {
     const engine = new PromptEngine();
     const a = engine.compose(input());
