@@ -392,3 +392,24 @@ boundary, the one `NOT_APPLICABLE` declaration, the six fixed findings with thei
 eleven cases that measured the wrong thing and were corrected, and every limitation of the run are in
 [security-gate.md](../security-gate.md). The findings are kept permanently, with root cause and
 re-test result, in [security-knowledge-base.md](../security-knowledge-base.md).
+
+## Task 1.1 — LLM core architecture
+
+The LLM layer already had the gateway, the provider boundary and the three
+auditable contracts. What it lacked before the next phase of work: a user
+scope on the request contracts (a request carried only a correlation id, so
+usage and audit could not be attributed to the authenticated user), and named
+seams for the six capabilities every later phase needs.
+
+[ADR-0058](./ADR-0058-llm-core-extension-seams-and-request-scoping.md)
+records both decisions. `DEC-AI-5-REQUEST-SCOPING` adds `LlmRequestScope`
+(`correlationId` plus an opaque `userId`, never a `Principal`) to the request
+contracts and threads it `AgentService` → `Orchestrator` → model adapter →
+gateway, so the LLM layer gains attribution, not authorization.
+`DEC-AI-4-EXTENSION-SEAMS` names the six future capabilities — prompt engine,
+context builder, agent loops, tool calling, evaluation, training — as type-only
+seams in `src/llm/extensionPoints.ts`: contracts with no implementation, no
+default behavior and no wiring, each encoding the invariants it must keep
+(nothing executes, nothing is trusted, nothing bypasses a contract). The
+`LlmGateway` remains the single entry point for every LLM request until a
+phase installs a seam.

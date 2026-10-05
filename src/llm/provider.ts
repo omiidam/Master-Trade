@@ -13,6 +13,11 @@
  * Third core rule: a provider reports **tokens**, never money. Cost is derived
  * from our own price table in `pricing.ts`, so a provider cannot under-report
  * what it spent against the budget.
+ *
+ * Fourth core rule: a request carries a **user scope**, never a principal.
+ * `LlmRequestScope.userId` is an opaque identifier set by the caller that
+ * already authenticated the user; the LLM layer gains attribution without
+ * gaining authorization, roles or credentials.
  */
 
 import { AppError, toAppError } from '../../packages/shared/src/core/errors.js';
@@ -44,8 +49,23 @@ export interface LlmToolCall {
 
 export type LlmFinishReason = 'stop' | 'length' | 'tool_call' | 'error';
 
-export interface LlmRequest {
+/**
+ * The authenticated scope every completion runs under.
+ *
+ * `userId` is an opaque identifier supplied by the caller that already
+ * authenticated the principal. The gateway and the providers receive the
+ * identifier and nothing else — no `Principal`, no roles, no credentials —
+ * so the LLM layer can attribute and audit requests without gaining any
+ * authorization power of its own. Adapters choose what, if anything, the
+ * transport sees; today nothing is serialized.
+ */
+export interface LlmRequestScope {
   correlationId: string;
+  /** The authenticated user this request runs for, when the caller knows one. */
+  userId?: string;
+}
+
+export interface LlmRequest extends LlmRequestScope {
   model: string;
   messages: LlmMessage[];
   maxTokens: number;
@@ -178,8 +198,7 @@ export class UsageTracker {
   }
 }
 
-export interface LlmCompletionInput {
-  correlationId: string;
+export interface LlmCompletionInput extends LlmRequestScope {
   messages: LlmMessage[];
   maxTokens?: number;
   temperature?: number;
@@ -362,6 +381,7 @@ export class LlmGateway {
   ): Promise<LlmResponse> {
     const request: LlmRequest = {
       correlationId: input.correlationId,
+      ...(input.userId === undefined ? {} : { userId: input.userId }),
       model: input.model ?? endpoint.model,
       messages: input.messages,
       maxTokens: Math.min(

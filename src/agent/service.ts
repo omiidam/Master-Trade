@@ -188,6 +188,12 @@ export class AgentService {
     message: string,
     options: {
       correlationId?: string;
+      /**
+       * The authenticated user the turn runs for (opaque identifier, set
+       * by the caller that already checked the principal). Forwarded to
+       * the orchestrator and on to the gateway for attribution only.
+       */
+      userId?: string;
       context?: readonly ContextSection[];
       /**
        * The gate's verdict, when the request named an analysis.

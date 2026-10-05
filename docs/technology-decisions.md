@@ -21,35 +21,37 @@ Phase 1/2 invariants are unchanged and remain authoritative:
 
 ## 0. Locked stack at a glance
 
-| Area                  | Decision                                                                                | Decision id                  | ADR(s)                                                                                                     |
-| --------------------- | --------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Frontend framework    | React 19 + TypeScript (strict) bundled by Vite 6                                        | `DEC-FE-1-FRAMEWORK`         | [0010](./adr/ADR-0010-frontend-framework-react-vite.md)                                                    |
-| Frontend state        | TanStack Query v5 (async) + Zustand v5 (UI state)                                       | `DEC-FE-2-STATE`             | [0011](./adr/ADR-0011-frontend-state-tanstack-query-zustand.md)                                            |
-| UI system             | Tailwind CSS v4 + Radix primitives (vendored shadcn-style) + lucide-react               | `DEC-FE-3-UI-SYSTEM`         | [0012](./adr/ADR-0012-ui-system-tailwind-radix.md)                                                         |
-| Charting              | TradingView Lightweight Charts behind an internal `ChartAdapter`                        | `DEC-FE-4-CHARTING`          | [0013](./adr/ADR-0013-charting-lightweight-charts.md)                                                      |
-| UI motion             | Framer Motion with reduced-motion presets; motion never carries information             | `DEC-FE-5-MOTION`            | [0020](./adr/ADR-0020-ui-motion-framer-motion.md)                                                          |
-| Backend runtime       | Node.js 22 LTS (Node 20 compatibility lane stays in CI)                                 | `DEC-BE-1-RUNTIME`           | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
-| Backend framework     | Fastify 5, loopback-only, plugin lifecycle hooks                                        | `DEC-BE-2-FRAMEWORK`         | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
-| API architecture      | Typed contracts in `src/api/contracts.ts`; Fastify is an adapter over the same pipeline | `DEC-BE-3-API`               | [0002](./adr/ADR-0002-modular-monolith.md), [0014](./adr/ADR-0014-backend-runtime-fastify.md)              |
-| Validation            | Zod schemas as the single validator; Fastify body validation disabled                   | `DEC-BE-4-VALIDATION`        | [0015](./adr/ADR-0015-validation-zod-single-source.md)                                                     |
-| Request pipeline      | One `preHandler` pipeline per catalogue route; coverage asserted at boot                | `DEC-BE-5-PIPELINE`          | [0021](./adr/ADR-0021-single-request-pipeline.md)                                                          |
-| Database — local      | SQLite via `node:sqlite`, WAL, foreign keys on, file in OS app-data dir                 | `DEC-DB-1-LOCAL`             | [0003](./adr/ADR-0003-sqlite-first.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md)               |
-| Database — production | PostgreSQL behind one declaration set + dialect, driver injected (not installed yet)    | `DEC-DB-2-PRODUCTION`        | [0016](./adr/ADR-0016-persistence-driver-and-orm.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md) |
-| Migrations            | Generated from the schema, numbered, forward-only, checksummed, drift refuses at boot   | `DEC-DB-3-MIGRATIONS`        | [0024](./adr/ADR-0024-generated-migrations-and-ledger.md)                                                  |
-| Data access           | Repository boundary over a `SqlExecutor` port; one owner repository per table           | `DEC-DB-4-REPOSITORIES`      | [0023](./adr/ADR-0023-repository-boundary-and-data-ownership.md)                                           |
-| AI abstraction        | `LlmProvider` interface; adapters only in `src/llm/providers/`                          | `DEC-AI-1-ABSTRACTION`       | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
-| AI gateway            | Existing `LlmGateway`: fallback, retry, timeout, streaming, token/cost, budget          | `DEC-AI-2-GATEWAY`           | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
-| Provider independence | Import-boundary test confines provider SDKs to `src/llm/providers/**`                   | `DEC-AI-3-INDEPENDENCE`      | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
-| Desktop runtime       | Tauri 2 shell + TypeScript backend as bundled Node sidecar on loopback                  | `DEC-DESKTOP-1-RUNTIME`      | [0001](./adr/ADR-0001-desktop-shell-tauri.md)                                                              |
-| Desktop security      | Loopback-only + per-launch bearer token, keychain-only secrets, capability allow-list   | `DEC-DESKTOP-2-SECURITY`     | [0001](./adr/ADR-0001-desktop-shell-tauri.md), [0007](./adr/ADR-0007-deny-by-default-auth.md)              |
-| Desktop capabilities  | WebView granted no `shell:`/`fs:`/`path:`/`http:` permission; Rust owns privileged work | `DEC-DESKTOP-3-CAPABILITIES` | [0029](./adr/ADR-0029-webview-capability-boundary.md)                                                      |
-| Desktop lifecycle     | Fixed launch plan, per-launch token, health-gated window, bounded restarts              | `DEC-DESKTOP-4-LIFECYCLE`    | [0030](./adr/ADR-0030-sidecar-supervision-fixed-port.md)                                                   |
-| Desktop config        | App-data directory, one strict schema shared with Rust, credentials refused             | `DEC-DESKTOP-5-CONFIG`       | [0031](./adr/ADR-0031-desktop-config-appdata-keychain.md)                                                  |
-| Realtime              | WebSocket at `/ws` (`@fastify/websocket`) over the existing `EventBus`                  | `DEC-RT-1-WEBSOCKET`         | [0017](./adr/ADR-0017-realtime-websocket-transport.md)                                                     |
-| Realtime contracts    | Versioned event contracts, deny-by-default audiences, auth + subscribe in one frame     | `DEC-RT-2-PROTOCOL`          | [0032](./adr/ADR-0032-versioned-event-contracts-deny-by-default.md)                                        |
-| Background jobs       | Durable DB-backed queue, in-process workers, claim + lease, dead-letter                 | `DEC-JOBS-1-QUEUE`           | [0018](./adr/ADR-0018-durable-db-backed-job-queue.md)                                                      |
-| Job storage           | `JobStore` port: in-memory or SQLite over `jobs`; Redis only as an adapter              | `DEC-JOBS-2-STORE`           | [0033](./adr/ADR-0033-job-store-port-sqlite-first.md)                                                      |
-| Interface states      | Loading, empty and error designed per surface, rendered with the real components        | `DEC-FE-8-STATES`            | [0034](./adr/ADR-0034-loading-empty-error-are-designed-states.md)                                          |
+| Area                  | Decision                                                                                     | Decision id                  | ADR(s)                                                                                                     |
+| --------------------- | -------------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Frontend framework    | React 19 + TypeScript (strict) bundled by Vite 6                                             | `DEC-FE-1-FRAMEWORK`         | [0010](./adr/ADR-0010-frontend-framework-react-vite.md)                                                    |
+| Frontend state        | TanStack Query v5 (async) + Zustand v5 (UI state)                                            | `DEC-FE-2-STATE`             | [0011](./adr/ADR-0011-frontend-state-tanstack-query-zustand.md)                                            |
+| UI system             | Tailwind CSS v4 + Radix primitives (vendored shadcn-style) + lucide-react                    | `DEC-FE-3-UI-SYSTEM`         | [0012](./adr/ADR-0012-ui-system-tailwind-radix.md)                                                         |
+| Charting              | TradingView Lightweight Charts behind an internal `ChartAdapter`                             | `DEC-FE-4-CHARTING`          | [0013](./adr/ADR-0013-charting-lightweight-charts.md)                                                      |
+| UI motion             | Framer Motion with reduced-motion presets; motion never carries information                  | `DEC-FE-5-MOTION`            | [0020](./adr/ADR-0020-ui-motion-framer-motion.md)                                                          |
+| Backend runtime       | Node.js 22 LTS (Node 20 compatibility lane stays in CI)                                      | `DEC-BE-1-RUNTIME`           | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
+| Backend framework     | Fastify 5, loopback-only, plugin lifecycle hooks                                             | `DEC-BE-2-FRAMEWORK`         | [0014](./adr/ADR-0014-backend-runtime-fastify.md)                                                          |
+| API architecture      | Typed contracts in `src/api/contracts.ts`; Fastify is an adapter over the same pipeline      | `DEC-BE-3-API`               | [0002](./adr/ADR-0002-modular-monolith.md), [0014](./adr/ADR-0014-backend-runtime-fastify.md)              |
+| Validation            | Zod schemas as the single validator; Fastify body validation disabled                        | `DEC-BE-4-VALIDATION`        | [0015](./adr/ADR-0015-validation-zod-single-source.md)                                                     |
+| Request pipeline      | One `preHandler` pipeline per catalogue route; coverage asserted at boot                     | `DEC-BE-5-PIPELINE`          | [0021](./adr/ADR-0021-single-request-pipeline.md)                                                          |
+| Database — local      | SQLite via `node:sqlite`, WAL, foreign keys on, file in OS app-data dir                      | `DEC-DB-1-LOCAL`             | [0003](./adr/ADR-0003-sqlite-first.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md)               |
+| Database — production | PostgreSQL behind one declaration set + dialect, driver injected (not installed yet)         | `DEC-DB-2-PRODUCTION`        | [0016](./adr/ADR-0016-persistence-driver-and-orm.md), [0025](./adr/ADR-0025-sqlite-driver-and-dialects.md) |
+| Migrations            | Generated from the schema, numbered, forward-only, checksummed, drift refuses at boot        | `DEC-DB-3-MIGRATIONS`        | [0024](./adr/ADR-0024-generated-migrations-and-ledger.md)                                                  |
+| Data access           | Repository boundary over a `SqlExecutor` port; one owner repository per table                | `DEC-DB-4-REPOSITORIES`      | [0023](./adr/ADR-0023-repository-boundary-and-data-ownership.md)                                           |
+| AI abstraction        | `LlmProvider` interface; adapters only in `src/llm/providers/`                               | `DEC-AI-1-ABSTRACTION`       | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
+| AI gateway            | Existing `LlmGateway`: fallback, retry, timeout, streaming, token/cost, budget               | `DEC-AI-2-GATEWAY`           | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
+| Provider independence | Import-boundary test confines provider SDKs to `src/llm/providers/**`                        | `DEC-AI-3-INDEPENDENCE`      | [0004](./adr/ADR-0004-llm-gateway-abstraction.md), [0019](./adr/ADR-0019-llm-adapters-not-frameworks.md)   |
+| AI extension seams    | Six type-only seams in `src/llm/extensionPoints.ts`; nothing implemented, wired or defaulted | `DEC-AI-4-EXTENSION-SEAMS`   | [0058](./adr/ADR-0058-llm-core-extension-seams-and-request-scoping.md)                                     |
+| AI request scoping    | `LlmRequestScope` on every completion: correlation id + opaque `userId`, never a `Principal` | `DEC-AI-5-REQUEST-SCOPING`   | [0058](./adr/ADR-0058-llm-core-extension-seams-and-request-scoping.md)                                     |
+| Desktop runtime       | Tauri 2 shell + TypeScript backend as bundled Node sidecar on loopback                       | `DEC-DESKTOP-1-RUNTIME`      | [0001](./adr/ADR-0001-desktop-shell-tauri.md)                                                              |
+| Desktop security      | Loopback-only + per-launch bearer token, keychain-only secrets, capability allow-list        | `DEC-DESKTOP-2-SECURITY`     | [0001](./adr/ADR-0001-desktop-shell-tauri.md), [0007](./adr/ADR-0007-deny-by-default-auth.md)              |
+| Desktop capabilities  | WebView granted no `shell:`/`fs:`/`path:`/`http:` permission; Rust owns privileged work      | `DEC-DESKTOP-3-CAPABILITIES` | [0029](./adr/ADR-0029-webview-capability-boundary.md)                                                      |
+| Desktop lifecycle     | Fixed launch plan, per-launch token, health-gated window, bounded restarts                   | `DEC-DESKTOP-4-LIFECYCLE`    | [0030](./adr/ADR-0030-sidecar-supervision-fixed-port.md)                                                   |
+| Desktop config        | App-data directory, one strict schema shared with Rust, credentials refused                  | `DEC-DESKTOP-5-CONFIG`       | [0031](./adr/ADR-0031-desktop-config-appdata-keychain.md)                                                  |
+| Realtime              | WebSocket at `/ws` (`@fastify/websocket`) over the existing `EventBus`                       | `DEC-RT-1-WEBSOCKET`         | [0017](./adr/ADR-0017-realtime-websocket-transport.md)                                                     |
+| Realtime contracts    | Versioned event contracts, deny-by-default audiences, auth + subscribe in one frame          | `DEC-RT-2-PROTOCOL`          | [0032](./adr/ADR-0032-versioned-event-contracts-deny-by-default.md)                                        |
+| Background jobs       | Durable DB-backed queue, in-process workers, claim + lease, dead-letter                      | `DEC-JOBS-1-QUEUE`           | [0018](./adr/ADR-0018-durable-db-backed-job-queue.md)                                                      |
+| Job storage           | `JobStore` port: in-memory or SQLite over `jobs`; Redis only as an adapter                   | `DEC-JOBS-2-STORE`           | [0033](./adr/ADR-0033-job-store-port-sqlite-first.md)                                                      |
+| Interface states      | Loading, empty and error designed per surface, rendered with the real components             | `DEC-FE-8-STATES`            | [0034](./adr/ADR-0034-loading-empty-error-are-designed-states.md)                                          |
 
 Everything else in Phase 1/2 — error codes, provenance vocabulary, redaction,
 retry primitives, approval workflow, vector memory, market-data normalization,
@@ -385,6 +387,47 @@ same versioning rule.
 4. `ai.allowModelDirectToolExecution` is literally `false` and startup-validated.
 5. New in Phase 3.1: provider SDKs cannot be imported into the permission,
    orchestrator or tool layers at all.
+
+### 4.6 Extension seams — `DEC-AI-4-EXTENSION-SEAMS`
+
+The six capabilities the next phases need are named as **type-only
+seams** in `src/llm/extensionPoints.ts` ([ADR-0058](./adr/ADR-0058-llm-core-extension-seams-and-request-scoping.md)):
+
+| Seam            | Interface        | The boundary it fixes                                                |
+| --------------- | ---------------- | -------------------------------------------------------------------- |
+| Prompt Engine   | `PromptEngine`   | Composes `LlmMessage[]` from instructions, context and user input    |
+| Context Builder | `ContextBuilder` | Assembles context under a token budget, reporting what it dropped    |
+| Agent Loops     | `AgentLoop`      | Drives bounded multi-turn loops (`maxTurns`); never executes a tool  |
+| Tool Calling    | `ToolCalling`    | `authorize` decides, `execute` obeys — the only place a tool may run |
+| Evaluation      | `Evaluator`      | Offline measurement against recorded cases; no budget authority      |
+| Training        | `Trainer`        | Operator action over curated datasets; no gateway, no secrets        |
+
+They are contracts only — no implementation, no default behavior, no
+wiring — collected in `LlmExtensionPoints` with every member optional.
+A phase installs one seam at a time, and until it does the `LlmGateway`
+remains the single entry point for every LLM request. The seams encode
+the invariants rather than merely naming the capabilities: no seam holds
+a principal, a credential or a permission (each input extends
+`LlmRequestScope`), and an agent loop routes every tool step through
+the `ToolCalling` seam, so nothing that reasons can also execute.
+
+### 4.7 Request scoping — `DEC-AI-5-REQUEST-SCOPING`
+
+Every completion request now carries a **user scope**:
+`LlmRequestScope` is `{ correlationId, userId? }`, extended by both
+`LlmRequest` and `LlmCompletionInput`
+([ADR-0058](./adr/ADR-0058-llm-core-extension-seams-and-request-scoping.md)).
+`userId` is an opaque identifier set by the caller that already
+authenticated the principal, threaded
+`AgentService.runAsync` → `Orchestrator.runAsync` →
+`AsyncModelAdapter.completeTurn` → `LlmGateway.complete`. The LLM layer
+therefore gains **attribution, not authorization**: usage, budget and
+audit can be recorded per user, while the layer itself never sees a
+`Principal`, a role, a session or a credential. Provider adapters build
+their HTTP payloads field by field, so nothing about the scope is
+serialized to a provider today. The alternative — handing the gateway
+the `Principal` — was rejected in ADR-0058: it would give the LLM layer
+authorization power it must never exercise.
 
 ## 5. Desktop
 

@@ -262,6 +262,26 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     adr: ['ADR-0004-llm-gateway-abstraction.md', 'ADR-0019-llm-adapters-not-frameworks.md'],
   },
   {
+    id: 'DEC-AI-4-EXTENSION-SEAMS',
+    area: 'ai.abstraction',
+    choice:
+      'Six type-only seams in src/llm/extensionPoints.ts (PromptEngine, ContextBuilder, AgentLoop, ToolCalling, Evaluator, Trainer) collected in LlmExtensionPoints — contracts with no implementation, wiring or default behavior',
+    status: 'locked',
+    adr: ['ADR-0058-llm-core-extension-seams-and-request-scoping.md'],
+    constraint:
+      'A seam is a type, not a wire: nothing is implemented or consumed until a phase installs it, and the LlmGateway stays the single entry point for every LLM request.',
+  },
+  {
+    id: 'DEC-AI-5-REQUEST-SCOPING',
+    area: 'ai.abstraction',
+    choice:
+      'Every completion request carries a LlmRequestScope (correlationId plus an opaque userId) from src/llm/provider.ts, threaded through src/agent/asyncModel.ts to the gateway',
+    status: 'locked',
+    adr: ['ADR-0058-llm-core-extension-seams-and-request-scoping.md'],
+    constraint:
+      'userId is an opaque identifier, never a Principal, a role or a credential; the LLM layer gains attribution, not authorization.',
+  },
+  {
     id: 'DEC-DESKTOP-1-RUNTIME',
     area: 'desktop.runtime',
     choice:

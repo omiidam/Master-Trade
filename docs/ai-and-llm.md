@@ -77,11 +77,17 @@ recorded as an ADR:
 
 ### Request/response contract
 
-`LlmRequest` carries exactly: correlation id, model, messages, max tokens,
-temperature, timeout. It has **no** field that can execute anything.
-`LlmResponse` carries text, tool-call _requests_, finish reason, usage and
-latency. Executing a `LlmToolCall` requires the orchestrator's permission check —
-the gateway has no tool registry at all.
+`LlmRequest` carries exactly: a user scope (correlation id plus an optional
+opaque `userId` — the authenticated user, never a `Principal`), model,
+messages, max tokens, temperature, timeout. It has **no** field that can
+execute anything. `LlmResponse` carries text, tool-call _requests_, finish
+reason, usage and latency. Executing a `LlmToolCall` requires the
+orchestrator's permission check — the gateway has no tool registry at all.
+The scope is threaded `AgentService.runAsync` → `Orchestrator.runAsync` →
+`AsyncModelAdapter.completeTurn` → `LlmGateway.complete` (`DEC-AI-5-REQUEST-SCOPING`,
+[ADR-0058](./adr/ADR-0058-llm-core-extension-seams-and-request-scoping.md)):
+the LLM layer gains attribution, not authorization, and no part of the scope
+is serialized to a provider today.
 
 ### Gateway responsibilities
 
@@ -108,6 +114,7 @@ src/llm/
 ├── summary.ts         # the only accepted answer shape + the output contract text
 ├── prompt.ts          # assembled context → labelled provider messages
 ├── registry.ts        # settings → a live gateway (the composition root)
+├── extensionPoints.ts # type-only seams for future capabilities (DEC-AI-4)
 └── providers/
     ├── http.ts               # JSON POST, timeout/abort, status → typed error
     ├── openaiCompatible.ts   # OpenAI and any OpenAI-compatible local server
@@ -279,3 +286,11 @@ did.
 - Per-user model preference, cost dashboards and a spend report per session.
 - A provider-registry UI: configuration is code/config today, resolved by
   `createAiGateway()`.
+
+Every deferred capability above now has a named, type-only seam in
+`src/llm/extensionPoints.ts` (`DEC-AI-4-EXTENSION-SEAMS`,
+[ADR-0058](./adr/ADR-0058-llm-core-extension-seams-and-request-scoping.md)):
+`PromptEngine`, `ContextBuilder`, `AgentLoop`, `ToolCalling`, `Evaluator` and
+`Trainer`, collected in `LlmExtensionPoints`. Implementing one means
+implementing its seam and installing it — the gateway remains the single
+entry point for every LLM request until a phase does.

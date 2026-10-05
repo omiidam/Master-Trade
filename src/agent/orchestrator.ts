@@ -179,6 +179,12 @@ export class Orchestrator {
     userInput: string,
     options: ResponseDirectives & {
       correlationId?: string;
+      /**
+       * The authenticated user the turn runs for (opaque identifier, set
+       * by the caller that already checked the principal). Forwarded to
+       * the model adapter for attribution — never a `Principal` itself.
+       */
+      userId?: string;
       context?: readonly ContextSection[];
       subject?: Subject;
     } = {},
@@ -194,6 +200,7 @@ export class Orchestrator {
       const instructions = renderInstructions(this.deps.instructions);
       const turn = await adapter.completeTurn({
         correlationId: options.correlationId ?? 'run-async',
+        ...(options.userId === undefined ? {} : { userId: options.userId }),
         userInput,
         instructions,
         context: options.context ?? [instructionsSection(instructions)],

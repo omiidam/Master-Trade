@@ -29,6 +29,13 @@ export interface ToolRequest {
 
 export interface ModelTurnRequest {
   correlationId: string;
+  /**
+   * The authenticated user the turn runs for: an opaque identifier set
+   * by the caller that already checked the principal. Carried to the
+   * gateway for attribution and audit — and nowhere else. The adapter
+   * sees an id, never a `Principal`, a role or a credential.
+   */
+  userId?: string;
   userInput: string;
   /** Rendered, version-stamped instruction modules. */
   instructions: string;
@@ -113,6 +120,7 @@ export function createLlmModelAdapter(deps: LlmModelAdapterDeps): AsyncModelAdap
 
       const response = await deps.gateway.complete({
         correlationId: request.correlationId,
+        ...(request.userId === undefined ? {} : { userId: request.userId }),
         messages,
         maxTokens: deps.maxAnswerTokens ?? 1_200,
         temperature: deps.temperature ?? 0.2,
