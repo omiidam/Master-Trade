@@ -295,6 +295,20 @@ Every deferred capability above now has a named, type-only seam in
 implementing its seam and installing it — the gateway remains the single
 entry point for every LLM request until a phase does.
 
+### The prompt engine (Task 1.4)
+
+`PromptEngine.compose`
+([ADR-0061](./adr/ADR-0061-prompt-engine-layered-roles-and-the-quarantine-boundary.md))
+is the concrete contract of the prompt seam: five separated layers
+(system instructions from a versioned template, developer instructions,
+agent policies, labelled context, user input), with the system layer
+closed — user text and context never enter it — and untrusted material
+fenced in the user message. Injection-override patterns are scanned and
+recorded, not refused; every layer is token-accounted against an
+enforced budget; templates change by version, never by edit. The engine
+emits the same message shape the existing turn builder hands the
+adapter, so provider/model logic remains inside the gateway.
+
 ### The agent run harness (Task 1.3)
 
 `AgentRunHarness.run`

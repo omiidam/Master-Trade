@@ -44,6 +44,8 @@ export const LOCK_AREAS = [
   'ai.training',
   // Task 1.3: the run harness owns the per-run lifecycle and the ephemeral memory.
   'ai.harness',
+  // Task 1.4: the prompt engine owns the layered prompt and the quarantine boundary.
+  'ai.prompt',
   'desktop.runtime',
   'desktop.security',
   // Phase 3.6: the shell became an implementation, so three areas of its policy
@@ -334,6 +336,26 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     adr: ['ADR-0060-agent-run-harness-lifecycle-and-ephemeral-working-memory.md'],
     constraint:
       'Nothing persists and nothing is shared between runs; disposed memory refuses every read and write; persistent memory is a later phase with its own contract.',
+  },
+  {
+    id: 'DEC-AI-11-PROMPT-LAYERS',
+    area: 'ai.prompt',
+    choice:
+      'The prompt is composed in five separated layers (system-instructions, developer-instructions, agent-policies, context, user-input) from versioned templates whose slots take trusted parameters only',
+    status: 'locked',
+    adr: ['ADR-0061-prompt-engine-layered-roles-and-the-quarantine-boundary.md'],
+    constraint:
+      'User input and context never enter the system message; a template may own only behaviour layers; prompts change by new template version, never an in-place edit.',
+  },
+  {
+    id: 'DEC-AI-12-INJECTION-QUARANTINE',
+    area: 'ai.prompt',
+    choice:
+      'Untrusted text is fenced in the user message; instruction-override patterns are scanned, recorded and annotated in-message rather than refused',
+    status: 'locked',
+    adr: ['ADR-0061-prompt-engine-layered-roles-and-the-quarantine-boundary.md'],
+    constraint:
+      'The system layer is closed (template + developer block + policies + output contract); a scan marker is data for the response layer, never a regex veto.',
   },
   {
     id: 'DEC-DESKTOP-1-RUNTIME',

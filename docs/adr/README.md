@@ -457,3 +457,22 @@ the real `LlmGateway` is unchanged. Tool requests the model makes are
 recorded and returned, never executed. Later phases attach through
 `HarnessRuntimeHooks` — observational, cancellable, never able to
 rewrite the assembly or answer in place.
+
+## Task 1.4 — prompt architecture
+
+Everything the model reads, composed in one place
+([ADR-0061](./ADR-0061-prompt-engine-layered-roles-and-the-quarantine-boundary.md)).
+`PromptEngine.compose` builds the prompt in five separated layers —
+system instructions, developer instructions, agent policies, context,
+user input — where the system layer is closed (versioned template with
+classed slots, developer block, policies, output contract) and untrusted
+material — context sections and the user's message — travels in the user
+message behind `<<<USER_DATA` fences (`DEC-AI-11-PROMPT-LAYERS`).
+Templates are versioned by id and semver; a prompt changes by new
+version, never an in-place edit, and composition refuses unfilled slots,
+unknown parameters and a template claiming untrusted layers.
+`scanForInjection` records instruction-override patterns and annotates
+them inside the user message rather than refusing the turn
+(`DEC-AI-12-INJECTION-QUARANTINE`); every layer is token-accounted and
+the budget is enforced at compose time. Provider/model logic stays in
+the gateway: the engine emits messages, not requests.
