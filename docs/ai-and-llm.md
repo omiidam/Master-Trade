@@ -295,6 +295,21 @@ Every deferred capability above now has a named, type-only seam in
 implementing its seam and installing it — the gateway remains the single
 entry point for every LLM request until a phase does.
 
+### The memory foundation (Task 1.5)
+
+Persistent memory is three layers
+([ADR-0062](./adr/ADR-0062-three-memory-layers-scoped-versioned-and-bridged-to-the-context-builder.md)):
+procedural (skills, rules, how-tos — system-owned, versioned like code,
+shared by every run, refusing private content), semantic (durable facts
+and user profile knowledge, user-scoped) and episodic (dated events and
+conversation history, always timestamped and user-scoped). Records are
+immutable and versioned; every record carries an owner and a cross-user
+read throws rather than filtering quietly. Retrieval is per-layer,
+labelled and capped, and reaches a run only as `ContextSection[]`
+through the harness's existing context assembly — working memory stays
+ephemeral and separate. Summarization, distillation, tool calling,
+evaluation and the learning loop are deliberately absent.
+
 ### The prompt engine (Task 1.4)
 
 `PromptEngine.compose`

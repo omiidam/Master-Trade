@@ -476,3 +476,22 @@ them inside the user message rather than refusing the turn
 (`DEC-AI-12-INJECTION-QUARANTINE`); every layer is token-accounted and
 the budget is enforced at compose time. Provider/model logic stays in
 the gateway: the engine emits messages, not requests.
+
+## Task 1.5 — memory foundation
+
+Persistent memory is three layers with three contracts
+([ADR-0062](./ADR-0062-three-memory-layers-scoped-versioned-and-bridged-to-the-context-builder.md)):
+procedural (skills, rules, how-tos — system-owned, shared, and the one
+layer that refuses private content), semantic (durable facts and user
+profile knowledge, user-scoped) and episodic (dated events and
+conversation history, always timestamped and user-scoped). Records are
+immutable and versioned — a change appends a semver, never an edit, and
+ownership cannot change across versions (`DEC-AI-13-MEMORY-LAYERS`).
+Every record carries an owner; read, history and query are scope-checked
+and a cross-user read throws instead of filtering quietly
+(`DEC-AI-14-MEMORY-SCOPING`). Retrieval is per-layer, labelled and
+capped — procedural as instructions-source, semantic verified, episodic
+unverified inside a recency window — and never merged into one blob. A
+typed bridge hands the harness `ContextSection[]` for its existing
+`runtimeContext`, so working memory stays ephemeral and separate. No
+summarization, distillation, tool calling, evaluation or learning loop.

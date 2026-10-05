@@ -46,6 +46,8 @@ export const LOCK_AREAS = [
   'ai.harness',
   // Task 1.4: the prompt engine owns the layered prompt and the quarantine boundary.
   'ai.prompt',
+  // Task 1.5: persistent memory is three scoped layers with their own contracts.
+  'ai.memory',
   'desktop.runtime',
   'desktop.security',
   // Phase 3.6: the shell became an implementation, so three areas of its policy
@@ -346,6 +348,26 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     adr: ['ADR-0061-prompt-engine-layered-roles-and-the-quarantine-boundary.md'],
     constraint:
       'User input and context never enter the system message; a template may own only behaviour layers; prompts change by new template version, never an in-place edit.',
+  },
+  {
+    id: 'DEC-AI-13-MEMORY-LAYERS',
+    area: 'ai.memory',
+    choice:
+      'Three closed memory layers with separate storage contracts — procedural (skills, rules, how-tos; system-owned), semantic (durable facts, user profile), episodic (dated events, conversation history) — each with its own query type and token cap',
+    status: 'locked',
+    adr: ['ADR-0062-three-memory-layers-scoped-versioned-and-bridged-to-the-context-builder.md'],
+    constraint:
+      'Records are immutable and versioned (a change appends a semver, never an edit); private content is refused in procedural memory and in system-owned records.',
+  },
+  {
+    id: 'DEC-AI-14-MEMORY-SCOPING',
+    area: 'ai.memory',
+    choice:
+      'Every record carries a MemoryOwner (system or user scope); read, history and query are scope-checked and a cross-user read throws rather than filtering quietly',
+    status: 'locked',
+    adr: ['ADR-0062-three-memory-layers-scoped-versioned-and-bridged-to-the-context-builder.md'],
+    constraint:
+      'Retrieval output reaches a run only as labelled ContextSection[] through the harness context assembly; working memory stays ephemeral and separate.',
   },
   {
     id: 'DEC-AI-12-INJECTION-QUARANTINE',
