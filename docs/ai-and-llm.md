@@ -294,3 +294,19 @@ Every deferred capability above now has a named, type-only seam in
 `Trainer`, collected in `LlmExtensionPoints`. Implementing one means
 implementing its seam and installing it — the gateway remains the single
 entry point for every LLM request until a phase does.
+
+### The training foundation (Task 1.2)
+
+The `Trainer` seam has a concrete contract now:
+`src/training/foundation.ts`
+([ADR-0059](./adr/ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md)).
+It defines the stage ladder (base referenced by id, instruction-tuning,
+domain; continuous-learning reserved and refused), versioned dataset
+schemas (`dataset/1`) with per-record provenance and explicit approval,
+quality/deduplication rules behind a pure `validateDataset` gate, a
+deterministic seeded train/evaluation split, and a versioned
+`PreferencePair` schema for future preference optimization. Execution is
+an injected `TrainingBackend` port the runtime never imports — training
+is infrastructure, and this module has no access to the gateway, the
+request path or any conversation store. No model is trained in this
+phase.

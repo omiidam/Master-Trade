@@ -40,6 +40,8 @@ export const LOCK_AREAS = [
   'ai.abstraction',
   'ai.gateway',
   'ai.providerIndependence',
+  // Task 1.2: training is its own area — infrastructure, not the request path.
+  'ai.training',
   'desktop.runtime',
   'desktop.security',
   // Phase 3.6: the shell became an implementation, so three areas of its policy
@@ -280,6 +282,36 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     adr: ['ADR-0058-llm-core-extension-seams-and-request-scoping.md'],
     constraint:
       'userId is an opaque identifier, never a Principal, a role or a credential; the LLM layer gains attribution, not authorization.',
+  },
+  {
+    id: 'DEC-AI-6-NO-LIVE-DATA',
+    area: 'ai.training',
+    choice:
+      'Training datasets are curated exports only; the reviewed-conversation origin is excluded from the default quality rules until an approved redaction pipeline exists',
+    status: 'locked',
+    adr: ['ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md'],
+    constraint:
+      'No runtime component captures conversations for training; a reviewed-conversation record must name its pipeline and approver, and is refused until both exist.',
+  },
+  {
+    id: 'DEC-AI-7-DATASET-PROVENANCE',
+    area: 'ai.training',
+    choice:
+      'Every dataset carries a provenance block with explicit approval (approvedBy/approvedAt/approvedUses) and is content-addressed by a deterministic fingerprint',
+    status: 'locked',
+    adr: ['ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md'],
+    constraint:
+      'validateDataset refuses a dataset without recorded approval; a job references a fingerprint, never loose bytes.',
+  },
+  {
+    id: 'DEC-AI-8-TRAINING-LADDER',
+    area: 'ai.training',
+    choice:
+      'Training stages are base (referenced, never trained), instruction-tuning (SFT), domain, and continuous-learning (reserved); infrastructure is an injected TrainingBackend port the runtime never imports',
+    status: 'locked',
+    adr: ['ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md'],
+    constraint:
+      'Continuous learning is refused at validation and must not be scheduled by any backend; the gateway holds no training surface.',
   },
   {
     id: 'DEC-DESKTOP-1-RUNTIME',

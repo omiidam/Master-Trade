@@ -413,3 +413,28 @@ default behavior and no wiring, each encoding the invariants it must keep
 (nothing executes, nothing is trusted, nothing bypasses a contract). The
 `LlmGateway` remains the single entry point for every LLM request until a
 phase installs a seam.
+
+## Task 1.2 — training foundation
+
+Training is infrastructure, not the request path, and the foundation in
+`src/training/foundation.ts` keeps it that way: contracts and gates
+only, no runner, no backend, no trained model
+([ADR-0059](./ADR-0059-training-foundation-datasets-provenance-and-the-infrastructure-boundary.md)).
+
+`DEC-AI-6-NO-LIVE-DATA` closes the origin union — authored,
+reviewed-conversation, synthetic, licensed — and refuses the
+conversation origin under the default rules until an approved redaction
+pipeline exists and is named by the record; nothing in the runtime
+captures conversations for training. `DEC-AI-7-DATASET-PROVENANCE`
+makes approval data: a dataset carries `approvedBy`/`approvedAt`/
+`approvedUses`, `validateDataset` refuses without them, and a job
+references a deterministic fingerprint, not loose bytes.
+`DEC-AI-8-TRAINING-LADDER` names the four stages — base (referenced,
+never trained), instruction-tuning, domain, and continuous-learning,
+**reserved**: refused at validation and unschedulable by any backend.
+Schemas are versioned (`dataset/1`), duplicates are exact-detected,
+train/evaluation splits are derived deterministically from the
+fingerprint, and a versioned `PreferencePair` schema prepares for
+future preference optimization. Execution is an injected
+`TrainingBackend` port the runtime never imports; the gateway holds no
+training surface, asserted by test.
