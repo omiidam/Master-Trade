@@ -35,6 +35,7 @@ export * from './vector/memory.js';
 export * from './agent/approval.js';
 export * from './agent/proposals.js';
 export * from './agent/context.js';
+export * from './agent/contextBuilder.js';
 
 /* Phase 3.5: AI infrastructure — the LLM-backed async turn. The adapters and the
    gateway come from ./llm/index.js above; this adds the async model adapter that

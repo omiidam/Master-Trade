@@ -5,9 +5,12 @@
  * message list. Everything the model sees is built here, which is what makes the
  * following checkable rather than aspirational:
  *
- *   - **The instruction set cannot be omitted.** A prompt without an
- *     `instructions` section is refused. The instructions carry the safety policy,
- *     so a missing one is a configuration bug, not a prompt to send anyway.
+ *   - **The instruction set cannot be omitted — and is never duplicated.** A
+ *     prompt whose context carries no `instructions` section is refused: the
+ *     section is the assembly contract's proof that the safety text was
+ *     budgeted and kept. It is rendered exactly once, in the system message
+ *     below; a context block that repeated it would pay for the same tokens
+ *     twice and give the model two places to read behaviour from.
  *   - **Every retrieved section is presented with its label and provenance.**
  *     Unverified memory reaches the model as uncertainty, never as fact — the
  *     label comes from `contextKindForTrust()`, not from this module's opinion.
@@ -205,6 +208,11 @@ export function buildTurnMessages(input: TurnPromptInput): LlmMessage[] {
       'refusing to build a prompt whose context omits the instruction section',
     );
   }
+  // The instruction set is stated once, in the system message above. Sections
+  // carrying it are the assembly contract's structural marker, not material for
+  // the context block — rendering them here would duplicate the system layer's
+  // text into the user message at full token cost.
+  const contextSections = input.sections.filter((section) => section.source !== 'instructions');
   const userInput = input.userInput.trim();
   if (userInput.length === 0) {
     throw new AppError('VALIDATION_FAILED', 'user input must not be empty');
@@ -225,7 +233,7 @@ export function buildTurnMessages(input: TurnPromptInput): LlmMessage[] {
     DECISION_POLICY,
     OUTPUT_CONTRACT,
   ].join('\n\n');
-  const context = input.sections.map(renderContextSection).join('\n\n');
+  const context = contextSections.map(renderContextSection).join('\n\n');
 
   return [
     { role: 'system', content: system },

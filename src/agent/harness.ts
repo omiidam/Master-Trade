@@ -38,7 +38,8 @@
  */
 
 import type { ContextSection } from './context.js';
-import { assembleContext, section, estimateTokens, type ContextBudget } from './context.js';
+import { estimateTokens, type ContextBudget } from './context.js';
+import { AgentContextBuilder, type ContextAssembly } from './contextBuilder.js';
 import type { AsyncModelAdapter, ModelTurn, ToolRequest } from './asyncModel.js';
 import type { ResponseStyle } from '../../packages/shared/src/language/guidance.js';
 import type { ResponseLanguage } from '../../packages/shared/src/types.js';
@@ -194,8 +195,15 @@ export interface AgentRunInput {
   runtimeContext?: readonly ContextSection[];
   responseLanguage?: ResponseLanguage;
   responseStyle?: ResponseStyle;
-  /** Token budget for assembled context (default: the context module's). */
-  budget?: ContextBudget;
+  /**
+   * Token budget for assembled context (default: the context module's).
+   * The builder's optional layer caps ride along, so a run can bound the
+   * conversation and runtime layers independently of the total.
+   */
+  budget?: ContextBudget & {
+    maxRuntimeTokens?: number;
+    maxConversationTokens?: number;
+  };
   /** Hard cap on the ephemeral working memory, in tokens. */
   maxMemoryTokens?: number;
 }
@@ -269,6 +277,12 @@ export interface HarnessRuntimeHooks {
 export interface AgentHarnessOptions {
   /** The real reasoning path: an AsyncModelAdapter over the LLM Gateway. */
   adapter: AsyncModelAdapter;
+  /**
+   * The centralized Context Builder. Defaults to the shared stateless
+   * instance: assembly is pure, so one instance serves every run, and no
+   * run's assembly can leak into another's.
+   */
+  contextBuilder?: AgentContextBuilder;
   /** Observational hooks for later phases. */
   hooks?: HarnessRuntimeHooks;
 }
@@ -277,10 +291,12 @@ let harnessRunCounter = 0;
 
 export class AgentRunHarness {
   private readonly adapter: AsyncModelAdapter;
+  private readonly contextBuilder: AgentContextBuilder;
   private readonly hooks: HarnessRuntimeHooks | undefined;
 
   constructor(options: AgentHarnessOptions) {
     this.adapter = options.adapter;
+    this.contextBuilder = options.contextBuilder ?? new AgentContextBuilder();
     this.hooks = options.hooks;
   }
 
@@ -288,10 +304,11 @@ export class AgentRunHarness {
    * Run one bounded, isolated agent run.
    *
    * Contract shape: the harness owns the lifecycle and the ephemeral
-   * memory; the Context Builder role is the pure `assembleContext`
-   * step; the LLM Gateway is reached only through the caller-supplied
-   * `AsyncModelAdapter`. Whatever happens, the run ends in exactly
-   * one terminal state and the working memory is disposed.
+   * memory; the centralized Context Builder owns assembly (layers,
+   * budgets, dedup, pre-request size validation); the LLM Gateway is
+   * reached only through the caller-supplied `AsyncModelAdapter`.
+   * Whatever happens, the run ends in exactly one terminal state and the
+   * working memory is disposed.
    */
   async run(input: AgentRunInput): Promise<AgentRunResult> {
     const startedAt = Date.now();
@@ -324,7 +341,15 @@ export class AgentRunHarness {
         else memory.recordAssistant(turnEntry.content);
       }
       memory.recordUser(input.userInput);
-      assembly = this.assemble(input, memory);
+      const assembled = this.assemble(input, memory);
+      assembly = {
+        systemInstructions: input.instructions,
+        history: memory.history,
+        userPrompt: assembled.userInput,
+        contextSections: assembled.sections,
+        dropped: assembled.dropped.map((entry) => entry.id),
+        estimatedTokens: assembled.totalTokens,
+      };
       if (this.hooks?.shouldCancel?.()) {
         lifecycle.transitionTo('cancelled');
         return finish('cancelled');
@@ -379,49 +404,37 @@ export class AgentRunHarness {
   }
 
   /**
-   * The Context Builder role: instructions (never dropped), chat
-   * history from this run's memory, the user prompt, and the
-   * caller-supplied runtime context — assembled under the budget.
+   * Assembly is delegated to the centralized Context Builder: five
+   * separated layers (system instructions, agent policies, runtime,
+   * conversation, user input), configurable budgets, duplication removed
+   * and the total validated against the budget before the model is
+   * called. The conversation section carries the *prior* turns only — the
+   * current question travels once, in the user-input layer, instead of
+   * being repeated inside the chat history it also sits at the end of.
    */
-  private assemble(input: AgentRunInput, memory: WorkingMemory): HarnessAssembly {
-    const sections: ContextSection[] = [
-      section({
-        id: 'instructions',
-        source: 'instructions',
-        priority: 100,
-        content: input.instructions,
-      }),
-    ];
-
-    // Current chat history: the run's own memory, oldest first.
-    const historyText = memory.history.map((entry) => `${entry.role}: ${entry.content}`).join('\n');
-    if (historyText.trim() !== '') {
-      sections.push(
-        section({
-          id: 'chat-history',
-          source: 'conversation',
-          priority: 80,
-          content: historyText,
-        }),
-      );
-    }
-
-    // Relevant runtime context comes from the caller, verbatim.
-    for (const item of input.runtimeContext ?? []) {
-      sections.push(item);
-    }
-
-    const budget = input.budget ?? { maxTokens: 8_000, reserveForResponse: 1_500 };
-    const assembled = assembleContext(sections, budget);
-
-    return {
-      systemInstructions: input.instructions,
-      history: memory.history,
-      userPrompt: input.userInput,
-      contextSections: assembled.sections,
-      dropped: assembled.dropped,
-      estimatedTokens: assembled.totalTokens,
-    };
+  private assemble(input: AgentRunInput, memory: WorkingMemory): ContextAssembly {
+    return this.contextBuilder.assemble({
+      correlationId: input.correlationId,
+      ...(input.userId === undefined ? {} : { userId: input.userId }),
+      instructions: input.instructions,
+      userInput: input.userInput,
+      conversationHistory: input.history ?? [],
+      runtimeContext: input.runtimeContext ?? [],
+      ...(input.budget === undefined
+        ? {}
+        : {
+            budget: {
+              maxContextTokens: input.budget.maxTokens,
+              reserveForResponse: input.budget.reserveForResponse,
+              ...(input.budget.maxRuntimeTokens === undefined
+                ? {}
+                : { maxRuntimeTokens: input.budget.maxRuntimeTokens }),
+              ...(input.budget.maxConversationTokens === undefined
+                ? {}
+                : { maxConversationTokens: input.budget.maxConversationTokens }),
+            },
+          }),
+    });
   }
 }
 

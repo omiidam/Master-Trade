@@ -18,10 +18,11 @@
  * Each layer also gets its own token cap, so a chatty episodic layer
  * cannot crowd out procedural rules or the user's prompt.
  *
- * The output is `ContextSection[]` — the exact type the run harness's
- * assembly (`AgentRunHarness.run` → `assembleContext`) consumes as
- * runtime context. The bridge changes no context rules; it only
- * produces labelled, priority-ranked, budget-respecting sections.
+ * The output is `ContextSection[]` — the exact type the centralized
+ * Context Builder (`AgentContextBuilder`, assembled by
+ * `AgentRunHarness.run`) consumes as runtime context. The bridge changes
+ * no context rules; it only produces labelled, priority-ranked,
+ * budget-respecting sections.
  *
  * No summarization or distillation happens here: sections are the
  * records themselves, headlined and clipped to the layer cap. Working

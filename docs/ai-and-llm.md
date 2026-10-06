@@ -25,6 +25,18 @@ action. Responsibilities:
 - Selection is deterministic: priority, then id, then the budget.
 - Every retrieved section carries a trust-derived label; unverified material is
   labelled `uncertainty` (`contextKindForTrust`).
+- Assembly is centralized in the **Context Builder**
+  (`src/agent/contextBuilder.ts`,
+  [ADR-0064](./adr/ADR-0064-central-context-builder-between-harness-and-gateway.md),
+  `DEC-AI-16-CONTEXT-BUILDER`): five separated layers — system instructions
+  and agent policies (never dropped), runtime context (per-section priority),
+  conversation (oldest turns first, as a contiguous prefix) and user input
+  (never dropped or truncated). Budgets (`maxContextTokens`,
+  `reserveForResponse`, per-layer caps) are configurable per instance and per
+  call, the assembled total is validated before every request, and duplicate
+  content is dropped by digest — within an assembly, against the system
+  layer, and across the steps of a running loop via caller-supplied
+  digests.
 
 ### Agent state management
 

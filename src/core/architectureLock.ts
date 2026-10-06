@@ -390,6 +390,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
       'The credential is referenced by a SecretRef and resolved server-side (env: ARVANCLOUD_API_KEY); with no key the provider is skipped with a reason and the offline scripted adapter answers.',
   },
   {
+    id: 'DEC-AI-16-CONTEXT-BUILDER',
+    area: 'ai.harness',
+    choice:
+      'One centralized Context Builder (src/agent/contextBuilder.ts) owns assembly for every LLM call: five separated layers (system instructions and policies never dropped, then runtime, conversation, user input), configurable token budgets with per-layer caps, digest-based deduplication, and size validation before every request',
+    status: 'locked',
+    adr: ['ADR-0064-central-context-builder-between-harness-and-gateway.md'],
+    constraint:
+      'The builder is stateless and produces plain ContextSection[] for the existing prompt path; the LlmGateway is untouched, and safety text that cannot fit the budget is an INTERNAL refusal, never a truncation.',
+  },
+  {
     id: 'DEC-DESKTOP-1-RUNTIME',
     area: 'desktop.runtime',
     choice:

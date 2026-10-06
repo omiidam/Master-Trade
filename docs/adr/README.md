@@ -513,3 +513,22 @@ Workplace reaches the model through the same `LlmGateway` — fallbacks,
 retries, timeout, circuit breaker, budget refusal and the structured-summary
 contract are unchanged. No memory/RAG/tool-calling/evaluation/learning work in
 this phase.
+
+## Context Assembly — the Context Builder
+
+One centralized Context Builder
+([ADR-0064](./ADR-0064-central-context-builder-between-harness-and-gateway.md))
+owns assembly for every LLM call the harness makes
+(`DEC-AI-16-CONTEXT-BUILDER`). Five separated layers in priority order —
+system instructions and agent policies never dropped, then runtime context,
+conversation (oldest turns first, as a contiguous prefix) and user input
+(never dropped, never truncated). Budgets are configurable per instance and
+per call, with per-layer caps, and the assembled total is validated before
+every request: a budget that cannot fit the safety text is an `INTERNAL`
+refusal, never a silent truncation. Duplication is refused by content digest
+— within an assembly, against the system layer, and across the steps of a
+running loop via caller-supplied digests — so the instruction set and the
+user's question each travel exactly once. The builder is stateless and
+produces plain `ContextSection[]` for the existing prompt path; the gateway
+is untouched, and memory, RAG, tools and multi-step loops are admitted as
+sections without being implemented here.
