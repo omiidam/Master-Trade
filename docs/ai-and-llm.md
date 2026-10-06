@@ -246,6 +246,30 @@ is not called a second time to narrate them. That is deliberate — an unverifie
 narrative over a deterministic result is exactly the content this layer is built to
 keep separated.
 
+### The run manager (AI Workplace)
+
+One level above the orchestrator and the harness, the **Agent Run Manager**
+(`src/agent/runManager.ts`, ADR-0065, `DEC-AI-17-AGENT-RUN-MANAGER`) owns the
+run _as an object_: a unique id per run, a record that outlives the execution
+(start/end times, duration, model, accumulated token usage, the error and the
+phase it surfaced in), and a machine-checked state machine in the Workplace's
+vocabulary — `idle → running → waiting-tool → validating → responding →
+completed`, with `blocked`, `failed` and `cancelled` as the other terminal
+states. Every conversation turn served by `agent.chat` is tracked as a run,
+so a gate refusal is a terminal `blocked` run, not a missing one.
+
+Cancellation is cooperative: `cancel()` marks the request, the executing
+driver polls `shouldCancel` between phases, and the run ends `cancelled` when
+the driver observes it — never mid-write. Reads, transitions and
+subscriptions are owner-checked against the opaque `userId`; a cross-user
+read throws rather than filtering quietly. Every transition is announced as
+an `agent.status` event on the existing `EventBus`, so the AI Workplace sees
+run progress over the same WebSocket contracts, audiences and replay as every
+other surface — no second channel and no second gateway. `waiting-tool` and
+`validating` are machine-checked now and driven by the phase that implements
+tools; streaming, tracing, evaluation, persistent memory and resume/retry are
+shaped for, not implemented.
+
 ## 3. Prompt and instruction management
 
 Instructions live in `src/instructions/loader.ts`: immutable modules with id +

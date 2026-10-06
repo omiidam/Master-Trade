@@ -532,3 +532,19 @@ user's question each travel exactly once. The builder is stateless and
 produces plain `ContextSection[]` for the existing prompt path; the gateway
 is untouched, and memory, RAG, tools and multi-step loops are admitted as
 sections without being implemented here.
+
+## Agent Run Manager — the durable run lifecycle
+
+One Agent Run Manager
+([ADR-0065](./ADR-0065-agent-run-manager-durable-lifecycle-and-workplace-status.md))
+owns the run as an object, one level above the harness
+(`DEC-AI-17-AGENT-RUN-MANAGER`): a unique id per run, a machine-checked
+state machine in the Workplace's vocabulary (`idle → running →
+waiting-tool → validating → responding → completed`, plus `blocked`,
+`failed` and `cancelled`), start/end times, model, token usage and error
+tracking, cooperative cancellation, and owner-checked access — a cross-user
+read throws, never filters. Every transition is announced as an
+`agent.status` event on the existing `EventBus`, so the AI Workplace sees
+runs in real time over the transport it already speaks. The registry is
+in-process and bounded; tool calling, persistent memory, evaluation,
+learning and resume/retry are shaped for, not implemented.

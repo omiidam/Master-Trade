@@ -21,6 +21,7 @@
 import Fastify, { LogController, type FastifyInstance } from 'fastify';
 import type { DestinationStream } from 'pino';
 import { AgentService } from '../agent/service.js';
+import { AgentRunManager, runStatusEventNotifier } from '../agent/runManager.js';
 import { ApprovalWorkflow } from '../agent/approval.js';
 import { SessionService } from '../auth/sessions.js';
 import { assertNoHardlineOperations } from '../../packages/shared/src/auth/model.js';
@@ -102,6 +103,12 @@ export interface ServerDeps {
   eventBus?: EventBus;
   agent?: AgentService;
   /**
+   * The agent run manager, when the caller supplies one. Defaults to a
+   * fresh manager whose transitions are announced on the event bus, so
+   * the AI Workplace sees run status over the existing realtime layer.
+   */
+  runManager?: AgentRunManager;
+  /**
    * The live LLM gateway, when configuration built one (Phase 2.3). Supplying it
    * is what connects the agent surface (AI Workplace) to a hosted model through
    * the existing gateway; without it the offline scripted adapter answers.
@@ -158,6 +165,8 @@ export interface ServerInstance {
   eventBus: EventBus;
   realtime: RealtimeHub;
   agent: AgentService;
+  /** Durable agent run lifecycle and registry, exposed for run status. */
+  runs: AgentRunManager;
   /** The metering service, exposed so a test can assert on the ledger it holds. */
   usage: UsageService;
   usageStore: UsageStore;
@@ -371,6 +380,20 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
   const llmProviders = deps.llmProviders ?? registrationProviders(aiRegistration);
 
   /**
+   * The agent run registry. Every agent conversation turn becomes a run
+   * with a unique id and an explicit lifecycle, and every transition is
+   * announced as an `agent.status` event on the existing bus — the same
+   * WebSocket contracts, audiences and replay the Workplace already
+   * speaks. No second channel, no second gateway.
+   */
+  const runs =
+    deps.runManager ??
+    new AgentRunManager({
+      onStatus: runStatusEventNotifier(eventBus, logger),
+      ...(deps.now === undefined ? {} : { now: deps.now }),
+    });
+
+  /**
    * What this server can offer in the way of bars.
    *
    * Reported as a fact and defaulted to "nothing", because until a provider is
@@ -480,11 +503,17 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     'system.health': healthHandler(health, config),
     'system.readiness': readinessHandler(health, config),
     'session.local': localSessionHandler({ sessions, config }) as AnyHandler,
-    'agent.chat': agentChatHandler(agent, eventBus, readinessFor, {
-      service: usage,
-      featureId: 'agent.chat',
-      credits: FEATURES_BY_ID['agent.chat'].creditCost,
-    }) as AnyHandler,
+    'agent.chat': agentChatHandler(
+      agent,
+      eventBus,
+      readinessFor,
+      {
+        service: usage,
+        featureId: 'agent.chat',
+        credits: FEATURES_BY_ID['agent.chat'].creditCost,
+      },
+      runs,
+    ) as AnyHandler,
     'job.list': jobListHandler(jobService) as AnyHandler,
     'job.get': jobGetHandler(jobService) as AnyHandler,
     'job.cancel': jobCancelHandler(jobService) as AnyHandler,
@@ -622,6 +651,7 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     eventBus,
     realtime,
     agent,
+    runs,
     usage,
     usageStore,
     security,

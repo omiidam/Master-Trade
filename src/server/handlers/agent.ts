@@ -22,6 +22,7 @@ import type { AgentChatBody } from '../../../packages/shared/src/api/schemas.js'
 import type { ResponseLanguage } from '../../../packages/shared/src/types.js';
 import type { ResponseStyle } from '../../../packages/shared/src/language/guidance.js';
 import type { AgentAsyncTurn, AgentService, AgentTurn } from '../../agent/service.js';
+import type { AgentRunManager } from '../../agent/runManager.js';
 import type { AnalysisReadinessDecision } from '../../../packages/shared/src/quality/readiness.js';
 import {
   planCapabilityRun,
@@ -111,6 +112,12 @@ export function agentChatHandler(
     | ((userId: string, analysisType: string) => Promise<AnalysisReadinessDecision | null>)
     | undefined,
   metering?: AgentMetering | undefined,
+  /**
+   * The run manager, when the server tracks conversation turns as agent
+   * runs. Each turn becomes a run whose state the AI Workplace follows in
+   * real time; without it the turn runs exactly as before.
+   */
+  runs?: AgentRunManager | undefined,
 ): RouteHandler<AgentChatBody, AgentChatResponseData> {
   /*
    * The deterministic engines this process actually holds, asked of the registry rather than
@@ -346,7 +353,38 @@ export function agentChatHandler(
       },
     });
 
-    if (metering === undefined) return respond(await runTurn(), undefined);
+    /*
+     * One conversation turn, one agent run. The run exists from before the
+     * turn starts to its terminal state, so the Workplace can watch it in
+     * real time; a blocked turn is a terminal `blocked` run, a refusal is
+     * not a missing run. Unattributed requests (no principal) are not
+     * tracked, because a run belongs to someone.
+     */
+    const runTrackedTurn = async (): Promise<AgentTurn> => {
+      const principal = context.principal;
+      if (runs === undefined || principal === null) return runTurn();
+      const run = runs.createRun({
+        userId: principal.id,
+        correlationId: context.correlationId,
+        model: service.modelLabel(),
+      });
+      runs.start(run.runId, principal.id);
+      try {
+        const turn = await runTurn();
+        if (turn.status === 'completed') {
+          runs.transition(run.runId, principal.id, 'responding');
+          runs.complete(run.runId, principal.id);
+        } else {
+          runs.block(run.runId, principal.id, turn.reason ?? 'the turn was blocked');
+        }
+        return turn;
+      } catch (error) {
+        runs.fail(run.runId, principal.id, error instanceof Error ? error.message : String(error));
+        throw error;
+      }
+    };
+
+    if (metering === undefined) return respond(await runTrackedTurn(), undefined);
 
     const principal = context.principal;
     if (principal === null) {
@@ -370,7 +408,7 @@ export function agentChatHandler(
         actor: principal.id,
       },
       async () => {
-        const turn = await runTurn();
+        const turn = await runTrackedTurn();
         // A turn that produced a refusal, or that the gate blocked, did not deliver what
         // the credit pays for — so it is not charged.
         return { charge: turn.status === 'completed', value: turn };

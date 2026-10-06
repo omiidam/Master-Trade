@@ -400,6 +400,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
       'The builder is stateless and produces plain ContextSection[] for the existing prompt path; the LlmGateway is untouched, and safety text that cannot fit the budget is an INTERNAL refusal, never a truncation.',
   },
   {
+    id: 'DEC-AI-17-AGENT-RUN-MANAGER',
+    area: 'ai.harness',
+    choice:
+      'One Agent Run Manager (src/agent/runManager.ts) owns the durable run lifecycle the AI Workplace reads: a unique id per run, a machine-checked state machine (idle → running → waiting-tool → validating → responding → completed, with blocked/failed/cancelled), start/end time, model, token usage and error tracking, cooperative cancellation, and owner-checked reads that throw on a cross-user access — with every transition announced as an agent.status event on the existing EventBus',
+    status: 'locked',
+    adr: ['ADR-0065-agent-run-manager-durable-lifecycle-and-workplace-status.md'],
+    constraint:
+      'The registry is in-process and bounded (an active run is never evicted); cancellation is cooperative, never a force-end mid-write; model work is reached only through the existing adapter over the LlmGateway, and no second status channel exists.',
+  },
+  {
     id: 'DEC-DESKTOP-1-RUNTIME',
     area: 'desktop.runtime',
     choice:
