@@ -20,6 +20,12 @@ export {
 } from './openaiCompatible.js';
 
 export {
+  arvanCloudProvider,
+  ARVANCLOUD_DEFAULT_BASE_URL,
+  type ArvanCloudOptions,
+} from './arvancloud.js';
+
+export {
   anthropicProvider,
   splitAnthropicMessages,
   mapAnthropicContent,

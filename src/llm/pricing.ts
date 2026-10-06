@@ -69,6 +69,13 @@ export const MODEL_PRICES: readonly ModelPrice[] = [
     note: 'Indicative list price; review on provider pricing changes.',
   },
   {
+    provider: 'arvancloud',
+    model: 'DeepSeek-V4-Flash',
+    inputPer1M: 0.14,
+    outputPer1M: 0.28,
+    note: 'Indicative ArvanCloud list price for DeepSeek-V4-Flash; review on provider pricing changes.',
+  },
+  {
     provider: 'local-openai-compatible',
     model: 'local-model',
     inputPer1M: 0,

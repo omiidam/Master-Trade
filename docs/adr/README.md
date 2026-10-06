@@ -495,3 +495,21 @@ unverified inside a recency window — and never merged into one blob. A
 typed bridge hands the harness `ContextSection[]` for its existing
 `runtimeContext`, so working memory stays ephemeral and separate. No
 summarization, distillation, tool calling, evaluation or learning loop.
+
+## Phase 2.3 — ArvanCloud provider
+
+ArvanCloud AI (`api.arvancloudai.ir`, `/chat/completions`, model
+`DeepSeek-V4-Flash`) is a hosted provider **inside the existing gateway**
+([ADR-0063](./ADR-0063-arvancloud-ai-hosted-provider.md)), not a second
+integration path
+(`DEC-AI-15-ARVANCLOUD-PROVIDER`). The adapter composes the
+OpenAI-compatible one and overrides only the credential scheme — ArvanCloud
+authenticates with `Authorization: apikey <key>`, not `Bearer`. The credential
+is referenced by a `SecretRef` (`MASTER_TRADE_AI_KEY_ENV=ARVANCLOUD_API_KEY`)
+and resolved server-side; with no key the provider is skipped with a reason and
+the offline scripted adapter answers, so local development needs no key. A
+price row in `src/llm/pricing.ts` keeps budget enforcement honest, and the AI
+Workplace reaches the model through the same `LlmGateway` — fallbacks,
+retries, timeout, circuit breaker, budget refusal and the structured-summary
+contract are unchanged. No memory/RAG/tool-calling/evaluation/learning work in
+this phase.

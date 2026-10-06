@@ -35,6 +35,7 @@ import {
 } from './provider.js';
 import {
   anthropicProvider,
+  arvanCloudProvider,
   openAiCompatibleProvider,
   scriptedLlmProvider,
   type FetchLike,
@@ -44,6 +45,7 @@ import {
 export const DEFAULT_BASE_URLS: Record<Exclude<LlmProviderId, 'scripted'>, string> = {
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com',
+  arvancloud: 'https://api.arvancloudai.ir',
   'local-openai-compatible': 'http://127.0.0.1:11434/v1',
 };
 
@@ -109,7 +111,11 @@ function buildProvider(
   const baseUrl = settings.baseUrl ?? DEFAULT_BASE_URLS[settings.provider];
   const fetchOption = fetchImpl ? { fetchImpl } : {};
 
-  if (settings.provider === 'openai' || settings.provider === 'anthropic') {
+  if (
+    settings.provider === 'openai' ||
+    settings.provider === 'anthropic' ||
+    settings.provider === 'arvancloud'
+  ) {
     const secretRef = settings.secret ?? null;
     if (!secretRef) {
       return { reason: `no secret reference is configured for ${settings.provider}` };
@@ -120,23 +126,34 @@ function buildProvider(
         reason: `credential "${secretRef.kind}:${secretRef.name}" did not resolve to a value`,
       };
     }
-    return settings.provider === 'openai'
-      ? {
-          provider: openAiCompatibleProvider({
-            baseUrl,
-            apiKey: key,
-            models: [settings.model],
-            ...fetchOption,
-          }),
-        }
-      : {
-          provider: anthropicProvider({
-            baseUrl,
-            apiKey: key,
-            models: [settings.model],
-            ...fetchOption,
-          }),
-        };
+    if (settings.provider === 'openai') {
+      return {
+        provider: openAiCompatibleProvider({
+          baseUrl,
+          apiKey: key,
+          models: [settings.model],
+          ...fetchOption,
+        }),
+      };
+    }
+    if (settings.provider === 'arvancloud') {
+      return {
+        provider: arvanCloudProvider({
+          baseUrl,
+          apiKey: key,
+          models: [settings.model],
+          ...fetchOption,
+        }),
+      };
+    }
+    return {
+      provider: anthropicProvider({
+        baseUrl,
+        apiKey: key,
+        models: [settings.model],
+        ...fetchOption,
+      }),
+    };
   }
 
   // A local server needs no credential: it is reached on the loopback port the

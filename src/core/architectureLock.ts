@@ -380,6 +380,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
       'The system layer is closed (template + developer block + policies + output contract); a scan marker is data for the response layer, never a regex veto.',
   },
   {
+    id: 'DEC-AI-15-ARVANCLOUD-PROVIDER',
+    area: 'ai.gateway',
+    choice:
+      'ArvanCloud AI (api.arvancloudai.ir, /chat/completions, DeepSeek-V4-Flash) is a hosted provider inside the existing LlmGateway: id arvancloud, an adapter composing the OpenAI-compatible one with the apikey Authorization scheme, a price row, and registry wiring — no second gateway or configuration system',
+    status: 'locked',
+    adr: ['ADR-0063-arvancloud-ai-hosted-provider.md'],
+    constraint:
+      'The credential is referenced by a SecretRef and resolved server-side (env: ARVANCLOUD_API_KEY); with no key the provider is skipped with a reason and the offline scripted adapter answers.',
+  },
+  {
     id: 'DEC-DESKTOP-1-RUNTIME',
     area: 'desktop.runtime',
     choice:

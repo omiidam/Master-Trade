@@ -125,7 +125,7 @@ const envSchema = z.strictObject({
     .optional(),
   MASTER_TRADE_AUDIT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3_650).optional(),
   MASTER_TRADE_AI_PROVIDER: z
-    .enum(['scripted', 'openai', 'anthropic', 'local-openai-compatible'])
+    .enum(['scripted', 'openai', 'anthropic', 'arvancloud', 'local-openai-compatible'])
     .optional(),
   MASTER_TRADE_AI_MODEL: z.string().min(1).max(128).optional(),
   MASTER_TRADE_AI_MONTHLY_BUDGET_USD: z.coerce.number().min(0).max(100_000).optional(),

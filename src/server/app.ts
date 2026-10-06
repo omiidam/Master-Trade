@@ -44,6 +44,8 @@ import { EventBus } from '../../packages/shared/src/realtime/events.js';
 import { RealtimeHub, type RealtimeLimits } from '../realtime/hub.js';
 import { registerRealtimeTransport, REALTIME_ROUTE } from '../realtime/ws.js';
 import { loadConfigFromEnv, resolveSecretFromEnv } from '../config/loader.js';
+import { createAiGateway, type AiGatewayRegistration } from '../llm/index.js';
+import { createLlmModelAdapter } from '../agent/asyncModel.js';
 import type { LogSink, Logger } from '../../packages/shared/src/core/logging.js';
 import { createAccessPolicy } from './access.js';
 import { workflowApprovalGate, type ApprovalGate } from './approval.js';
@@ -99,6 +101,12 @@ export interface ServerDeps {
   jobs?: JobQueue;
   eventBus?: EventBus;
   agent?: AgentService;
+  /**
+   * The live LLM gateway, when configuration built one (Phase 2.3). Supplying it
+   * is what connects the agent surface (AI Workplace) to a hosted model through
+   * the existing gateway; without it the offline scripted adapter answers.
+   */
+  aiGateway?: AiGatewayRegistration;
   idFactory?: IdFactory;
   now?: () => number;
   resolveSecret?: (ref: SecretRef) => string | null;
@@ -172,18 +180,65 @@ export function assertServerPreconditions(config: AppConfig): void {
   loadInstructions();
 }
 
-/** Conditions that do not block start-up but must be visible in the log. */
-export function bootWarnings(config: AppConfig): string[] {
+/**
+ * Build a live LLM gateway from the resolved configuration, through the existing
+ * composition root (`createAiGateway`). This is the one place the configuration
+ * becomes the agent's reasoning component: a hosted provider with a resolvable
+ * credential answers, everything else degrades to the offline scripted adapter
+ * with a recorded reason. No second gateway or configuration system is created.
+ */
+function buildGatewayFromConfig(
+  config: AppConfig,
+  resolveSecret: ((ref: SecretRef) => string | null) | undefined,
+): AiGatewayRegistration {
+  const ai = config.ai;
+  return createAiGateway(
+    {
+      primary: {
+        provider: ai.primary.provider,
+        model: ai.primary.model,
+        maxTokensPerRequest: ai.primary.maxTokensPerRequest,
+        secret: ai.primary.secret,
+      },
+      fallbacks: ai.fallbacks.map((endpoint) => ({
+        provider: endpoint.provider,
+        model: endpoint.model,
+        maxTokensPerRequest: endpoint.maxTokensPerRequest,
+        secret: endpoint.secret,
+      })),
+      requestTimeoutMs: ai.requestTimeoutMs,
+      maxRetries: ai.maxRetries,
+      retry: ai.retry,
+      monthlyBudgetUsd: ai.monthlyBudgetUsd,
+    },
+    {
+      resolveSecret: resolveSecret ?? ((ref) => resolveSecretFromEnv(ref)),
+    },
+  );
+}
+
+/** Provider ids a registration actually holds, for health reporting. */
+function registrationProviders(registration: AiGatewayRegistration): string[] {
+  return [...registration.providers];
+}
+
+export function bootWarnings(config: AppConfig, aiRegistration?: AiGatewayRegistration): string[] {
   const warnings: string[] = [];
   if (config.auth.allowAnonymousLocalLogin) {
     warnings.push(
       'auth.allowAnonymousLocalLogin is true: POST /v1/session/local will issue a session to any caller that can reach the loopback port, without the shell token. Turn it off when the desktop shell is the only client.',
     );
   }
-  if (config.ai.primary.provider !== 'scripted') {
-    warnings.push(
-      `ai.primary.provider is "${config.ai.primary.provider}" but this server registers no provider: the adapters exist (src/llm/providers, wired by createAiGateway) and none is configured here, so the offline scripted adapter answers.`,
-    );
+  const aiLive =
+    aiRegistration === undefined ? undefined : aiRegistration.endpoints[0]?.provider !== 'scripted';
+  if (config.ai.primary.provider !== 'scripted' && aiLive !== true) {
+    const detail =
+      aiRegistration === undefined
+        ? 'the adapters exist (src/llm/providers, wired by createAiGateway) and none is configured here.'
+        : `the offline scripted adapter answers. ${aiRegistration.skipped
+            .map((entry) => entry.reason)
+            .join(' ')}`.trim();
+    warnings.push(`ai.primary.provider is "${config.ai.primary.provider}" but ${detail}`);
   }
   if (config.api.shellToken === null) {
     warnings.push(
@@ -298,8 +353,22 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     ...(deps.realtimeLimits === undefined ? {} : { limits: deps.realtimeLimits }),
   });
 
-  const agent = deps.agent ?? new AgentService();
-  const llmProviders = deps.llmProviders ?? ['scripted'];
+  /**
+   * The AI Workplace's reasoning component. When configuration built a live
+   * gateway (a hosted provider with a resolvable credential), the agent turns
+   * run through it — the same `LlmGateway` every other path uses. When it did
+   * not, the offline scripted adapter answers, exactly as before: local dev
+   * with no key is fully supported, and the degradation is recorded.
+   */
+  const aiRegistration = deps.aiGateway ?? buildGatewayFromConfig(config, deps.resolveSecret);
+  const agent =
+    deps.agent ??
+    new AgentService({
+      ...(aiRegistration.endpoints[0]?.provider !== 'scripted'
+        ? { asyncModel: createLlmModelAdapter({ gateway: aiRegistration.gateway }) }
+        : {}),
+    });
+  const llmProviders = deps.llmProviders ?? registrationProviders(aiRegistration);
 
   /**
    * What this server can offer in the way of bars.
@@ -520,7 +589,7 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
     assertSocketCoverage(tracked);
   });
 
-  const warnings = bootWarnings(config);
+  const warnings = bootWarnings(config, aiRegistration);
   logger.info(
     'server constructed',
     {

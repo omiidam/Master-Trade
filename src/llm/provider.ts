@@ -30,7 +30,12 @@ import {
 } from '../../packages/shared/src/core/retry.js';
 import { priceUsage } from './pricing.js';
 
-export type LlmProviderId = 'scripted' | 'openai' | 'anthropic' | 'local-openai-compatible';
+/**
+ * `arvancloud` is ArvanCloud's hosted AI service (OpenAI-compatible wire
+ * protocol, `apikey` credential scheme — ADR-0063).
+ */
+export type LlmProviderId =
+  'scripted' | 'openai' | 'anthropic' | 'arvancloud' | 'local-openai-compatible';
 
 export type LlmRole = 'system' | 'user' | 'assistant' | 'tool';
 

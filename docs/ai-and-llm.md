@@ -54,7 +54,7 @@ this.
 
 ```ts
 interface LlmProvider {
-  readonly id: LlmProviderId; // 'scripted' | 'openai' | 'anthropic' | 'local-openai-compatible'
+  readonly id: LlmProviderId; // 'scripted' | 'openai' | 'anthropic' | 'arvancloud' | 'local-openai-compatible'
   readonly models: readonly string[];
   complete(request: LlmRequest, signal?: AbortSignal): Promise<LlmProviderResponse>;
 }
@@ -118,19 +118,20 @@ src/llm/
 └── providers/
     ├── http.ts               # JSON POST, timeout/abort, status → typed error
     ├── openaiCompatible.ts   # OpenAI and any OpenAI-compatible local server
+    ├── arvancloud.ts         # ArvanCloud AI: the OpenAI-compatible adapter + the apikey scheme
     ├── anthropic.ts          # Messages API (system split, content blocks)
     └── scripted.ts           # offline deterministic adapter (always registered)
 ```
 
-| Concern              | Where it lives, and why it is there                                                                                     |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Transport + timeouts | `providers/http.ts`: one JSON POST, `AbortSignal` on timeout, no `Response` escapes the adapter                         |
-| Error taxonomy       | `http.ts`: 429/5xx retryable; 401/403 `FORBIDDEN` and 400/404 `VALIDATION_FAILED` not — a bad credential is not a flake |
-| Credential travel    | `x-api-key` for Anthropic, `Authorization: Bearer` otherwise; never in a detail object, an error or a log               |
-| Reasoning exclusion  | adapters never read reasoning fields/blocks; the summary parser refuses them by name                                    |
-| Tool arguments       | parsed from JSON, or the call is refused — a deterministic calculator must never receive guessed inputs                 |
-| Cost                 | `pricing.ts` + gateway: priced by the model **we** requested, not the one the response names                            |
-| Composition          | `registry.ts`: the scripted adapter is always registered; a provider that cannot be built is skipped _with a reason_    |
+| Concern              | Where it lives, and why it is there                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Transport + timeouts | `providers/http.ts`: one JSON POST, `AbortSignal` on timeout, no `Response` escapes the adapter                                                   |
+| Error taxonomy       | `http.ts`: 429/5xx retryable; 401/403 `FORBIDDEN` and 400/404 `VALIDATION_FAILED` not — a bad credential is not a flake                           |
+| Credential travel    | `x-api-key` for Anthropic, `Authorization: apikey` for ArvanCloud, `Authorization: Bearer` otherwise; never in a detail object, an error or a log |
+| Reasoning exclusion  | adapters never read reasoning fields/blocks; the summary parser refuses them by name                                                              |
+| Tool arguments       | parsed from JSON, or the call is refused — a deterministic calculator must never receive guessed inputs                                           |
+| Cost                 | `pricing.ts` + gateway: priced by the model **we** requested, not the one the response names                                                      |
+| Composition          | `registry.ts`: the scripted adapter is always registered; a provider that cannot be built is skipped _with a reason_                              |
 
 The offline default is a real path, not a stub: with the scripted provider
 registered, a turn still goes through the prompt builder, the summary parser, the
@@ -159,6 +160,32 @@ start-up warning and a `POLICY_VIOLATION` at call time.
 Secrets are `SecretRef` values (`{kind:'env'|'keychain', name}`) — configuration
 objects can be logged, exported and committed without leaking keys. The desktop
 shell resolves `kind:'keychain'` from the OS keychain.
+
+### ArvanCloud AI (Phase 2.3)
+
+ArvanCloud's hosted AI service is the first non-OpenAI/Anthropic hosted provider
+([ADR-0063](./adr/ADR-0063-arvancloud-ai-hosted-provider.md),
+`DEC-AI-15-ARVANCLOUD-PROVIDER`). It speaks the OpenAI Chat Completions protocol
+but authenticates with `Authorization: apikey <key>`; the adapter
+(`src/llm/providers/arvancloud.ts`) composes `openAiCompatibleProvider` and
+overrides only the credential scheme, so payload mapping, error taxonomy,
+reasoning-field dropping and tool-argument refusal are the existing code.
+
+Configuration (server-side only, see `.env.example`):
+
+```
+MASTER_TRADE_AI_PROVIDER=arvancloud
+MASTER_TRADE_AI_MODEL=DeepSeek-V4-Flash
+MASTER_TRADE_AI_KEY_ENV=ARVANCLOUD_API_KEY
+ARVANCLOUD_API_KEY=<the key itself>
+```
+
+With `ARVANCLOUD_API_KEY` unset the provider is skipped with a recorded reason
+and the offline scripted adapter answers — local development needs no key. The
+server installs `createLlmModelAdapter({ gateway })` on the agent surface only
+when a hosted endpoint was actually built, so the AI Workplace answers from
+ArvanCloud through the same gateway (fallbacks, retries, budget, summary
+contract) and never through a second path.
 
 ### Why the LLM can never bypass permissions
 

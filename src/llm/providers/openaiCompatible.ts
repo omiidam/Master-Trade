@@ -39,7 +39,7 @@ export const DROPPED_REASONING_FIELDS = [
 ] as const;
 
 export interface OpenAiCompatibleOptions {
-  id?: Extract<LlmProviderId, 'openai' | 'local-openai-compatible'>;
+  id?: Extract<LlmProviderId, 'openai' | 'arvancloud' | 'local-openai-compatible'>;
   /** e.g. `https://api.openai.com/v1` or `http://127.0.0.1:11434/v1`. */
   baseUrl: string;
   apiKey?: string | null;
@@ -47,6 +47,12 @@ export interface OpenAiCompatibleOptions {
   /** Require a credential before any request (hosted endpoints: yes). */
   requireApiKey?: boolean;
   headers?: Record<string, string>;
+  /**
+   * Override how the credential travels. Defaults to `Authorization: Bearer`;
+   * ArvanCloud uses the `apikey` scheme and passes this instead of forking the
+   * adapter. Never logged, never placed in an error detail.
+   */
+  authHeader?: { name: string; value: string };
   fetchImpl?: FetchLike;
   /** Path appended to `baseUrl`. */
   path?: string;
@@ -120,6 +126,7 @@ export function openAiCompatibleProvider(options: OpenAiCompatibleOptions): LlmP
     baseUrl: options.baseUrl.replace(/\/$/, ''),
     apiKey: options.apiKey ?? null,
     ...(options.headers ? { headers: options.headers } : {}),
+    ...(options.authHeader ? { authHeader: options.authHeader } : {}),
     ...(options.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
   };
 
