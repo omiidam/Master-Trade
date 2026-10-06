@@ -548,3 +548,17 @@ read throws, never filters. Every transition is announced as an
 runs in real time over the transport it already speaks. The registry is
 in-process and bounded; tool calling, persistent memory, evaluation,
 learning and resume/retry are shaped for, not implemented.
+
+ADR-0066 adds the **Agent Loop Engine**
+([ADR-0066](./ADR-0066-agent-loop-engine-bounded-multi-step-reasoning.md)),
+one level above the harness (`DEC-AI-18-AGENT-LOOP-ENGINE`): a controlled
+multi-step loop where each iteration is one `AgentRunHarness.run` (the LLM
+reasoning step), then a context update that records delivered digests, then a
+next-step decision read off the structured summary. Three configurable limits
+(`maxIterations`, `maxExecutionTimeMs`, `maxOutputTokens`) bound every loop;
+the lifecycle is machine-checked (`idle → reasoning → context-update →
+deciding`, terminal in `completed`, `blocked`, `failed` or `cancelled` — the
+Run Manager's vocabulary); stop is immediate on completion, failure,
+cancellation or limit exhaustion; and an identical step is refused by input
+digest before it runs, so infinite and futile loops are impossible by
+construction. Tool calling and retrieval are shaped for, not implemented.

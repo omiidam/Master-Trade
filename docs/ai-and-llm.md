@@ -270,6 +270,27 @@ other surface — no second channel and no second gateway. `waiting-tool` and
 tools; streaming, tracing, evaluation, persistent memory and resume/retry are
 shaped for, not implemented.
 
+### The agent loop engine
+
+One level above the harness, the **Agent Loop Engine**
+(`src/agent/agentLoop.ts`, ADR-0066, `DEC-AI-18-AGENT-LOOP-ENGINE`) owns the
+controlled multi-step loop. Each iteration is exactly the four phases: one
+`AgentRunHarness.run` (the LLM reasoning step — the only place the gateway is
+reached), a context update that records the digests of everything the step
+delivered (the Context Builder's `alreadyDeliveredDigests` feedstock), a
+next-step decision read off the structured summary — never model prose — and
+completion.
+
+Three configurable limits bound every loop: `maxIterations`,
+`maxExecutionTimeMs` and `maxOutputTokens` (accumulated completion tokens).
+The loop ends in exactly one terminal state — `completed`, `blocked`,
+`failed` or `cancelled`, the Run Manager's own vocabulary — and a limit stop
+is terminal `blocked` with the precise reason. An identical step is refused
+by input digest _before_ it is paid for, so an infinite or futile loop is
+impossible by construction. Tool requests are recorded, never executed; tool
+calling and retrieval are later phases that continue the loop with fresh
+context material.
+
 ## 3. Prompt and instruction management
 
 Instructions live in `src/instructions/loader.ts`: immutable modules with id +

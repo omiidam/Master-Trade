@@ -1,0 +1,377 @@
+/**
+ * Agent Loop Engine tests.
+ *
+ * The loop composes the existing harness per iteration and owns the control:
+ * the four phases (reasoning → context update → next-step decision →
+ * completion), the three configurable limits, cooperative cancellation and
+ * identical-step protection. Every claim the module makes in prose is pinned
+ * here as behaviour.
+ */
+
+import { describe, expect, it } from 'vitest';
+import {
+  AgentLoopEngine,
+  AgentLoopLifecycle,
+  DEFAULT_AGENT_LOOP_LIMITS,
+  defaultLoopDecider,
+  type AgentLoopDecider,
+} from '../src/agent/agentLoop.js';
+import { scriptedAsyncModelAdapter, type ModelTurnRequest } from '../src/agent/asyncModel.js';
+import type { ScriptedAsyncModelOptions } from '../src/agent/asyncModel.js';
+import type { AgentRunInput } from '../src/agent/harness.js';
+import { section, type ContextSection } from '../src/agent/context.js';
+import { AppError } from '../packages/shared/src/core/errors.js';
+import type { StructuredSummary } from '../src/llm/summary.js';
+
+const instructions = 'system instructions for the loop';
+
+function input(overrides: Partial<AgentRunInput> = {}): AgentRunInput {
+  return {
+    correlationId: 'corr-loop',
+    userInput: 'what is a stop order?',
+    instructions,
+    ...overrides,
+  };
+}
+
+/** A capture wrapper over the scripted adapter: same answers, counted calls. */
+function countingAdapter(options: ScriptedAsyncModelOptions = {}) {
+  const scripted = scriptedAsyncModelAdapter(options);
+  const requests: ModelTurnRequest[] = [];
+  return {
+    requests,
+    adapter: {
+      label: 'counting (offline, deterministic)',
+      async completeTurn(request: ModelTurnRequest) {
+        requests.push(request);
+        return scripted.completeTurn(request);
+      },
+    },
+  };
+}
+
+/** A decider that keeps the loop open and supplies fresh runtime material
+ * per step — exactly the seam a future tool-calling or retrieval phase will
+ * use to continue the loop with new context. */
+function continuingDecider(runtime: ContextSection[]): AgentLoopDecider {
+  return ({ iteration }) => {
+    runtime.push(
+      section({
+        id: `fresh:${iteration}`,
+        source: 'market-data',
+        priority: 50,
+        content: `fresh material ${iteration}`,
+      }),
+    );
+    return { complete: false, rationale: 'not yet' };
+  };
+}
+
+describe('agent loop engine — the four phases', () => {
+  it('completes in a single step when the summary requests no further work', async () => {
+    const { adapter } = countingAdapter();
+    const engine = new AgentLoopEngine({ adapter });
+    const result = await engine.run(input());
+
+    expect(result.status).toBe('completed');
+    expect(result.stopReason).toEqual({ reason: 'completed' });
+    expect(result.iterations).toBe(1);
+    expect(result.decision).toEqual({
+      complete: true,
+      rationale: 'the summary requested no further work',
+    });
+    expect(result.statements.length).toBeGreaterThan(0);
+    expect(result.summary).not.toBeNull();
+    expect(result.toolRequests).toEqual([]);
+    expect(result.runs[0]?.status).toBe('completed');
+    expect(result.timeline.map((entry) => entry.state)).toEqual([
+      'idle',
+      'reasoning',
+      'context-update',
+      'deciding',
+      'completed',
+    ]);
+    expect(result.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('delivers the caller input and instructions through the harness unchanged, and records delivered digests', async () => {
+    const { adapter, requests } = countingAdapter();
+    const runtime = [
+      section({ id: 'market:spot', source: 'market-data', priority: 60, content: 'BTC 60k' }),
+    ];
+    const engine = new AgentLoopEngine({ adapter });
+    const result = await engine.run(input({ runtimeContext: runtime }));
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.userInput).toBe('what is a stop order?');
+    expect(requests[0]?.instructions).toBe(instructions);
+    // The instructions layer and the kept runtime section were both delivered.
+    expect(result.deliveredDigests).toHaveLength(2);
+    const sectionIds = result.runs[0]?.assembly?.contextSections.map((item) => item.id) ?? [];
+    expect(sectionIds).toContain('instructions');
+    expect(sectionIds).toContain('market:spot');
+  });
+
+  it('runs multiple steps until the decider completes, accumulating statements and usage', async () => {
+    const runtime: ContextSection[] = [];
+    const { adapter } = countingAdapter({ usage: { completionTokens: 10, totalTokens: 10 } });
+    const decider: AgentLoopDecider = (decision) => {
+      if (decision.iteration >= 3) return { complete: true, rationale: 'done at the third step' };
+      return continuingDecider(runtime)(decision);
+    };
+    const engine = new AgentLoopEngine({ adapter, decide: decider });
+    const result = await engine.run(input({ runtimeContext: runtime }));
+
+    expect(result.status).toBe('completed');
+    expect(result.iterations).toBe(3);
+    expect(result.decision).toEqual({ complete: true, rationale: 'done at the third step' });
+    expect(result.usage.completionTokens).toBe(30);
+    expect(result.usage.totalTokens).toBe(30);
+    // One statement set per step, accumulated oldest first.
+    const perStep = result.summary?.statements.length ?? 0;
+    expect(perStep).toBeGreaterThan(0);
+    expect(result.statements.length).toBe(3 * perStep);
+  });
+
+  it('stops at the iteration limit with a blocked status and the counts', async () => {
+    const runtime: ContextSection[] = [];
+    const { adapter, requests } = countingAdapter();
+    const engine = new AgentLoopEngine({
+      adapter,
+      limits: { maxIterations: 3 },
+      decide: continuingDecider(runtime),
+    });
+    const result = await engine.run(input({ runtimeContext: runtime }));
+
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toEqual({
+      reason: 'iteration-limit',
+      iterationsRun: 3,
+      maxIterations: 3,
+    });
+    expect(result.iterations).toBe(3);
+    expect(requests).toHaveLength(3);
+    expect(result.timeline.map((entry) => entry.state)).toEqual([
+      'idle',
+      'reasoning',
+      'context-update',
+      'deciding',
+      'reasoning',
+      'context-update',
+      'deciding',
+      'reasoning',
+      'context-update',
+      'deciding',
+      'blocked',
+    ]);
+  });
+});
+
+describe('agent loop engine — guards and limits', () => {
+  it('refuses an identical step instead of re-asking the same question', async () => {
+    const { adapter, requests } = countingAdapter();
+    const engine = new AgentLoopEngine({
+      adapter,
+      limits: { maxIterations: 5 },
+      decide: () => ({ complete: false, rationale: 'not yet' }),
+    });
+    const result = await engine.run(input());
+
+    // The second iteration would show the model exactly what the first
+    // already saw, so the loop refuses it after two steps, not five.
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toEqual({ reason: 'repeated-step', iteration: 2 });
+    expect(result.iterations).toBe(1);
+    expect(requests).toHaveLength(1);
+    expect(result.timeline.map((entry) => entry.state)).toEqual([
+      'idle',
+      'reasoning',
+      'context-update',
+      'deciding',
+      'blocked',
+    ]);
+  });
+
+  it('stops when accumulated output tokens exhaust the budget', async () => {
+    const runtime: ContextSection[] = [];
+    const { adapter } = countingAdapter({ usage: { completionTokens: 100 } });
+    const engine = new AgentLoopEngine({
+      adapter,
+      limits: { maxOutputTokens: 150 },
+      decide: continuingDecider(runtime),
+    });
+    const result = await engine.run(input({ runtimeContext: runtime }));
+
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toEqual({
+      reason: 'output-token-limit',
+      completionTokens: 200,
+      maxOutputTokens: 150,
+    });
+    expect(result.iterations).toBe(2);
+  });
+
+  it('stops when the wall-clock ceiling is exceeded before the next paid step', async () => {
+    const runtime: ContextSection[] = [];
+    const { adapter } = countingAdapter({ delayMs: 30 });
+    const engine = new AgentLoopEngine({
+      adapter,
+      limits: { maxExecutionTimeMs: 10 },
+      decide: continuingDecider(runtime),
+    });
+    const result = await engine.run(input({ runtimeContext: runtime }));
+
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toMatchObject({ reason: 'time-limit' });
+    if (result.stopReason.reason === 'time-limit') {
+      expect(result.stopReason.elapsedMs).toBeGreaterThanOrEqual(10);
+      expect(result.stopReason.maxExecutionTimeMs).toBe(10);
+    }
+    expect(result.iterations).toBe(1);
+  });
+
+  it('ends cancelled when cancellation is observed before the first step', async () => {
+    const { adapter } = countingAdapter();
+    const engine = new AgentLoopEngine({ adapter, shouldCancel: () => true });
+    const result = await engine.run(input());
+
+    expect(result.status).toBe('cancelled');
+    expect(result.stopReason).toEqual({ reason: 'cancelled' });
+    expect(result.iterations).toBe(0);
+    expect(result.timeline.map((entry) => entry.state)).toEqual(['idle', 'cancelled']);
+  });
+
+  it('ends cancelled between steps when cancellation is requested mid-loop', async () => {
+    let cancelled = false;
+    const { adapter } = countingAdapter();
+    const engine = new AgentLoopEngine({
+      adapter,
+      shouldCancel: () => cancelled,
+      decide: () => {
+        cancelled = true;
+        return { complete: false, rationale: 'one more' };
+      },
+      limits: { maxIterations: 5 },
+    });
+    const result = await engine.run(input());
+
+    expect(result.status).toBe('cancelled');
+    expect(result.stopReason).toEqual({ reason: 'cancelled' });
+    expect(result.iterations).toBe(1);
+    expect(result.timeline.map((entry) => entry.state)).toEqual([
+      'idle',
+      'reasoning',
+      'context-update',
+      'deciding',
+      'cancelled',
+    ]);
+  });
+
+  it('fails immediately when the reasoning step fails, with the failure message', async () => {
+    const { adapter } = countingAdapter({ failWith: new Error('gateway down') });
+    const engine = new AgentLoopEngine({ adapter });
+    const result = await engine.run(input());
+
+    expect(result.status).toBe('failed');
+    expect(result.stopReason).toEqual({ reason: 'failed', message: 'gateway down' });
+    expect(result.iterations).toBe(1);
+    expect(result.runs[0]?.status).toBe('failed');
+    expect(result.statements).toEqual([]);
+    expect(result.summary).toBeNull();
+  });
+
+  it('records tool requests without executing them, and the guard refuses re-asking the identical question', async () => {
+    const summary: StructuredSummary = {
+      headline: 'Position sizing needs the risk tool',
+      statements: [
+        {
+          kind: 'analysis',
+          text: 'I will request the deterministic risk tool.',
+          sources: ['risk.positionSize'],
+        },
+      ],
+      uncertainty: [],
+      toolRequests: [
+        {
+          toolName: 'risk.positionSize',
+          arguments: { equity: 10_000 },
+          purpose: 'size the position',
+        },
+      ],
+    };
+    const { adapter } = countingAdapter({ summary });
+    const engine = new AgentLoopEngine({ adapter, limits: { maxIterations: 5 } });
+    const result = await engine.run(input());
+
+    // The default decider keeps the loop open on tool work; the
+    // identical-step guard then stops it, because no tool phase exists to
+    // supply new material. The request is recorded, never executed.
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toEqual({ reason: 'repeated-step', iteration: 2 });
+    expect(result.iterations).toBe(1);
+    expect(result.toolRequests).toHaveLength(1);
+    expect(result.toolRequests[0]?.toolName).toBe('risk.positionSize');
+    expect(result.decision).toEqual({
+      complete: false,
+      rationale: 'the summary requested tool work; no tool phase is installed',
+    });
+    expect(
+      defaultLoopDecider({
+        summary,
+        statements: [],
+        toolRequests: summary.toolRequests,
+        iteration: 1,
+      }),
+    ).toEqual({
+      complete: false,
+      rationale: 'the summary requested tool work; no tool phase is installed',
+    });
+  });
+
+  it('validates its limits at construction and defaults the rest', () => {
+    const { adapter } = countingAdapter();
+    expect(() => new AgentLoopEngine({ adapter, limits: { maxIterations: 0 } })).toThrow(AppError);
+    expect(() => new AgentLoopEngine({ adapter, limits: { maxIterations: 1.5 } })).toThrow(
+      AppError,
+    );
+    expect(() => new AgentLoopEngine({ adapter, limits: { maxExecutionTimeMs: 0 } })).toThrow(
+      AppError,
+    );
+    expect(() => new AgentLoopEngine({ adapter, limits: { maxOutputTokens: 0 } })).toThrow(
+      AppError,
+    );
+    expect(() => new AgentLoopEngine({ adapter })).not.toThrow();
+    expect(DEFAULT_AGENT_LOOP_LIMITS).toEqual({
+      maxIterations: 5,
+      maxExecutionTimeMs: 120_000,
+      maxOutputTokens: 4_000,
+    });
+  });
+});
+
+describe('agent loop lifecycle', () => {
+  it('walks the full happy path and ends terminal', () => {
+    const lifecycle = new AgentLoopLifecycle();
+    lifecycle.transitionTo('reasoning');
+    lifecycle.transitionTo('context-update');
+    lifecycle.transitionTo('deciding');
+    lifecycle.transitionTo('completed');
+    expect(lifecycle.transitions().map((entry) => entry.state)).toEqual([
+      'idle',
+      'reasoning',
+      'context-update',
+      'deciding',
+      'completed',
+    ]);
+    expect(lifecycle.isTerminal()).toBe(true);
+  });
+
+  it('refuses an illegal transition loudly, leaving the state untouched', () => {
+    const lifecycle = new AgentLoopLifecycle();
+    expect(() => lifecycle.transitionTo('completed')).toThrow(
+      /Illegal agent loop lifecycle transition/,
+    );
+    expect(lifecycle.current()).toBe('idle');
+    expect(lifecycle.isTerminal()).toBe(false);
+  });
+});

@@ -410,6 +410,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
       'The registry is in-process and bounded (an active run is never evicted); cancellation is cooperative, never a force-end mid-write; model work is reached only through the existing adapter over the LlmGateway, and no second status channel exists.',
   },
   {
+    id: 'DEC-AI-18-AGENT-LOOP-ENGINE',
+    area: 'ai.harness',
+    choice:
+      'One Agent Loop Engine (src/agent/agentLoop.ts) owns the controlled multi-step loop around the per-run harness: each iteration is one AgentRunHarness.run (the LLM reasoning step through the existing gateway), then a context update that records delivered digests, then a next-step decision read off the structured summary — bounded by configurable maxIterations, maxExecutionTimeMs and maxOutputTokens, ending in exactly one terminal state (completed, blocked, failed, cancelled)',
+    status: 'locked',
+    adr: ['ADR-0066-agent-loop-engine-bounded-multi-step-reasoning.md'],
+    constraint:
+      'The loop composes the harness, the Context Builder and the adapter over the LlmGateway — it never reaches a provider itself; an identical step is refused by input digest before it runs; tool requests are recorded, never executed, and no tool calling, RAG, memory, evaluation or learning lives here.',
+  },
+  {
     id: 'DEC-DESKTOP-1-RUNTIME',
     area: 'desktop.runtime',
     choice:
