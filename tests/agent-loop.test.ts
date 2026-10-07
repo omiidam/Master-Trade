@@ -313,7 +313,7 @@ describe('agent loop engine — guards and limits', () => {
     expect(result.toolRequests[0]?.toolName).toBe('risk.positionSize');
     expect(result.decision).toEqual({
       complete: false,
-      rationale: 'the summary requested tool work; no tool phase is installed',
+      rationale: 'the summary requested tool work that is still outstanding',
     });
     expect(
       defaultLoopDecider({
@@ -324,7 +324,7 @@ describe('agent loop engine — guards and limits', () => {
       }),
     ).toEqual({
       complete: false,
-      rationale: 'the summary requested tool work; no tool phase is installed',
+      rationale: 'the summary requested tool work that is still outstanding',
     });
   });
 
@@ -373,5 +373,188 @@ describe('agent loop lifecycle', () => {
     );
     expect(lifecycle.current()).toBe('idle');
     expect(lifecycle.isTerminal()).toBe(false);
+  });
+});
+
+// ── Tool calling through the centralized registry ──────────────────────────
+
+import { z } from 'zod';
+import { AgentToolRegistry } from '../src/agent/tools/registry.js';
+import type { AgentTool } from '../src/agent/tools/contracts.js';
+import { statementsFromSummary, toolRequestsFromSummary } from '../src/agent/asyncModel.js';
+
+type RiskInput = { equity: number; riskPercent: number };
+type RiskOutput = { shares: number; riskPercent: number };
+
+function positionSizeTool(): AgentTool<RiskInput, RiskOutput> {
+  return {
+    name: 'risk.positionSize',
+    version: '1.0.0',
+    description: 'Deterministic position sizing from equity and a risk percent.',
+    category: 'general',
+    capabilities: ['risk.calculate'],
+    riskLevel: 'low',
+    timeoutMs: 1_000,
+    requiresApproval: false,
+    sideEffects: false,
+    inputSchema: z.object({
+      equity: z.number().positive(),
+      riskPercent: z.number().min(0).max(100).default(1),
+    }),
+    outputSchema: z.object({ shares: z.number(), riskPercent: z.number() }),
+    async execute(toolInput) {
+      return {
+        shares: Math.floor((toolInput.equity * (toolInput.riskPercent / 100)) / 50),
+        riskPercent: toolInput.riskPercent,
+      };
+    },
+  };
+}
+
+/** An adapter that answers from a fixed queue: the first summary per call,
+ * holding on the last one — how a tool-requesting step is followed by a
+ * wrap-up step. Requests are captured so the test can see what the model
+ * was shown each iteration. */
+function queuedAdapter(summaries: StructuredSummary[]) {
+  const requests: ModelTurnRequest[] = [];
+  let call = 0;
+  return {
+    requests,
+    adapter: {
+      label: 'queued (offline, deterministic)',
+      async completeTurn(request: ModelTurnRequest) {
+        requests.push(request);
+        const summary = summaries[Math.min(call, summaries.length - 1)];
+        if (summary === undefined) throw new Error('queued adapter underflow');
+        call += 1;
+        return {
+          provider: 'scripted' as const,
+          model: 'scripted-v1',
+          latencyMs: 0,
+          usage: {
+            promptTokens: 10,
+            completionTokens: 20,
+            totalTokens: 30,
+            costUsd: 0.01,
+            priced: true,
+            estimated: false,
+          },
+          summary,
+          statements: statementsFromSummary(summary),
+          toolRequests: toolRequestsFromSummary(summary),
+        };
+      },
+    },
+  };
+}
+
+const toolRequestSummary: StructuredSummary = {
+  headline: 'Position sizing needs the risk tool',
+  statements: [
+    { kind: 'analysis', text: 'I will request the deterministic risk tool.', sources: [] },
+  ],
+  uncertainty: [],
+  toolRequests: [
+    { toolName: 'risk.positionSize', arguments: { equity: 10_000 }, purpose: 'size the position' },
+  ],
+};
+
+const wrapUpSummary: StructuredSummary = {
+  headline: 'Position sized',
+  statements: [{ kind: 'fact', text: 'The deterministic tool sized the position.', sources: [] }],
+  uncertainty: [],
+  toolRequests: [],
+};
+
+describe('agent loop engine — tool calling through the registry', () => {
+  it('executes a requested tool through the registry and feeds the validated output back to the next step', async () => {
+    const queued = queuedAdapter([toolRequestSummary, wrapUpSummary]);
+    const registry = new AgentToolRegistry();
+    registry.register(positionSizeTool());
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      limits: { maxIterations: 4 },
+    });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('completed');
+    expect(result.iterations).toBe(2);
+    expect(result.toolRuns).toHaveLength(1);
+    expect(result.toolRuns[0]?.status).toBe('succeeded');
+    expect(result.toolRuns[0]?.output).toEqual({ shares: 2, riskPercent: 1 });
+    // The second reasoning step saw the tool results as a fresh runtime section.
+    const secondRequest = queued.requests[1];
+    const toolSection = secondRequest?.context.find((entry) => entry.id === 'tool-results');
+    expect(toolSection).toBeDefined();
+    expect(toolSection?.content).toContain('risk.positionSize');
+    expect(toolSection?.content).toContain('"shares": 2');
+    // Exactly one execution record, scoped to the user and run that invoked it.
+    expect(registry.records({ userId: 'user-1', runId: 'corr-loop' })).toHaveLength(1);
+    expect(registry.records()[0]?.status).toBe('succeeded');
+  });
+
+  it('feeds a refusal back as fresh material, and the guard then refuses the futile re-ask before the gateway is paid again', async () => {
+    const queued = queuedAdapter([toolRequestSummary, toolRequestSummary, toolRequestSummary]);
+    const registry = new AgentToolRegistry(); // nothing registered: every ask is refused
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      limits: { maxIterations: 5 },
+    });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toEqual({ reason: 'repeated-step', iteration: 3 });
+    expect(result.iterations).toBe(2);
+    expect(result.toolRuns).toHaveLength(2);
+    expect(
+      result.toolRuns.every(
+        (run) => run.status === 'refused' && run.refusalReason === 'unknown-tool',
+      ),
+    ).toBe(true);
+    // Two steps ran, and the third identical one was refused before any
+    // further gateway call — a futile tool loop cannot burn iterations.
+    expect(queued.requests).toHaveLength(2);
+    expect(registry.records()).toHaveLength(2);
+  });
+
+  it('never executes a tool for a run without a user identity — isolation is structural', async () => {
+    const queued = queuedAdapter([toolRequestSummary, toolRequestSummary, toolRequestSummary]);
+    const registry = new AgentToolRegistry();
+    registry.register(positionSizeTool());
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      limits: { maxIterations: 5 },
+    });
+
+    const result = await engine.run(input()); // no userId
+
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toEqual({ reason: 'repeated-step', iteration: 3 });
+    expect(result.toolRuns).toHaveLength(2);
+    expect(
+      result.toolRuns.every(
+        (run) => run.status === 'refused' && run.refusalReason === 'missing-identity',
+      ),
+    ).toBe(true);
+    // The registry was never reached, so nothing executed and nothing recorded.
+    expect(registry.records()).toHaveLength(0);
+  });
+
+  it('keeps the record-only behavior when no registry is installed', async () => {
+    const { adapter } = countingAdapter({ summary: toolRequestSummary });
+    const engine = new AgentLoopEngine({ adapter, limits: { maxIterations: 5 } });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toEqual({ reason: 'repeated-step', iteration: 2 });
+    expect(result.iterations).toBe(1);
+    expect(result.toolRequests).toHaveLength(1);
+    expect(result.toolRuns).toEqual([]);
   });
 });

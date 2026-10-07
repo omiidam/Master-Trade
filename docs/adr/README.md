@@ -562,3 +562,16 @@ Run Manager's vocabulary); stop is immediate on completion, failure,
 cancellation or limit exhaustion; and an identical step is refused by input
 digest before it runs, so infinite and futile loops are impossible by
 construction. Tool calling and retrieval are shaped for, not implemented.
+
+**ADR-0067** gives the loop's tool phase its owner: one centralized Tool
+Registry (`DEC-AI-19-TOOL-REGISTRY`, `src/tools/registry.ts`) is the single
+server-side execution path for agent tools. Tools declare typed contracts —
+identity, description, zod input and output schemas, capability classes,
+risk level, timeout, approval requirement — and every invocation walks one
+gate sequence: identity (an explicit user/run context), existence, approval
+(delegated to the existing human approval workflow), permissions
+(`checkPermission` over the existing deny-by-default rules, consumed never
+copied), input validation, execution under the tool's timeout, and output
+validation. Every call settles into one recorded outcome; failures are
+values the loop feeds back to the model, and a futile re-ask is refused by
+the loop's repeated-step guard before the gateway is paid again.

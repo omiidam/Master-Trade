@@ -362,8 +362,9 @@ did.
 - **Streaming** (`stream()` returning `AsyncIterable<LlmStreamChunk>`) and true
   cancellation propagation from the UI into an in-flight provider call. The
   gateway owns timeouts today; a user-visible cancel needs the interface change.
-- **The multi-step tool loop**: re-asking the model to explain a deterministic
-  result, with the result supplied as a source.
+- Re-asking the model to explain a deterministic result: the multi-step loop
+  (ADR-0066) and its tool phase through the Tool Registry (ADR-0067) exist;
+  what remains is a teaching flow that drives them for explanation turns.
 - **Embedding + reranking for context selection** — retrieval quality, not layer
   structure.
 - Prompt templates distinct from instruction modules and an instruction registry.
@@ -438,3 +439,23 @@ an injected `TrainingBackend` port the runtime never imports — training
 is infrastructure, and this module has no access to the gateway, the
 request path or any conversation store. No model is trained in this
 phase.
+
+### The tool registry (Phase 2.7)
+
+Agent tools execute through one server-side path
+([ADR-0067](./adr/ADR-0067-tool-registry-server-side-tool-calling.md)):
+`src/agent/tools/registry.ts`, with the typed contracts in
+`src/agent/tools/contracts.ts`. A tool declares its identity (name, semver),
+description, category, zod input and output schemas, capability classes
+from the existing permission model, risk level, per-call timeout, approval
+requirement and side effects; registration refuses any contract that
+declares critical risk, side effects or the trading category without a
+human-approval requirement. One invocation is one gate sequence — identity
+(an explicit user/run context; a run without a user identity can never
+execute a tool), existence, approval, permissions (`checkPermission` over
+`PHASE1_PERMISSIONS`, consumed not copied), input validation, execution
+under the timeout, output validation — and settles into one recorded
+outcome (`succeeded`, `failed`, `timeout`, `refused`). The Agent Loop
+Engine's tool phase invokes through the registry and feeds validated
+outcomes back as fresh runtime context. No trading action, RAG/retrieval
+tool, persistent tool history, evaluation or learning ships in this phase.

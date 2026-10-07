@@ -51,9 +51,12 @@
  *
  * What this module deliberately does **not** do, per this phase:
  *
- *   - no tool calling — tool requests are recorded and surfaced, never
- *     executed; the decider seam plus the context-update phase are where a
- *     tool step continues the loop with fresh material;
+ *   - tool calling only through the centralized Tool Registry (ADR-0067):
+ *     when one is installed, each step's tool requests execute through its
+ *     single server-side path — identity, approval, permissions, schemas,
+ *     timeout — and the validated outcomes are fed back as a fresh runtime
+ *     context section; without one, requests are recorded and never
+ *     executed. The loop itself still runs no tool of its own;
  *   - no RAG / retrieval — runtime context is supplied by the caller, as
  *     for the harness; the loop only records what was delivered;
  *   - no persistent memory, evaluation or learning;
@@ -64,6 +67,9 @@
 
 import { AgentRunHarness, type AgentRunInput, type AgentRunResult } from './harness.js';
 import { AgentContextBuilder, contentDigest } from './contextBuilder.js';
+import { section as makeSection } from './context.js';
+import type { AgentToolContext } from './tools/contracts.js';
+import type { AgentToolRegistry, AgentToolRunOutcome } from './tools/registry.js';
 import type { AsyncModelAdapter, ToolRequest } from './asyncModel.js';
 import type { StructuredSummary } from '../llm/summary.js';
 import type { ModelStatement } from '../../packages/shared/src/types.js';
@@ -185,16 +191,17 @@ export interface AgentLoopStepDecision {
 export type AgentLoopDecider = (input: AgentLoopDecisionInput) => AgentLoopStepDecision;
 
 /**
- * The default next-step decision: the work is complete when the summary
- * requested no tool work — there is nothing the agent is waiting on. A
- * summary that requests tools keeps the loop open, and this phase then
- * relies on the `repeated-step` guard to refuse re-asking the identical
- * question until a tool phase supplies fresh material.
+ * The default next-step decision: the work is complete when the latest
+ * summary requested no tool work — there is nothing outstanding the agent
+ * is waiting on. A summary that still asks for tools keeps the loop open;
+ * when a tool registry is installed the tool phase services the request and
+ * the next step's summary carries no outstanding ask, and without one the
+ * `repeated-step` guard refuses re-asking the identical question.
  */
-export const defaultLoopDecider: AgentLoopDecider = ({ toolRequests }) =>
-  toolRequests.length === 0
+export const defaultLoopDecider: AgentLoopDecider = ({ summary }) =>
+  summary.toolRequests.length === 0
     ? { complete: true, rationale: 'the summary requested no further work' }
-    : { complete: false, rationale: 'the summary requested tool work; no tool phase is installed' };
+    : { complete: false, rationale: 'the summary requested tool work that is still outstanding' };
 
 // ── Options and outcome ────────────────────────────────────────────────────
 
@@ -210,6 +217,15 @@ export interface AgentLoopOptions {
   limits?: Partial<AgentLoopLimits>;
   /** Next-step decision; defaults to `defaultLoopDecider`. */
   decide?: AgentLoopDecider;
+  /**
+   * The centralized Tool Registry. When present, every tool request a step
+   * produces executes through it — the one server-side path, gated by
+   * identity, approval, permissions, schemas and timeout — and the validated
+   * outcomes are fed back as a fresh runtime context section for the next
+   * reasoning step. When absent, tool requests are recorded and never
+   * executed.
+   */
+  toolRegistry?: AgentToolRegistry;
   /**
    * Cooperative cancellation, polled before each step and wired into every
    * harness run's `shouldCancel` hook. A cancellation observed between
@@ -239,8 +255,11 @@ export interface AgentLoopResult {
   statements: readonly ModelStatement[];
   /** The last step's structured summary, when a step completed. */
   summary: StructuredSummary | null;
-  /** Tool requests recorded across steps. Recorded, never executed here. */
+  /** Tool requests recorded across steps (executed only when a tool
+   * registry is installed). */
   toolRequests: readonly ToolRequest[];
+  /** Tool executions and refusals from the registry, in run order. */
+  toolRuns: readonly AgentToolRunOutcome[];
   /** Token usage accumulated across steps. */
   usage: AgentLoopUsage;
   /** The last decision the loop reached, when one was made. */
@@ -269,6 +288,7 @@ export class AgentLoopEngine {
   private readonly limits: AgentLoopLimits;
   private readonly decide: AgentLoopDecider;
   private readonly shouldCancel: (() => boolean) | undefined;
+  private readonly toolRegistry: AgentToolRegistry | undefined;
   private readonly now: () => number;
 
   constructor(options: AgentLoopOptions) {
@@ -276,6 +296,7 @@ export class AgentLoopEngine {
     this.contextBuilder = options.contextBuilder;
     this.decide = options.decide ?? defaultLoopDecider;
     this.shouldCancel = options.shouldCancel;
+    this.toolRegistry = options.toolRegistry;
     this.now = options.now ?? Date.now;
     const limits: AgentLoopLimits = { ...DEFAULT_AGENT_LOOP_LIMITS, ...(options.limits ?? {}) };
     if (!Number.isInteger(limits.maxIterations) || limits.maxIterations < 1) {
@@ -320,6 +341,7 @@ export class AgentLoopEngine {
     const runs: AgentRunResult[] = [];
     const statements: ModelStatement[] = [];
     const toolRequests: ToolRequest[] = [];
+    const toolRuns: AgentToolRunOutcome[] = [];
     const usage: AgentLoopUsage = {
       promptTokens: 0,
       completionTokens: 0,
@@ -339,6 +361,7 @@ export class AgentLoopEngine {
       statements: [...statements],
       summary,
       toolRequests: [...toolRequests],
+      toolRuns: [...toolRuns],
       usage: { ...usage },
       decision,
       timeline: lifecycle.transitions(),
@@ -347,6 +370,9 @@ export class AgentLoopEngine {
       deliveredDigests: [...deliveredDigests],
     });
 
+    // The input evolves only when the tool phase appends fresh material;
+    // the caller's original input object is never mutated.
+    let currentInput = input;
     try {
       for (let iteration = 1; iteration <= this.limits.maxIterations; iteration += 1) {
         // Cancellation and the time ceiling are checked before another paid
@@ -371,10 +397,10 @@ export class AgentLoopEngine {
         // step instead of running it.
         const pendingDigest = contentDigest(
           JSON.stringify([
-            input.instructions,
-            input.userInput,
-            input.history ?? [],
-            (input.runtimeContext ?? []).map((item) => [item.id, item.content]),
+            currentInput.instructions,
+            currentInput.userInput,
+            currentInput.history ?? [],
+            (currentInput.runtimeContext ?? []).map((item) => [item.id, item.content]),
           ]),
         );
         if (seenIterationDigests.has(pendingDigest)) {
@@ -395,7 +421,7 @@ export class AgentLoopEngine {
           ...(this.contextBuilder === undefined ? {} : { contextBuilder: this.contextBuilder }),
           hooks: { shouldCancel: () => this.shouldCancel?.() ?? false },
         });
-        const result = await harness.run(input);
+        const result = await harness.run(currentInput);
         runs.push(result);
         if (result.status === 'cancelled') {
           lifecycle.transitionTo('cancelled');
@@ -426,6 +452,64 @@ export class AgentLoopEngine {
           for (const section of assembly.contextSections) {
             deliveredDigests.push(contentDigest(section.content));
           }
+        }
+
+        // 2b. Tool phase — when a registry is installed and this step asked
+        //     for tools, every request goes through the registry's single
+        //     server-side path (identity, approval, permissions, schemas,
+        //     timeout). The stable form of the outcomes is fed back as one
+        //     fresh runtime context section, so the next reasoning step sees
+        //     the results — a genuinely new step the repeated-step guard
+        //     passes — while a futile ask (the same refusal again) reproduces
+        //     an identical input the guard refuses before the gateway is paid.
+        if (this.toolRegistry !== undefined && turn.toolRequests.length > 0) {
+          const stepToolRuns: AgentToolRunOutcome[] = [];
+          if (input.userId === undefined) {
+            for (const request of turn.toolRequests) {
+              stepToolRuns.push({
+                executionId: 'n/a',
+                toolName: request.toolName,
+                toolVersion: 'unknown',
+                status: 'refused',
+                refusalReason: 'missing-identity',
+                detail: 'the run carries no user identity, so no tool may execute',
+                durationMs: 0,
+                timedOut: false,
+              });
+            }
+          } else {
+            const toolContext: AgentToolContext = {
+              userId: input.userId,
+              runId: input.correlationId,
+            };
+            for (const request of turn.toolRequests) {
+              stepToolRuns.push(
+                await this.toolRegistry.invoke(request.toolName, request.arguments, toolContext),
+              );
+            }
+          }
+          toolRuns.push(...stepToolRuns);
+          const stableOutcomes = stepToolRuns.map((run) => ({
+            toolName: run.toolName,
+            toolVersion: run.toolVersion,
+            status: run.status,
+            ...(run.refusalReason === undefined ? {} : { refusalReason: run.refusalReason }),
+            ...(run.detail === undefined ? {} : { detail: run.detail }),
+            ...(run.output === undefined ? {} : { output: run.output }),
+          }));
+          const toolSection = makeSection({
+            id: 'tool-results',
+            source: 'tools',
+            priority: 60,
+            content: JSON.stringify(stableOutcomes, null, 2),
+          });
+          currentInput = {
+            ...currentInput,
+            runtimeContext: [
+              ...(input.runtimeContext ?? []).filter((item) => item.id !== 'tool-results'),
+              toolSection,
+            ],
+          };
         }
 
         // 3. Next-step decision — the output-token ceiling first, then the

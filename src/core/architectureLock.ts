@@ -48,6 +48,8 @@ export const LOCK_AREAS = [
   'ai.prompt',
   // Task 1.5: persistent memory is three scoped layers with their own contracts.
   'ai.memory',
+  // Phase 2.7: agent tools execute through one server-side registry.
+  'ai.tools',
   'desktop.runtime',
   'desktop.security',
   // Phase 3.6: the shell became an implementation, so three areas of its policy
@@ -418,6 +420,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     adr: ['ADR-0066-agent-loop-engine-bounded-multi-step-reasoning.md'],
     constraint:
       'The loop composes the harness, the Context Builder and the adapter over the LlmGateway — it never reaches a provider itself; an identical step is refused by input digest before it runs; tool requests are recorded, never executed, and no tool calling, RAG, memory, evaluation or learning lives here.',
+  },
+  {
+    id: 'DEC-AI-19-TOOL-REGISTRY',
+    area: 'ai.tools',
+    choice:
+      'One centralized Tool Registry (src/agent/tools/registry.ts, contracts in src/agent/tools/contracts.ts) is the single server-side execution path for agent tools: typed contracts (identity, description, zod input/output schemas, capabilities, risk level, timeout, approval requirement, side effects), a per-invocation gate sequence of identity, existence, approval, permissions (checkPermission over the existing PHASE1_PERMISSIONS — consumed, never re-implemented), input validation, execution under the tool timeout, and output validation, settling every call into one recorded outcome (succeeded, failed, timeout, refused)',
+    status: 'locked',
+    adr: ['ADR-0067-tool-registry-server-side-tool-calling.md'],
+    constraint:
+      'Tools run server-side only, scoped to an explicit user/run context, and a run with no user identity can never execute a tool; the registry consumes the existing permission and approval systems and creates no second one; the Agent Loop Engine invokes registered tools through it and feeds validated outcomes back as fresh runtime context; no trading action, RAG/retrieval tool, persistent tool history, evaluation or learning ships in this phase.',
   },
   {
     id: 'DEC-DESKTOP-1-RUNTIME',
