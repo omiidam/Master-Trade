@@ -53,6 +53,9 @@ export const LOCK_AREAS = [
   // Phase 2.11: one centralized pipeline turns a settled run into the
   // response a user may see.
   'ai.response',
+  // Phase 2.12-A: Needle 3's local decision taxonomy, decided before
+  // any cloud LLM call.
+  'ai.routing',
   'desktop.runtime',
   'desktop.security',
   // Phase 3.6: the shell became an implementation, so three areas of its policy
@@ -463,6 +466,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     adr: ['ADR-0070-response-pipeline.md'],
     constraint:
       'Only a completed answer may carry statements or report success, so blocked, failed, cancelled and incomplete runs can never produce a misleading successful response; run id, run status, stop reason, usage and validation status (with per-stage verdicts) are preserved on every outcome; the policy check withholds — never strips — any response reproducing chain-of-thought markup, system instructions, context digests, tool records, secret-shaped material or stack traces, and free-text failure messages stay server-side; the pipeline is pure and independent from UI rendering, finalizing agent.chat responses in src/server/handlers/agent.ts while the Agent Loop, Run Manager, Harness, Context Builder, Tool Registry, permission gate and LLM Gateway stay untouched; no evaluation, observability, diagnosis, quality gate, memory consolidation, learning or mock response ships in this phase.',
+  },
+  {
+    id: 'DEC-AI-23-DECISION-ROUTER',
+    area: 'ai.routing',
+    choice:
+      'Needle 3, a lightweight local decision router before any expensive LLM call, classifies into exactly eight closed intents (NON_TRADING, TRADING_EDUCATION, MARKET_ANALYSIS, PORTFOLIO_ANALYSIS, RISK_MANAGEMENT, TRADE_JOURNAL, MARKET_DATA_REQUEST, SYSTEM_REQUEST) and picks exactly one of five closed routes (LOCAL_RESPONSE, MEMORY_RETRIEVAL, TOOL_REQUIRED, LLM_GATEWAY, BLOCK), emitted as a strict machine-consumption-only decision {intent, route, confidence, reason, requires_llm, requires_tool} from src/training/decisionRouter.ts with a curated JSONL training foundation in training-data/decision-router.jsonl',
+    status: 'locked',
+    adr: ['ADR-0071-decision-router-taxonomy-and-training-foundation.md'],
+    constraint:
+      'Needle 3 is not the main reasoning model and does not replace DeepSeek or the cloud LLM Gateway — it only decides routes and never answers the user; the decision schema refuses unknown keys, bounds reason to 200 characters and ties requires_llm / requires_tool to the route so it can never carry advice or an execution; the router never provides trading advice, never executes trades, never bypasses permission systems and never calls tools itself — a TOOL_REQUIRED route means the existing Tool Registry and permission gate are required, a decision to require, never an ability to do; training records are hand-authored under the ADR-0059 provenance rules and validated by the pure line-numbered parser; this phase trains no model, wires no runtime routing, and leaves the Agent Loop, LLM Gateway and response pipeline untouched — no fake AI responses or mock trading logic ship in this phase.',
   },
   {
     id: 'DEC-DESKTOP-1-RUNTIME',

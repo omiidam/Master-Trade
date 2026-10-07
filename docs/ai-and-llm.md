@@ -539,3 +539,41 @@ Builder, Tool Registry, permission gate and LLM Gateway are untouched;
 no evaluation, observability, diagnosis, quality gate, memory
 consolidation, learning, chain-of-thought exposure or mock response
 ships in this phase.
+
+### Decision router foundation (Phase 2.12-A)
+
+The Local Decision Router's contract now exists ahead of its model
+([ADR-0071](./adr/ADR-0071-decision-router-taxonomy-and-training-foundation.md)):
+`src/training/decisionRouter.ts` defines what **Needle 3** — a
+lightweight local routing model, _not_ the main reasoning model and not
+a replacement for DeepSeek or the cloud LLM Gateway — will classify and
+route _before_ any expensive LLM call. Eight closed intents
+(`NON_TRADING`, `TRADING_EDUCATION`, `MARKET_ANALYSIS`,
+`PORTFOLIO_ANALYSIS`, `RISK_MANAGEMENT`, `TRADE_JOURNAL`,
+`MARKET_DATA_REQUEST`, `SYSTEM_REQUEST`) each carry their subcategories
+and a one-sentence meaning; five closed routes (`LOCAL_RESPONSE`,
+`MEMORY_RETRIEVAL`, `TOOL_REQUIRED`, `LLM_GATEWAY`, `BLOCK`) each carry
+a meaning and the two flags they imply (`requires_llm` only for the
+gateway, `requires_tool` only for tools), plus per-intent route
+guidance in which `BLOCK` is reachable from every intent — policy can
+reject anything.
+
+The decision output is a strict, machine-consumption-only schema:
+`intent`, `route`, `confidence` (integer 0–100), `reason` (bounded to
+200 characters), `requires_llm`, `requires_tool` — unknown keys
+refused, flags refined to equal the route, and **no field anywhere that
+can carry an answer**, because the router decides and never replies.
+`training-data/decision-router.jsonl` holds the first 30 hand-authored
+examples (origin `authored` under the ADR-0059 provenance rules — never
+captured conversations) covering all eight intents, all five routes and
+the promised categories, with trade-execution and permission-bypass
+requests labelled `BLOCK` from the first record;
+`parseDecisionRouterJsonl()` validates the file as a pure function with
+line-numbered issues for malformed JSON, schema violations, duplicate
+inputs, incoherent flags and routes the taxonomy does not allow. The
+safety rules — never advise, never execute, never bypass permissions,
+never call tools directly, only decide the route — are carried as data
+and enforced structurally. Nothing is wired into the request path: the
+Agent Loop, LLM Gateway and response pipeline are untouched, no model
+is trained, and no mock response or trading logic ships in this phase —
+Phase 2.12-B fine-tunes Needle 3 against this contract.

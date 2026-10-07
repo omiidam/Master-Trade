@@ -619,3 +619,24 @@ honest copy. The pipeline is pure and UI-independent: the `agent.chat`
 handler finalizes through it, surfaces merely render what it decided, and
 the Agent Loop, Run Manager, Harness, Context Builder, Tool Registry,
 permission gate and LLM Gateway are untouched.
+
+**ADR-0071** lays the decision router's foundation without wiring
+anything (`DEC-AI-23-DECISION-ROUTER`, `src/training/decisionRouter.ts`):
+Needle 3 is a _local routing model_ — not the main reasoning model, not a
+replacement for DeepSeek or the cloud gateway — and this phase defines
+only what it will decide with: eight closed intents (non-trading,
+education, market analysis, portfolio, risk, journal, market data,
+system) with their subcategories, five closed routes (`LOCAL_RESPONSE`,
+`MEMORY_RETRIEVAL`, `TOOL_REQUIRED`, `LLM_GATEWAY`, `BLOCK`) whose two
+flags are a mechanical restatement of the route, and a strict,
+machine-consumption-only output schema that refuses invented keys,
+out-of-range confidence and flags that disagree with the route — with no
+field anywhere that can carry an answer. `training-data/decision-router.jsonl`
+holds the first hand-authored examples (origin `authored`, never captured
+conversations) covering every intent and route, validated by a pure,
+line-numbered parser that also enforces flag coherence and the
+per-intent route guidance. Trade-execution and permission-bypass
+requests are labelled `BLOCK` from the first record. The Agent Loop, LLM
+Gateway and response pipeline are untouched; no model is trained, no
+request is classified at runtime, and no mock response or trading logic
+ships in this phase — Phase 2.12-B fine-tunes against this contract.

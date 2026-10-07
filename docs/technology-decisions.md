@@ -55,6 +55,7 @@ Phase 1/2 invariants are unchanged and remain authoritative:
 | AI loop tool execution  | Tool steps inside the loop's control: one budget across LLM and tool steps, immediate honest stops, no duplicate execution, tool work on the run record   | `DEC-AI-20-LOOP-TOOL-EXECUTION`  | [0068](./adr/ADR-0068-tool-execution-inside-the-agent-loop.md)                                             |
 | AI tool permission gate | One pre-execution decision per tool call: ALLOW / BLOCK / REQUIRE_APPROVAL over user, run, tool, risk and approval; deny by default; recorded on the run  | `DEC-AI-21-TOOL-PERMISSION-GATE` | [0069](./adr/ADR-0069-tool-permission-and-risk-gate.md)                                                    |
 | AI response pipeline    | One centralized five-stage pipeline (normalize → validate → policy → uncertainty → format); five honest outcome kinds; metadata preserved; leaks withheld | `DEC-AI-22-RESPONSE-PIPELINE`    | [0070](./adr/ADR-0070-response-pipeline.md)                                                                |
+| AI decision router      | Needle 3 taxonomy before any cloud call: 8 closed intents, 5 closed routes, strict machine-only decision schema, curated JSONL training foundation        | `DEC-AI-23-DECISION-ROUTER`      | [0071](./adr/ADR-0071-decision-router-taxonomy-and-training-foundation.md)                                 |
 | Desktop runtime         | Tauri 2 shell + TypeScript backend as bundled Node sidecar on loopback                                                                                    | `DEC-DESKTOP-1-RUNTIME`          | [0001](./adr/ADR-0001-desktop-shell-tauri.md)                                                              |
 | Desktop security        | Loopback-only + per-launch bearer token, keychain-only secrets, capability allow-list                                                                     | `DEC-DESKTOP-2-SECURITY`         | [0001](./adr/ADR-0001-desktop-shell-tauri.md), [0007](./adr/ADR-0007-deny-by-default-auth.md)              |
 | Desktop capabilities    | WebView granted no `shell:`/`fs:`/`path:`/`http:` permission; Rust owns privileged work                                                                   | `DEC-DESKTOP-3-CAPABILITIES`     | [0029](./adr/ADR-0029-webview-capability-boundary.md)                                                      |
@@ -824,6 +825,48 @@ The Agent Loop, Run Manager, Harness, Context Builder, Tool Registry,
 permission gate and LLM Gateway are preserved untouched. No evaluation,
 observability, diagnosis, quality gate, memory consolidation, learning,
 chain-of-thought exposure or mock response ships in this phase.
+
+### 4.20 Decision Router Taxonomy & Training Foundation — `DEC-AI-23-DECISION-ROUTER`
+
+The foundation Needle 3 fine-tuning (Phase 2.12-B) will build on
+([ADR-0071](./adr/ADR-0071-decision-router-taxonomy-and-training-foundation.md)),
+`src/training/decisionRouter.ts` + `training-data/decision-router.jsonl`:
+
+- **Needle 3's role, stated once** — a lightweight local routing model
+  that decides _before_ expensive LLM calls. Not the main reasoning
+  model, not a replacement for DeepSeek or the cloud LLM Gateway, and it
+  never answers the user: it classifies, routes, and a separate layer
+  acts.
+- **Eight closed intents** — `NON_TRADING`, `TRADING_EDUCATION`,
+  `MARKET_ANALYSIS`, `PORTFOLIO_ANALYSIS`, `RISK_MANAGEMENT`,
+  `TRADE_JOURNAL`, `MARKET_DATA_REQUEST`, `SYSTEM_REQUEST`, each with
+  its documented subcategories; an unknown label is a validation
+  failure, never a ninth intent.
+- **Five closed routes** — `LOCAL_RESPONSE`, `MEMORY_RETRIEVAL`,
+  `TOOL_REQUIRED`, `LLM_GATEWAY`, `BLOCK`, each with a meaning and the
+  two flags it implies (`requires_llm` ⇔ gateway, `requires_tool` ⇔
+  tool), and per-intent route guidance in which `BLOCK` is reachable
+  from every intent because policy can reject any request.
+- **Strict machine-only output** — `{intent, route, confidence,
+reason, requires_llm, requires_tool}`: unknown keys refused,
+  `confidence` an integer 0–100, `reason` bounded to 200 characters, and
+  no field anywhere that can carry an answer or an action.
+- **Training foundation** — a JSONL dataset of hand-authored records
+  (`instruction` / `input` / `output{intent, route, requires_llm}`),
+  origin `authored` under ADR-0059's provenance rules, covering every
+  intent and route; validated by a pure, line-numbered parser that also
+  enforces flag coherence and route guidance, so label drift fails at
+  the file instead of in production.
+- **Safety by construction** — the five prohibitions (no advice, no
+  execution, no permission bypass, no direct tool calls, route
+  decisions only) are data and structural properties of a closed
+  schema; `TOOL_REQUIRED` means "this needs the Tool Registry and its
+  permission gate", a decision to require, never an ability to do.
+
+Nothing runs at request time and no model is trained in this phase: the
+Agent Loop, LLM Gateway and response pipeline are untouched, and no
+fake AI response or mock trading logic ships — Phase 2.12-B fine-tunes
+against this contract.
 
 ## 5. Desktop
 
