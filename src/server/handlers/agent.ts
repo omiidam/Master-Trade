@@ -5,6 +5,15 @@
  * shape the response. The reply carries its epistemic label and the model that
  * produced it, so the client can never present model text as a tool result.
  *
+ * **Every response leaves through the centralized Response Pipeline** (Phase
+ * 2.11, `src/agent/responsePipeline.ts`): between the turn's execution and the
+ * payload this handler shapes, the pipeline normalizes the result, validates
+ * it, policy-checks it for leaked internals, handles uncertainty and formats
+ * the final text. The handler renders whatever the pipeline decided — the
+ * reply, the epistemic label and the statements come from its result, and its
+ * kind and validation status ride along as metadata — so a blocked, failed or
+ * incomplete turn can never be shaped here into a successful-looking answer.
+ *
  * **The turn is metered, and the order of the two gates is the whole design.** A turn is
  * refused before it runs when the account may not afford it (a plan without the feature, a
  * spent allowance, a per-period cap), and that refusal *is* the reply: no model is
@@ -23,6 +32,11 @@ import type { ResponseLanguage } from '../../../packages/shared/src/types.js';
 import type { ResponseStyle } from '../../../packages/shared/src/language/guidance.js';
 import type { AgentAsyncTurn, AgentService, AgentTurn } from '../../agent/service.js';
 import type { AgentRunManager } from '../../agent/runManager.js';
+import {
+  responsePipelineInputFromTurn,
+  runResponsePipeline,
+  type ResponseKind,
+} from '../../agent/responsePipeline.js';
 import type { AnalysisReadinessDecision } from '../../../packages/shared/src/quality/readiness.js';
 import {
   planCapabilityRun,
@@ -89,6 +103,22 @@ export interface AgentChatResponseData {
     replay: boolean;
     note: string;
   } | null;
+  /**
+   * What the centralized Response Pipeline decided, with the metadata it
+   * preserved (Phase 2.11): the outcome kind (completed / clarification /
+   * blocked / failed / unavailable-data), the run this response answers,
+   * the stop-reason *code* and the validation status with its stage-tagged
+   * violation codes.
+   *
+   * The stop reason's free-text message and every other internal detail stay
+   * server-side — only structured, safe-to-show forms travel here.
+   */
+  responsePipeline?: {
+    kind: ResponseKind;
+    runId: string;
+    stopReason: string | null;
+    validation: { status: 'passed' | 'failed' | 'skipped'; violations: readonly string[] };
+  };
 }
 
 export interface AgentMetering {
@@ -332,26 +362,46 @@ export function agentChatHandler(
     };
 
     const respond = (
-      turn: AgentTurn,
+      outcome: { turn: AgentTurn; runId: string },
       usage: AgentChatResponseData['usage'],
-    ): { data: AgentChatResponseData } => ({
-      data: {
-        reply: turn.reply,
-        epistemicKind: turn.epistemicKind,
-        correlationId: context.correlationId,
-        status: turn.status,
-        agentState: turn.agentState,
-        model: turn.model,
-        toolResultCount: turn.toolResultCount,
-        statements: turn.statements,
-        note: OFFLINE_NOTE,
-        ...(body.responseLanguage === undefined ? {} : { responseLanguage: body.responseLanguage }),
-        ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
-        ...(turn.readiness === undefined ? {} : { readiness: turn.readiness }),
-        ...(turn.capability === undefined ? {} : { capability: turn.capability }),
-        ...(usage === undefined ? {} : { usage }),
-      },
-    });
+    ): { data: AgentChatResponseData } => {
+      const { turn } = outcome;
+      // The one place a response is finalized: five stages, five kinds,
+      // metadata preserved. Everything this handler ships about the answer
+      // itself (reply, label, statements, status) is the pipeline's
+      // decision, not a re-derivation — which is what makes a withheld or
+      // incomplete turn impossible to shape into a success here.
+      const response = runResponsePipeline(responsePipelineInputFromTurn(outcome.runId, turn));
+      return {
+        data: {
+          reply: response.reply,
+          epistemicKind: response.epistemicKind,
+          correlationId: context.correlationId,
+          status: response.kind === 'completed' ? 'completed' : 'blocked',
+          agentState: turn.agentState,
+          model: turn.model,
+          toolResultCount: turn.toolResultCount,
+          statements: [...response.statements],
+          note: OFFLINE_NOTE,
+          responsePipeline: {
+            kind: response.kind,
+            runId: response.metadata.runId,
+            stopReason: response.metadata.stopReason?.reason ?? null,
+            validation: {
+              status: response.metadata.validation.status,
+              violations: [...response.metadata.validation.violations],
+            },
+          },
+          ...(body.responseLanguage === undefined
+            ? {}
+            : { responseLanguage: body.responseLanguage }),
+          ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
+          ...(turn.readiness === undefined ? {} : { readiness: turn.readiness }),
+          ...(turn.capability === undefined ? {} : { capability: turn.capability }),
+          ...(usage === undefined ? {} : { usage }),
+        },
+      };
+    };
 
     /*
      * One conversation turn, one agent run. The run exists from before the
@@ -360,9 +410,14 @@ export function agentChatHandler(
      * not a missing run. Unattributed requests (no principal) are not
      * tracked, because a run belongs to someone.
      */
-    const runTrackedTurn = async (): Promise<AgentTurn> => {
+    const runTrackedTurn = async (): Promise<{ turn: AgentTurn; runId: string }> => {
       const principal = context.principal;
-      if (runs === undefined || principal === null) return runTurn();
+      // An untracked turn has no run id of its own; the correlation id is
+      // the identity it answers under, so the pipeline's metadata is never
+      // empty and never borrowed from another run.
+      if (runs === undefined || principal === null) {
+        return { turn: await runTurn(), runId: context.correlationId };
+      }
       const run = runs.createRun({
         userId: principal.id,
         correlationId: context.correlationId,
@@ -377,7 +432,7 @@ export function agentChatHandler(
         } else {
           runs.block(run.runId, principal.id, turn.reason ?? 'the turn was blocked');
         }
-        return turn;
+        return { turn, runId: run.runId };
       } catch (error) {
         runs.fail(run.runId, principal.id, error instanceof Error ? error.message : String(error));
         throw error;
@@ -408,10 +463,10 @@ export function agentChatHandler(
         actor: principal.id,
       },
       async () => {
-        const turn = await runTrackedTurn();
+        const tracked = await runTrackedTurn();
         // A turn that produced a refusal, or that the gate blocked, did not deliver what
         // the credit pays for — so it is not charged.
-        return { charge: turn.status === 'completed', value: turn };
+        return { charge: tracked.turn.status === 'completed', value: tracked };
       },
     );
 
@@ -447,7 +502,7 @@ export function agentChatHandler(
       if (bus !== undefined) {
         publishTurn(bus, refused, context.correlationId, context.logger);
       }
-      return respond(refused, null);
+      return respond({ turn: refused, runId: context.correlationId }, null);
     }
 
     context.logger.info(
@@ -455,7 +510,7 @@ export function agentChatHandler(
       {
         userId: principal.id,
         featureId: metering.featureId,
-        status: outcome.value.status,
+        status: outcome.value.turn.status,
         charged: outcome.settled,
         replay: outcome.reservation.replay,
       },

@@ -600,3 +600,22 @@ decision with its reason is written onto `AgentRunRecord.toolRuns` for the
 Workplace trace. Future risk levels attach through the policy table alone;
 read-only and side-effecting tools stay distinguishable in every
 evaluation; there is still no second permission system.
+
+**ADR-0070** closes the loop between execution and the user
+(`DEC-AI-22-RESPONSE-PIPELINE`, `src/agent/responsePipeline.ts`): one
+centralized Response Pipeline every response passes through on its way out,
+in five explicit stages — result normalization, response validation, policy
+check, uncertainty handling, final response formatting. It settles on one
+of five outcome kinds (`completed`, `clarification`, `blocked`, `failed`,
+`unavailable-data`) and enforces one honesty rule: only a `completed` answer
+carries statements or reports success, so blocked, failed, cancelled and
+incomplete runs can never be shaped into a misleading success. Run id, run
+status, the stop reason, usage and the validation status (with per-stage
+verdicts) travel with every outcome. The policy stage withholds — never
+strips — any response reproducing chain-of-thought markup, system
+instructions, context digests, tool records, secret-shaped material or
+stack traces, and free-text failure messages stay server-side behind fixed,
+honest copy. The pipeline is pure and UI-independent: the `agent.chat`
+handler finalizes through it, surfaces merely render what it decided, and
+the Agent Loop, Run Manager, Harness, Context Builder, Tool Registry,
+permission gate and LLM Gateway are untouched.

@@ -50,6 +50,9 @@ export const LOCK_AREAS = [
   'ai.memory',
   // Phase 2.7: agent tools execute through one server-side registry.
   'ai.tools',
+  // Phase 2.11: one centralized pipeline turns a settled run into the
+  // response a user may see.
+  'ai.response',
   'desktop.runtime',
   'desktop.security',
   // Phase 3.6: the shell became an implementation, so three areas of its policy
@@ -450,6 +453,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     adr: ['ADR-0069-tool-permission-and-risk-gate.md'],
     constraint:
       'The gate is evaluated inside AgentToolRegistry.invoke, the single server-side execution path, before input validation and before execute is reachable, so the agent cannot bypass it and permissions stay server-side and user/run scoped; the gate consumes the existing permission and approval systems and creates no second one; the decision and its reason are recorded on AgentRunRecord.toolRuns through recordToolRun; future risk levels attach through the risk policy table without redesigning the Registry; no trading action, RAG, evaluation, learning, approval UI or mock response ships in this phase.',
+  },
+  {
+    id: 'DEC-AI-22-RESPONSE-PIPELINE',
+    area: 'ai.response',
+    choice:
+      'One centralized Response Pipeline (src/agent/responsePipeline.ts) is the only path from Agent execution to the final user response, processing every result through five explicit stages — result normalization, response validation, policy check, uncertainty handling, final response formatting — and settling on exactly one of five outcome kinds: completed answer, clarification required, blocked response, failed response, or unavailable-data response',
+    status: 'locked',
+    adr: ['ADR-0070-response-pipeline.md'],
+    constraint:
+      'Only a completed answer may carry statements or report success, so blocked, failed, cancelled and incomplete runs can never produce a misleading successful response; run id, run status, stop reason, usage and validation status (with per-stage verdicts) are preserved on every outcome; the policy check withholds — never strips — any response reproducing chain-of-thought markup, system instructions, context digests, tool records, secret-shaped material or stack traces, and free-text failure messages stay server-side; the pipeline is pure and independent from UI rendering, finalizing agent.chat responses in src/server/handlers/agent.ts while the Agent Loop, Run Manager, Harness, Context Builder, Tool Registry, permission gate and LLM Gateway stay untouched; no evaluation, observability, diagnosis, quality gate, memory consolidation, learning or mock response ships in this phase.',
   },
   {
     id: 'DEC-DESKTOP-1-RUNTIME',

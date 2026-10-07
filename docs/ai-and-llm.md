@@ -498,3 +498,44 @@ the Registry, and read-only versus side-effecting stays distinguishable in
 every evaluation. There is still exactly one permission system — no trading
 action, approval UI, RAG, evaluation, learning or mock response ships in
 this phase.
+
+### The response pipeline (Phase 2.11)
+
+Every response now leaves through one centralized pipeline
+([ADR-0070](./adr/ADR-0070-response-pipeline.md)),
+`src/agent/responsePipeline.ts`, sitting between Agent execution and the
+final user response — five explicit stages, always in order: **result
+normalization** (one defensive shape for every input, harvesting the
+run's internals — system-instruction lines, context digests, tool
+execution ids and details — for the policy stage), **response
+validation** (known epistemic kinds, non-empty text, well-formed
+sources; nothing to validate is recorded `skipped`, never silently
+`passed`), **policy check** (the outgoing text is scanned for inline
+reasoning markup, stack traces, secret-shaped material and the stage-1
+internals; a hit withholds the whole response rather than stripping it),
+**uncertainty handling** (the summary's uncertainty notes are carried,
+and the stage decides whether an answer exists: answered, needs
+clarification, or data never arrived), and **final response formatting**
+(reply, epistemic label, preserved metadata).
+
+The pipeline settles on one of five outcome kinds — `completed`,
+`clarification`, `blocked`, `failed`, `unavailable-data` — and enforces
+the honesty rule the phase exists for: **only `completed` carries
+statements and reports success.** A run that hit a limit after
+productive steps, errored, was cancelled, or finished without an answer
+loses its partial material in full, so none of them can be shaped into a
+misleading success; a cancellation maps to `blocked` with
+`metadata.runStatus` saying exactly which. Metadata travels with every
+outcome: run id, run status, the loop's stop reason structured and
+verbatim, usage, the validation status with stage-tagged violation
+codes, and a verdict for each stage in execution order. Free-text
+failure messages stay server-side behind fixed, honest copy. The
+`agent.chat` handler finalizes through the pipeline — its reply, label,
+statements and status are the pipeline's decision, with kind, run id,
+stop-reason code and validation status as response metadata — while the
+pipeline itself stays pure and UI-independent: same input, same
+plain-data result. The Agent Loop, Run Manager, Harness, Context
+Builder, Tool Registry, permission gate and LLM Gateway are untouched;
+no evaluation, observability, diagnosis, quality gate, memory
+consolidation, learning, chain-of-thought exposure or mock response
+ships in this phase.
