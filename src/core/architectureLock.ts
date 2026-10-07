@@ -442,6 +442,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
       'The loop still composes the existing harness, Context Builder, adapter and Tool Registry — no second loop, registry or permission system; tool outcomes are fed back as fresh runtime context under the same user/run isolation; toolRuns is bounded in-memory recording, not persistent tool history; the single-step run() and the agent.chat integration are untouched.',
   },
   {
+    id: 'DEC-AI-21-TOOL-PERMISSION-GATE',
+    area: 'ai.tools',
+    choice:
+      'One centralized Tool Permission and Risk Gate (src/agent/tools/permissionGate.ts) answers every tool invocation with exactly one of ALLOW / BLOCK / REQUIRE_APPROVAL, evaluated from five dimensions — user permissions (server-resolved grants against the required operation), run permissions (tools run only in an active, known run state), tool permissions (checkPermission over the existing PHASE1_PERMISSIONS), risk level (a policy table where an unknown level blocks), and approval requirement (contract, side effects or risk policy with no current human approval) — denying by default whenever permission or risk information is missing',
+    status: 'locked',
+    adr: ['ADR-0069-tool-permission-and-risk-gate.md'],
+    constraint:
+      'The gate is evaluated inside AgentToolRegistry.invoke, the single server-side execution path, before input validation and before execute is reachable, so the agent cannot bypass it and permissions stay server-side and user/run scoped; the gate consumes the existing permission and approval systems and creates no second one; the decision and its reason are recorded on AgentRunRecord.toolRuns through recordToolRun; future risk levels attach through the risk policy table without redesigning the Registry; no trading action, RAG, evaluation, learning, approval UI or mock response ships in this phase.',
+  },
+  {
     id: 'DEC-DESKTOP-1-RUNTIME',
     area: 'desktop.runtime',
     choice:

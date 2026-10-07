@@ -15,7 +15,13 @@ import { AgentToolRegistry, type AgentToolRunOutcome } from '../src/agent/tools/
 import type { AgentTool, AgentToolContext } from '../src/agent/tools/contracts.js';
 import { AppError } from '../packages/shared/src/core/errors.js';
 
-const context: AgentToolContext = { userId: 'user-1', runId: 'run-1', correlationId: 'corr-1' };
+const context: AgentToolContext = {
+  userId: 'user-1',
+  runId: 'run-1',
+  correlationId: 'corr-1',
+  userGrants: ['tool.run'],
+  runState: 'running',
+};
 
 type RiskInput = { equity: number; riskPercent: number };
 type RiskOutput = { shares: number; riskPercent: number };
@@ -259,7 +265,7 @@ describe('tool registry — isolation and records', () => {
     await registry.invoke(
       'risk.positionSize',
       { equity: 2_000 },
-      { userId: 'user-2', runId: 'run-2' },
+      { userId: 'user-2', runId: 'run-2', userGrants: ['tool.run'], runState: 'running' },
     );
 
     expect(registry.records({ userId: 'user-1' })).toHaveLength(1);

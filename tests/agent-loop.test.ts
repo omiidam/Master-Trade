@@ -474,6 +474,7 @@ describe('agent loop engine — tool calling through the registry', () => {
     const engine = new AgentLoopEngine({
       adapter: queued.adapter,
       toolRegistry: registry,
+      userGrants: ['tool.run'],
       limits: { maxIterations: 4 },
     });
 
@@ -501,6 +502,7 @@ describe('agent loop engine — tool calling through the registry', () => {
     const engine = new AgentLoopEngine({
       adapter: queued.adapter,
       toolRegistry: registry,
+      userGrants: ['tool.run'],
       limits: { maxIterations: 5 },
     });
 
@@ -528,6 +530,7 @@ describe('agent loop engine — tool calling through the registry', () => {
     const engine = new AgentLoopEngine({
       adapter: queued.adapter,
       toolRegistry: registry,
+      userGrants: ['tool.run'],
       limits: { maxIterations: 5 },
     });
 
@@ -596,6 +599,7 @@ describe('agent loop engine — tool execution stops, limits, and duplicates', (
     const engine = new AgentLoopEngine({
       adapter: queued.adapter,
       toolRegistry: registry,
+      userGrants: ['tool.run'],
       limits: { maxIterations: 4 },
     });
 
@@ -620,6 +624,7 @@ describe('agent loop engine — tool execution stops, limits, and duplicates', (
     const engine = new AgentLoopEngine({
       adapter: queued.adapter,
       toolRegistry: registry,
+      userGrants: ['tool.run'],
       limits: { maxIterations: 4 },
     });
 
@@ -646,7 +651,11 @@ describe('agent loop engine — tool execution stops, limits, and duplicates', (
     const registry = new AgentToolRegistry();
     registry.register(invalid);
     const queued = queuedAdapter([toolRequestSummary, wrapUpSummary]);
-    const engine = new AgentLoopEngine({ adapter: queued.adapter, toolRegistry: registry });
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      userGrants: ['tool.run'],
+    });
 
     const result = await engine.run(input({ userId: 'user-1' }));
 
@@ -669,7 +678,11 @@ describe('agent loop engine — tool execution stops, limits, and duplicates', (
     const registry = new AgentToolRegistry();
     registry.register(slow);
     const queued = queuedAdapter([toolRequestSummary, wrapUpSummary]);
-    const engine = new AgentLoopEngine({ adapter: queued.adapter, toolRegistry: registry });
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      userGrants: ['tool.run'],
+    });
 
     const result = await engine.run(input({ userId: 'user-1' }));
 
@@ -697,6 +710,7 @@ describe('agent loop engine — tool execution stops, limits, and duplicates', (
     const engine = new AgentLoopEngine({
       adapter: queued.adapter,
       toolRegistry: registry,
+      userGrants: ['tool.run'],
       shouldCancel: () => firstDone, // flips once the first tool settles
     });
 
@@ -724,6 +738,7 @@ describe('agent loop engine — tool execution stops, limits, and duplicates', (
     const engine = new AgentLoopEngine({
       adapter: queued.adapter,
       toolRegistry: registry,
+      userGrants: ['tool.run'],
       limits: { maxExecutionTimeMs: 50 },
       now: () => clock,
     });
@@ -748,6 +763,7 @@ describe('agent loop engine — tool execution stops, limits, and duplicates', (
     const engine = new AgentLoopEngine({
       adapter: queued.adapter,
       toolRegistry: registry,
+      userGrants: ['tool.run'],
       onToolRun: (outcome) => {
         seen.push({
           toolName: outcome.toolName,

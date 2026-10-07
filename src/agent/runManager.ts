@@ -52,6 +52,8 @@ import { AgentContextBuilder } from './contextBuilder.js';
 import { AgentRunHarness, type AgentRunInput, type AgentRunResult } from './harness.js';
 import { AgentLoopEngine, type AgentLoopLimits, type AgentLoopResult } from './agentLoop.js';
 import type { AgentToolRunOutcome, ToolRunStatus, AgentToolRegistry } from './tools/registry.js';
+import type { AgentToolContext } from './tools/contracts.js';
+import type { ToolGateEvaluation } from './tools/permissionGate.js';
 import { AppError, PolicyViolationError } from '../../packages/shared/src/core/errors.js';
 import type { Logger } from '../../packages/shared/src/core/logging.js';
 import type { EventBus } from '../../packages/shared/src/realtime/events.js';
@@ -181,6 +183,8 @@ export interface AgentRunToolRecord {
   /** Failure or refusal detail, when there is one. */
   error?: string;
   at: string;
+  /** The permission-gate decision and reason, as evaluated pre-execution. */
+  gate?: ToolGateEvaluation;
 }
 
 /** One transition announcement, delivered to the notifier and subscribers. */
@@ -513,6 +517,7 @@ export class AgentRunManager {
       durationMs: outcome.durationMs,
       ...(outcome.detail === undefined ? {} : { error: outcome.detail }),
       at: new Date(this.now()).toISOString(),
+      ...(outcome.gate === undefined ? {} : { gate: outcome.gate }),
     };
     const toolRuns = [...record.toolRuns, entry];
     while (toolRuns.length > MAX_TOOL_RUNS_PER_RUN) toolRuns.shift();
@@ -532,7 +537,11 @@ export class AgentRunManager {
    * (completed / blocked with the precise stop reason / failed / cancelled).
    */
   async runLoop(
-    input: AgentRunInput & { userId: string; limits?: Partial<AgentLoopLimits> },
+    input: AgentRunInput & {
+      userId: string;
+      limits?: Partial<AgentLoopLimits>;
+      userGrants?: AgentToolContext['userGrants'];
+    },
   ): Promise<AgentLoopResult & { runId: string }> {
     if (this.harnessConfig === undefined) {
       throw new AppError(
@@ -540,7 +549,7 @@ export class AgentRunManager {
         'AgentRunManager.runLoop requires a harness configuration (adapter over the LLM Gateway)',
       );
     }
-    const { limits, ...runInput } = input;
+    const { limits, userGrants, ...runInput } = input;
     const snapshot = this.createRun({
       userId: input.userId,
       correlationId: input.correlationId,
@@ -556,6 +565,7 @@ export class AgentRunManager {
         : { contextBuilder: this.harnessConfig.contextBuilder }),
       ...(this.toolRegistry === undefined ? {} : { toolRegistry: this.toolRegistry }),
       ...(limits === undefined ? {} : { limits }),
+      ...(userGrants === undefined ? {} : { userGrants }),
       shouldCancel: () => this.shouldCancel(runId, input.userId),
       onToolRun: (outcome) => {
         this.recordToolRun(runId, input.userId, outcome);

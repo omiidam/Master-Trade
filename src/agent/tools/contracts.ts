@@ -20,6 +20,7 @@
 import { z } from 'zod';
 import type { ToolCapability } from '../../../packages/trading-engine/src/framework.js';
 import { AppError } from '../../../packages/shared/src/core/errors.js';
+import type { OperationId } from '../../../packages/shared/src/auth/model.js';
 
 // ── Risk, category, and identity ───────────────────────────────────────────
 
@@ -40,16 +41,41 @@ export type AgentToolCategory =
  * and are contractually barred from reaching outside it. The id fields are
  * opaque: attribution and scoping only, never a `Principal` or credential.
  */
+/**
+ * The run states, mirroring the Run Manager's vocabulary. A tool may
+ * execute only while the run is active; the gate decides what counts.
+ */
+export type ToolRunState =
+  | 'idle'
+  | 'running'
+  | 'responding'
+  | 'waiting-tool'
+  | 'validating'
+  | 'completed'
+  | 'blocked'
+  | 'failed'
+  | 'cancelled';
+
 export interface AgentToolContext {
   userId: string;
   runId: string;
   correlationId?: string;
+  /**
+   * The server-resolved operation grants of the acting user (from the
+   * route-level `authorize()` over the role table). Permission information:
+   * absent means absent — the gate denies by default, never infers.
+   */
+  userGrants?: readonly OperationId[];
+  /** The run's state as the server knows it. Missing is denied by default. */
+  runState?: ToolRunState;
 }
 
 export const agentToolContextSchema = z.object({
   userId: z.string().min(1),
   runId: z.string().min(1),
   correlationId: z.string().min(1).optional(),
+  userGrants: z.array(z.string().min(1)).optional(),
+  runState: z.string().min(1).optional(),
 });
 
 // ── The tool contract ──────────────────────────────────────────────────────

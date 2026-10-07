@@ -522,7 +522,7 @@ describe('agent run manager — driving the Agent Loop with tools', () => {
       tools: registry,
     });
 
-    const result = await manager.runLoop(harnessInput());
+    const result = await manager.runLoop({ ...harnessInput(), userGrants: ['tool.run'] });
 
     expect(result.status).toBe('completed');
     expect(result.iterations).toBe(2);
@@ -557,7 +557,11 @@ describe('agent run manager — driving the Agent Loop with tools', () => {
       tools: registry,
     });
 
-    const result = await manager.runLoop({ ...harnessInput(), limits: { maxIterations: 1 } });
+    const result = await manager.runLoop({
+      ...harnessInput(),
+      limits: { maxIterations: 1 },
+      userGrants: ['tool.run'],
+    });
 
     expect(result.status).toBe('blocked');
     expect(result.stopReason).toMatchObject({ reason: 'iteration-limit' });
@@ -584,7 +588,7 @@ describe('agent run manager — driving the Agent Loop with tools', () => {
       tools: registry,
     });
 
-    const result = await manager.runLoop(harnessInput());
+    const result = await manager.runLoop({ ...harnessInput(), userGrants: ['tool.run'] });
 
     expect(result.status).toBe('failed');
     expect(result.stopReason).toMatchObject({ reason: 'tool-failure', toolStatus: 'failed' });

@@ -586,3 +586,17 @@ step. Every settled tool outcome reaches the durable run record
 seam, and the Run Manager's `runLoop()` driver maps the loop's terminal
 outcome onto the run's own vocabulary — the single-step `run()` and the
 `agent.chat` integration are untouched.
+
+**ADR-0069** gives every tool call one pre-execution decision
+(`DEC-AI-21-TOOL-PERMISSION-GATE`, `src/agent/tools/permissionGate.ts`): a
+centralized Tool Permission and Risk Gate that answers `ALLOW`, `BLOCK` or
+`REQUIRE_APPROVAL` from five dimensions — the acting user's server-resolved
+grants, the run's state, the tool's declared capabilities against the
+existing deny-by-default rules, its risk level against a policy table, and
+its approval requirement. Missing permission or risk information denies by
+default. The gate is evaluated inside `AgentToolRegistry.invoke`, the single
+server-side execution path, so the agent cannot walk around it, and the
+decision with its reason is written onto `AgentRunRecord.toolRuns` for the
+Workplace trace. Future risk levels attach through the policy table alone;
+read-only and side-effecting tools stay distinguishable in every
+evaluation; there is still no second permission system.

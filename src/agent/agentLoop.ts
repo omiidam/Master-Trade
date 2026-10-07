@@ -235,6 +235,12 @@ export interface AgentLoopOptions {
    */
   toolRegistry?: AgentToolRegistry;
   /**
+   * The server-resolved operation grants of this run's user, passed to the
+   * permission gate with every tool invocation. Absent, the gate denies by
+   * default — the loop never infers permission information.
+   */
+  userGrants?: AgentToolContext['userGrants'];
+  /**
    * Observer for every tool outcome the loop settles — executed or
    * refused — with the tool's name, status, duration and error detail.
    * Called as each invocation settles, so a caller (the Run Manager)
@@ -305,6 +311,7 @@ export class AgentLoopEngine {
   private readonly decide: AgentLoopDecider;
   private readonly shouldCancel: (() => boolean) | undefined;
   private readonly toolRegistry: AgentToolRegistry | undefined;
+  private readonly userGrants: AgentToolContext['userGrants'];
   private readonly onToolRun: ((outcome: AgentToolRunOutcome) => void) | undefined;
   private readonly now: () => number;
 
@@ -314,6 +321,7 @@ export class AgentLoopEngine {
     this.decide = options.decide ?? defaultLoopDecider;
     this.shouldCancel = options.shouldCancel;
     this.toolRegistry = options.toolRegistry;
+    this.userGrants = options.userGrants;
     this.onToolRun = options.onToolRun;
     this.now = options.now ?? Date.now;
     const limits: AgentLoopLimits = { ...DEFAULT_AGENT_LOOP_LIMITS, ...(options.limits ?? {}) };
@@ -553,6 +561,11 @@ export class AgentLoopEngine {
             const toolContext: AgentToolContext = {
               userId: input.userId,
               runId: input.correlationId,
+              // The loop is mid-step and cancellation was just polled:
+              // its own view of this run is active. Grants are the
+              // server's to supply; absent grants deny by default.
+              runState: 'running',
+              ...(this.userGrants === undefined ? {} : { userGrants: this.userGrants }),
             };
             const outcome = await this.toolRegistry.invoke(
               request.toolName,

@@ -49,6 +49,7 @@ import {
   type AgentToolContext,
   type AgentToolDescriptor,
 } from './contracts.js';
+import { ToolPermissionGate, type ToolGateEvaluation } from './permissionGate.js';
 
 // ── Outcomes and records ───────────────────────────────────────────────────
 
@@ -61,7 +62,8 @@ export type ToolRefusalReason =
   | 'approval-required'
   | 'invalid-input'
   | 'missing-identity'
-  | 'duplicate-request';
+  | 'duplicate-request'
+  | 'gate-blocked';
 
 /** The settled result of one invocation. Failures are values, not throws. */
 export interface AgentToolRunOutcome {
@@ -77,6 +79,8 @@ export interface AgentToolRunOutcome {
   output?: unknown;
   durationMs: number;
   timedOut: boolean;
+  /** The permission-gate decision behind this outcome, with every check. */
+  gate?: ToolGateEvaluation;
 }
 
 /** The durable-for-this-process trace of one invocation. */
@@ -112,6 +116,12 @@ export interface AgentToolRegistryOptions {
   maxRecords?: number;
   now?: () => number;
   idFactory?: () => string;
+  /**
+   * The centralized permission gate every invocation passes through before
+   * execution. Defaults to the standard gate; injection lets a deployment
+   * tighten policy without the Registry ever growing permission logic.
+   */
+  gate?: ToolPermissionGate;
 }
 
 const TIMEOUT_SENTINEL: unique symbol = Symbol('tool-timeout');
@@ -126,6 +136,7 @@ export class AgentToolRegistry {
   private readonly maxRecords: number;
   private readonly now: () => number;
   private readonly idFactory: () => string;
+  private readonly gate: ToolPermissionGate;
 
   constructor(options: AgentToolRegistryOptions = {}) {
     this.isApproved = options.isApproved;
@@ -137,6 +148,7 @@ export class AgentToolRegistry {
     }
     this.now = options.now ?? Date.now;
     this.idFactory = options.idFactory ?? (() => randomUUID());
+    this.gate = options.gate ?? new ToolPermissionGate();
   }
 
   /** Register a tool. Duplicate names and invalid contracts are loud bugs. */
@@ -205,29 +217,50 @@ export class AgentToolRegistry {
     const executionId = this.idFactory();
     const tool = this.tools.get(name);
 
-    if (!tool) {
+    // The centralized permission gate: exactly one pre-execution decision
+    // (ALLOW / BLOCK / REQUIRE_APPROVAL) over user, run, tool, risk and
+    // approval — deny by default on missing information. Every outcome
+    // carries the evaluation, so the run trace records the decision and
+    // its reason. Nothing executes without it: this is the only path.
+    const evaluation = this.gate.evaluate(
+      tool,
+      {
+        ...context,
+        approvalGranted: tool !== undefined && this.isApproved?.(name, context) === true,
+      },
+      name,
+    );
+    if (evaluation.decision === 'BLOCK') {
+      const refusalReason =
+        tool === undefined
+          ? 'unknown-tool'
+          : evaluation.checks.tool.verdict === 'block'
+            ? 'permission-denied'
+            : 'gate-blocked';
+      return this.settle(startedAt, executionId, name, tool?.version ?? 'unknown', context, {
+        status: 'refused',
+        refusalReason,
+        detail: evaluation.reason,
+        gate: evaluation,
+      });
+    }
+    if (tool === undefined) {
+      // Unreachable — the gate blocks every unknown tool above — but a
+      // missing tool must never reach execution even if policy changes.
       return this.settle(startedAt, executionId, name, 'unknown', context, {
         status: 'refused',
         refusalReason: 'unknown-tool',
         detail: `no tool registered under the name "${name}"`,
+        gate: evaluation,
       });
     }
-    if (tool.requiresApproval && this.isApproved?.(name, context) !== true) {
+    if (evaluation.decision === 'REQUIRE_APPROVAL') {
       return this.settle(startedAt, executionId, name, tool.version, context, {
         status: 'refused',
         refusalReason: 'approval-required',
-        detail: `tool ${name} requires a current human approval; none exists for this run`,
+        detail: evaluation.reason,
+        gate: evaluation,
       });
-    }
-    for (const capability of tool.capabilities) {
-      const decision = checkPermission(PHASE1_PERMISSIONS, 'model', capability);
-      if (!decision.allowed) {
-        return this.settle(startedAt, executionId, name, tool.version, context, {
-          status: 'refused',
-          refusalReason: 'permission-denied',
-          detail: `permission denied for ${name} (${capability}): ${decision.reason}`,
-        });
-      }
     }
     const parsedInput = tool.inputSchema.safeParse(args);
     if (!parsedInput.success) {
@@ -237,6 +270,7 @@ export class AgentToolRegistry {
         detail: parsedInput.error.issues
           .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
           .join('; '),
+        gate: evaluation,
       });
     }
 
@@ -256,6 +290,7 @@ export class AgentToolRegistry {
           status: 'timeout',
           detail: `tool ${name} exceeded its ${tool.timeoutMs}ms timeout`,
           timedOut: true,
+          gate: evaluation,
         });
       }
       if (!raced.ok) {
@@ -263,6 +298,7 @@ export class AgentToolRegistry {
         return this.settle(startedAt, executionId, name, tool.version, context, {
           status: 'failed',
           detail: error instanceof Error ? error.message : String(error),
+          gate: evaluation,
         });
       }
       const parsedOutput = tool.outputSchema.safeParse(raced.value);
@@ -272,11 +308,13 @@ export class AgentToolRegistry {
           detail: `output failed the tool's own schema: ${parsedOutput.error.issues
             .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
             .join('; ')}`,
+          gate: evaluation,
         });
       }
       return this.settle(startedAt, executionId, name, tool.version, context, {
         status: 'succeeded',
         output: parsedOutput.data,
+        gate: evaluation,
       });
     } finally {
       if (timer !== undefined) clearTimeout(timer);
@@ -293,7 +331,7 @@ export class AgentToolRegistry {
     outcome: Omit<
       AgentToolRunOutcome,
       'executionId' | 'toolName' | 'toolVersion' | 'durationMs' | 'timedOut'
-    > & { timedOut?: boolean },
+    > & { timedOut?: boolean; gate?: ToolGateEvaluation },
   ): AgentToolRunOutcome {
     const durationMs = Math.max(0, this.now() - startedAt);
     const full: AgentToolRunOutcome = {
@@ -306,6 +344,7 @@ export class AgentToolRegistry {
       ...(outcome.refusalReason === undefined ? {} : { refusalReason: outcome.refusalReason }),
       ...(outcome.detail === undefined ? {} : { detail: outcome.detail }),
       ...(outcome.output === undefined ? {} : { output: outcome.output }),
+      ...(outcome.gate === undefined ? {} : { gate: outcome.gate }),
     };
     const record: ToolExecutionRecord = {
       executionId,

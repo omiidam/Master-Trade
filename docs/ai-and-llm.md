@@ -476,3 +476,25 @@ settled outcome (name, status, duration, error) flows through the loop's
 and accumulates usage across steps — the single-step `run()` and the
 `agent.chat` integration are untouched, and no second loop, registry or
 permission system exists.
+
+### Tool permissions and the risk gate (Phase 2.10)
+
+Every tool call now passes one centralized pre-execution decision
+([ADR-0069](./adr/ADR-0069-tool-permission-and-risk-gate.md)):
+`src/agent/tools/permissionGate.ts` answers `ALLOW`, `BLOCK` or
+`REQUIRE_APPROVAL` from five dimensions — the acting user's server-resolved
+grants against the required operation, the run's state (a tool runs only in
+an active, known run), the tool's declared capabilities against the existing
+`checkPermission`/`PHASE1_PERMISSIONS` rules, its risk level against a policy
+table, and its approval requirement. Deny by default runs through all of it:
+missing permission or risk information blocks with a reason naming what was
+missing. The gate is evaluated inside `AgentToolRegistry.invoke` — the one
+server-side execution path — before `execute` is ever reachable, so the
+agent cannot bypass it and permissions stay server-side and user/run
+scoped. The decision and its reason land on `AgentRunRecord.toolRuns[].gate`,
+so the Workplace can answer "why did (not) that tool run?" from the run
+trace; future risk levels attach through the policy table without touching
+the Registry, and read-only versus side-effecting stays distinguishable in
+every evaluation. There is still exactly one permission system — no trading
+action, approval UI, RAG, evaluation, learning or mock response ships in
+this phase.
