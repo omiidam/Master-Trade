@@ -41,7 +41,9 @@
  * immediate at the loop's own granularity:
  *
  *   - `maxIterations` — the hard ceiling on reasoning steps;
- *   - `maxExecutionTimeMs` — wall-clock ceiling, checked before each step;
+ *   - `maxExecutionTimeMs` — wall-clock ceiling, checked before each
+ *     reasoning step *and* between tool invocations, so tool time counts
+ *     against the same budget;
  *   - `maxOutputTokens` — accumulated completion tokens across steps.
  *
  * Two guards make an infinite or futile loop impossible, not merely
@@ -162,7 +164,13 @@ export type AgentLoopStopReason =
   | { reason: 'iteration-limit'; iterationsRun: number; maxIterations: number }
   | { reason: 'time-limit'; elapsedMs: number; maxExecutionTimeMs: number }
   | { reason: 'output-token-limit'; completionTokens: number; maxOutputTokens: number }
-  | { reason: 'repeated-step'; iteration: number };
+  | { reason: 'repeated-step'; iteration: number }
+  | {
+      reason: 'tool-failure';
+      toolName: string;
+      toolStatus: 'failed' | 'timeout';
+      message: string;
+    };
 
 // ── The decision seam ──────────────────────────────────────────────────────
 
@@ -227,6 +235,14 @@ export interface AgentLoopOptions {
    */
   toolRegistry?: AgentToolRegistry;
   /**
+   * Observer for every tool outcome the loop settles — executed or
+   * refused — with the tool's name, status, duration and error detail.
+   * Called as each invocation settles, so a caller (the Run Manager)
+   * records them against the run in real time. Observation only: an
+   * error thrown by the observer is its own and never fails the run.
+   */
+  onToolRun?: (outcome: AgentToolRunOutcome) => void;
+  /**
    * Cooperative cancellation, polled before each step and wired into every
    * harness run's `shouldCancel` hook. A cancellation observed between
    * phases ends the loop `cancelled` immediately.
@@ -289,6 +305,7 @@ export class AgentLoopEngine {
   private readonly decide: AgentLoopDecider;
   private readonly shouldCancel: (() => boolean) | undefined;
   private readonly toolRegistry: AgentToolRegistry | undefined;
+  private readonly onToolRun: ((outcome: AgentToolRunOutcome) => void) | undefined;
   private readonly now: () => number;
 
   constructor(options: AgentLoopOptions) {
@@ -297,6 +314,7 @@ export class AgentLoopEngine {
     this.decide = options.decide ?? defaultLoopDecider;
     this.shouldCancel = options.shouldCancel;
     this.toolRegistry = options.toolRegistry;
+    this.onToolRun = options.onToolRun;
     this.now = options.now ?? Date.now;
     const limits: AgentLoopLimits = { ...DEFAULT_AGENT_LOOP_LIMITS, ...(options.limits ?? {}) };
     if (!Number.isInteger(limits.maxIterations) || limits.maxIterations < 1) {
@@ -464,9 +482,48 @@ export class AgentLoopEngine {
         //     an identical input the guard refuses before the gateway is paid.
         if (this.toolRegistry !== undefined && turn.toolRequests.length > 0) {
           const stepToolRuns: AgentToolRunOutcome[] = [];
-          if (input.userId === undefined) {
-            for (const request of turn.toolRequests) {
-              stepToolRuns.push({
+          // A stop decided mid-phase settles the loop immediately:
+          // cancellation, the time ceiling (checked across tool steps, not
+          // only reasoning steps), or a tool that failed or timed out
+          // (which includes invalid output — the registry reports a bad
+          // shape as `failed`).
+          let phaseStop:
+            | { kind: 'cancelled' }
+            | { kind: 'time-limit'; elapsedMs: number }
+            | {
+                kind: 'tool-failure';
+                toolName: string;
+                toolStatus: 'failed' | 'timeout';
+                message: string;
+              }
+            | null = null;
+          // Duplicate protection within this step: an identical ask (same
+          // tool, same arguments) is answered from the first outcome and
+          // never executed twice.
+          const seenAsks = new Set<string>();
+          const settle = (outcome: AgentToolRunOutcome): void => {
+            stepToolRuns.push(outcome);
+            // Observation only: a recording observer's error is its own —
+            // the run must not fail because a status hook threw.
+            try {
+              this.onToolRun?.(outcome);
+            } catch {
+              /* observation must not fail the run */
+            }
+          };
+          for (const request of turn.toolRequests) {
+            if (phaseStop !== null) break;
+            if (this.shouldCancel?.() === true) {
+              phaseStop = { kind: 'cancelled' };
+              break;
+            }
+            const elapsedMs = this.now() - startedAt;
+            if (elapsedMs > this.limits.maxExecutionTimeMs) {
+              phaseStop = { kind: 'time-limit', elapsedMs };
+              break;
+            }
+            if (input.userId === undefined) {
+              settle({
                 executionId: 'n/a',
                 toolName: request.toolName,
                 toolVersion: 'unknown',
@@ -476,19 +533,69 @@ export class AgentLoopEngine {
                 durationMs: 0,
                 timedOut: false,
               });
+              continue;
             }
-          } else {
+            const askDigest = contentDigest(JSON.stringify([request.toolName, request.arguments]));
+            if (seenAsks.has(askDigest)) {
+              settle({
+                executionId: 'n/a',
+                toolName: request.toolName,
+                toolVersion: 'unknown',
+                status: 'refused',
+                refusalReason: 'duplicate-request',
+                detail: 'the same tool call already executed for this step',
+                durationMs: 0,
+                timedOut: false,
+              });
+              continue;
+            }
+            seenAsks.add(askDigest);
             const toolContext: AgentToolContext = {
               userId: input.userId,
               runId: input.correlationId,
             };
-            for (const request of turn.toolRequests) {
-              stepToolRuns.push(
-                await this.toolRegistry.invoke(request.toolName, request.arguments, toolContext),
-              );
+            const outcome = await this.toolRegistry.invoke(
+              request.toolName,
+              request.arguments,
+              toolContext,
+            );
+            settle(outcome);
+            if (outcome.status === 'failed' || outcome.status === 'timeout') {
+              phaseStop = {
+                kind: 'tool-failure',
+                toolName: outcome.toolName,
+                toolStatus: outcome.status,
+                message: outcome.detail ?? `tool ${outcome.toolName} ${outcome.status}`,
+              };
             }
           }
           toolRuns.push(...stepToolRuns);
+
+          // The phase's terminal stops settle the loop right here, before
+          // any further step is taken.
+          if (phaseStop?.kind === 'cancelled') {
+            lifecycle.transitionTo('cancelled');
+            return finish('cancelled', { reason: 'cancelled' });
+          }
+          if (phaseStop?.kind === 'time-limit') {
+            lifecycle.transitionTo('blocked');
+            return finish('blocked', {
+              reason: 'time-limit',
+              elapsedMs: phaseStop.elapsedMs,
+              maxExecutionTimeMs: this.limits.maxExecutionTimeMs,
+            });
+          }
+          if (phaseStop?.kind === 'tool-failure') {
+            lifecycle.transitionTo('failed');
+            return finish('failed', {
+              reason: 'tool-failure',
+              toolName: phaseStop.toolName,
+              toolStatus: phaseStop.toolStatus,
+              message: phaseStop.message,
+            });
+          }
+          // Only successes and refusals reach here; their outcomes are fed
+          // back below as the fresh material for the next reasoning step.
           const stableOutcomes = stepToolRuns.map((run) => ({
             toolName: run.toolName,
             toolVersion: run.toolVersion,

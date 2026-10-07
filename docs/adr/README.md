@@ -575,3 +575,14 @@ copied), input validation, execution under the tool's timeout, and output
 validation. Every call settles into one recorded outcome; failures are
 values the loop feeds back to the model, and a futile re-ask is refused by
 the loop's repeated-step guard before the gateway is paid again.
+
+**ADR-0068** puts tool steps under the loop's own control: the run limits
+span LLM and tool steps (the time ceiling is checked between tool
+invocations), cancellation polls between invocations, a tool that fails,
+times out or returns invalid output settles the loop immediately with a
+precise `tool-failure` stop reason, and an identical ask executes once per
+step. Every settled tool outcome reaches the durable run record
+(`AgentRunRecord.toolRuns`) through the loop's `onToolRun` observation
+seam, and the Run Manager's `runLoop()` driver maps the loop's terminal
+outcome onto the run's own vocabulary — the single-step `run()` and the
+`agent.chat` integration are untouched.

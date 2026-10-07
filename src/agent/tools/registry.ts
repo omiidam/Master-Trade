@@ -56,7 +56,12 @@ export type ToolRunStatus = 'succeeded' | 'failed' | 'timeout' | 'refused';
 
 /** Why an invocation was refused before execution was ever attempted. */
 export type ToolRefusalReason =
-  'unknown-tool' | 'permission-denied' | 'approval-required' | 'invalid-input' | 'missing-identity';
+  | 'unknown-tool'
+  | 'permission-denied'
+  | 'approval-required'
+  | 'invalid-input'
+  | 'missing-identity'
+  | 'duplicate-request';
 
 /** The settled result of one invocation. Failures are values, not throws. */
 export interface AgentToolRunOutcome {

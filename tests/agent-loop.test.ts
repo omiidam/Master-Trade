@@ -558,3 +558,214 @@ describe('agent loop engine — tool calling through the registry', () => {
     expect(result.toolRuns).toEqual([]);
   });
 });
+
+// ── Phase 2.9: tool execution hardening inside the loop ────────────────────
+
+describe('agent loop engine — tool execution stops, limits, and duplicates', () => {
+  const twoToolSummary: StructuredSummary = {
+    headline: 'Two tool asks',
+    statements: [{ kind: 'analysis', text: 'Two deterministic calculations.', sources: [] }],
+    uncertainty: [],
+    toolRequests: [
+      { toolName: 'risk.positionSize', arguments: { equity: 10_000 }, purpose: 'size' },
+      { toolName: 'risk.positionSize', arguments: { equity: 20_000 }, purpose: 'size again' },
+    ],
+  };
+
+  const duplicateToolSummary: StructuredSummary = {
+    headline: 'The same ask twice',
+    statements: [],
+    uncertainty: [],
+    toolRequests: [
+      { toolName: 'risk.positionSize', arguments: { equity: 10_000 }, purpose: 'size' },
+      { toolName: 'risk.positionSize', arguments: { equity: 10_000 }, purpose: 'size again' },
+    ],
+  };
+
+  it('executes an identical tool call only once per step; the duplicate is refused, not run', async () => {
+    let executions = 0;
+    const tool = positionSizeTool();
+    const original = tool.execute;
+    tool.execute = async (toolInput, toolContext) => {
+      executions += 1;
+      return original(toolInput, toolContext);
+    };
+    const registry = new AgentToolRegistry();
+    registry.register(tool);
+    const queued = queuedAdapter([duplicateToolSummary, wrapUpSummary]);
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      limits: { maxIterations: 4 },
+    });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('completed');
+    expect(executions).toBe(1);
+    expect(result.toolRuns).toHaveLength(2);
+    expect(result.toolRuns[0]?.status).toBe('succeeded');
+    expect(result.toolRuns[1]?.status).toBe('refused');
+    expect(result.toolRuns[1]?.refusalReason).toBe('duplicate-request');
+  });
+
+  it('stops the loop immediately when a tool fails, with the tool named in the stop reason', async () => {
+    const broken = positionSizeTool();
+    broken.execute = async () => {
+      throw new Error('price feed unavailable');
+    };
+    const registry = new AgentToolRegistry();
+    registry.register(broken);
+    const queued = queuedAdapter([toolRequestSummary, wrapUpSummary]);
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      limits: { maxIterations: 4 },
+    });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('failed');
+    expect(result.stopReason).toEqual({
+      reason: 'tool-failure',
+      toolName: 'risk.positionSize',
+      toolStatus: 'failed',
+      message: 'price feed unavailable',
+    });
+    expect(result.iterations).toBe(1);
+    expect(result.toolRuns).toHaveLength(1);
+    // No second reasoning step: the failure settled the loop in the phase.
+    expect(queued.requests).toHaveLength(1);
+    expect(result.timeline.at(-1)?.state).toBe('failed');
+  });
+
+  it('stops the loop when a tool returns output its own schema rejects', async () => {
+    const invalid = positionSizeTool();
+    invalid.execute = async () =>
+      ({ shares: 'many', riskPercent: 1 }) as unknown as { shares: number; riskPercent: number };
+    const registry = new AgentToolRegistry();
+    registry.register(invalid);
+    const queued = queuedAdapter([toolRequestSummary, wrapUpSummary]);
+    const engine = new AgentLoopEngine({ adapter: queued.adapter, toolRegistry: registry });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('failed');
+    expect(result.stopReason).toMatchObject({
+      reason: 'tool-failure',
+      toolStatus: 'failed',
+      message: expect.stringContaining('schema'),
+    });
+    expect(result.toolRuns[0]?.output).toBeUndefined();
+  });
+
+  it('stops the loop when a tool times out, with the timeout named', async () => {
+    const slow = positionSizeTool();
+    slow.timeoutMs = 30;
+    slow.execute = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      return { shares: 1, riskPercent: 1 };
+    };
+    const registry = new AgentToolRegistry();
+    registry.register(slow);
+    const queued = queuedAdapter([toolRequestSummary, wrapUpSummary]);
+    const engine = new AgentLoopEngine({ adapter: queued.adapter, toolRegistry: registry });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('failed');
+    expect(result.stopReason).toMatchObject({
+      reason: 'tool-failure',
+      toolStatus: 'timeout',
+    });
+    expect(result.toolRuns[0]?.timedOut).toBe(true);
+    expect(queued.requests).toHaveLength(1);
+  });
+
+  it('observes cancellation between tool invocations and stops before the next one runs', async () => {
+    let firstDone = false;
+    const tool = positionSizeTool();
+    const original = tool.execute;
+    tool.execute = async (toolInput, toolContext) => {
+      const out = await original(toolInput, toolContext);
+      firstDone = true;
+      return out;
+    };
+    const registry = new AgentToolRegistry();
+    registry.register(tool);
+    const queued = queuedAdapter([twoToolSummary, wrapUpSummary]);
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      shouldCancel: () => firstDone, // flips once the first tool settles
+    });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('cancelled');
+    expect(result.stopReason).toEqual({ reason: 'cancelled' });
+    expect(result.toolRuns).toHaveLength(1); // the second ask never executed
+    expect(result.toolRuns[0]?.status).toBe('succeeded');
+    expect(queued.requests).toHaveLength(1);
+  });
+
+  it('counts tool time against maxExecutionTimeMs: the ceiling is checked between invocations', async () => {
+    let clock = 0;
+    const tool = positionSizeTool();
+    const original = tool.execute;
+    tool.execute = async (toolInput, toolContext) => {
+      const out = await original(toolInput, toolContext);
+      clock += 10_000; // this one tool call burns far past the ceiling
+      return out;
+    };
+    const registry = new AgentToolRegistry();
+    registry.register(tool);
+    const queued = queuedAdapter([twoToolSummary, wrapUpSummary]);
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      limits: { maxExecutionTimeMs: 50 },
+      now: () => clock,
+    });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toEqual({
+      reason: 'time-limit',
+      elapsedMs: 10_000,
+      maxExecutionTimeMs: 50,
+    });
+    expect(result.toolRuns).toHaveLength(1); // stopped before the second
+    expect(result.toolRuns[0]?.status).toBe('succeeded');
+  });
+
+  it('reports every settled outcome to the onToolRun observer, in order', async () => {
+    const seen: { toolName: string; status: string; durationMs: number; detail?: string }[] = [];
+    const registry = new AgentToolRegistry();
+    registry.register(positionSizeTool());
+    const queued = queuedAdapter([twoToolSummary, wrapUpSummary]);
+    const engine = new AgentLoopEngine({
+      adapter: queued.adapter,
+      toolRegistry: registry,
+      onToolRun: (outcome) => {
+        seen.push({
+          toolName: outcome.toolName,
+          status: outcome.status,
+          durationMs: outcome.durationMs,
+          ...(outcome.detail === undefined ? {} : { detail: outcome.detail }),
+        });
+      },
+    });
+
+    const result = await engine.run(input({ userId: 'user-1' }));
+
+    expect(result.status).toBe('completed');
+    expect(seen).toHaveLength(result.toolRuns.length);
+    expect(seen.map((entry) => entry.status)).toEqual(result.toolRuns.map((run) => run.status));
+    for (const entry of seen) {
+      expect(entry.toolName).toBe('risk.positionSize');
+      expect(entry.durationMs).toBeGreaterThanOrEqual(0);
+    }
+  });
+});

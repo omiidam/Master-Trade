@@ -50,6 +50,8 @@
 import type { AsyncModelAdapter } from './asyncModel.js';
 import { AgentContextBuilder } from './contextBuilder.js';
 import { AgentRunHarness, type AgentRunInput, type AgentRunResult } from './harness.js';
+import { AgentLoopEngine, type AgentLoopLimits, type AgentLoopResult } from './agentLoop.js';
+import type { AgentToolRunOutcome, ToolRunStatus, AgentToolRegistry } from './tools/registry.js';
 import { AppError, PolicyViolationError } from '../../packages/shared/src/core/errors.js';
 import type { Logger } from '../../packages/shared/src/core/logging.js';
 import type { EventBus } from '../../packages/shared/src/realtime/events.js';
@@ -74,6 +76,9 @@ export type AgentRunManagerState =
   | 'blocked'
   | 'failed'
   | 'cancelled';
+
+/** Bound on the tool entries one run keeps; the oldest is evicted. */
+const MAX_TOOL_RUNS_PER_RUN = 1_000;
 
 const TERMINAL_STATES: readonly AgentRunManagerState[] = [
   'completed',
@@ -158,6 +163,24 @@ export interface AgentRunRecord {
   cancelRequested: boolean;
   /** Every state the run passed through, in order, with times. */
   timeline: readonly AgentRunTimelineEntry[];
+  /**
+   * Tool executions recorded against this run, in order: name, status,
+   * duration and error detail. In-memory and bounded per run — status
+   * recording for the Workplace, not a persistent tool history.
+   */
+  toolRuns: readonly AgentRunToolRecord[];
+}
+
+/** One tool execution as the run records it: name, status, duration, error. */
+export interface AgentRunToolRecord {
+  executionId: string;
+  toolName: string;
+  toolVersion: string;
+  status: ToolRunStatus;
+  durationMs: number;
+  /** Failure or refusal detail, when there is one. */
+  error?: string;
+  at: string;
 }
 
 /** One transition announcement, delivered to the notifier and subscribers. */
@@ -196,6 +219,12 @@ export interface AgentRunManagerOptions {
    */
   harness?: { adapter: AsyncModelAdapter; contextBuilder?: AgentContextBuilder };
   /**
+   * The centralized Tool Registry for `runLoop()`: the only path through
+   * which a loop-driven run executes tools. Absent, the loop records tool
+   * requests and executes nothing.
+   */
+  tools?: AgentToolRegistry;
+  /**
    * Retention bound per user. When exceeded, the oldest *terminal* run is
    * evicted; an active run is never evicted, so the bound can be exceeded
    * briefly rather than a live run losing its record.
@@ -210,6 +239,7 @@ export class AgentRunManager {
   private readonly idFactory: () => string;
   private readonly onStatus: ((update: AgentRunStatusUpdate) => void) | undefined;
   private readonly harnessConfig: AgentRunManagerOptions['harness'];
+  private readonly toolRegistry: AgentToolRegistry | undefined;
   private readonly maxRunsPerUser: number;
   private readonly runs = new Map<string, AgentRunRecord>();
   private readonly subscribers = new Map<string, (update: AgentRunStatusUpdate) => void>();
@@ -219,6 +249,7 @@ export class AgentRunManager {
     this.idFactory = options.idFactory ?? (() => `run_${crypto.randomUUID()}`);
     this.onStatus = options.onStatus;
     this.harnessConfig = options.harness;
+    this.toolRegistry = options.tools;
     this.maxRunsPerUser = options.maxRunsPerUser ?? 200;
   }
 
@@ -244,6 +275,7 @@ export class AgentRunManager {
       blockedReason: null,
       cancelRequested: false,
       timeline: [{ state: 'idle', at: new Date(this.now()).toISOString() }],
+      toolRuns: [],
     };
     this.runs.set(record.runId, record);
     this.evictIfNeeded(input.userId);
@@ -464,6 +496,104 @@ export class AgentRunManager {
     return { ...result, runId };
   }
 
+  /**
+   * Record one settled tool outcome against the run: name, status,
+   * duration and error. Called by the loop's observation seam as each
+   * invocation settles, so the Workplace sees tool work on the run while
+   * it happens. Isolation lives here too: the entry is refused unless the
+   * caller owns the run.
+   */
+  recordToolRun(runId: string, userId: string, outcome: AgentToolRunOutcome): AgentRunRecord {
+    const record = this.owned(runId, userId);
+    const entry: AgentRunToolRecord = {
+      executionId: outcome.executionId,
+      toolName: outcome.toolName,
+      toolVersion: outcome.toolVersion,
+      status: outcome.status,
+      durationMs: outcome.durationMs,
+      ...(outcome.detail === undefined ? {} : { error: outcome.detail }),
+      at: new Date(this.now()).toISOString(),
+    };
+    const toolRuns = [...record.toolRuns, entry];
+    while (toolRuns.length > MAX_TOOL_RUNS_PER_RUN) toolRuns.shift();
+    record.toolRuns = toolRuns;
+    return this.snapshot(record);
+  }
+
+  /**
+   * Drive one run through the Agent Loop Engine instead of a single
+   * harness step: the multi-step, tool-executing entry point. `run()` above
+   * is unchanged, so existing callers (and the agent.chat integration)
+   * keep their behavior exactly; this driver adds the loop's limits and
+   * tool phase over the same adapter and gateway, and records what the
+   * loop did on the same durable run record: token usage accumulated
+   * across every step, one tool entry per tool outcome as it settles, and
+   * the loop's terminal outcome mapped onto the run's own vocabulary
+   * (completed / blocked with the precise stop reason / failed / cancelled).
+   */
+  async runLoop(
+    input: AgentRunInput & { userId: string; limits?: Partial<AgentLoopLimits> },
+  ): Promise<AgentLoopResult & { runId: string }> {
+    if (this.harnessConfig === undefined) {
+      throw new AppError(
+        'NOT_IMPLEMENTED',
+        'AgentRunManager.runLoop requires a harness configuration (adapter over the LLM Gateway)',
+      );
+    }
+    const { limits, ...runInput } = input;
+    const snapshot = this.createRun({
+      userId: input.userId,
+      correlationId: input.correlationId,
+      model: this.harnessConfig.adapter.label,
+    });
+    const runId = snapshot.runId;
+    this.start(runId, input.userId);
+
+    const engine = new AgentLoopEngine({
+      adapter: this.harnessConfig.adapter,
+      ...(this.harnessConfig.contextBuilder === undefined
+        ? {}
+        : { contextBuilder: this.harnessConfig.contextBuilder }),
+      ...(this.toolRegistry === undefined ? {} : { toolRegistry: this.toolRegistry }),
+      ...(limits === undefined ? {} : { limits }),
+      shouldCancel: () => this.shouldCancel(runId, input.userId),
+      onToolRun: (outcome) => {
+        this.recordToolRun(runId, input.userId, outcome);
+      },
+    });
+
+    try {
+      const result = await engine.run(runInput);
+      this.recordUsage(runId, input.userId, {
+        promptTokens: result.usage.promptTokens,
+        completionTokens: result.usage.completionTokens,
+        totalTokens: result.usage.totalTokens,
+        costUsd: result.usage.costUsd,
+      });
+      if (result.status === 'completed') {
+        this.transition(runId, input.userId, 'responding');
+        this.complete(runId, input.userId);
+      } else if (result.status === 'blocked') {
+        this.block(runId, input.userId, JSON.stringify(result.stopReason));
+      } else if (result.status === 'cancelled') {
+        this.transition(runId, input.userId, 'cancelled', 'cancelled by request');
+      } else {
+        const reason = result.stopReason;
+        this.fail(
+          runId,
+          input.userId,
+          reason.reason === 'failed' || reason.reason === 'tool-failure'
+            ? reason.message
+            : 'the loop failed',
+        );
+      }
+      return { ...result, runId };
+    } catch (error) {
+      this.fail(runId, input.userId, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
   // ── Internals ──
 
   /** Resolve a run the user owns, or throw. Isolation lives here. */
@@ -510,6 +640,7 @@ export class AgentRunManager {
       usage: record.usage === null ? null : { ...record.usage },
       error: record.error === null ? null : { ...record.error },
       timeline: [...record.timeline],
+      toolRuns: [...record.toolRuns],
     };
   }
 

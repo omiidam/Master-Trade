@@ -459,3 +459,20 @@ outcome (`succeeded`, `failed`, `timeout`, `refused`). The Agent Loop
 Engine's tool phase invokes through the registry and feeds validated
 outcomes back as fresh runtime context. No trading action, RAG/retrieval
 tool, persistent tool history, evaluation or learning ships in this phase.
+
+### Tool execution inside the loop (Phase 2.9)
+
+The loop's tool phase now carries the loop's discipline
+([ADR-0068](./adr/ADR-0068-tool-execution-inside-the-agent-loop.md)): the
+three limits span LLM and tool steps (the time ceiling is checked between
+tool invocations, so tool time spends the same clock), cancellation is
+polled between invocations, and a tool that fails, times out or returns
+invalid output settles the loop immediately as `failed` with a
+`tool-failure` stop reason naming the tool — while refusals stay values
+fed back to the model. An identical ask executes once per step. Every
+settled outcome (name, status, duration, error) flows through the loop's
+`onToolRun` seam onto `AgentRunRecord.toolRuns`, and the Run Manager's new
+`runLoop()` driver maps the loop's outcome onto the run's own vocabulary
+and accumulates usage across steps — the single-step `run()` and the
+`agent.chat` integration are untouched, and no second loop, registry or
+permission system exists.

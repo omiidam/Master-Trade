@@ -16,6 +16,11 @@ import {
   type AgentRunStatusUpdate,
 } from '../src/agent/runManager.js';
 import { scriptedAsyncModelAdapter } from '../src/agent/asyncModel.js';
+import type { AsyncModelAdapter } from '../src/agent/asyncModel.js';
+import { AgentToolRegistry, type AgentToolRunOutcome } from '../src/agent/tools/registry.js';
+import type { AgentTool } from '../src/agent/tools/contracts.js';
+import type { StructuredSummary } from '../src/llm/summary.js';
+import { z } from 'zod';
 import type { AgentRunInput } from '../src/agent/harness.js';
 import { AppError, PolicyViolationError } from '../packages/shared/src/core/errors.js';
 import { EventBus } from '../packages/shared/src/realtime/events.js';
@@ -448,5 +453,170 @@ describe('agent run manager — status exposure over the EventBus', () => {
     // the run into a state it is no longer in.
     expect(() => manager.start(run.runId, 'u1')).toThrow('the wire is down');
     expect(manager.getRun(run.runId, 'u1').state).toBe('running');
+  });
+});
+
+// ── Phase 2.9: driving the Agent Loop through a managed run ────────────────
+
+const loopToolSummary: StructuredSummary = {
+  headline: 'Position sizing needs the risk tool',
+  statements: [{ kind: 'analysis', text: 'Requesting the deterministic risk tool.', sources: [] }],
+  uncertainty: [],
+  toolRequests: [{ toolName: 'risk.positionSize', arguments: { equity: 10_000 }, purpose: 'size' }],
+};
+
+const loopWrapUpSummary: StructuredSummary = {
+  headline: 'Position sized',
+  statements: [{ kind: 'fact', text: 'The deterministic tool sized it.', sources: [] }],
+  uncertainty: [],
+  toolRequests: [],
+};
+
+/** An adapter answering from a fixed queue, reusing the scripted adapter's
+ * summary mechanics — each call consumes one queued summary (holding on
+ * the last), with usage set so accumulation across steps is measurable. */
+function queuedAdapter(summaries: StructuredSummary[]): AsyncModelAdapter {
+  let call = 0;
+  return {
+    label: 'queued-loop (offline, deterministic)',
+    async completeTurn(request) {
+      const summary = summaries[Math.min(call, summaries.length - 1)];
+      if (summary === undefined) throw new Error('queued adapter underflow');
+      call += 1;
+      return scriptedAsyncModelAdapter({
+        summary,
+        usage: { promptTokens: 120, completionTokens: 30, totalTokens: 150, costUsd: 0.02 },
+      }).completeTurn(request);
+    },
+  };
+}
+
+function loopPositionSizeTool(): AgentTool<
+  { equity: number },
+  { shares: number; riskPercent: number }
+> {
+  return {
+    name: 'risk.positionSize',
+    version: '1.0.0',
+    description: 'Deterministic position sizing from equity and a risk percent.',
+    category: 'general',
+    capabilities: ['risk.calculate'],
+    riskLevel: 'low',
+    timeoutMs: 1_000,
+    requiresApproval: false,
+    sideEffects: false,
+    inputSchema: z.object({ equity: z.number().positive() }),
+    outputSchema: z.object({ shares: z.number(), riskPercent: z.number() }),
+    async execute(toolInput) {
+      return { shares: Math.floor(toolInput.equity / 50), riskPercent: 1 };
+    },
+  };
+}
+
+describe('agent run manager — driving the Agent Loop with tools', () => {
+  it('runLoop drives the loop and records each tool execution on the run', async () => {
+    const registry = new AgentToolRegistry();
+    registry.register(loopPositionSizeTool());
+    const manager = new AgentRunManager({
+      harness: { adapter: queuedAdapter([loopToolSummary, loopWrapUpSummary]) },
+      tools: registry,
+    });
+
+    const result = await manager.runLoop(harnessInput());
+
+    expect(result.status).toBe('completed');
+    expect(result.iterations).toBe(2);
+    const record = manager.getRun(result.runId, 'u1');
+    expect(record.state).toBe('completed');
+    expect(record.timeline.map((entry) => entry.state)).toEqual([
+      'idle',
+      'running',
+      'responding',
+      'completed',
+    ]);
+    // The tool execution is on the run: name, status, duration, no error.
+    expect(record.toolRuns).toHaveLength(1);
+    const entry = record.toolRuns[0];
+    expect(entry).toMatchObject({
+      toolName: 'risk.positionSize',
+      toolVersion: '1.0.0',
+      status: 'succeeded',
+    });
+    expect(entry?.durationMs).toBeGreaterThanOrEqual(0);
+    expect(entry?.error).toBeUndefined();
+    expect(entry?.at).toBeTruthy();
+    // Usage accumulated across both reasoning steps: 2 × 150 tokens.
+    expect(record.usage?.totalTokens).toBe(300);
+    expect(record.usage?.costUsd).toBeCloseTo(0.04);
+  });
+
+  it('maps a blocked loop onto the run with the precise stop reason', async () => {
+    const registry = new AgentToolRegistry(); // nothing registered: refused
+    const manager = new AgentRunManager({
+      harness: { adapter: queuedAdapter([loopToolSummary, loopToolSummary]) },
+      tools: registry,
+    });
+
+    const result = await manager.runLoop({ ...harnessInput(), limits: { maxIterations: 1 } });
+
+    expect(result.status).toBe('blocked');
+    expect(result.stopReason).toMatchObject({ reason: 'iteration-limit' });
+    const record = manager.getRun(result.runId, 'u1');
+    expect(record.state).toBe('blocked');
+    expect(record.blockedReason).toContain('iteration-limit');
+    expect(record.toolRuns).toHaveLength(1);
+    expect(record.toolRuns[0]).toMatchObject({
+      toolName: 'risk.positionSize',
+      status: 'refused',
+      error: expect.stringContaining('no tool registered'),
+    });
+  });
+
+  it('maps a tool failure onto a failed run with the tool error recorded', async () => {
+    const broken = loopPositionSizeTool();
+    broken.execute = async () => {
+      throw new Error('price feed unavailable');
+    };
+    const registry = new AgentToolRegistry();
+    registry.register(broken);
+    const manager = new AgentRunManager({
+      harness: { adapter: queuedAdapter([loopToolSummary, loopWrapUpSummary]) },
+      tools: registry,
+    });
+
+    const result = await manager.runLoop(harnessInput());
+
+    expect(result.status).toBe('failed');
+    expect(result.stopReason).toMatchObject({ reason: 'tool-failure', toolStatus: 'failed' });
+    const record = manager.getRun(result.runId, 'u1');
+    expect(record.state).toBe('failed');
+    expect(record.error?.message).toContain('price feed unavailable');
+    expect(record.toolRuns[0]).toMatchObject({
+      toolName: 'risk.positionSize',
+      status: 'failed',
+      error: expect.stringContaining('price feed unavailable'),
+    });
+  });
+
+  it('refuses to record a tool run against a run the caller does not own', () => {
+    const manager = new AgentRunManager();
+    const run = manager.createRun({ userId: 'u1', correlationId: 'c1', model: 'm' });
+    const outcome: AgentToolRunOutcome = {
+      executionId: 'exec-1',
+      toolName: 'risk.positionSize',
+      toolVersion: '1.0.0',
+      status: 'succeeded',
+      durationMs: 5,
+      timedOut: false,
+    };
+    expect(() => manager.recordToolRun(run.runId, 'u2', outcome)).toThrow(PolicyViolationError);
+    expect(manager.getRun(run.runId, 'u1').toolRuns).toEqual([]);
+    const own = manager.recordToolRun(run.runId, 'u1', outcome);
+    expect(own.toolRuns).toHaveLength(1);
+  });
+
+  it('runLoop without a harness configuration is unavailable, like run()', async () => {
+    const manager = new AgentRunManager();
+    await expect(manager.runLoop(harnessInput())).rejects.toThrow(AppError);
   });
 });

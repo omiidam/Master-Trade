@@ -432,6 +432,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
       'Tools run server-side only, scoped to an explicit user/run context, and a run with no user identity can never execute a tool; the registry consumes the existing permission and approval systems and creates no second one; the Agent Loop Engine invokes registered tools through it and feeds validated outcomes back as fresh runtime context; no trading action, RAG/retrieval tool, persistent tool history, evaluation or learning ships in this phase.',
   },
   {
+    id: 'DEC-AI-20-LOOP-TOOL-EXECUTION',
+    area: 'ai.tools',
+    choice:
+      'Tool steps live inside the Agent Loop Engine control (src/agent/agentLoop.ts): the run limits span LLM and tool steps (maxIterations bounds reasoning steps structurally, maxExecutionTimeMs is checked between tool invocations, maxOutputTokens moves only on reasoning steps), cancellation/failure/timeout/invalid-output each settle the loop immediately with a precise stop reason, an identical ask executes once per step, and every settled outcome reaches the Run Manager through an onToolRun observation seam into AgentRunRecord.toolRuns — driven by runLoop() on the existing Agent Run Manager',
+    status: 'locked',
+    adr: ['ADR-0068-tool-execution-inside-the-agent-loop.md'],
+    constraint:
+      'The loop still composes the existing harness, Context Builder, adapter and Tool Registry — no second loop, registry or permission system; tool outcomes are fed back as fresh runtime context under the same user/run isolation; toolRuns is bounded in-memory recording, not persistent tool history; the single-step run() and the agent.chat integration are untouched.',
+  },
+  {
     id: 'DEC-DESKTOP-1-RUNTIME',
     area: 'desktop.runtime',
     choice:
