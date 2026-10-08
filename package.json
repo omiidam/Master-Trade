@@ -19,7 +19,7 @@
     "test:e2e": "vitest run --config vitest.browser.config.ts",
     "build": "tsc -p tsconfig.build.json",
     "build:web": "vite build",
-    "api": "node dist/src/server/start.js",
+    "api": "node --env-file-if-exists=.env.local dist/src/server/start.js",
     "db:migrate": "node dist/src/db/cli.js migrate",
     "db:status": "node dist/src/db/cli.js status",
     "db:ownership": "node dist/src/db/cli.js ownership",

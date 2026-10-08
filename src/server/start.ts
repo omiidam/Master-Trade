@@ -137,10 +137,18 @@ export async function startServer(
   try {
     await app.listen({ host: config.api.host, port: config.api.port });
   } catch (error) {
+    // The underlying cause is the actionable part: `EADDRINUSE` says an instance is
+    // already listening on the port — a different operator answer from any other bind
+    // failure — so it travels in the message instead of being swallowed here.
+    const reason = error instanceof Error ? error.message : String(error);
+    const hint = /EADDRINUSE/.test(reason) ? ' — is another API instance already listening?' : '';
     const appError =
       error instanceof AppError
         ? error
-        : new AppError('INTERNAL', `Failed to bind ${config.api.host}:${config.api.port}`);
+        : new AppError(
+            'INTERNAL',
+            `Failed to bind ${config.api.host}:${config.api.port}: ${reason}${hint}`,
+          );
     logger.error(appError.message, { code: appError.code }, 'server.listen.failed');
     throw appError;
   }

@@ -117,8 +117,10 @@ server, never guessed by the client.
 The provider is configured exactly as before —
 `MASTER_TRADE_AI_PROVIDER=arvancloud`, `MASTER_TRADE_AI_MODEL`,
 `MASTER_TRADE_AI_KEY_ENV=ARVANCLOUD_API_KEY`, and the key itself in
-the process environment (`.env.local`, sourced into the shell when
-starting the API; no dotenv loads it implicitly). The gateway resolves
+the process environment: `.env.local` is loaded by the `npm run api`
+entry point through Node's own `--env-file-if-exists` — no dotenv in
+application code, the application never reads the file, and a
+variable the shell already exported still takes precedence over it. The gateway resolves
 the secret server-side through the existing `secretFromEnv` seam, and
 tests assert the resolved secret appears in no response body.
 

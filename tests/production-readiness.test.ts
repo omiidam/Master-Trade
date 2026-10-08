@@ -305,8 +305,11 @@ describe('the frontend is static, so no server route is load-bearing', () => {
     expect(pkg.scripts['desktop:verify']).toBeDefined();
     expect(pkg.scripts['build:web']).toBeDefined();
     expect(pkg.scripts['api']).toBeDefined();
-    // And the API starts from the compiled output, not from a source loader.
-    expect(pkg.scripts['api']).toMatch(/^node dist\//);
+    // And the API starts from the compiled output, not from a source loader. Node's own
+    // `--env-file-if-exists` before the path is still a compiled-output entry point — it is
+    // how `npm run api` picks up the operator's `.env.local` — so the anchor allows exactly
+    // that flag and nothing else.
+    expect(pkg.scripts['api']).toMatch(/^node( --env-file-if-exists=\S+)? dist\//);
   });
 });
 

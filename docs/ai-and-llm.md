@@ -628,14 +628,25 @@ answered by the server, never guessed by the client.
 provider is configured: `MASTER_TRADE_AI_PROVIDER=arvancloud`,
 `MASTER_TRADE_AI_MODEL=DeepSeek-V4-Flash`,
 `MASTER_TRADE_AI_KEY_ENV=ARVANCLOUD_API_KEY`, with the key itself in
-the process environment. Nothing loads `.env.local` implicitly (there
-is no dotenv), so the API reads it only when the shell exports it:
+the process environment. The application still never reads a secret
+file (there is no dotenv in app code): the `npm run api` entry point
+hands `.env.local` to Node's own `--env-file-if-exists`, so a plain
+`npm run api` starts with the provider configured when the file is
+present, and a variable the shell already exported still takes
+precedence over the file:
 
 ```bash
-set -a; . ./.env.local; set +a            # provider + key into the environment
 npm run build                              # the API runs from dist/
 MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN=true npm run api   # loopback :4317
 npm run dev                                # web at :5173, signs in locally
+```
+
+Every other entry point — a custom process manager, the desktop
+sidecar — reads the environment only, so export it yourself the way
+the flow always has:
+
+```bash
+set -a; . ./.env.local; set +a            # provider + key into the environment
 ```
 
 `MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN=true` is the documented
