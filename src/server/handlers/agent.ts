@@ -33,10 +33,14 @@ import type { ResponseStyle } from '../../../packages/shared/src/language/guidan
 import type { AgentAsyncTurn, AgentService, AgentTurn } from '../../agent/service.js';
 import type { AgentRunManager } from '../../agent/runManager.js';
 import {
+  responsePipelineInputFromLoop,
   responsePipelineInputFromTurn,
   runResponsePipeline,
   type ResponseKind,
+  type ResponsePipelineResult,
 } from '../../agent/responsePipeline.js';
+import { validateChatMessage, type ChatPolicyDecision } from '../../agent/chatPolicy.js';
+import type { AgentLoopResult, AgentLoopStopReason } from '../../agent/agentLoop.js';
 import type { AnalysisReadinessDecision } from '../../../packages/shared/src/quality/readiness.js';
 import {
   planCapabilityRun,
@@ -119,6 +123,23 @@ export interface AgentChatResponseData {
     stopReason: string | null;
     validation: { status: 'passed' | 'failed' | 'skipped'; violations: readonly string[] };
   };
+  /**
+   * The tracked run this response answers, as the Run Manager recorded it
+   * (Phase 2.13): run id, lifecycle status, start time and completion.
+   *
+   * The states are the Run Manager's own vocabulary — `idle → running →
+   * responding → completed` (or `blocked` / `failed` / `cancelled`) — which is
+   * exactly what the Workplace renders; the surface may label `running` as
+   * REASONING, but the server reports what the record says rather than a label.
+   * Present whenever the turn was tracked (an authenticated request always is).
+   */
+  run?: {
+    runId: string;
+    state: string;
+    startedAt: string;
+    endedAt: string | null;
+    durationMs: number | null;
+  };
 }
 
 export interface AgentMetering {
@@ -189,11 +210,64 @@ export function agentChatHandler(
 
   return async ({ context, body }) => {
     /*
+     * Phase 2.13 — the alpha chat path, decided once per request.
+     *
+     * `loop` is non-null exactly when the full pipeline must run: a live gateway
+     * was configured (so the Run Manager holds the harness adapter and the
+     * service holds the async model), the caller is authenticated (a run belongs
+     * to someone), and the request is a plain chat turn. In that mode the turn
+     * executes through Run Manager → Agent Loop → Harness → adapter → gateway,
+     * and the run the loop creates *is* this request's tracked run. Everything
+     * else — capability plans, gated analyses, offline deployments — executes
+     * exactly as it did before this phase.
+     */
+    const loop =
+      runs !== undefined &&
+      context.principal !== null &&
+      runs.hasHarness() &&
+      service.hasAsyncReasoning() &&
+      body.capabilityId === undefined &&
+      body.analysisType === undefined
+        ? { manager: runs, userId: context.principal.id }
+        : null;
+
+    /*
+     * The pre-LLM policy hook (Phase 2.13): the smallest possible answer to
+     * "should this message reach the model at all?" — closed patterns, no
+     * engine, and it runs immediately before the model would be consulted in
+     * each branch below. A refusal is shaped into the same blocked turn every
+     * other gate produces, so tracking, metering and the bus treat it alike.
+     */
+    const policyTurn = (decision: Extract<ChatPolicyDecision, { allowed: false }>): AgentTurn => ({
+      status: 'blocked',
+      reply: decision.reply,
+      epistemicKind: 'uncertainty',
+      statements: [],
+      toolResultCount: 0,
+      agentState: service.state(),
+      model: service.modelLabel(),
+      reason: decision.reply,
+      ...(body.responseLanguage === undefined ? {} : { responseLanguage: body.responseLanguage }),
+      ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
+    });
+
+    /*
      * Run the turn. Everything about what a turn *is* lives in here, so the metered and
      * unmetered paths cannot diverge: both call this, and the difference between them is
      * only whether the result was charged.
+     *
+     * The returned `runId` is set only when the execution created its own tracked
+     * run (the loop path); a `undefined` runId means the caller tracks the turn.
+     * The loop path also carries the pipeline's own decision on its result, so
+     * the response ships the very decision that shaped the turn rather than a
+     * second pass over the turn's reduced view (which would lose the loop's
+     * stop reason and re-decide from less input).
      */
-    const runTurn = async (): Promise<AgentTurn> => {
+    const runTurn = async (): Promise<{
+      turn: AgentTurn;
+      runId?: string;
+      response?: ResponsePipelineResult;
+    }> => {
       /*
        * A request that names an analysis is gated before anything answers it.
        *
@@ -270,23 +344,31 @@ export function agentChatHandler(
           // turn, with the structured result attached so the surface can render the stage, the
           // reasons and the next actions without parsing the sentence.
           return {
-            status: 'blocked',
-            reply: plan.refusals[0]?.reason ?? 'The capability was refused.',
-            epistemicKind: 'uncertainty',
-            reason: plan.refusals[0]?.reason ?? 'The capability was refused.',
-            statements: [],
-            toolResultCount: 0,
-            agentState: service.state(),
-            model: 'none',
-            readiness: gatedReadiness,
-            capability,
-            // A refusal is a complete result, so it echoes the language too: no model was consulted, and
-            // the answer the caller asked for is the answer they did not get.
-            ...(body.responseLanguage === undefined
-              ? {}
-              : { responseLanguage: body.responseLanguage }),
-            ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
+            turn: {
+              status: 'blocked',
+              reply: plan.refusals[0]?.reason ?? 'The capability was refused.',
+              epistemicKind: 'uncertainty',
+              reason: plan.refusals[0]?.reason ?? 'The capability was refused.',
+              statements: [],
+              toolResultCount: 0,
+              agentState: service.state(),
+              model: 'none',
+              readiness: gatedReadiness,
+              capability,
+              // A refusal is a complete result, so it echoes the language too: no model was consulted, and
+              // the answer the caller asked for is the answer they did not get.
+              ...(body.responseLanguage === undefined
+                ? {}
+                : { responseLanguage: body.responseLanguage }),
+              ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
+            },
           };
+        }
+
+        // The plan permits the turn; the policy hook still speaks before the model does.
+        const capabilityPolicy = validateChatMessage(body.message);
+        if (!capabilityPolicy.allowed) {
+          return { turn: policyTurn(capabilityPolicy) };
         }
 
         const turn = service.run(body.message, {
@@ -308,7 +390,7 @@ export function agentChatHandler(
           },
           'agent.turn.capability',
         );
-        return turn;
+        return { turn };
       }
 
       if (body.analysisType !== undefined) {
@@ -317,6 +399,10 @@ export function agentChatHandler(
           decide === undefined || principal === null
             ? null
             : await decide(principal.id, body.analysisType);
+        const analysisPolicy = validateChatMessage(body.message);
+        if (!analysisPolicy.allowed) {
+          return { turn: policyTurn(analysisPolicy) };
+        }
         const turn = service.run(body.message, {
           readiness,
           ...(body.responseLanguage === undefined
@@ -336,7 +422,55 @@ export function agentChatHandler(
           },
           'agent.turn.gated',
         );
-        return turn;
+        return { turn };
+      }
+
+      // Plain chat — the alpha path. Policy first, then the full pipeline when it
+      // is wired, then the offline single step exactly as before.
+      const plainPolicy = validateChatMessage(body.message);
+      if (!plainPolicy.allowed) {
+        context.logger.info(
+          'chat policy refused a turn before the LLM',
+          { rule: plainPolicy.rule, kind: plainPolicy.kind },
+          'agent.turn.policy',
+        );
+        const turn = policyTurn(plainPolicy);
+        if (bus !== undefined) {
+          publishTurn(bus, turn, context.correlationId, context.logger);
+        }
+        return { turn };
+      }
+
+      if (loop !== null) {
+        // User → agent.chat → Agent Loop → Harness → adapter → gateway → response.
+        // runLoop creates, tracks and settles the run itself, so nothing wraps it
+        // in a second record; the response pipeline turns its settled result into
+        // the user-facing answer and its five honest outcome kinds.
+        const loopResult = await loop.manager.runLoop({
+          correlationId: context.correlationId,
+          userId: loop.userId,
+          userInput: body.message,
+          instructions: service.renderedInstructions(),
+          ...(body.responseLanguage === undefined
+            ? {}
+            : { responseLanguage: body.responseLanguage }),
+          ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
+        });
+        const mapped = loopTurnFrom(loopResult);
+        context.logger.info(
+          'agent loop turn completed',
+          {
+            status: mapped.turn.status,
+            runId: mapped.runId,
+            stopReason: loopResult.stopReason.reason,
+            iterations: loopResult.iterations,
+          },
+          'agent.turn.loop',
+        );
+        if (bus !== undefined) {
+          publishTurn(bus, mapped.turn, context.correlationId, context.logger);
+        }
+        return { turn: mapped.turn, runId: mapped.runId, response: mapped.response };
       }
 
       const turn = service.run(body.message, {
@@ -358,11 +492,54 @@ export function agentChatHandler(
       if (bus !== undefined) {
         publishTurn(bus, turn, context.correlationId, context.logger);
       }
-      return turn;
+      return { turn };
     };
 
+    /*
+     * Map a settled loop result onto the turn shape this handler speaks, through
+     * the Response Pipeline (Phase 2.11's loop seam): the reply, the epistemic
+     * label and the honesty rule come from the pipeline's decision — only a
+     * completed run gets statements and `status: 'completed'` — while the run's
+     * own record supplies the state. The stop reason travels as its machine
+     * code; the free-text message stays in pipeline metadata, never in the
+     * user-facing `reason`.
+     */
+    const loopTurnFrom = (
+      loopResult: AgentLoopResult & { runId: string },
+    ): { turn: AgentTurn; runId: string; response: ResponsePipelineResult } => {
+      const response = runResponsePipeline(responsePipelineInputFromLoop(loopResult));
+      const completed = response.kind === 'completed';
+      let state = completed ? 'completed' : 'blocked';
+      if (loop !== null) {
+        try {
+          state = loop.manager.getRun(loopResult.runId, loop.userId).state;
+        } catch {
+          state = completed ? 'completed' : 'blocked';
+        }
+      }
+      const turn: AgentTurn = {
+        status: completed ? 'completed' : 'blocked',
+        reply: response.reply,
+        epistemicKind: response.epistemicKind,
+        statements: [...response.statements],
+        toolResultCount: loopResult.toolRuns.length,
+        agentState: state,
+        model: service.modelLabel(),
+        ...(completed ? {} : { reason: loopStopCode(loopResult.stopReason) }),
+      };
+      return { turn, runId: loopResult.runId, response };
+    };
+
+    /*
+     * The loop's stop reason as the turn's machine code: the discriminator
+     * only (`iteration-limit`, `tool-failure`, …). The free-text `message`
+     * fields stay in pipeline metadata — an error string can carry anything,
+     * and `reason` travels to the surface.
+     */
+    const loopStopCode = (stopReason: AgentLoopStopReason): string => stopReason.reason;
+
     const respond = (
-      outcome: { turn: AgentTurn; runId: string },
+      outcome: { turn: AgentTurn; runId: string; response?: ResponsePipelineResult },
       usage: AgentChatResponseData['usage'],
     ): { data: AgentChatResponseData } => {
       const { turn } = outcome;
@@ -370,8 +547,26 @@ export function agentChatHandler(
       // metadata preserved. Everything this handler ships about the answer
       // itself (reply, label, statements, status) is the pipeline's
       // decision, not a re-derivation — which is what makes a withheld or
-      // incomplete turn impossible to shape into a success here.
-      const response = runResponsePipeline(responsePipelineInputFromTurn(outcome.runId, turn));
+      // incomplete turn impossible to shape into a success here. The loop
+      // path passes that decision through (it was made on the full loop
+      // result); every other path finalizes the turn here, once.
+      const response =
+        outcome.response ?? runResponsePipeline(responsePipelineInputFromTurn(outcome.runId, turn));
+      // The run this answer belongs to, read back from the Run Manager so the
+      // surface renders the record rather than a reconstruction of it. An
+      // untracked turn (no principal, no manager, a borrowed correlation id)
+      // has no record and simply omits the field.
+      const principal = context.principal;
+      const record =
+        runs === undefined || principal === null
+          ? null
+          : (() => {
+              try {
+                return runs.getRun(outcome.runId, principal.id);
+              } catch {
+                return null;
+              }
+            })();
       return {
         data: {
           reply: response.reply,
@@ -399,6 +594,17 @@ export function agentChatHandler(
           ...(turn.readiness === undefined ? {} : { readiness: turn.readiness }),
           ...(turn.capability === undefined ? {} : { capability: turn.capability }),
           ...(usage === undefined ? {} : { usage }),
+          ...(record === null
+            ? {}
+            : {
+                run: {
+                  runId: record.runId,
+                  state: record.state,
+                  startedAt: record.startedAt,
+                  endedAt: record.endedAt,
+                  durationMs: record.durationMs,
+                },
+              }),
         },
       };
     };
@@ -410,14 +616,48 @@ export function agentChatHandler(
      * not a missing run. Unattributed requests (no principal) are not
      * tracked, because a run belongs to someone.
      */
-    const runTrackedTurn = async (): Promise<{ turn: AgentTurn; runId: string }> => {
+    const runTrackedTurn = async (): Promise<{
+      turn: AgentTurn;
+      runId: string;
+      response?: ResponsePipelineResult;
+    }> => {
       const principal = context.principal;
       // An untracked turn has no run id of its own; the correlation id is
       // the identity it answers under, so the pipeline's metadata is never
       // empty and never borrowed from another run.
       if (runs === undefined || principal === null) {
-        return { turn: await runTurn(), runId: context.correlationId };
+        const outcome = await runTurn();
+        return { ...outcome, runId: outcome.runId ?? context.correlationId };
       }
+
+      // When the loop runs the turn, `runLoop` created the run before the turn
+      // started and settled it after — that record *is* this request's tracked
+      // run, and wrapping it in a second one would double-track a single turn.
+      if (loop !== null) {
+        const outcome = await runTurn();
+        if (outcome.runId !== undefined) {
+          return { ...outcome, runId: outcome.runId };
+        }
+        // The loop never ran (the policy hook refused first): the refusal is
+        // still a tracked run, minted and settled here as a blocked one.
+        const run = runs.createRun({
+          userId: loop.userId,
+          correlationId: context.correlationId,
+          model: service.modelLabel(),
+        });
+        runs.start(run.runId, loop.userId);
+        runs.block(
+          run.runId,
+          loop.userId,
+          outcome.turn.reason ?? 'the turn was blocked before the loop ran',
+        );
+        return {
+          turn: outcome.turn,
+          runId: run.runId,
+          ...(outcome.response === undefined ? {} : { response: outcome.response }),
+        };
+      }
+
       const run = runs.createRun({
         userId: principal.id,
         correlationId: context.correlationId,
@@ -425,14 +665,19 @@ export function agentChatHandler(
       });
       runs.start(run.runId, principal.id);
       try {
-        const turn = await runTurn();
+        const outcome = await runTurn();
+        const { turn } = outcome;
         if (turn.status === 'completed') {
           runs.transition(run.runId, principal.id, 'responding');
           runs.complete(run.runId, principal.id);
         } else {
           runs.block(run.runId, principal.id, turn.reason ?? 'the turn was blocked');
         }
-        return { turn, runId: run.runId };
+        return {
+          turn,
+          runId: run.runId,
+          ...(outcome.response === undefined ? {} : { response: outcome.response }),
+        };
       } catch (error) {
         runs.fail(run.runId, principal.id, error instanceof Error ? error.message : String(error));
         throw error;

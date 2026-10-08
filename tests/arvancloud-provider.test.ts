@@ -100,8 +100,8 @@ describe('arvancloud adapter', () => {
   });
 
   it('defaults its base URL and honours a configured override', async () => {
-    expect(ARVANCLOUD_DEFAULT_BASE_URL).toBe('https://api.arvancloudai.ir');
-    expect(DEFAULT_BASE_URLS.arvancloud).toBe('https://api.arvancloudai.ir');
+    expect(ARVANCLOUD_DEFAULT_BASE_URL).toBe('https://api.arvancloudai.ir/v1');
+    expect(DEFAULT_BASE_URLS.arvancloud).toBe('https://api.arvancloudai.ir/v1');
 
     const capture = fakeEndpoint(completion('ok'));
     const provider = arvanCloudProvider({

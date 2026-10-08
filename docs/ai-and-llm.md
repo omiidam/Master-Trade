@@ -577,3 +577,90 @@ and enforced structurally. Nothing is wired into the request path: the
 Agent Loop, LLM Gateway and response pipeline are untouched, no model
 is trained, and no mock response or trading logic ships in this phase —
 Phase 2.12-B fine-tunes Needle 3 against this contract.
+
+### The alpha chat pipeline (Phase 2.13)
+
+The AI Workplace can now drive the whole stack by hand
+([ADR-0072](./adr/ADR-0072-ai-workplace-alpha-chat.md)). A plain chat
+turn on `agent.chat` is decided once per request: when a live gateway
+was configured (a hosted provider with a resolvable credential), the
+caller is authenticated and no capability or analysis was named, the
+turn executes through `AgentRunManager.runLoop` — Agent Loop →
+Harness → adapter → LLM Gateway → DeepSeek — with
+`service.renderedInstructions()` as its instructions; every other
+branch, including the offline single step with no key, runs exactly as
+before. The run `runLoop` creates _is_ the request's tracked run: it
+exists before the turn starts, settles after, and the response
+reports `{runId, state, startedAt, endedAt, durationMs}` read back
+from the record — while a turn the loop never reached (a policy
+refusal) still mints a blocked run, so every chat request has exactly
+one tracked run. The loop's Response Pipeline decision travels
+unchanged to the response instead of being re-derived from the turn's
+reduced view, which is what keeps the loop's stop reason and a
+`kind: 'failed'` gateway failure visible to the client instead of
+flattening them into a null stop reason and a generic block.
+
+**The pre-LLM policy hook** (`src/agent/chatPolicy.ts`) answers one
+question — should this message reach the model at all? — with closed,
+deterministic pattern lists: system-manipulation attempts and
+trade-execution requests are rejected outright, whole-message
+greetings and a closed out-of-scope list are redirected to what the
+workspace is for, and anything unrecognised (including Persian and
+technical phrasing) is allowed. It runs immediately before the model
+would be consulted in each branch, a refusal becomes the same blocked
+turn every other gate produces, and it adds no second permission
+system: operation authorization, readiness gates, capability plans,
+metering and the tool permission gate all stay where they are.
+
+The page itself (`web/src/pages/AgentWorkspacePage.tsx`) sends through
+the existing typed client and session resolver and renders only turns
+that were actually sent — user and assistant messages with epistemic
+labels, a RUNNING state while a turn is in flight (the composer locks:
+one turn at a time), an error surface carrying the server's or
+transport's own reason, a conversation identifier, the
+`Agent Loop → LLM Gateway → Response` pipeline line, and the run's id,
+state and duration from the server's record. The model badge reports
+the label the last answer carried and says `model not connected` when
+the server reports the offline adapter — the provider question is
+answered by the server, never guessed by the client.
+
+**Configuration and manual testing.** Nothing changed in how the
+provider is configured: `MASTER_TRADE_AI_PROVIDER=arvancloud`,
+`MASTER_TRADE_AI_MODEL=DeepSeek-V4-Flash`,
+`MASTER_TRADE_AI_KEY_ENV=ARVANCLOUD_API_KEY`, with the key itself in
+the process environment. Nothing loads `.env.local` implicitly (there
+is no dotenv), so the API reads it only when the shell exports it:
+
+```bash
+set -a; . ./.env.local; set +a            # provider + key into the environment
+npm run build                              # the API runs from dist/
+MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN=true npm run api   # loopback :4317
+npm run dev                                # web at :5173, signs in locally
+```
+
+`MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN=true` is the documented
+browser-preview door (`POST /v1/session/local`); it stays off by
+default. The secret is resolved inside the gateway, server-side, and
+tests assert it appears in no response body.
+
+**What the first live run found.** Driving the pipeline by hand (the
+phase's whole point) surfaced two real defects that mocks had never
+could: the adapter's default base URL was missing the OpenAI-compatible
+`/v1` mount, so the live service answered `404 route not found` — the
+default is now `https://api.arvancloudai.ir/v1` (the endpoint
+correction is noted in [ADR-0063](./adr/ADR-0063-arvancloud-ai-hosted-provider.md)
+and was verified against the real API); and local sign-in issued a
+session without the `users` row every owner-scoped table references,
+so the first _write_ — a metered chat turn — failed with a
+foreign-key error while every read succeeded. Sign-in now creates the
+workstation account before issuing the session
+(`IdentityRepository.ensureUser`), which is what makes a browser
+session a first-class account rather than a readable ghost. With both
+fixed, a browser chat reaches the gateway over the wire; while the
+ArvanCloud account itself reports `403 Account is debtor`, the turn
+ends as an honestly failed run — blocked, uncharged, no fabricated
+answer — which is the pipeline behaving correctly on provider
+failure, not a UI fallback. Deliberately absent from
+this phase: streaming, Needle 3 runtime routing, tool execution from
+chat, memory, RAG, portfolio integration and conversation
+persistence.

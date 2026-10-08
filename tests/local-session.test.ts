@@ -183,6 +183,37 @@ describe('local sign-in issues an ordinary session', () => {
   );
 
   withDatabase(
+    'creates the workstation account the session will write under, exactly once',
+    async () => {
+      const f = await fixture();
+      try {
+        const server = buildServer({ allowLocalLogin: true, repositories: f.repositories });
+        try {
+          // The account the session is about to belong to does not exist yet, and a session
+          // without it would be readable but unwritable: every owner-scoped table references
+          // `users`, so the first write (a metered chat turn) failed on the missing row.
+          expect(await f.repositories.identity.findUser(LOCAL_ACCOUNT_ID)).toBeNull();
+
+          const first = await signIn(server);
+          expect(first.statusCode).toBe(200);
+          const account = await f.repositories.identity.findUser(LOCAL_ACCOUNT_ID);
+          expect(account).not.toBeNull();
+          expect(account?.display_name).toBe('Workstation owner');
+
+          // A second sign-in finds the same account rather than minting a rival for it.
+          const second = await signIn(server);
+          expect(second.statusCode).toBe(200);
+          expect(await f.repositories.identity.listUsers()).toHaveLength(1);
+        } finally {
+          await server.close();
+        }
+      } finally {
+        f.close();
+      }
+    },
+  );
+
+  withDatabase(
     "another account's history never reaches the local session's dashboard",
     async () => {
       const f = await fixture();

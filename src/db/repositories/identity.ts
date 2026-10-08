@@ -70,6 +70,11 @@ export interface CreateUserInput {
   experienceLevel?: ExperienceLevel;
 }
 
+export interface EnsureUserInput extends CreateUserInput {
+  /** The fixed id the account must exist under. */
+  id: string;
+}
+
 export interface CreateSessionInput {
   userId: string;
   roles: readonly Role[];
@@ -116,6 +121,38 @@ export class IdentityRepository {
 
   findUser(id: string): Promise<UserRow | null> {
     return this.users.findById(id);
+  }
+
+  /**
+   * Ensure an account with a caller-declared id exists, creating it if not.
+   *
+   * The workstation's local sign-in issues sessions under one fixed id, and
+   * every owner-scoped table references `users` — so a session that could
+   * exist without its account would be readable but unwritable, failing every
+   * write (a metered chat turn failed on exactly that) with a foreign-key
+   * error. Sign-in makes the account first; a second sign-in finds it, and a
+   * racing sign-in that loses the insert re-reads the row the winner
+   * committed rather than surfacing the constraint.
+   */
+  async ensureUser(input: EnsureUserInput): Promise<UserRow> {
+    const existing = await this.users.findById(input.id);
+    if (existing !== null) return existing;
+    const at = this.iso();
+    try {
+      return await this.users.insert({
+        id: input.id,
+        display_name: input.displayName,
+        timezone: input.timezone,
+        experience_level: input.experienceLevel ?? 'beginner',
+        last_seen_at: null,
+        created_at: at,
+        updated_at: at,
+      });
+    } catch (error) {
+      const raced = await this.users.findById(input.id);
+      if (raced !== null) return raced;
+      throw error;
+    }
   }
 
   findUserByName(displayName: string): Promise<UserRow | null> {

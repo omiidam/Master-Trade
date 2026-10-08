@@ -54,6 +54,7 @@ import type {
   DecisionRecordInput,
 } from '@shared/decisions/model';
 import type {
+  AgentChatData,
   CapabilitiesViewData,
   DecisionListData,
   DecisionViewData,
@@ -391,6 +392,21 @@ export class ApiClient {
    */
   async getDashboard(): Promise<DashboardReadData> {
     return this.request<DashboardReadData>('GET', '/v1/dashboard');
+  }
+
+  /**
+   * Send one message to the training agent — the AI Workplace's chat turn.
+   *
+   * The request is the whole pipeline in one call: the server runs it through
+   * the policy hook, the Run Manager, the Agent Loop, the harness and the
+   * provider gateway, and answers with the reply the Response Pipeline
+   * finalized plus the tracked run it ran under. A blocked turn (a policy
+   * refusal, a failed gateway) arrives as `status: 'blocked'` with the reason
+   * the server chose to show — it is an answer, not an error, so it is never
+   * raised as an `ApiError` here.
+   */
+  async agentChat(body: { message: string; conversationId?: string }): Promise<AgentChatData> {
+    return this.request<AgentChatData>('POST', '/v1/agent/messages', { body });
   }
 
   /**

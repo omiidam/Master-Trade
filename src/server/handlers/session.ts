@@ -45,12 +45,23 @@ export const LOCAL_ACCOUNT_ROLES: readonly Role[] = ['owner'];
 export interface LocalSessionHandlerDeps {
   sessions: SessionService;
   config: AppConfig;
+  /**
+   * Make the account a local session will belong to exist before the session
+   * does, when this deployment has a store to hold it.
+   *
+   * A session without its account is readable but unwritable: every
+   * owner-scoped table references `users`, so the first *write* — a metered
+   * chat turn, a recorded progress — would fail on the missing row. Absent
+   * only on deployments with no database at all, where nothing can fail
+   * against one.
+   */
+  ensureUser?: (userId: string) => Promise<unknown>;
 }
 
 export function localSessionHandler(
   deps: LocalSessionHandlerDeps,
 ): RouteHandler<never, LocalSessionData> {
-  return () => {
+  return async () => {
     if (!deps.config.auth.allowAnonymousLocalLogin) {
       throw new AppError(
         'FORBIDDEN',
@@ -58,6 +69,12 @@ export function localSessionHandler(
           'MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN=true to let a browser preview start a session, ' +
           'or open the desktop shell, which signs in through the keychain.',
       );
+    }
+
+    // The account before the session: a refusal here must fail the sign-in,
+    // not be swallowed into issuing a credential that cannot write.
+    if (deps.ensureUser !== undefined) {
+      await deps.ensureUser(LOCAL_ACCOUNT_ID);
     }
 
     const issued = deps.sessions.issue({

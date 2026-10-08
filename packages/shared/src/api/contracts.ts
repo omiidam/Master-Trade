@@ -58,6 +58,7 @@ import {
   type UsageSubscriptionBody,
 } from './schemas.js';
 import type { AnalysisReadinessDecision } from '../quality/readiness.js';
+import type { ModelStatement } from '../types.js';
 import type { DashboardReadData } from '../frontend/viewModels.js';
 import type { DecisionReadinessDecision, EvaluationReadiness } from '../decisions/readiness.js';
 import type {
@@ -188,6 +189,27 @@ export interface AgentChatData {
   epistemicKind: string;
   correlationId: string;
   /**
+   * The turn's outcome, as the centralized Response Pipeline decided it:
+   * `completed` only when the pipeline says the answer is one, `blocked` for
+   * every refusal, failure or withheld turn (Phase 2.11).
+   */
+  status: 'completed' | 'blocked';
+  /**
+   * The Run Manager's lifecycle state for this turn's run, in its own
+   * vocabulary (`idle / running / waiting-tool / validating / responding /
+   * completed / blocked / failed / cancelled`) — what the record says, not a
+   * label the client derived (Phase 2.13).
+   */
+  agentState: string;
+  /** The model label that answered — or the offline adapter's, which says no hosted model did. */
+  model: string;
+  /** How many deterministic tool runs the turn recorded. */
+  toolResultCount: number;
+  /** The structured statements behind the reply; empty unless the turn completed. */
+  statements: ModelStatement[];
+  /** How this turn was answered, in the server's words (offline adapter, metering, …). */
+  note: string;
+  /**
    * Present only when the request named an analysis type.
    *
    * When it is present and not permitted, the reply is the gate's own refusal and no
@@ -215,6 +237,31 @@ export interface AgentChatData {
     replay: boolean;
     note: string;
   } | null;
+  /**
+   * What the centralized Response Pipeline decided, with the metadata it
+   * preserved (Phase 2.11): the outcome kind, the run this response answers,
+   * the stop-reason *code* and the validation status with its stage-tagged
+   * violation codes. The kind vocabulary mirrors `src/agent/responsePipeline.ts`,
+   * which is the only place it is decided.
+   */
+  responsePipeline?: {
+    kind: 'completed' | 'clarification' | 'blocked' | 'failed' | 'unavailable-data';
+    runId: string;
+    stopReason: string | null;
+    validation: { status: 'passed' | 'failed' | 'skipped'; violations: readonly string[] };
+  };
+  /**
+   * The tracked run this response answers, as the Run Manager recorded it
+   * (Phase 2.13): run id, lifecycle state, start time and completion. Present
+   * whenever the turn was tracked — an authenticated request always is.
+   */
+  run?: {
+    runId: string;
+    state: string;
+    startedAt: string;
+    endedAt: string | null;
+    durationMs: number | null;
+  };
 }
 
 /** One entry of the context history, for review. */

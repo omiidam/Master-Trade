@@ -526,6 +526,15 @@ export class AgentRunManager {
   }
 
   /**
+   * Whether this manager can drive a harness/loop turn: did the server
+   * wire an adapter over the LLM Gateway into it (Phase 2.13)? The chat
+   * handler asks rather than trying `run()` and catching the refusal.
+   */
+  hasHarness(): boolean {
+    return this.harnessConfig !== undefined;
+  }
+
+  /**
    * Drive one run through the Agent Loop Engine instead of a single
    * harness step: the multi-step, tool-executing entry point. `run()` above
    * is unchanged, so existing callers (and the agent.chat integration)

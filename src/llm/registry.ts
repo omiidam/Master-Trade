@@ -45,7 +45,7 @@ import {
 export const DEFAULT_BASE_URLS: Record<Exclude<LlmProviderId, 'scripted'>, string> = {
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com',
-  arvancloud: 'https://api.arvancloudai.ir',
+  arvancloud: 'https://api.arvancloudai.ir/v1',
   'local-openai-compatible': 'http://127.0.0.1:11434/v1',
 };
 

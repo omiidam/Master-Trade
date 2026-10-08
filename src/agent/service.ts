@@ -366,6 +366,26 @@ export class AgentService {
     return renderInstructions(this.instructions).slice(0, 400);
   }
 
+  /**
+   * The full rendered instruction text — what the run harness assembles
+   * with (Phase 2.13). The chat path passes this into the Agent Loop's
+   * run input so a loop-driven turn is instructed exactly as a
+   * single-step turn would be. Not truncated: the harness needs the
+   * whole thing, unlike the audit summary above.
+   */
+  renderedInstructions(): string {
+    return renderInstructions(this.instructions);
+  }
+
+  /**
+   * Whether this service has a real async reasoning component (an LLM
+   * adapter over the gateway). The chat handler asks before choosing an
+   * execution path; it never guesses from a label.
+   */
+  hasAsyncReasoning(): boolean {
+    return this.asyncModel !== undefined;
+  }
+
   describe(): { model: string; tools: number; instructions: { id: string; version: string }[] } {
     return {
       model: this.model,

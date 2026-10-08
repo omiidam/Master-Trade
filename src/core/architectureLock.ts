@@ -56,6 +56,9 @@ export const LOCK_AREAS = [
   // Phase 2.12-A: Needle 3's local decision taxonomy, decided before
   // any cloud LLM call.
   'ai.routing',
+  // Phase 2.13: the Workplace's chat seam — a policy hook before the
+  // model, one tracked run per turn, the loop path end to end.
+  'ai.workplace',
   'desktop.runtime',
   'desktop.security',
   // Phase 3.6: the shell became an implementation, so three areas of its policy
@@ -391,7 +394,7 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     id: 'DEC-AI-15-ARVANCLOUD-PROVIDER',
     area: 'ai.gateway',
     choice:
-      'ArvanCloud AI (api.arvancloudai.ir, /chat/completions, DeepSeek-V4-Flash) is a hosted provider inside the existing LlmGateway: id arvancloud, an adapter composing the OpenAI-compatible one with the apikey Authorization scheme, a price row, and registry wiring — no second gateway or configuration system',
+      'ArvanCloud AI (api.arvancloudai.ir/v1, /chat/completions, DeepSeek-V4-Flash) is a hosted provider inside the existing LlmGateway: id arvancloud, an adapter composing the OpenAI-compatible one with the apikey Authorization scheme, a price row, and registry wiring — no second gateway or configuration system',
     status: 'locked',
     adr: ['ADR-0063-arvancloud-ai-hosted-provider.md'],
     constraint:
@@ -476,6 +479,16 @@ export const LOCKED_DECISIONS: readonly LockedDecision[] = [
     adr: ['ADR-0071-decision-router-taxonomy-and-training-foundation.md'],
     constraint:
       'Needle 3 is not the main reasoning model and does not replace DeepSeek or the cloud LLM Gateway — it only decides routes and never answers the user; the decision schema refuses unknown keys, bounds reason to 200 characters and ties requires_llm / requires_tool to the route so it can never carry advice or an execution; the router never provides trading advice, never executes trades, never bypasses permission systems and never calls tools itself — a TOOL_REQUIRED route means the existing Tool Registry and permission gate are required, a decision to require, never an ability to do; training records are hand-authored under the ADR-0059 provenance rules and validated by the pure line-numbered parser; this phase trains no model, wires no runtime routing, and leaves the Agent Loop, LLM Gateway and response pipeline untouched — no fake AI responses or mock trading logic ship in this phase.',
+  },
+  {
+    id: 'DEC-AI-24-WORKPLACE-ALPHA-CHAT',
+    area: 'ai.workplace',
+    choice:
+      'The AI Workplace alpha chat drives the existing agent.chat route end to end: when a live gateway is configured, a plain chat turn executes through AgentRunManager.runLoop (Agent Loop → Harness → adapter → LLM Gateway), every chat request creates exactly one tracked run reported back as {runId, state, startedAt, endedAt, durationMs}, the loop Response Pipeline decision travels unchanged to the response, a closed-pattern chat policy hook (src/agent/chatPolicy.ts) rejects manipulation and execution requests and redirects greetings and out-of-scope topics before the model is consulted, and web/src/pages/AgentWorkspacePage.tsx renders the live transcript from the real API through the existing typed client and session resolver',
+    status: 'locked',
+    adr: ['ADR-0072-ai-workplace-alpha-chat.md'],
+    constraint:
+      "Every path named here exists: src/server/handlers/agent.ts holds the per-request loop decision, the carried pipeline decision and the run metadata read back from the record; src/agent/chatPolicy.ts is closed lists that allow by default; web/src/pages/AgentWorkspacePage.tsx holds the live transcript with running and error states and the conversation and run identifiers; tests/alpha-chat.test.ts is the focused pipeline suite; the policy hook adds no second permission system — operation authorization, readiness gates, capability plans, metering and the tool permission gate stay where they are; the resolved provider secret stays server-side and never appears in a response body; responses still leave through the Response Pipeline (DEC-AI-22), runs remain the Run Manager's (DEC-AI-17), and execution still flows through the Loop Engine (DEC-AI-18) and Harness (DEC-AI-9) — no streaming, Needle 3 runtime routing, tool execution from chat, memory, RAG, portfolio engine, conversation persistence or mock response ships in this phase.",
   },
   {
     id: 'DEC-DESKTOP-1-RUNTIME',

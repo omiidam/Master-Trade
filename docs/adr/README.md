@@ -498,7 +498,7 @@ summarization, distillation, tool calling, evaluation or learning loop.
 
 ## Phase 2.3 — ArvanCloud provider
 
-ArvanCloud AI (`api.arvancloudai.ir`, `/chat/completions`, model
+ArvanCloud AI (`api.arvancloudai.ir/v1`, `/chat/completions`, model
 `DeepSeek-V4-Flash`) is a hosted provider **inside the existing gateway**
 ([ADR-0063](./ADR-0063-arvancloud-ai-hosted-provider.md)), not a second
 integration path
@@ -640,3 +640,30 @@ requests are labelled `BLOCK` from the first record. The Agent Loop, LLM
 Gateway and response pipeline are untouched; no model is trained, no
 request is classified at runtime, and no mock response or trading logic
 ships in this phase — Phase 2.12-B fine-tunes against this contract.
+
+**ADR-0072** opens the first real AI Workplace chat
+(`DEC-AI-24-WORKPLACE-ALPHA-CHAT`, `src/agent/chatPolicy.ts`): a plain
+chat turn on `agent.chat` now executes through the whole existing
+stack — Run Manager → Agent Loop → Harness → adapter → LLM Gateway →
+DeepSeek — whenever a live gateway is configured, and the run the loop
+creates _is_ the request's tracked run: one run per request, with its
+id, state, start time and completion read back from the record, and a
+refusal minting a blocked run rather than going untracked. The loop's
+Response Pipeline decision travels unchanged to the response instead
+of being re-derived from the turn's reduced view, so a failed gateway
+reaches the client as `kind: 'failed'` metadata on a blocked turn. A
+small closed-pattern policy hook runs immediately before the model
+would be consulted — manipulation and execution requests rejected,
+greetings and out-of-scope topics redirected, everything else allowed
+by default — and it adds no second permission system beside
+authorization, readiness gates, capability plans, metering and the
+tool gate. The Workplace page replaces its mock transcript with a live
+one driven by the real API: only turns actually sent, a RUNNING state
+while a turn is in flight, an error surface carrying the server's own
+reason, a conversation identifier, and the pipeline line
+`Agent Loop → LLM Gateway → Response` beside the run it ran under.
+Provider configuration stays exactly as it was — server-side secret
+resolution through the gateway, no key ever reaching the client — and
+the phase ships no streaming, no Needle 3 runtime routing, no tool
+execution from chat, no memory, no RAG and no conversation
+persistence.

@@ -18,8 +18,16 @@ import type { LlmProvider } from '../provider.js';
 import { openAiCompatibleProvider } from './openaiCompatible.js';
 import type { FetchLike } from './http.js';
 
-/** ArvanCloud AI's hosted endpoint, unless configuration says otherwise. */
-export const ARVANCLOUD_DEFAULT_BASE_URL = 'https://api.arvancloudai.ir';
+/**
+ * ArvanCloud AI's hosted endpoint, unless configuration says otherwise.
+ *
+ * The `/v1` prefix is the OpenAI-compatible mount the live service answers on:
+ * `/chat/completions` without it returns 404 ("route not found"), verified
+ * against the real API in Phase 2.13 when the alpha chat first drove it end to
+ * end — the adapter's sibling defaults (`openai`, `local-openai-compatible`)
+ * already carry their `/v1`.
+ */
+export const ARVANCLOUD_DEFAULT_BASE_URL = 'https://api.arvancloudai.ir/v1';
 
 export interface ArvanCloudOptions {
   baseUrl?: string;

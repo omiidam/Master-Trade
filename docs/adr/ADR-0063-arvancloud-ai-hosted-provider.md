@@ -11,9 +11,11 @@
 
 The gateway abstraction existed from Phase 3.5 with three hosted adapters:
 OpenAI, Anthropic and any local OpenAI-compatible server. The product now needs
-ArvanCloud's hosted AI service (`https://api.arvancloudai.ir`, endpoint
+ArvanCloud's hosted AI service (`https://api.arvancloudai.ir/v1`, endpoint
 `/chat/completions`, model `DeepSeek-V4-Flash`) as the real model behind the
-agent surface (AI Workplace).
+agent surface (AI Workplace). _Endpoint corrected in Phase 2.13: the live
+service mounts the OpenAI-compatible API under `/v1`; without the prefix the
+route does not exist — verified against the real API._
 
 ArvanCloud speaks the OpenAI Chat Completions wire protocol but authenticates
 with `Authorization: apikey <key>` rather than the `Bearer` scheme. Three ways
@@ -43,7 +45,7 @@ it:
   a detail object or a log field.
 - **Registry wiring, not a new composition root.**
   `src/llm/registry.ts` gains `arvancloud` in `DEFAULT_BASE_URLS`
-  (`https://api.arvancloudai.ir`) and a `buildProvider` branch that requires a
+  (`https://api.arvancloudai.ir/v1`) and a `buildProvider` branch that requires a
   resolved `SecretRef`, exactly like `openai`/`anthropic`: no credential means
   the provider is skipped **with a reason** and the offline scripted adapter
   answers.

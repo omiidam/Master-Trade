@@ -370,12 +370,16 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
    * with no key is fully supported, and the degradation is recorded.
    */
   const aiRegistration = deps.aiGateway ?? buildGatewayFromConfig(config, deps.resolveSecret);
+  const liveGateway = aiRegistration.endpoints[0]?.provider !== 'scripted';
+  // One adapter, one gateway, both consumers: the service's async turns and the
+  // run manager's harness/loop turns reach the same provider path (Phase 2.13).
+  const llmAdapter = liveGateway
+    ? createLlmModelAdapter({ gateway: aiRegistration.gateway })
+    : undefined;
   const agent =
     deps.agent ??
     new AgentService({
-      ...(aiRegistration.endpoints[0]?.provider !== 'scripted'
-        ? { asyncModel: createLlmModelAdapter({ gateway: aiRegistration.gateway }) }
-        : {}),
+      ...(llmAdapter === undefined ? {} : { asyncModel: llmAdapter }),
     });
   const llmProviders = deps.llmProviders ?? registrationProviders(aiRegistration);
 
@@ -385,11 +389,19 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
    * announced as an `agent.status` event on the existing bus — the same
    * WebSocket contracts, audiences and replay the Workplace already
    * speaks. No second channel, no second gateway.
+   *
+   * When a live gateway was configured, the manager also gets the
+   * harness adapter: that is what lets a chat turn run through the
+   * Agent Loop → Harness → adapter → gateway path (`runLoop`) instead
+   * of the offline single step, with the run it creates tracked on the
+   * same record and announced the same way. Without a live gateway
+   * nothing is wired here and the scripted adapter answers as before.
    */
   const runs =
     deps.runManager ??
     new AgentRunManager({
       onStatus: runStatusEventNotifier(eventBus, logger),
+      ...(llmAdapter === undefined ? {} : { harness: { adapter: llmAdapter } }),
       ...(deps.now === undefined ? {} : { now: deps.now }),
     });
 
@@ -502,7 +514,24 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
   const handlers: Record<string, AnyHandler> = {
     'system.health': healthHandler(health, config),
     'system.readiness': readinessHandler(health, config),
-    'session.local': localSessionHandler({ sessions, config }) as AnyHandler,
+    'session.local': localSessionHandler({
+      sessions,
+      config,
+      // With a store behind it, sign-in makes the account the session will
+      // belong to — every owner-scoped table references it, so the session is
+      // only usable for writes once the row exists (a metered chat turn was
+      // the first request to fail on its absence).
+      ...(deps.repositories === undefined
+        ? {}
+        : {
+            ensureUser: (userId: string) =>
+              (deps.repositories as Repositories).identity.ensureUser({
+                id: userId,
+                displayName: 'Workstation owner',
+                timezone: 'UTC',
+              }),
+          }),
+    }) as AnyHandler,
     'agent.chat': agentChatHandler(
       agent,
       eventBus,
