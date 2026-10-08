@@ -34,6 +34,10 @@ export {
 } from './needle3Adapter.js';
 export {
   createChatDecisionRouter,
+  fallbackRouteDecision,
+  NEEDLE3_FAILURE_CODES,
+  routeChatTurn,
   type ChatDecisionRouter,
   type ChatDecisionRouterOptions,
+  type DecisionRouterLogger,
 } from './routingPolicy.js';

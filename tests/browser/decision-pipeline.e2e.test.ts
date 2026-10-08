@@ -41,6 +41,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { translate } from '../../web/src/i18n/index.js';
 import { NAV_SECTIONS } from '../../web/src/config/navigation.js';
 import { resolveConfig } from '../../src/core/config.js';
+import { createAiGateway, type FetchLike } from '../../src/llm/index.js';
+import { DEFAULT_RETRY_POLICY } from '../../packages/shared/src/core/retry.js';
 import {
   createChatDecisionRouter,
   type ChatDecisionRouter,
@@ -74,6 +76,67 @@ function stubRouter(): ChatDecisionRouter {
           ),
       },
     },
+  );
+}
+
+/**
+ * The prompt marker the failing-provider case sends. It travels to the provider
+ * inside the prompt, so the stub fetch can fail *this* turn and no other — the
+ * suite's positive cases keep their working gateway (Phase 2.14.C).
+ */
+const GATEWAY_DOWN_MARKER = 'XAUUSD-DOWN-PROBE';
+
+/** The provider the browser suite boots with: real settings, a stubbed transport. */
+function gatewayTransport() {
+  const fetchImpl: FetchLike = async (_url, init) => {
+    const body = typeof init?.body === 'string' ? init.body : '';
+    // A turn that asked for the marker meets a gateway that refuses to connect,
+    // exactly as an unreachable provider does. Everything else is answered.
+    if (body.includes(GATEWAY_DOWN_MARKER)) {
+      throw new TypeError('fetch failed: connect ECONNREFUSED 127.0.0.1:9');
+    }
+    return new Response(
+      JSON.stringify({
+        model: 'DeepSeek-V4-Flash',
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: JSON.stringify({
+                headline: 'Market structure is the sequence of swings',
+                statements: [
+                  {
+                    kind: 'analysis',
+                    text: 'Market structure is read from the sequence of higher highs and lower lows.',
+                    sources: [],
+                  },
+                ],
+                uncertainty: [],
+                toolRequests: [],
+              }),
+            },
+          },
+        ],
+        usage: { prompt_tokens: 40, completion_tokens: 20, total_tokens: 60 },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  };
+  return createAiGateway(
+    {
+      primary: {
+        provider: 'arvancloud' as const,
+        model: 'DeepSeek-V4-Flash',
+        maxTokensPerRequest: 512,
+        secret: { provider: 'arvancloud' as const, envVar: 'ARVANCLOUD_API_KEY' } as never,
+      },
+      fallbacks: [],
+      requestTimeoutMs: 30_000,
+      maxRetries: 2,
+      retry: DEFAULT_RETRY_POLICY,
+      monthlyBudgetUsd: 25,
+    },
+    { resolveSecret: () => 'arv-resolved', fetchImpl },
   );
 }
 
@@ -130,7 +193,14 @@ suite('the Needle 3 decision pipeline in a real browser (Phase 2.14)', () => {
     // all) without sharing rows with whatever else is running on this machine.
     config.database.file = join(distDir, 'e2e.db');
     const { startServer } = await import('../../src/server/start.js');
-    api = await startServer({ config, decisionRouter: stubRouter() });
+    // A live gateway over a stubbed transport: the cloud route reaches a real
+    // adapter and a real Agent Loop, and one prompt can meet a gateway that is
+    // down (Phase 2.14.C's Case 3/4 in the browser).
+    api = await startServer({
+      config,
+      decisionRouter: stubRouter(),
+      aiGateway: gatewayTransport(),
+    });
 
     session = await openSession(BROWSER as string);
     await session.setViewport(1440, 900);
@@ -213,7 +283,53 @@ suite('the Needle 3 decision pipeline in a real browser (Phase 2.14)', () => {
     ).toBe(false);
   }, 60_000);
 
+  it('renders an honest failed turn when the gateway is unreachable, and stays usable', async () => {
+    // A cloud-routed prompt (not a greeting) whose provider connection fails.
+    await sendPrompt(`Analyze market structure on BTC/USDT ${GATEWAY_DOWN_MARKER}`);
+
+    // The Workplace renders the server's honest failure sentence: a valid
+    // response, not a broken one.
+    await session.waitFor(
+      bodyIncludes('This run failed before an answer was produced'),
+      'the honest failure of the unreachable gateway',
+    );
+    // The server still reported the path the turn took and its own state.
+    await session.waitFor(bodyIncludes('LLM_GATEWAY'), 'the gateway route line');
+    await session.waitFor(bodyIncludes('failed'), 'the run state of the failed turn');
+    // And the turn carries its outcome as a state badge, not only as prose: the
+    // pipeline's `failed` kind is drawn in the danger tone beside the label.
+    const failedBadge = await session.evaluate<boolean>(`
+      [...document.querySelectorAll('span')].some(
+        (element) =>
+          (element.textContent ?? '').trim() === 'failed' && /danger/.test(element.className),
+      )
+    `);
+    expect(failedBadge).toBe(true);
+
+    // The composer is usable again: a failed turn is not a stuck surface.
+    const usable = await session.evaluate<boolean>(`
+      (() => {
+        const field = document.querySelector('textarea');
+        const send = [...document.querySelectorAll('button')].find(
+          (item) => (item.getAttribute('aria-label') ?? '') === 'Send message',
+        );
+        return !!field && !field.disabled && !!send && !send.disabled;
+      })()
+    `);
+    expect(usable).toBe(true);
+
+    // And an ordinary turn after it still works: the chat is not stuck.
+    await sendPrompt('Hello, good evening');
+    await session.waitFor(
+      bodyIncludes('no hosted model was consulted'),
+      'the local answer of the turn after the failure',
+    );
+  }, 90_000);
+
   it('logged no runtime error while the pipeline was exercised', () => {
+    // A provider that refuses to connect is a *handled* outcome, so the page
+    // must show no uncaught exception and no failed request of its own: the
+    // failure travels in the response the API returned, not in the console.
     const errors = session.diagnostics.filter((entry) => /error|exception/.test(entry));
     expect(errors).toEqual([]);
   });

@@ -767,3 +767,58 @@ run id the run record already carried. The subprocess that runs the
 local classifier goes through `execOnce` in
 `src/desktop/child-process.ts`, the single spawner `src/` is allowed
 (`process.single-spawner.typescript`, security gate SEC-082).
+
+#### The router is never a single point of failure (Phase 2.14.C)
+
+The decision layer is hardened so that **no** failure inside it can
+fail a chat turn. Four mechanisms, all inside
+`src/agent/decisionRouter/` plus one guard in the handler:
+
+1. **`route()` is total.** The policy wraps its whole body; an
+   unexpected exception — a classifier that resolves a malformed value,
+   an intent or route outside the closed taxonomy, a non-numeric
+   confidence — is caught and returned as the same visible fallback,
+   with `code: 'NEEDLE3_INVALID_OUTPUT'`. `isRouteAllowedForIntent` is
+   reached only behind a shape guard, because `INTENT_ALLOWED_ROUTES[
+intent]` would otherwise throw.
+2. **A policy-level deadline.** The classification runs under
+   `Promise.race` with the configured budget plus a one-second grace,
+   so the adapter's typed timeout normally wins and a runner that
+   ignores its own budget is still cut off. A late rejection is handled
+   by the race, not left unhandled.
+3. **`routeChatTurn(router, message, logger)`** is the seam
+   `agent.chat` calls. It wraps _any_ injected router, so a router that
+   throws — the exact failure this phase exists for — resolves as
+   `fallbackRouteDecision('NEEDLE3_UNAVAILABLE', …)` and the turn runs
+   the full existing pipeline (Agent Runtime → Agent Loop → LLM
+   Gateway) exactly as it did before the layer existed.
+4. **The handler never awaits a bare router.** It calls the seam, so
+   the failure path cannot be forgotten at a call site.
+
+Each turn is traceable as one structured sequence, all with safe data
+only (counts, closed vocabularies, an error's _name_):
+`chat.request.received` → `decision.router.started` →
+`decision.router.completed` (or `decision.router.failed` when Needle 3
+was consulted and could not decide) → `fallback.triggered` when the
+fallback path is taken → `agent.runtime.started` (`path:
+agent-loop | deterministic-adapter`) → `gateway.called` on the hosted
+path → `response.generated` (`kind`, `route`, run id). The event names
+added by earlier phases (`agent.turn.routed`, `agent.turn.loop`,
+`agent.turn.completed`) are unchanged, so existing log evidence still
+reads the same. Nothing traces the message text, the checkpoint path,
+the CLI, a raw completion or a secret.
+
+The AI Workplace needed one display change and no redesign: a turn
+whose Response Pipeline kind is not `completed` carries a state badge
+(`failed`, `blocked`, `clarification`, `unavailable-data`) beside its
+epistemic label, so a failed or withheld turn reads as what happened
+rather than as an ordinary answer. The reply text itself was already
+the pipeline's honest sentence. `agent.chat` still returns `200` with
+the same payload shape for every outcome, which is why a provider that
+is down is a rendered failed turn and never a broken chat.
+
+`tests/chat-stability.test.ts` is the regression suite for the four
+required cases (normal classification, router throwing, dead gateway,
+and the trace contract), and
+`tests/browser/decision-pipeline.e2e.test.ts` renders the failed turn
+in a real browser and proves the surface stays usable afterwards.

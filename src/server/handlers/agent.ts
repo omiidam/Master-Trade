@@ -42,7 +42,10 @@ import {
 } from '../../agent/responsePipeline.js';
 import { validateChatMessage, type ChatPolicyDecision } from '../../agent/chatPolicy.js';
 import type { ChatRoutingDecision } from '../../agent/decisionRouter/contract.js';
-import type { ChatDecisionRouter } from '../../agent/decisionRouter/routingPolicy.js';
+import {
+  routeChatTurn,
+  type ChatDecisionRouter,
+} from '../../agent/decisionRouter/routingPolicy.js';
 import type { AgentLoopResult, AgentLoopStopReason } from '../../agent/agentLoop.js';
 import type { AnalysisReadinessDecision } from '../../../packages/shared/src/quality/readiness.js';
 import {
@@ -263,6 +266,21 @@ export function agentChatHandler(
 
   return async ({ context, body }) => {
     /*
+     * One structured line per chat turn before anything runs (Phase 2.14.C):
+     * flags and counts, never the message and never a credential.
+     */
+    context.logger.info(
+      'chat request received',
+      {
+        hasCapability: body.capabilityId !== undefined,
+        hasAnalysisType: body.analysisType !== undefined,
+        messageChars: body.message.length,
+        idempotent: body.idempotencyKey !== undefined,
+      },
+      'chat.request.received',
+    );
+
+    /*
      * Phase 2.13 — the alpha chat path, decided once per request.
      *
      * `loop` is non-null exactly when the full pipeline must run: a live gateway
@@ -303,6 +321,21 @@ export function agentChatHandler(
       ...(body.responseLanguage === undefined ? {} : { responseLanguage: body.responseLanguage }),
       ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
     });
+
+    /**
+     * One line naming the runtime a branch is about to enter (Phase 2.14.C). A
+     * turn that the router sent locally enters the deterministic adapter; a turn
+     * it sent to the hosted path enters the Agent Loop. Anthropomorphised names
+     * (`REASONING`, `THINKING`) are deliberately not invented here: the path is
+     * the path.
+     */
+    const startRuntime = (path: 'agent-loop' | 'deterministic-adapter'): void => {
+      context.logger.info(
+        'agent runtime started',
+        { path, model: service.modelLabel() },
+        'agent.runtime.started',
+      );
+    };
 
     /*
      * Run the turn. Everything about what a turn *is* lives in here, so the metered and
@@ -429,6 +462,7 @@ export function agentChatHandler(
           return { turn: policyTurn(capabilityPolicy), route: 'LOCAL_RESPONSE' };
         }
 
+        startRuntime('deterministic-adapter');
         const turn = service.run(body.message, {
           readiness: gatedReadiness,
           capability,
@@ -463,6 +497,7 @@ export function agentChatHandler(
         if (!analysisPolicy.allowed) {
           return { turn: policyTurn(analysisPolicy), route: 'LOCAL_RESPONSE' };
         }
+        startRuntime('deterministic-adapter');
         const turn = service.run(body.message, {
           readiness,
           ...(body.responseLanguage === undefined
@@ -510,8 +545,13 @@ export function agentChatHandler(
        * authoritative for permissions, risk or execution — those gates all
        * still run; this only chooses whether the Agent Runtime is consulted.
        */
+      // The seam guarantees a decision and never throws (Phase 2.14.C): a router
+      // that fails is a visible fallback, not a failed chat turn. The trace
+      // (`decision.router.*`, `fallback.triggered`) is emitted inside it.
       const decision =
-        decisionRouter !== undefined ? await decisionRouter.route(body.message) : undefined;
+        decisionRouter === undefined
+          ? undefined
+          : await routeChatTurn(decisionRouter, body.message, context.logger);
       if (decision !== undefined) {
         context.logger.info(
           'decision router routed a chat turn',
@@ -538,6 +578,16 @@ export function agentChatHandler(
         // runLoop creates, tracks and settles the run itself, so nothing wraps it
         // in a second record; the response pipeline turns its settled result into
         // the user-facing answer and its five honest outcome kinds.
+        startRuntime('agent-loop');
+        // The gateway is the only hosted-model path in the product, and the loop is
+        // its only caller: the loop reaches it through the existing adapter, which
+        // is why choosing the loop *is* choosing the gateway (Phase 2.14.C). A
+        // provider failure still travelled this path and is reported by the run.
+        context.logger.info(
+          'the LLM gateway is being called for this turn',
+          { path: 'agent-loop', model: service.modelLabel() },
+          'gateway.called',
+        );
         const loopResult = await loop.manager.runLoop({
           correlationId: context.correlationId,
           userId: loop.userId,
@@ -573,6 +623,7 @@ export function agentChatHandler(
         };
       }
 
+      startRuntime('deterministic-adapter');
       const turn = service.run(body.message, {
         ...(body.responseLanguage === undefined ? {} : { responseLanguage: body.responseLanguage }),
         ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
@@ -677,6 +728,20 @@ export function agentChatHandler(
                 return null;
               }
             })();
+      // The one response the surface receives, logged where it is finalized: the
+      // outcome kind, the route and the identifiers — never the reply text.
+      context.logger.info(
+        'response generated',
+        {
+          kind: response.kind,
+          status: response.kind === 'completed' ? 'completed' : 'blocked',
+          route: outcome.route,
+          runId: response.metadata.runId,
+          model: turn.model,
+          toolResultCount: turn.toolResultCount,
+        },
+        'response.generated',
+      );
       return {
         data: {
           reply: response.reply,

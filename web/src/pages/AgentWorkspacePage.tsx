@@ -121,12 +121,32 @@ interface AlphaTurn {
    * the execution path the policy selected. Displayed exactly as received.
    */
   decision?: AgentChatDecisionData;
+  /**
+   * The Response Pipeline's outcome kind, when the server reported one (Phase
+   * 2.14.C). `completed` is the only kind that carries an answer; anything else
+   * is shown as a state beside the turn, so a failed or withheld turn reads as
+   * what happened rather than as an ordinary reply.
+   */
+  outcome?: string;
 }
 
 /** The server's epistemic label, with the honest fallback for a label we don't know. */
 function asEpistemicKind(value: string): EpistemicKind {
   return value === 'fact' || value === 'analysis' || value === 'hypothesis' ? value : 'uncertainty';
 }
+
+/**
+ * The Response Pipeline's outcome kind as a state badge, muted to a tone per kind.
+ *
+ * The reply text already says what happened in words; this is the label beside it,
+ * so a turn that produced no answer is not drawn exactly like one that did.
+ */
+const OUTCOME_TONES: Record<string, 'warning' | 'danger' | 'info' | 'neutral'> = {
+  blocked: 'warning',
+  failed: 'danger',
+  clarification: 'info',
+  'unavailable-data': 'neutral',
+};
 
 /** Build the transcript entry for one answered turn, from the response the server sent. */
 function turnFromResponse(data: AgentChatData, id: string): AlphaTurn {
@@ -149,6 +169,7 @@ function turnFromResponse(data: AgentChatData, id: string): AlphaTurn {
     model: data.model,
     ...(data.route === undefined ? {} : { route: data.route }),
     ...(data.decision === undefined ? {} : { decision: data.decision }),
+    ...(data.responsePipeline === undefined ? {} : { outcome: data.responsePipeline.kind }),
   };
 }
 
@@ -426,6 +447,13 @@ export function AgentWorkspacePage() {
                             {isAgent ? 'Training agent' : 'You'}
                           </span>
                           <EpistemicBadge kind={message.epistemicKind} />
+                          {isAgent &&
+                          message.outcome !== undefined &&
+                          message.outcome !== 'completed' ? (
+                            <Badge tone={OUTCOME_TONES[message.outcome] ?? 'warning'} shape="tag">
+                              {message.outcome}
+                            </Badge>
+                          ) : null}
                           <span className="num ms-auto text-caption text-text-faint">
                             {formatTimestamp(message.createdAt)}
                           </span>
