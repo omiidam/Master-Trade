@@ -41,6 +41,7 @@ export const KNOWN_ENV_KEYS = [
   'MASTER_TRADE_AI_MONTHLY_BUDGET_USD',
   'MASTER_TRADE_AI_KEY_ENV',
   'MASTER_TRADE_SHELL_TOKEN_ENV',
+  'MASTER_TRADE_DECISION_ROUTER',
 ] as const;
 
 /**
@@ -137,6 +138,7 @@ const envSchema = z.strictObject({
     .string()
     .regex(/^[A-Z][A-Z0-9_]{2,63}$/, 'must be an environment variable name')
     .optional(),
+  MASTER_TRADE_DECISION_ROUTER: z.enum(['needle3', 'off']).optional(),
   ...unsafeFlagKeys,
 });
 
@@ -160,6 +162,14 @@ export interface ConfigSummary {
   realtime: { path: string };
   jobs: { concurrency: number };
   marketData: { allowedProvenance: readonly string[] };
+  decisionRouter: {
+    mode: string;
+    enabled: boolean;
+    /** Configured/not-configured only — the path itself never leaves the server. */
+    checkpointConfigured: boolean;
+    timeoutMs: number;
+    minConfidence: number;
+  };
   safety: { mode: string; liveTradingEnabled: false; brokerExecutionEnabled: false };
   shellToken: { configured: boolean; ref: string | null };
 }
@@ -229,6 +239,51 @@ export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): AppConf
     observability.auditRetentionDays = values.MASTER_TRADE_AUDIT_RETENTION_DAYS;
   }
 
+  // The decision router (Phase 2.14). `MASTER_TRADE_DECISION_ROUTER` is the
+  // prefixed switch; the `NEEDLE3_*` variables are the model's own namespace
+  // (the phase specifies them unprefixed) and are read directly from the
+  // environment. The checkpoint path names weights on disk — configuration,
+  // never a secret — and is stored in the config object, which only ever
+  // reaches the browser as a configured/not-configured boolean.
+  const decisionRouter = { ...DEFAULT_CONFIG.decisionRouter };
+  if (values.MASTER_TRADE_DECISION_ROUTER !== undefined) {
+    decisionRouter.mode = values.MASTER_TRADE_DECISION_ROUTER;
+  }
+  const needle3Enabled = env['NEEDLE3_ENABLED'];
+  if (needle3Enabled !== undefined) {
+    decisionRouter.enabled = !FALSY.has(needle3Enabled.trim().toLowerCase());
+  }
+  const needle3Checkpoint = env['NEEDLE3_CHECKPOINT_PATH'];
+  if (needle3Checkpoint !== undefined && needle3Checkpoint.trim() !== '') {
+    decisionRouter.checkpointPath = needle3Checkpoint.trim();
+  }
+  const needle3Cli = env['NEEDLE3_CLI_PATH'];
+  if (needle3Cli !== undefined && needle3Cli.trim() !== '') {
+    decisionRouter.cliPath = needle3Cli.trim();
+  }
+  const needle3Timeout = env['NEEDLE3_TIMEOUT_MS'];
+  if (needle3Timeout !== undefined && needle3Timeout.trim() !== '') {
+    const parsed = Number(needle3Timeout);
+    if (!Number.isInteger(parsed) || parsed < 50 || parsed > 30_000) {
+      throw new AppError(
+        'VALIDATION_FAILED',
+        'Invalid configuration: NEEDLE3_TIMEOUT_MS must be an integer between 50 and 30000.',
+      );
+    }
+    decisionRouter.timeoutMs = parsed;
+  }
+  const needle3MinConfidence = env['NEEDLE3_MIN_CONFIDENCE'];
+  if (needle3MinConfidence !== undefined && needle3MinConfidence.trim() !== '') {
+    const parsed = Number(needle3MinConfidence);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 100) {
+      throw new AppError(
+        'VALIDATION_FAILED',
+        'Invalid configuration: NEEDLE3_MIN_CONFIDENCE must be an integer between 0 and 100.',
+      );
+    }
+    decisionRouter.minConfidence = parsed;
+  }
+
   const auth = { ...DEFAULT_CONFIG.auth };
   if (values.MASTER_TRADE_SESSION_TTL_MINUTES !== undefined) {
     auth.sessionTtlMinutes = values.MASTER_TRADE_SESSION_TTL_MINUTES;
@@ -242,7 +297,14 @@ export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): AppConf
   auth.allowAnonymousLocalLogin =
     values.MASTER_TRADE_ALLOW_ANONYMOUS_LOCAL_LOGIN ?? api.shellToken === null;
 
-  const overrides: ConfigOverrides = { api, ai, database, observability, auth };
+  const overrides: ConfigOverrides = {
+    api,
+    ai,
+    database,
+    observability,
+    auth,
+    decisionRouter,
+  };
   return resolveConfig(overrides);
 }
 
@@ -288,6 +350,13 @@ export function describeConfig(config: AppConfig): ConfigSummary {
     realtime: { path: config.realtime.path },
     jobs: { concurrency: config.jobs.concurrency },
     marketData: { allowedProvenance: config.marketData.allowedProvenance },
+    decisionRouter: {
+      mode: config.decisionRouter.mode,
+      enabled: config.decisionRouter.enabled,
+      checkpointConfigured: config.decisionRouter.checkpointPath !== null,
+      timeoutMs: config.decisionRouter.timeoutMs,
+      minConfidence: config.decisionRouter.minConfidence,
+    },
     safety: {
       mode: config.safety.mode,
       liveTradingEnabled: false,

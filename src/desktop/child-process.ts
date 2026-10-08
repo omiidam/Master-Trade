@@ -181,3 +181,118 @@ export async function isProcessAlive(pid: number): Promise<boolean> {
     return false;
   }
 }
+
+/* ── one-shot execution ──────────────────────────────────────────────── */
+
+/**
+ * The child ran past its budget and was killed. A distinct type rather than
+ * a message match: the caller distinguishes "too slow" (retry later, or
+ * fall back) from "cannot run" (fall back), and an error string is the one
+ * way to make that distinction quietly break.
+ */
+export class ChildTimeoutError extends Error {
+  constructor() {
+    super('the child process did not finish within its timeout');
+    this.name = 'ChildTimeoutError';
+  }
+}
+
+/** The child exited non-zero. The tail of its stderr travels as `detail`. */
+export class ChildExitError extends Error {
+  readonly code: number | null;
+  readonly signal: NodeJS.Signals | null;
+  constructor(message: string, code: number | null, signal: NodeJS.Signals | null) {
+    super(message);
+    this.name = 'ChildExitError';
+    this.code = code;
+    this.signal = signal;
+  }
+}
+
+/** A bounded one-shot request: run, capture stdout, die on the deadline. */
+export interface OneShotRequest {
+  command: string;
+  args: readonly string[];
+  /** Hard budget; past it the child is SIGKILLed and `ChildTimeoutError` rejects. */
+  timeoutMs: number;
+  /** Output cap; stdout beyond it is dropped, and only the cap is returned. */
+  maxOutputBytes?: number;
+}
+
+/** The stderr tail kept for a failing child — enough to diagnose, bounded. */
+const STDERR_TAIL_BYTES = 2_048;
+
+/**
+ * Run a short-lived child once and return its stdout — the one-shot sibling
+ * of `nodeSidecarSpawner`, for callers that need an answer rather than a
+ * supervisable process (the Needle 3 classifier is one).
+ *
+ * It lives here because this module is the *only* place in `src/` allowed to
+ * start a process: `process.single-spawner.typescript` and security gate
+ * SEC-082 both fail the build if `node:child_process` is imported anywhere
+ * else. A second spawner is a second place that can start the wrong one.
+ *
+ * Never a shell (`shell: false`), never detached, never inherited env beyond
+ * `process.env` — the caller passes explicit arguments or nothing runs.
+ */
+export function execOnce(request: OneShotRequest): Promise<{ stdout: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(request.command, [...request.args], {
+      shell: false,
+      windowsHide: true,
+      detached: false,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    const cap = request.maxOutputBytes ?? 4 * 1024 * 1024;
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    let spawnError: Error | null = null;
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGKILL');
+    }, request.timeoutMs);
+    // The timer must never hold the event loop open on its own.
+    timer.unref?.();
+
+    child.stdout?.setEncoding('utf8');
+    child.stdout?.on('data', (chunk: string) => {
+      if (stdout.length < cap) stdout = (stdout + chunk).slice(0, cap);
+    });
+    child.stderr?.setEncoding('utf8');
+    child.stderr?.on('data', (chunk: string) => {
+      if (stderr.length < STDERR_TAIL_BYTES) stderr = (stderr + chunk).slice(-STDERR_TAIL_BYTES);
+    });
+
+    // A spawn that cannot start (ENOENT, permission) arrives here; the close
+    // handler reports exits. One rejection, whichever arrives first.
+    child.once('error', (error: Error) => {
+      spawnError = error;
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.once('close', (code, signal) => {
+      if (spawnError !== null || timedOut) {
+        clearTimeout(timer);
+        if (timedOut) reject(new ChildTimeoutError());
+        return;
+      }
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve({ stdout });
+        return;
+      }
+      reject(
+        new ChildExitError(
+          `the child exited with ${signal ?? `code ${String(code)}`}${
+            stderr.length > 0 ? `: ${stderr.trim()}` : ''
+          }`,
+          code,
+          signal,
+        ),
+      );
+    });
+  });
+}

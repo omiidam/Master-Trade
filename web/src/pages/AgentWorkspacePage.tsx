@@ -45,7 +45,7 @@ import { formatTimestamp } from '../lib/format';
 import { useUiStore } from '../store/ui';
 import { usePageView } from '../store/pageContext';
 import { msg } from '../i18n/index.js';
-import type { AgentChatData } from '@shared/api/contracts';
+import type { AgentChatData, AgentChatDecisionData } from '@shared/api/contracts';
 import type { EpistemicKind } from '@shared/types';
 
 /**
@@ -115,6 +115,12 @@ interface AlphaTurn {
   model?: string;
   /** The path the server reports this turn took: LLM_GATEWAY or LOCAL_RESPONSE. */
   route?: string;
+  /**
+   * The decision-router verdict the server reported for this turn (Phase 2.14):
+   * what Needle 3 classified — or the fallback state that routed instead — and
+   * the execution path the policy selected. Displayed exactly as received.
+   */
+  decision?: AgentChatDecisionData;
 }
 
 /** The server's epistemic label, with the honest fallback for a label we don't know. */
@@ -142,6 +148,7 @@ function turnFromResponse(data: AgentChatData, id: string): AlphaTurn {
     correlationId: data.correlationId,
     model: data.model,
     ...(data.route === undefined ? {} : { route: data.route }),
+    ...(data.decision === undefined ? {} : { decision: data.decision }),
   };
 }
 
@@ -175,6 +182,8 @@ export function AgentWorkspacePage() {
   const [model, setModel] = useState<string | null>(null);
   /** The execution route the last answer reported, until one has. */
   const [lastRoute, setLastRoute] = useState<string | null>(null);
+  /** The decision-router verdict the last answer carried, until one has. */
+  const [lastDecision, setLastDecision] = useState<AgentChatDecisionData | null>(null);
   const [lastRun, setLastRun] = useState<NonNullable<AgentChatData['run']> | null>(null);
   const [lastUsage, setLastUsage] = useState<NonNullable<AgentChatData['usage']> | null>(null);
   /**
@@ -268,6 +277,7 @@ export function AgentWorkspacePage() {
       setTurns((previous) => [...previous, turnFromResponse(data, `t-${data.correlationId}`)]);
       setModel(data.model);
       setLastRoute(data.route ?? null);
+      setLastDecision(data.decision ?? null);
       setLastRun(data.run ?? null);
       setLastUsage(data.usage ?? null);
     } catch (error) {
@@ -372,7 +382,9 @@ export function AgentWorkspacePage() {
                   {statusLabel}
                 </Badge>
                 <span className="font-medium text-text">Pipeline:</span>
-                <span className="text-text-faint">Agent Loop → LLM Gateway → Response</span>
+                <span className="text-text-faint">
+                  Decision Router → Agent Loop → LLM Gateway → Response
+                </span>
               </div>
 
               {/* Provenance for the sample above the sample itself: which of the two
@@ -452,6 +464,21 @@ export function AgentWorkspacePage() {
                               <>
                                 <span aria-hidden>·</span>
                                 <span>{message.route}</span>
+                              </>
+                            ) : null}
+                            {/* The decision the router made for this turn, exactly as the
+                                server sent it: intent, selected path, confidence — and the
+                                fallback state named when the classifier did not speak. */}
+                            {message.decision !== undefined ? (
+                              <>
+                                <span aria-hidden>·</span>
+                                <span>
+                                  decision {message.decision.intent} →{' '}
+                                  {message.decision.executionPath} ({message.decision.confidence}%)
+                                  {message.decision.source !== 'needle3'
+                                    ? ` · fallback: ${message.decision.source}`
+                                    : ''}
+                                </span>
                               </>
                             ) : null}
                             <span aria-hidden>·</span>
@@ -584,6 +611,27 @@ export function AgentWorkspacePage() {
                     : lastRoute === 'LLM_GATEWAY'
                       ? 'This turn ran Agent Loop → Harness → LLM Gateway → Response: a hosted model was consulted.'
                       : 'This turn was answered on this machine — no hosted model was consulted.'
+                }
+              />
+              <ReadOnlyValue
+                label="Decision router"
+                value={
+                  lastDecision === null
+                    ? 'not answered yet'
+                    : `${lastDecision.intent} → ${lastDecision.executionPath}`
+                }
+                hint={
+                  lastDecision === null
+                    ? 'Each plain chat turn reports what Needle 3 decided — or the fallback state that routed it — before the Agent Runtime runs.'
+                    : `${
+                        lastDecision.source === 'needle3'
+                          ? `Needle 3, confidence ${lastDecision.confidence}%`
+                          : lastDecision.source === 'fallback'
+                            ? `deterministic fallback (${lastDecision.code})`
+                            : 'router disabled'
+                      } · cloud LLM ${
+                        lastDecision.requires_cloud_llm ? 'required' : 'not required'
+                      } · ${lastDecision.reason}`
                 }
               />
               <ReadOnlyValue

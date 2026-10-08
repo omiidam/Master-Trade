@@ -217,9 +217,11 @@ export interface AgentChatData {
    *   offline adapter answered, or metering refused the turn.
    *
    * The two names mirror Needle 3's decision-router taxonomy (DEC-AI-23)
-   * because they mean exactly the same things — but this field is written
-   * by the chat handler about a turn that already ran; the router itself
-   * remains unwired to the runtime.
+   * because they mean exactly the same things. Since Phase 2.14 the
+   * decision router speaks before the Agent Runtime and can select the
+   * local path; this field is still written by the chat handler about a
+   * turn that already ran — the router picks the path, the handler reports
+   * the one the turn actually took.
    */
   route: 'LLM_GATEWAY' | 'LOCAL_RESPONSE';
   /** How many deterministic tool runs the turn recorded. */
@@ -281,6 +283,47 @@ export interface AgentChatData {
     endedAt: string | null;
     durationMs: number | null;
   };
+  /**
+   * The decision-router verdict for this turn (Phase 2.14): what Needle 3 —
+   * or the deterministic fallback — decided, and the execution path the
+   * policy selected. Safe fields only; see `AgentChatDecisionData`.
+   */
+  decision?: AgentChatDecisionData;
+}
+
+/**
+ * The decision-router verdict for a plain chat turn (Phase 2.14, Needle 3
+ * runtime integration): what the router classified, which execution path the
+ * deterministic policy selected, and — when the classifier could not speak —
+ * the safe fallback state that routed the turn instead. Every field is safe
+ * to display: a bounded reason and a closed vocabulary, with the model's
+ * path, files and every credential staying server-side.
+ *
+ * Present on plain chat turns; capability, gated-analysis and
+ * metering-refused turns are routed by their own explicit gates and carry no
+ * decision.
+ */
+export interface AgentChatDecisionData {
+  /** Where the request belongs (`trading / general / system / unknown`). */
+  domain: string;
+  /** The classified intent, or `UNCLASSIFIED` when only the fallback spoke. */
+  intent: string;
+  /** `simple` when the route can be served locally, `complex` otherwise. */
+  complexity: 'simple' | 'complex';
+  /** Whether the selected route requires a hosted model. */
+  requires_cloud_llm: boolean;
+  /** The classifier's confidence 0–100 (0 when no classifier spoke). */
+  confidence: number;
+  /** The taxonomy route the decision selected. */
+  route: string;
+  /** The execution path the turn actually took by the policy's selection. */
+  executionPath: 'LOCAL_RESPONSE' | 'LLM_GATEWAY';
+  /** Which layer produced the decision (`needle3 / fallback / disabled`). */
+  source: 'needle3' | 'fallback' | 'disabled';
+  /** Bounded machine code for how the decision was reached. */
+  code: string;
+  /** One bounded, safe sentence on why. */
+  reason: string;
 }
 
 /** One entry of the context history, for review. */

@@ -858,6 +858,18 @@ reason, requires_llm, requires_tool}`: unknown keys refused,
   intent and route; validated by a pure, line-numbered parser that also
   enforces flag coherence and route guidance, so label drift fails at
   the file instead of in production.
+- **Runtime integration (Phase 2.14)** — `src/agent/decisionRouter/`
+  now sits after the user prompt and before the Agent Runtime on plain
+  chat turns: the Cactus `needle` CLI behind the `Needle3Classifier`
+  interface, a deterministic policy that fails closed into the full
+  existing pipeline for every failure shape (disabled, missing
+  checkpoint, timeout, malformed output, incoherent route, `BLOCK`,
+  confidence below `NEEDLE3_MIN_CONFIDENCE`), and a typed `decision`
+  block in the chat response the AI Workplace renders. Environment:
+  `MASTER_TRADE_DECISION_ROUTER=needle3|off`, `NEEDLE3_ENABLED`,
+  `NEEDLE3_CHECKPOINT_PATH`, `NEEDLE3_CLI_PATH`, `NEEDLE3_TIMEOUT_MS`,
+  `NEEDLE3_MIN_CONFIDENCE`. The router is never authoritative for
+  permissions, risk, tool authorization or execution.
 - **Safety by construction** — the five prohibitions (no advice, no
   execution, no permission bypass, no direct tool calls, route
   decisions only) are data and structural properties of a closed

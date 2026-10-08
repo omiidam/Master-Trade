@@ -28,6 +28,7 @@
  */
 
 import type { AgentChatBody } from '../../../packages/shared/src/api/schemas.js';
+import type { AgentChatDecisionData } from '../../../packages/shared/src/api/contracts.js';
 import type { ResponseLanguage } from '../../../packages/shared/src/types.js';
 import type { ResponseStyle } from '../../../packages/shared/src/language/guidance.js';
 import type { AgentAsyncTurn, AgentService, AgentTurn } from '../../agent/service.js';
@@ -40,6 +41,8 @@ import {
   type ResponsePipelineResult,
 } from '../../agent/responsePipeline.js';
 import { validateChatMessage, type ChatPolicyDecision } from '../../agent/chatPolicy.js';
+import type { ChatRoutingDecision } from '../../agent/decisionRouter/contract.js';
+import type { ChatDecisionRouter } from '../../agent/decisionRouter/routingPolicy.js';
 import type { AgentLoopResult, AgentLoopStopReason } from '../../agent/agentLoop.js';
 import type { AnalysisReadinessDecision } from '../../../packages/shared/src/quality/readiness.js';
 import {
@@ -64,8 +67,9 @@ import type { RouteHandler } from '../context.js';
  * the LLM Gateway, `LOCAL_RESPONSE` when it was answered on this machine
  * without consulting a hosted model. The names mirror Needle 3's decision-router
  * taxonomy (DEC-AI-23) because they mean the same things — but this value is
- * written by this handler about a turn that already ran; the router stays
- * unwired to the runtime.
+ * written by this handler about a turn that already ran. Since Phase 2.14
+ * the router selects the path before the Agent Runtime runs; the handler
+ * reports the one the turn actually took.
  */
 export type AgentChatRoute = 'LLM_GATEWAY' | 'LOCAL_RESPONSE';
 
@@ -153,6 +157,16 @@ export interface AgentChatResponseData {
     endedAt: string | null;
     durationMs: number | null;
   };
+  /**
+   * The decision-router verdict for this turn (Phase 2.14): what Needle 3 —
+   * or the deterministic fallback when the router could not classify —
+   * decided, and which execution path the policy selected. Safe fields only:
+   * the model's path and files never leave the server. Present on plain chat
+   * turns (the surface the router routes); capability, gated-analysis and
+   * metering-refused turns are routed by their own explicit gates, not by
+   * the router, and carry no decision.
+   */
+  decision?: AgentChatDecisionData;
 }
 
 export interface AgentMetering {
@@ -199,6 +213,15 @@ export function agentChatHandler(
    * real time; without it the turn runs exactly as before.
    */
   runs?: AgentRunManager | undefined,
+  /**
+   * The decision router (Phase 2.14): the first AI processing layer after
+   * the user prompt and before the Agent Runtime. It only ever chooses
+   * between the two existing execution paths — a local deterministic answer
+   * or the full existing pipeline — and its verdict travels to the surface
+   * as the response's decision block. Without it, plain chat runs exactly
+   * as before.
+   */
+  decisionRouter?: ChatDecisionRouter | undefined,
 ): RouteHandler<AgentChatBody, AgentChatResponseData> {
   /*
    * The deterministic engines this process actually holds, asked of the registry rather than
@@ -300,6 +323,7 @@ export function agentChatHandler(
       runId?: string;
       response?: ResponsePipelineResult;
       route: AgentChatRoute;
+      decision?: ChatRoutingDecision;
     }> => {
       /*
        * A request that names an analysis is gated before anything answers it.
@@ -461,8 +485,10 @@ export function agentChatHandler(
         return { turn, route: 'LOCAL_RESPONSE' };
       }
 
-      // Plain chat — the alpha path. Policy first, then the full pipeline when it
-      // is wired, then the offline single step exactly as before.
+      // Plain chat — the alpha path. Policy first, then the decision router
+      // (Phase 2.14) — the first AI processing layer, before the Agent
+      // Runtime — then the full pipeline when it is wired and the router
+      // sends the turn to it, then the offline single step exactly as before.
       const plainPolicy = validateChatMessage(body.message);
       if (!plainPolicy.allowed) {
         context.logger.info(
@@ -477,7 +503,37 @@ export function agentChatHandler(
         return { turn, route: 'LOCAL_RESPONSE' };
       }
 
-      if (loop !== null) {
+      /*
+       * The decision router speaks for allowed plain chat turns: what Needle 3
+       * classified (or why the deterministic fallback had to), and which of
+       * the two existing execution paths the policy selected. It is never
+       * authoritative for permissions, risk or execution — those gates all
+       * still run; this only chooses whether the Agent Runtime is consulted.
+       */
+      const decision =
+        decisionRouter !== undefined ? await decisionRouter.route(body.message) : undefined;
+      if (decision !== undefined) {
+        context.logger.info(
+          'decision router routed a chat turn',
+          {
+            intent: decision.intent,
+            route: decision.route,
+            executionPath: decision.executionPath,
+            source: decision.source,
+            code: decision.code,
+            complexity: decision.complexity,
+            confidence: decision.confidence,
+          },
+          'agent.turn.routed',
+        );
+      }
+      // A local routing is not a bypass: the deterministic offline adapter
+      // (already the single local answer path) handles the turn, and no
+      // hosted model is consulted — exactly what `LOCAL_RESPONSE` has meant
+      // since Phase 2.13-B.
+      const routedLocal = decision !== undefined && decision.executionPath === 'LOCAL_RESPONSE';
+
+      if (loop !== null && !routedLocal) {
         // User → agent.chat → Agent Loop → Harness → adapter → gateway → response.
         // runLoop creates, tracks and settles the run itself, so nothing wraps it
         // in a second record; the response pipeline turns its settled result into
@@ -513,6 +569,7 @@ export function agentChatHandler(
           runId: mapped.runId,
           response: mapped.response,
           route: 'LLM_GATEWAY',
+          ...(decision === undefined ? {} : { decision }),
         };
       }
 
@@ -535,7 +592,11 @@ export function agentChatHandler(
       if (bus !== undefined) {
         publishTurn(bus, turn, context.correlationId, context.logger);
       }
-      return { turn, route: 'LOCAL_RESPONSE' };
+      return {
+        turn,
+        route: 'LOCAL_RESPONSE',
+        ...(decision === undefined ? {} : { decision }),
+      };
     };
 
     /*
@@ -587,6 +648,7 @@ export function agentChatHandler(
         runId: string;
         response?: ResponsePipelineResult;
         route: AgentChatRoute;
+        decision?: ChatRoutingDecision;
       },
       usage: AgentChatResponseData['usage'],
     ): { data: AgentChatResponseData } => {
@@ -642,6 +704,9 @@ export function agentChatHandler(
           ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
           ...(turn.readiness === undefined ? {} : { readiness: turn.readiness }),
           ...(turn.capability === undefined ? {} : { capability: turn.capability }),
+          // The router's verdict, as the router stated it — shipped rather
+          // than re-derived, so the surface shows the actual decision.
+          ...(outcome.decision === undefined ? {} : { decision: outcome.decision }),
           ...(usage === undefined ? {} : { usage }),
           ...(record === null
             ? {}
@@ -670,6 +735,7 @@ export function agentChatHandler(
       runId: string;
       response?: ResponsePipelineResult;
       route: AgentChatRoute;
+      decision?: ChatRoutingDecision;
     }> => {
       const principal = context.principal;
       // An untracked turn has no run id of its own; the correlation id is
@@ -688,23 +754,32 @@ export function agentChatHandler(
         if (outcome.runId !== undefined) {
           return { ...outcome, runId: outcome.runId };
         }
-        // The loop never ran (the policy hook refused first): the refusal is
-        // still a tracked run, minted and settled here as a blocked one.
+        // The loop never ran: either the policy hook refused the turn
+        // (blocked, as before) or the decision router sent it to the local
+        // path (completed, answered by the deterministic adapter). Either
+        // way the turn is still a tracked run, minted and settled here by
+        // its own outcome — one turn, one run, never two records.
         const run = runs.createRun({
           userId: loop.userId,
           correlationId: context.correlationId,
           model: service.modelLabel(),
         });
         runs.start(run.runId, loop.userId);
-        runs.block(
-          run.runId,
-          loop.userId,
-          outcome.turn.reason ?? 'the turn was blocked before the loop ran',
-        );
+        if (outcome.turn.status === 'completed') {
+          runs.transition(run.runId, loop.userId, 'responding');
+          runs.complete(run.runId, loop.userId);
+        } else {
+          runs.block(
+            run.runId,
+            loop.userId,
+            outcome.turn.reason ?? 'the turn was blocked before the loop ran',
+          );
+        }
         return {
           turn: outcome.turn,
           runId: run.runId,
           route: outcome.route,
+          ...(outcome.decision === undefined ? {} : { decision: outcome.decision }),
           ...(outcome.response === undefined ? {} : { response: outcome.response }),
         };
       }
@@ -728,6 +803,7 @@ export function agentChatHandler(
           turn,
           runId: run.runId,
           route: outcome.route,
+          ...(outcome.decision === undefined ? {} : { decision: outcome.decision }),
           ...(outcome.response === undefined ? {} : { response: outcome.response }),
         };
       } catch (error) {

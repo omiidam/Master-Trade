@@ -56,6 +56,10 @@ import { installErrorHandlers } from './errors.js';
 import { installSecurity, type InstalledSecurity } from './security.js';
 import { logRequestCompleted, createLogging, type ServerLogging } from './logging.js';
 import { agentChatHandler } from './handlers/agent.js';
+import {
+  createChatDecisionRouter,
+  type ChatDecisionRouter,
+} from '../agent/decisionRouter/index.js';
 import { healthHandler, readinessHandler } from './handlers/health.js';
 import { localSessionHandler } from './handlers/session.js';
 import { jobCancelHandler, jobGetHandler, jobListHandler } from './handlers/jobs.js';
@@ -114,6 +118,13 @@ export interface ServerDeps {
    * the existing gateway; without it the offline scripted adapter answers.
    */
   aiGateway?: AiGatewayRegistration;
+  /**
+   * The chat decision router (Phase 2.14), when the caller supplies one —
+   * the adapter-boundary seam tests use so a classification can be mocked
+   * hermetically. Defaults to the router the configuration builds: the real
+   * local Needle 3 adapter (or its deterministic fallback-only mode).
+   */
+  decisionRouter?: ChatDecisionRouter;
   idFactory?: IdFactory;
   now?: () => number;
   resolveSecret?: (ref: SecretRef) => string | null;
@@ -542,6 +553,10 @@ export function createServer(deps: ServerDeps = {}): ServerInstance {
         credits: FEATURES_BY_ID['agent.chat'].creditCost,
       },
       runs,
+      // Phase 2.14: the Needle 3 decision router, the first AI processing layer
+      // for plain chat turns — ahead of the Agent Runtime, never instead of it
+      // for a cloud route, and fail-closed to the full existing pipeline.
+      deps.decisionRouter ?? createChatDecisionRouter(config.decisionRouter),
     ) as AnyHandler,
     'job.list': jobListHandler(jobService) as AnyHandler,
     'job.get': jobGetHandler(jobService) as AnyHandler,

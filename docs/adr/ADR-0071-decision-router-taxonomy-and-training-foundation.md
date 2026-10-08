@@ -1,6 +1,10 @@
 # ADR-0071 — Decision Router foundation: Needle 3's taxonomy, schemas and training data
 
-- **Status:** Accepted
+- **Status:** Accepted — extended by Phase 2.14, which wired this
+  contract into the request path as `src/agent/decisionRouter/`
+  (runtime decision block, deterministic fail-closed policy, Cactus
+  adapter behind an interface); the taxonomy, schema and safety rules
+  defined here are unchanged and remain the contract that wiring obeys.
 - **Decision id:** `DEC-AI-23-DECISION-ROUTER`
 - **Phase:** Decision Router Taxonomy & Training Foundation (AI Workplace)
 - **Depends on:** ADR-0059 (the training foundation: dataset provenance,

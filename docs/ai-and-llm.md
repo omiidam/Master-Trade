@@ -675,3 +675,52 @@ failure, not a UI fallback. Deliberately absent from
 this phase: streaming, Needle 3 runtime routing, tool execution from
 chat, memory, RAG, portfolio integration and conversation
 persistence.
+
+### Decision router runtime integration (Phase 2.14)
+
+The Phase 2.12-A contract is now the first AI processing layer on a
+plain chat turn: **user prompt → `agent.chat` → decision router →
+deterministic policy → local answer or the existing Agent Runtime →
+Agent Loop → LLM Gateway**. `src/agent/decisionRouter/` is the layer:
+`contract.ts` (the typed decision — `domain`, `intent`, `complexity`,
+`requires_cloud_llm`, `confidence`, `route`, `executionPath`, `source`,
+`code`, `reason`), `needle3Adapter.ts` (the only file that knows a
+local model exists — it drives the installed Cactus `needle` CLI over
+the checkpoint behind the `Needle3Classifier` interface, so the runtime
+can replace or disable the model without `agent.chat` changing), and
+`routingPolicy.ts` (the fail-closed decision itself).
+
+Configuration is environment-only:
+`MASTER_TRADE_DECISION_ROUTER=needle3|off`, `NEEDLE3_ENABLED`,
+`NEEDLE3_CHECKPOINT_PATH`, `NEEDLE3_CLI_PATH`, `NEEDLE3_TIMEOUT_MS`
+(50–30000, default 1200) and `NEEDLE3_MIN_CONFIDENCE` (0–100,
+default 60). The checkpoint path is configuration, never a secret: it
+lives in the server config and reaches the browser only as a
+configured/not-configured fact — the response's `decision` block
+carries the bounded reason and closed vocabularies, never a path.
+
+The policy is deterministic and never silent. A classification is
+accepted only when its route is legal for its intent, is not `BLOCK`
+(refusals are the chat policy's authority, not the router's) and its
+confidence is at or above the threshold; every other shape — router
+disabled, checkpoint missing, unavailable, timeout, malformed output,
+incoherent route, low confidence — fails closed into the same
+conservative fallback: the full existing pipeline (Agent Runtime →
+Agent Loop → LLM Gateway), which is exactly what ran before this
+layer existed. The fallback is visible in the response (`source:
+'fallback' | 'disabled'` with a specific `code` and confidence `0`)
+and in the logs (`agent.turn.routed`). The router never grants a
+permission, never authorizes a tool and never executes: it only
+chooses between the two execution paths that already exist, the chat
+policy still refuses before it is consulted, and capability,
+gated-analysis and metering-refused turns keep their own explicit
+gates.
+
+The AI Workplace shows the verdict each turn was routed under —
+intent, selected execution path, confidence, cloud-LLM requirement,
+which layer decided (Needle 3 with its confidence, the fallback with
+its code, or "router disabled"), beside the Agent Runtime status and
+run id the run record already carried. The subprocess that runs the
+local classifier goes through `execOnce` in
+`src/desktop/child-process.ts`, the single spawner `src/` is allowed
+(`process.single-spawner.typescript`, security gate SEC-082).

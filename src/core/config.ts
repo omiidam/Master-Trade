@@ -98,6 +98,29 @@ export interface RealtimeConfig {
   replayBufferSize: number;
 }
 
+/**
+ * The chat decision-router configuration (Phase 2.14, Needle 3 runtime
+ * integration). Nothing here can weaken a safety guarantee: the router only
+ * ever chooses between answering locally and running the full existing
+ * pipeline, and every failure shape fails closed into that same pipeline.
+ * The checkpoint path names model weights on disk — configuration, never a
+ * secret — and is reported only as a configured/not-configured boolean.
+ */
+export interface DecisionRouterConfig {
+  /** Which router drives the pre-runtime decision. */
+  mode: 'needle3' | 'off';
+  /** Master switch for the Needle 3 adapter, independent of the mode. */
+  enabled: boolean;
+  /** The local Needle 3 checkpoint, or null when none is configured. */
+  checkpointPath: string | null;
+  /** The Cactus CLI executable, or null for the `needle` on PATH. */
+  cliPath: string | null;
+  /** Hard budget for one classification, before the fallback routes. */
+  timeoutMs: number;
+  /** Minimum classifier confidence (0–100) the policy accepts. */
+  minConfidence: number;
+}
+
 export interface MarketDataConfig {
   /** Only synthetic and historical data exist in this phase; never 'live'. */
   allowedProvenance: DataProvenance[];
@@ -139,6 +162,7 @@ export interface AppConfig {
   realtime: RealtimeConfig;
   marketData: MarketDataConfig;
   vectorMemory: VectorMemoryConfig;
+  decisionRouter: DecisionRouterConfig;
   observability: ObservabilityConfig;
   auth: AuthConfig;
   safety: SafetyProfile;
@@ -213,6 +237,17 @@ export const DEFAULT_CONFIG: AppConfig = {
     dimensions: 32,
     topK: 8,
     minScore: 0.1,
+  },
+  // The router layer is active by default; without a configured checkpoint it
+  // runs in deterministic fallback-only mode, which routes exactly as the
+  // pipeline did before this layer existed.
+  decisionRouter: {
+    mode: 'needle3',
+    enabled: true,
+    checkpointPath: null,
+    cliPath: null,
+    timeoutMs: 1_200,
+    minConfidence: 60,
   },
   observability: { level: 'info', redactSecrets: true, auditRetentionDays: 365 },
   auth: {
@@ -298,6 +333,12 @@ export function assertSafeConfig(config: AppConfig): void {
   }
   if (config.ai.allowModelDirectToolExecution !== false) {
     violations.push('ai.allowModelDirectToolExecution must be false');
+  }
+  if (config.decisionRouter.timeoutMs <= 0) {
+    violations.push('decisionRouter.timeoutMs must be > 0');
+  }
+  if (config.decisionRouter.minConfidence < 0 || config.decisionRouter.minConfidence > 100) {
+    violations.push('decisionRouter.minConfidence must be within 0-100');
   }
   if (config.auth.sessionTtlMinutes <= 0) violations.push('auth.sessionTtlMinutes must be > 0');
   if (violations.length > 0) {
