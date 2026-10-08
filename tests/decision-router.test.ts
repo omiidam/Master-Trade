@@ -319,7 +319,82 @@ describe('Needle 3 adapter parsing', () => {
     );
   });
 
-  it('the real local checkpoint is integrated through the real adapter — fail-closed, never a throw', async () => {
+  it('invokes the CLI with the fine-tune\u2019s own rendered prompt shape', async () => {
+    const calls: { command: string; args: readonly string[] }[] = [];
+    const runner: Needle3Runner = {
+      run: async ({ command, args }) => {
+        calls.push({ command, args: [...args] });
+        return {
+          stdout:
+            "prompt: '<|im_start|>user\\n<tools>[]</tools>\\nHi<|im_end|>\\n<|im_start|>assistant\\n'\n" +
+            '<tool_call>{"intent":"NON_TRADING","route":"LOCAL_RESPONSE","confidence":91,"reason":"Greeting or unrelated request.","requires_llm":false,"requires_tool":false}</tool_call>',
+        };
+      },
+    };
+    const { CactusNeedle3Classifier } =
+      await import('../src/agent/decisionRouter/needle3Adapter.js');
+    const classifier = new CactusNeedle3Classifier({
+      checkpointPath: '/models/needle3-router.safetensors',
+      cliPath: '/venv/bin/needle',
+      timeoutMs: 1_000,
+      runner,
+    });
+
+    const decision = await classifier.classify({ message: 'Hi there! Are you available?' });
+    expect(decision.intent).toBe('NON_TRADING');
+    expect(decision.confidence).toBe(91);
+
+    expect(calls).toHaveLength(1);
+    const call = calls[0]!;
+    expect(call.command).toBe('/venv/bin/needle');
+    expect(call.args[0]).toBe('run');
+    expect(call.args).toContain('/models/needle3-router.safetensors');
+    // The prompt is the fine-tune's own chat template — the empty tool list,
+    // the raw message, and the assistant turn left open — because that is
+    // exactly how training rendered it.
+    expect(call.args[call.args.indexOf('--query') + 1]).toBe(
+      '<|im_start|>user\n<tools>[]</tools>\nHi there! Are you available?<|im_end|>\n<|im_start|>assistant\n',
+    );
+    expect(call.args).toContain('--temperature');
+    expect(call.args[call.args.indexOf('--temperature') + 1]).toBe('0');
+  });
+
+  it('the fine-tuned local checkpoint really classifies through the real adapter', async () => {
+    const checkpoint = join(
+      homedir(),
+      'needle3',
+      'models',
+      'checkpoints',
+      'needle3-router.safetensors',
+    );
+    const cli = join(homedir(), 'needle3', '.venv', 'bin', 'needle');
+    if (!existsSync(checkpoint) || !existsSync(cli)) return; // installed-model test; skipped elsewhere
+
+    const config = loadConfigFromEnv({
+      MASTER_TRADE_DECISION_ROUTER: 'needle3',
+      NEEDLE3_ENABLED: 'true',
+      NEEDLE3_CHECKPOINT_PATH: checkpoint,
+      NEEDLE3_CLI_PATH: cli,
+      NEEDLE3_TIMEOUT_MS: '180000',
+      NEEDLE3_MIN_CONFIDENCE: '60',
+    });
+
+    // The real thing: the real policy over the real fine-tuned checkpoint over
+    // the real Cactus CLI, classifying a prompt the fine-tune was trained on.
+    const router = createChatDecisionRouter(config.decisionRouter);
+    const decision: ChatRoutingDecision = await router.route('Hi there! Are you available?');
+    expect(decision.source).toBe('needle3');
+    expect(decision.code).toBe('NEEDLE3_CLASSIFIED');
+    expect(decision.intent).toBe('NON_TRADING');
+    expect(decision.route).toBe('LOCAL_RESPONSE');
+    expect(decision.executionPath).toBe('LOCAL_RESPONSE');
+    expect(decision.requires_cloud_llm).toBe(false);
+    expect(decision.confidence).toBeGreaterThanOrEqual(60);
+    // The model's disk layout never travels with the verdict.
+    expect(JSON.stringify(decision)).not.toContain('safetensors');
+  }, 300_000);
+
+  it('the base checkpoint is integrated through the real adapter — fail-closed, never a throw', async () => {
     const checkpoint = join(homedir(), 'needle3', 'models', 'checkpoints', 'needle3.safetensors');
     const cli = join(homedir(), 'needle3', '.venv', 'bin', 'needle');
     if (!existsSync(checkpoint) || !existsSync(cli)) return; // installed-model test; skipped elsewhere

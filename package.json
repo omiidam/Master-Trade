@@ -34,6 +34,8 @@
     "brand:measure": "node scripts/build-brand-assets.mjs --measure",
     "fonts:vendor": "node scripts/vendor-fonts.mjs",
     "fonts:check": "node scripts/vendor-fonts.mjs --check",
+    "needle3:dataset": "node scripts/needle3-router-dataset.mjs",
+    "needle3:merge": "python3 scripts/needle3-router-merge.py",
     "desktop:icons": "tauri icon assets/brand/master-trade-logo-source.png",
     "desktop:verify": "node dist/src/desktop/cli.js",
     "desktop:dev": "tauri dev",

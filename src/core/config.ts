@@ -246,7 +246,12 @@ export const DEFAULT_CONFIG: AppConfig = {
     enabled: true,
     checkpointPath: null,
     cliPath: null,
-    timeoutMs: 1_200,
+    // Real local inference on this machine's CPU is tens of seconds (the
+    // checkpoint is small, the engine is JAX on CPU), so the budget has to
+    // clear a real classification rather than a hypothetical one: too small
+    // a default would turn every real turn into the timeout fallback. The
+    // policy still fails closed the moment the budget is exceeded.
+    timeoutMs: 60_000,
     minConfidence: 60,
   },
   observability: { level: 'info', redactSecrets: true, auditRetentionDays: 365 },

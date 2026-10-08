@@ -11,9 +11,10 @@
  * this machine through the Cactus `needle` CLI (`needle run --checkpoint …
  * --query …`), as a short-lived subprocess with a hard timeout:
  *
- *   - the prompt is the training instruction the fine-tune is taught
- *     (`ROUTER_TRAINING_INSTRUCTION`), so a checkpoint trained on the
- *     decision-router dataset is prompted exactly as it was trained;
+ *   - the prompt is exactly the fine-tune's own chat template: the raw
+ *     user message with the empty tool list (`--tools`), which is how
+ *     `training-data/decision-router-needle.jsonl` taught the model to
+ *     classify — so inference and training share one prompt shape;
  *   - the completion must be the strict decision JSON the Phase 2.12-A
  *     contract defines — parsed by `parseRouterDecision`, validated for
  *     intent/route coherence with `isRouteAllowedForIntent`;
@@ -21,19 +22,12 @@
  *     code: unavailable (nothing to execute), timeout, invalid output.
  *     Nothing here throws past the policy, and nothing here logs a model
  *     path or a raw completion into a response.
- *
- * The base checkpoint installed today emits prose, not decisions, so on the
- * current machine the adapter honestly fails closed and the deterministic
- * fallback routes the turn — which is the designed behaviour, not a defect:
- * the interface is live, and a checkpoint fine-tuned to emit decisions
- * (Phase 2.12-B) starts routing for real with no code change.
  */
 
 import { ChildTimeoutError, execOnce } from '../../desktop/child-process.js';
 import {
   isRouteAllowedForIntent,
   parseRouterDecision,
-  ROUTER_TRAINING_INSTRUCTION,
   type RouterDecision,
 } from '../../training/decisionRouter.js';
 
@@ -67,6 +61,19 @@ export const processRunner: Needle3Runner = {
     }
   },
 };
+
+/**
+ * The rendered prompt the fine-tune was trained on, built here rather than
+ * left to the CLI: the model's chat template with the empty tool list the
+ * decision router always has (`<tools>[]</tools>`), the raw user message,
+ * and the assistant turn left open. The CLI's own `--tools` path cannot
+ * produce it — it falls back to the bare query when the tool list is empty
+ * (`if not tools: return query`) — so the template is applied here, exactly
+ * as `render_example` in the training pipeline renders it.
+ */
+export function routerPrompt(message: string): string {
+  return `<|im_start|>user\n<tools>[]</tools>\n${message}<|im_end|>\n<|im_start|>assistant\n`;
+}
 
 /** The classifier interface everything downstream depends on. */
 export interface Needle3Classifier {
@@ -108,8 +115,12 @@ export interface Needle3AdapterOptions {
   runner?: Needle3Runner;
 }
 
-/** The generation budget, in tokens: a decision is short JSON, not prose. */
-const MAX_LEN_TOKENS = 256;
+/**
+ * The generation budget, in tokens: a decision is short JSON (`~50` tokens),
+ * and the bound is tight because every token costs CPU time on the real
+ * local checkpoint — a runaway generation would only be discarded.
+ */
+const MAX_LEN_TOKENS = 96;
 
 export class CactusNeedle3Classifier implements Needle3Classifier {
   private readonly runner: Needle3Runner;
@@ -129,8 +140,11 @@ export class CactusNeedle3Classifier implements Needle3Classifier {
         'run',
         '--checkpoint',
         this.options.checkpointPath,
+        // The rendered training template, so a real classification reads
+        // exactly the prompt shape the fine-tune learned (see
+        // `routerPrompt` for why the CLI's `--tools` cannot build it).
         '--query',
-        `${ROUTER_TRAINING_INSTRUCTION}: ${message}`,
+        routerPrompt(message),
         '--temperature',
         '0',
         '--max-len',
@@ -155,12 +169,18 @@ export class CactusNeedle3Classifier implements Needle3Classifier {
  * JSON object in the output — and then the strict contract does the rest.
  */
 export function parseCompletion(stdout: string): RouterDecision {
-  const start = stdout.indexOf('{');
-  const end = stdout.lastIndexOf('}');
+  // The CLI echoes the rendered prompt (which contains the user's message,
+  // possibly with braces) before generating, so the scan is anchored on the
+  // tool-call marker the fine-tune opens its answer with — and falls back to
+  // the first JSON object for a checkpoint that answers bare JSON.
+  const marker = stdout.indexOf('<tool_call>');
+  const region = marker === -1 ? stdout : stdout.slice(marker + '<tool_call>'.length);
+  const start = region.indexOf('{');
+  const end = region.lastIndexOf('}');
   if (start === -1 || end <= start) {
     throw new Needle3InvalidOutputError(['the completion contained no JSON object']);
   }
-  const parsed = parseRouterDecision(stdout.slice(start, end + 1));
+  const parsed = parseRouterDecision(region.slice(start, end + 1));
   if (!parsed.ok) {
     throw new Needle3InvalidOutputError(parsed.issues);
   }

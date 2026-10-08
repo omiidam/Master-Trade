@@ -716,6 +716,49 @@ policy still refuses before it is consulted, and capability,
 gated-analysis and metering-refused turns keep their own explicit
 gates.
 
+**The real model (Phase 2.14.B).** The checkpoint that answers is the
+fine-tuned router itself, not the base model: a LoRA adapter (rank 16,
+`needle finetune`, 32 epochs at lr 1.5e-3) was trained over
+`training-data/decision-router.jsonl`'s taxonomy and merged into
+`needle3.safetensors`, with a runtime-format copy of the dataset
+(`training-data/decision-router-needle.jsonl`: `query` + `answers`, the
+full six-field decision) so training and inference share one prompt
+shape. The prompt the adapter sends is the fine-tune's own chat template,
+rendered on this side (`routerPrompt`): `<|im_start|>user\n<tools>[]</tools>\n{message}<|im_end|>\n<|im_start|>assistant\n`.
+The CLI's `--tools` path cannot build it — with an empty tool list it
+falls back to the bare query (`if not tools: return query`) — which is
+why the template lives on this side. The completion is read out of its
+`<tool_call>…</tool_call>` block, which is how the fine-tune answers.
+Reproducing the checkpoint, from the repository root:
+
+```bash
+# 1. the runtime-format dataset (query + answers, the full six-field decision),
+#    derived from training-data/decision-router.jsonl — the taxonomy file is
+#    never rewritten
+node scripts/needle3-router-dataset.mjs
+# 2. the LoRA adapter (real CPU training; ~20-30 min on this machine)
+~/needle3/.venv/bin/needle finetune \
+  --checkpoint ~/needle3/models/checkpoints/needle3.safetensors \
+  --epochs 32 --lr 1.5e-3 --batch-size 8 --val-split 0 \
+  --out ~/needle3/models/checkpoints/needle3-router-adapter.safetensors \
+  training-data/decision-router-needle.jsonl
+# 3. merge the adapter into a runnable checkpoint (`needle run` loads no
+#    adapter; the merge applies merge_lora and the W4 straight-through
+#    quantisation the training loss was measured under)
+~/needle3/.venv/bin/python scripts/needle3-router-merge.py
+# 4. point the router at the merged checkpoint
+NEEDLE3_CHECKPOINT_PATH=~/needle3/models/checkpoints/needle3-router.safetensors
+NEEDLE3_CLI_PATH=~/needle3/.venv/bin/needle
+```
+
+Real CPU inference takes tens of seconds, so
+the default budget is 60 s (`NEEDLE3_TIMEOUT_MS`, accepted up to
+180 s) and the generation bound is 96 tokens: a budget that could not
+fit a real classification would make the timeout fallback the normal
+path. `tests/browser/needle3-real.e2e.test.ts` drives the whole thing —
+real checkpoint, real CLI, real browser — including a complex prompt
+that reaches the existing Agent Runtime and LLM Gateway.
+
 The AI Workplace shows the verdict each turn was routed under —
 intent, selected execution path, confidence, cloud-LLM requirement,
 which layer decided (Needle 3 with its confidence, the fallback with

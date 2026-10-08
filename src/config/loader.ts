@@ -264,10 +264,13 @@ export function loadConfigFromEnv(env: NodeJS.ProcessEnv = process.env): AppConf
   const needle3Timeout = env['NEEDLE3_TIMEOUT_MS'];
   if (needle3Timeout !== undefined && needle3Timeout.trim() !== '') {
     const parsed = Number(needle3Timeout);
-    if (!Number.isInteger(parsed) || parsed < 50 || parsed > 30_000) {
+    // The upper bound is minutes, not seconds: a real classification runs the
+    // local checkpoint on the CPU, which takes tens of seconds, and a budget
+    // that cannot fit one would make the timeout fallback the normal path.
+    if (!Number.isInteger(parsed) || parsed < 50 || parsed > 180_000) {
       throw new AppError(
         'VALIDATION_FAILED',
-        'Invalid configuration: NEEDLE3_TIMEOUT_MS must be an integer between 50 and 30000.',
+        'Invalid configuration: NEEDLE3_TIMEOUT_MS must be an integer between 50 and 180000.',
       );
     }
     decisionRouter.timeoutMs = parsed;
