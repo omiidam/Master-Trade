@@ -26,6 +26,10 @@ const withDatabase = driver.available ? it : it.skip;
  *   5. The chat policy speaks before the model: greetings, manipulation
  *      attempts and execution requests are answered without any gateway call,
  *      and each refusal is still a tracked (blocked) run.
+ *   6. Every response reports the route it actually took (Phase 2.13-B):
+ *      `LLM_GATEWAY` for a turn that ran the loop into the provider — even one
+ *      the provider refused — and `LOCAL_RESPONSE` for anything answered on
+ *      this machine, with a note that never claims "offline" on a live deploy.
  */
 
 const arvanSettings = {
@@ -152,6 +156,13 @@ describe('AI Workplace alpha chat (Phase 2.13)', () => {
     expect(record.state).toBe('completed');
     expect(record.correlationId).toBe(data.correlationId);
 
+    // The response names the path it took, and the note agrees: this answer
+    // travelled Agent Loop → LLM Gateway, and no "offline" claim appears on a
+    // deployment where a hosted model was genuinely consulted.
+    expect(data.route).toBe('LLM_GATEWAY');
+    expect(data.note).toMatch(/LLM Gateway/);
+    expect(data.note).not.toMatch(/offline/i);
+
     await server.close();
   });
 
@@ -241,6 +252,10 @@ describe('AI Workplace alpha chat (Phase 2.13)', () => {
     expect(response.body).not.toContain('gateway boom');
     expect(data.run).toBeDefined();
     expect(data.run.state).toBe('failed');
+    // The provider refused the call, but the request still *went* through the
+    // gateway — the route reports the path taken, the pipeline kind reports
+    // that it failed there.
+    expect(data.route).toBe('LLM_GATEWAY');
 
     await server.close();
   });
@@ -268,6 +283,11 @@ describe('AI Workplace alpha chat (Phase 2.13)', () => {
     expect(data.reply).toMatch(/Master Trade AI Workplace/);
     expect(data.run).toBeDefined();
     expect(data.run.state).toBe('blocked');
+    // The redirect never left this machine, and on a live deployment the note
+    // says exactly that instead of blaming the offline adapter.
+    expect(data.route).toBe('LOCAL_RESPONSE');
+    expect(data.note).toMatch(/no hosted model was consulted/i);
+    expect(data.note).not.toMatch(/offline/i);
 
     await server.close();
   });

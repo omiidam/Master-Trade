@@ -108,6 +108,8 @@ interface AlphaTurn {
   durationMs?: number | null;
   correlationId?: string;
   model?: string;
+  /** The path the server reports this turn took: LLM_GATEWAY or LOCAL_RESPONSE. */
+  route?: string;
 }
 
 /** The server's epistemic label, with the honest fallback for a label we don't know. */
@@ -134,6 +136,7 @@ function turnFromResponse(data: AgentChatData, id: string): AlphaTurn {
         }),
     correlationId: data.correlationId,
     model: data.model,
+    ...(data.route === undefined ? {} : { route: data.route }),
   };
 }
 
@@ -141,6 +144,20 @@ function turnFromResponse(data: AgentChatData, id: string): AlphaTurn {
 function describeFailure(error: unknown): string {
   if (error instanceof ApiError) return `${error.code}: ${error.describe()}`;
   return error instanceof Error ? error.message : 'The request failed without a reason.';
+}
+
+/**
+ * Refuse to render an answer the server did not actually describe. A 200 whose
+ * payload is missing the reply or the statements is a contract violation, not an
+ * answer — showing it would put `undefined` in the transcript, which reads like a
+ * broken message rather than a broken response.
+ */
+function assertChatShape(data: AgentChatData): void {
+  if (typeof data?.reply !== 'string' || !Array.isArray(data.statements)) {
+    throw new Error(
+      'The local API answered with an unexpected response shape, so this turn was not shown.',
+    );
+  }
 }
 
 export function AgentWorkspacePage() {
@@ -151,6 +168,8 @@ export function AgentWorkspacePage() {
   const [failure, setFailure] = useState<string | null>(null);
   /** The model label the last answer carried, until one has: null means not answered yet. */
   const [model, setModel] = useState<string | null>(null);
+  /** The execution route the last answer reported, until one has. */
+  const [lastRoute, setLastRoute] = useState<string | null>(null);
   const [lastRun, setLastRun] = useState<NonNullable<AgentChatData['run']> | null>(null);
   const [lastUsage, setLastUsage] = useState<NonNullable<AgentChatData['usage']> | null>(null);
   /**
@@ -192,8 +211,10 @@ export function AgentWorkspacePage() {
       setTurns((previous) => [...previous, userTurn]);
       setDraft('');
       const data = await client.agentChat({ message, conversationId });
+      assertChatShape(data);
       setTurns((previous) => [...previous, turnFromResponse(data, `t-${data.correlationId}`)]);
       setModel(data.model);
+      setLastRoute(data.route ?? null);
       setLastRun(data.run ?? null);
       setLastUsage(data.usage ?? null);
     } catch (error) {
@@ -341,6 +362,15 @@ export function AgentWorkspacePage() {
                         {isAgent && message.runId !== undefined ? (
                           <footer className="num mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-micro text-text-faint">
                             <span>run {message.runId}</span>
+                            {/* The path the server reports this turn took — shown per
+                                message because a policy redirect and a gateway answer
+                                happen in the same transcript. */}
+                            {message.route !== undefined ? (
+                              <>
+                                <span aria-hidden>·</span>
+                                <span>{message.route}</span>
+                              </>
+                            ) : null}
                             <span aria-hidden>·</span>
                             <span>{message.runState}</span>
                             {message.durationMs != null ? (
@@ -362,6 +392,38 @@ export function AgentWorkspacePage() {
                   );
                 })
               )}
+
+              {/* The loading indicator, where the answer will land. It states the
+                  request's real path while the composer is locked above — and it is
+                  not an answer: nothing is appended to the transcript until the
+                  server actually responds, at which point this card is replaced by
+                  the turn and its run. */}
+              {running ? (
+                <Card
+                  as="article"
+                  tone="sunken"
+                  emphasis="none"
+                  wash={false}
+                  className="p-3.5"
+                  aria-live="polite"
+                >
+                  <header className="flex flex-wrap items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="grid h-6 w-6 animate-pulse place-items-center rounded-full bg-ai-soft text-ai"
+                    >
+                      <BrainCircuit size={13} />
+                    </span>
+                    <span className="text-caption font-medium text-text">Training agent</span>
+                    <Badge tone="ai" dot>
+                      RUNNING
+                    </Badge>
+                  </header>
+                  <p className="mt-2 text-body text-text-faint">
+                    Running the turn through Agent Loop → LLM Gateway → Response…
+                  </p>
+                </Card>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -424,6 +486,17 @@ export function AgentWorkspacePage() {
                     : `state ${lastRun.state} · started ${lastRun.startedAt}${
                         lastRun.durationMs != null ? ` · ${lastRun.durationMs} ms` : ''
                       }`
+                }
+              />
+              <ReadOnlyValue
+                label="Route"
+                value={lastRoute ?? 'not answered yet'}
+                hint={
+                  lastRoute === null
+                    ? 'Each turn reports how it was answered: LLM_GATEWAY through the Agent Loop and LLM Gateway, LOCAL_RESPONSE answered on this machine.'
+                    : lastRoute === 'LLM_GATEWAY'
+                      ? 'This turn ran Agent Loop → Harness → LLM Gateway → Response: a hosted model was consulted.'
+                      : 'This turn was answered on this machine — no hosted model was consulted.'
                 }
               />
               <ReadOnlyValue

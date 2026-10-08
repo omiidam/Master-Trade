@@ -203,6 +203,25 @@ export interface AgentChatData {
   agentState: string;
   /** The model label that answered — or the offline adapter's, which says no hosted model did. */
   model: string;
+  /**
+   * The execution path this turn actually took, reported by the server
+   * (Phase 2.13-B) so the surface can show *how* the answer was produced:
+   *
+   * - `LLM_GATEWAY` — the turn ran through Run Manager → Agent Loop →
+   *   Harness → adapter → LLM Gateway (a hosted model was consulted; a
+   *   provider failure still travelled this path and is reported as a
+   *   blocked turn with `responsePipeline.kind: 'failed'`).
+   * - `LOCAL_RESPONSE` — the turn was answered on this machine without
+   *   consulting a hosted model: the chat policy hook refused or redirected
+   *   it, a capability/analysis plan ran the deterministic engine, the
+   *   offline adapter answered, or metering refused the turn.
+   *
+   * The two names mirror Needle 3's decision-router taxonomy (DEC-AI-23)
+   * because they mean exactly the same things — but this field is written
+   * by the chat handler about a turn that already ran; the router itself
+   * remains unwired to the runtime.
+   */
+  route: 'LLM_GATEWAY' | 'LOCAL_RESPONSE';
   /** How many deterministic tool runs the turn recorded. */
   toolResultCount: number;
   /** The structured statements behind the reply; empty unless the turn completed. */

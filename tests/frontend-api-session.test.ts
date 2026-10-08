@@ -21,6 +21,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiClient, ApiError } from '../web/src/api/client.js';
 import { clientForApiSession, resetApiSession } from '../web/src/api/session.js';
 
 /**
@@ -177,5 +178,52 @@ describe('a refused API session', () => {
     // It did ask once — that is what tells a stale session from a refused deployment — but
     // the identical answer is where the retrying stops.
     expect(signInsOf(calls)).toHaveLength(2);
+  });
+});
+
+/**
+ * A chat turn that never answers (Phase 2.13-B).
+ *
+ * The composer locks while a turn is in flight, so the request's ceiling is the only
+ * thing that guarantees the lock ever releases. Two facts must stay apart: a deadline
+ * that fired is `TIMEOUT` (the API was reached and was slow), and a socket that never
+ * connected is `PROVIDER_UNAVAILABLE` (the API is not there) — merging them reports a
+ * working-but-slow turn as a dead one, or a dead API as a slow one.
+ */
+describe('a chat turn with a deadline', () => {
+  it('sends a cancellation signal and reports a fired deadline as TIMEOUT', async () => {
+    let seenSignal: AbortSignal | null | undefined;
+    const stub: typeof fetch = async (_request, init) => {
+      seenSignal = init?.signal;
+      throw new DOMException('The operation timed out.', 'TimeoutError');
+    };
+    vi.stubGlobal('fetch', stub);
+
+    const client = new ApiClient({ baseUrl: API, token: 'mt_s_chat' });
+    const failure = await client.agentChat({ message: 'What is liquidity in trading?' }).then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+    expect(failure).toBeInstanceOf(ApiError);
+    expect((failure as ApiError).code).toBe('TIMEOUT');
+    expect((failure as ApiError).status).toBe(504);
+    expect((failure as ApiError).describe()).toMatch(/took too long/i);
+    // The ceiling was declared on the request itself rather than left to the browser's
+    // own multi-minute default — the signal exists because the client asked for one.
+    expect(seenSignal).not.toBeNull();
+    expect(seenSignal).toBeDefined();
+  });
+
+  it('still reports an unreachable API as PROVIDER_UNAVAILABLE, not a timeout', async () => {
+    const stub: typeof fetch = async () => {
+      throw new TypeError('fetch failed');
+    };
+    vi.stubGlobal('fetch', stub);
+
+    const client = new ApiClient({ baseUrl: API, token: 'mt_s_chat' });
+    await expect(client.agentChat({ message: 'Hello' })).rejects.toMatchObject({
+      code: 'PROVIDER_UNAVAILABLE',
+    });
   });
 });

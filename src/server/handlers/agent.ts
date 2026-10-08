@@ -58,6 +58,17 @@ import { AppError } from '../../../packages/shared/src/core/errors.js';
 import type { UsageService } from '../../usage/service.js';
 import type { RouteHandler } from '../context.js';
 
+/**
+ * Which path a chat turn actually took, reported to the surface (Phase 2.13-B):
+ * `LLM_GATEWAY` when the turn ran through the Agent Loop's harness adapter into
+ * the LLM Gateway, `LOCAL_RESPONSE` when it was answered on this machine
+ * without consulting a hosted model. The names mirror Needle 3's decision-router
+ * taxonomy (DEC-AI-23) because they mean the same things — but this value is
+ * written by this handler about a turn that already ran; the router stays
+ * unwired to the runtime.
+ */
+export type AgentChatRoute = 'LLM_GATEWAY' | 'LOCAL_RESPONSE';
+
 export interface AgentChatResponseData {
   reply: string;
   epistemicKind: string;
@@ -65,6 +76,8 @@ export interface AgentChatResponseData {
   status: 'completed' | 'blocked';
   agentState: string;
   model: string;
+  /** The execution path this turn took — see `AgentChatRoute`. */
+  route: AgentChatRoute;
   toolResultCount: number;
   statements: AgentTurn['statements'];
   note: string;
@@ -152,6 +165,23 @@ export interface AgentMetering {
 
 const OFFLINE_NOTE =
   'Answered by the offline deterministic adapter. No hosted model provider is configured in this phase.';
+
+/**
+ * How this turn was answered, in the server's words. The route decides it: a
+ * gateway turn names the path its answer travelled; a local turn states that no
+ * hosted model was consulted — and only the offline adapter claims *that* when
+ * one is genuinely unconfigured. A live deployment's policy refusal or
+ * deterministic answer is "local", not "offline", and the note must not say
+ * otherwise.
+ */
+function chatNoteFor(route: AgentChatRoute, model: string, liveGateway: boolean): string {
+  if (route === 'LLM_GATEWAY') {
+    return `Answered through the Agent Loop and the LLM Gateway by ${model}.`;
+  }
+  return liveGateway
+    ? 'Answered locally — no hosted model was consulted for this turn.'
+    : OFFLINE_NOTE;
+}
 
 const NO_CHARGE_NOTE =
   'This turn cost nothing: a refused or blocked turn is never charged, and the credit held for it was returned in full.';
@@ -257,16 +287,19 @@ export function agentChatHandler(
      * only whether the result was charged.
      *
      * The returned `runId` is set only when the execution created its own tracked
-     * run (the loop path); a `undefined` runId means the caller tracks the turn.
+     * run (the loop path); an `undefined` runId means the caller tracks the turn.
      * The loop path also carries the pipeline's own decision on its result, so
      * the response ships the very decision that shaped the turn rather than a
      * second pass over the turn's reduced view (which would lose the loop's
-     * stop reason and re-decide from less input).
+     * stop reason and re-decide from less input). Every path also names the
+     * route it took (`AgentChatRoute`), decided here where the path is chosen
+     * rather than inferred afterwards from the turn's shape.
      */
     const runTurn = async (): Promise<{
       turn: AgentTurn;
       runId?: string;
       response?: ResponsePipelineResult;
+      route: AgentChatRoute;
     }> => {
       /*
        * A request that names an analysis is gated before anything answers it.
@@ -362,13 +395,14 @@ export function agentChatHandler(
                 : { responseLanguage: body.responseLanguage }),
               ...(body.responseStyle === undefined ? {} : { responseStyle: body.responseStyle }),
             },
+            route: 'LOCAL_RESPONSE',
           };
         }
 
         // The plan permits the turn; the policy hook still speaks before the model does.
         const capabilityPolicy = validateChatMessage(body.message);
         if (!capabilityPolicy.allowed) {
-          return { turn: policyTurn(capabilityPolicy) };
+          return { turn: policyTurn(capabilityPolicy), route: 'LOCAL_RESPONSE' };
         }
 
         const turn = service.run(body.message, {
@@ -390,7 +424,9 @@ export function agentChatHandler(
           },
           'agent.turn.capability',
         );
-        return { turn };
+        // The capability plan runs the deterministic engine inside the turn;
+        // no hosted model is consulted on this path.
+        return { turn, route: 'LOCAL_RESPONSE' };
       }
 
       if (body.analysisType !== undefined) {
@@ -401,7 +437,7 @@ export function agentChatHandler(
             : await decide(principal.id, body.analysisType);
         const analysisPolicy = validateChatMessage(body.message);
         if (!analysisPolicy.allowed) {
-          return { turn: policyTurn(analysisPolicy) };
+          return { turn: policyTurn(analysisPolicy), route: 'LOCAL_RESPONSE' };
         }
         const turn = service.run(body.message, {
           readiness,
@@ -422,7 +458,7 @@ export function agentChatHandler(
           },
           'agent.turn.gated',
         );
-        return { turn };
+        return { turn, route: 'LOCAL_RESPONSE' };
       }
 
       // Plain chat — the alpha path. Policy first, then the full pipeline when it
@@ -438,7 +474,7 @@ export function agentChatHandler(
         if (bus !== undefined) {
           publishTurn(bus, turn, context.correlationId, context.logger);
         }
-        return { turn };
+        return { turn, route: 'LOCAL_RESPONSE' };
       }
 
       if (loop !== null) {
@@ -470,7 +506,14 @@ export function agentChatHandler(
         if (bus !== undefined) {
           publishTurn(bus, mapped.turn, context.correlationId, context.logger);
         }
-        return { turn: mapped.turn, runId: mapped.runId, response: mapped.response };
+        // The loop ran against the live gateway — even when the provider
+        // refused it, the answer (or the honest failure) travelled this path.
+        return {
+          turn: mapped.turn,
+          runId: mapped.runId,
+          response: mapped.response,
+          route: 'LLM_GATEWAY',
+        };
       }
 
       const turn = service.run(body.message, {
@@ -492,7 +535,7 @@ export function agentChatHandler(
       if (bus !== undefined) {
         publishTurn(bus, turn, context.correlationId, context.logger);
       }
-      return { turn };
+      return { turn, route: 'LOCAL_RESPONSE' };
     };
 
     /*
@@ -539,7 +582,12 @@ export function agentChatHandler(
     const loopStopCode = (stopReason: AgentLoopStopReason): string => stopReason.reason;
 
     const respond = (
-      outcome: { turn: AgentTurn; runId: string; response?: ResponsePipelineResult },
+      outcome: {
+        turn: AgentTurn;
+        runId: string;
+        response?: ResponsePipelineResult;
+        route: AgentChatRoute;
+      },
       usage: AgentChatResponseData['usage'],
     ): { data: AgentChatResponseData } => {
       const { turn } = outcome;
@@ -577,7 +625,8 @@ export function agentChatHandler(
           model: turn.model,
           toolResultCount: turn.toolResultCount,
           statements: [...response.statements],
-          note: OFFLINE_NOTE,
+          route: outcome.route,
+          note: chatNoteFor(outcome.route, turn.model, service.hasAsyncReasoning()),
           responsePipeline: {
             kind: response.kind,
             runId: response.metadata.runId,
@@ -620,6 +669,7 @@ export function agentChatHandler(
       turn: AgentTurn;
       runId: string;
       response?: ResponsePipelineResult;
+      route: AgentChatRoute;
     }> => {
       const principal = context.principal;
       // An untracked turn has no run id of its own; the correlation id is
@@ -654,6 +704,7 @@ export function agentChatHandler(
         return {
           turn: outcome.turn,
           runId: run.runId,
+          route: outcome.route,
           ...(outcome.response === undefined ? {} : { response: outcome.response }),
         };
       }
@@ -676,6 +727,7 @@ export function agentChatHandler(
         return {
           turn,
           runId: run.runId,
+          route: outcome.route,
           ...(outcome.response === undefined ? {} : { response: outcome.response }),
         };
       } catch (error) {
@@ -747,7 +799,12 @@ export function agentChatHandler(
       if (bus !== undefined) {
         publishTurn(bus, refused, context.correlationId, context.logger);
       }
-      return respond({ turn: refused, runId: context.correlationId }, null);
+      // Nothing was consulted — not the engine, not the model — so the turn is
+      // reported as the local answer it is, whatever the deployment is configured with.
+      return respond(
+        { turn: refused, runId: context.correlationId, route: 'LOCAL_RESPONSE' },
+        null,
+      );
     }
 
     context.logger.info(

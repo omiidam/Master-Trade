@@ -138,6 +138,8 @@ export class ApiError extends Error {
         return 'That job is no longer in the queue.';
       case 'PROVIDER_UNAVAILABLE':
         return 'The local API is not answering. It may still be starting.';
+      case 'TIMEOUT':
+        return 'The local API took too long to answer. It may still be processing this turn — wait a moment and try again.';
       case 'NOT_IMPLEMENTED':
         return 'The backend reports this capability as not implemented yet.';
       case 'VALIDATION_FAILED':
@@ -406,7 +408,14 @@ export class ApiClient {
    * raised as an `ApiError` here.
    */
   async agentChat(body: { message: string; conversationId?: string }): Promise<AgentChatData> {
-    return this.request<AgentChatData>('POST', '/v1/agent/messages', { body });
+    // A chat turn is the one request that may legitimately take a while — the loop can
+    // run several steps against the provider — so it carries a generous ceiling rather
+    // than the browser's own multi-minute default. Past it, the turn is reported as a
+    // TIMEOUT instead of leaving the composer locked against a socket that never answers.
+    return this.request<AgentChatData>('POST', '/v1/agent/messages', {
+      body,
+      timeoutMs: 120_000,
+    });
   }
 
   /**
@@ -426,7 +435,7 @@ export class ApiClient {
   private async request<T>(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
-    options: { body?: unknown } = {},
+    options: { body?: unknown; timeoutMs?: number } = {},
     replayed = false,
   ): Promise<T> {
     const correlationId = this.ids.correlationId();
@@ -450,8 +459,26 @@ export class ApiClient {
         method,
         headers,
         ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+        ...(options.timeoutMs === undefined
+          ? {}
+          : { signal: AbortSignal.timeout(options.timeoutMs) }),
       });
     } catch (error) {
+      // A caller-declared deadline that fired is a timeout — a different fact from an
+      // unreachable API, with a different remedy, and merging them into "not answering"
+      // is how a slow-but-working turn gets reported as a dead one.
+      const timedOut =
+        options.timeoutMs !== undefined &&
+        error instanceof Error &&
+        (error.name === 'TimeoutError' || error.name === 'AbortError');
+      if (timedOut) {
+        throw new ApiError({
+          code: 'TIMEOUT',
+          message: `The local API did not answer within ${options.timeoutMs} ms.`,
+          status: ERROR_STATUS.TIMEOUT,
+          correlationId,
+        });
+      }
       // The API may simply not be running yet; that is unavailability, not a bug in
       // the request, and says so.
       throw new ApiError({
