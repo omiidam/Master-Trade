@@ -233,6 +233,7 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
     'خروجی مدل هرگز مستقیماً به کنش تبدیل نمی‌شود',
   'agentWorkspacePage.modelReturnsAToolCallRequestArgumentsOnly':
     'مدل یک درخواست فراخوانی ابزار برمی‌گرداند (فقط آرگومان‌ها).',
+  'agentWorkspacePage.notConnectedToTheApi': 'به API محلی متصل نیست',
   'agentWorkspacePage.orchestratorChecksTheOperationAgainstThePermissionTa':
     'ارکستریتور عملیات را با جدول مجوز بررسی می‌کند.',
   'agentWorkspacePage.provider': 'ارائه‌دهنده',
@@ -249,6 +250,7 @@ export const FA_MESSAGES: Record<MessageKey, string> = {
   'agentWorkspacePage.theToolRegistryIsDeclaredInTheBackend':
     'رجیستری ابزارها در بک‌اند اعلام شده است. هیچ چیز در این صفحه نمی‌تواند گسترشش دهد.',
   'agentWorkspacePage.thisConversationHasNoTurnsYet': 'این گفت‌وگو هنوز نوبتی ندارد',
+  'agentWorkspacePage.tryAgain': 'دوباره تلاش کن',
   'agentWorkspacePage.waitingForAStructuredAnswer': 'در انتظار پاسخی ساختاریافته',
   'agentWorkspacePage.whatTheAgentCannotDoWhateverItSays':
     'کارهایی که عامل نمی‌تواند انجام دهد، هر چه بگوید',

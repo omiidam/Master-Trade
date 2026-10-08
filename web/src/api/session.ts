@@ -86,18 +86,46 @@ function environmentToken(): string | null {
  */
 let cached: ApiSession | null = null;
 
+/**
+ * The most recent resolution this tab saw, in either direction.
+ *
+ * Resolution is async, but a surface sometimes has to paint its first frame before a round
+ * trip of its own can finish — the AI Workplace's transcript decides from this answer
+ * whether a conversation is possible at all, and painting "no conversation" first and the
+ * truth a moment later would flip the page under the reader. So the resolver keeps its last
+ * answer where a first frame can read it synchronously.
+ *
+ * This is an observation to paint from, never a substitute for asking: `resolveApiSession`
+ * still resolves fresh on every call and overwrites it. `resetApiSession` drops it with the
+ * credential it came from.
+ */
+let observed: ApiSessionResolution | null = null;
+
+/** The last resolution this tab observed, or null when none has been made yet. */
+export function peekApiSession(): ApiSessionResolution | null {
+  return observed;
+}
+
 /** Forget the cached session. Used by tests, and by a caller that just saw a 401. */
 export function resetApiSession(): void {
   cached = null;
+  observed = null;
 }
 
 /**
  * Resolve a session for reading the API.
  *
  * Never throws: every failure becomes an `unavailable` state with the reason to render, in
- * the same shape the surfaces already use.
+ * the same shape the surfaces already use. Whatever comes back is also kept as this tab's
+ * most recent observation, for a first frame to read through `peekApiSession`.
  */
 export async function resolveApiSession(): Promise<ApiSessionResolution> {
+  const resolution = await resolveSession();
+  observed = resolution;
+  return resolution;
+}
+
+async function resolveSession(): Promise<ApiSessionResolution> {
   if (cached !== null) return { status: 'ready', session: cached };
 
   const baseUrl = apiBaseUrl();

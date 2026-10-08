@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Bot,
   BrainCircuit,
@@ -34,8 +34,13 @@ import { ReadOnlyValue } from '../components/Input';
 import { Reveal } from '../components/Reveal';
 import { Workspace } from '../app/Workspace';
 import { ApiError } from '../api/client.js';
-import { clientForApiSession } from '../api/session.js';
-import { EPISTEMIC_LABEL } from '../mock/data';
+import {
+  clientForApiSession,
+  peekApiSession,
+  resolveApiSession,
+  type ApiSessionResolution,
+} from '../api/session.js';
+import { EPISTEMIC_LABEL, mockConversation, mockDataNotice } from '../mock/data';
 import { formatTimestamp } from '../lib/format';
 import { useUiStore } from '../store/ui';
 import { usePageView } from '../store/pageContext';
@@ -182,6 +187,54 @@ export function AgentWorkspacePage() {
   );
 
   /**
+   * Whether this page can reach the API at all — and what the resolver says when it cannot.
+   *
+   * The first frame reads the last resolution this tab has already observed (the shell
+   * resolves one on the page it opens on), so the decision is a fact rather than a guess;
+   * this page's own resolution confirms it right after mount and is what a retry asks for.
+   */
+  const [session, setSession] = useState<ApiSessionResolution | null>(() => peekApiSession());
+  useEffect(() => {
+    let alive = true;
+    void resolveApiSession().then((resolution) => {
+      if (alive) setSession(resolution);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /** Why there is no session, in the resolver's own words — rendered verbatim. */
+  const unavailable = session?.status === 'unavailable' ? session.reason : null;
+
+  /**
+   * The labelled preview transcript: the conversation this surface is *for*, shown only
+   * where no conversation can exist — no session, and nothing sent.
+   *
+   * It is drawn from the contract-typed fixture the other preview surfaces label, through
+   * the same turn markup a real turn takes (an `article` whose body is `dir="auto"`, so
+   * each turn resolves its own direction from its own first strong character). The rule it
+   * exists to keep is the one from Phase 2.13: it can never sit beside a real turn — the
+   * moment a session answers or a turn is sent, the transcript is the live one only.
+   */
+  const previewing = unavailable !== null && turns.length === 0;
+  const transcript: readonly AlphaTurn[] = previewing
+    ? mockConversation.map((message): AlphaTurn => ({
+        id: message.id,
+        role: message.role === 'user' ? 'user' : 'agent',
+        text: message.text,
+        epistemicKind: message.epistemicKind,
+        createdAt: message.createdAt,
+        sources: message.sources,
+      }))
+    : turns;
+
+  /** Ask the resolver again — the answer changes when the API is started. */
+  const checkSession = (): void => {
+    void resolveApiSession().then((resolution) => setSession(resolution));
+  };
+
+  /**
    * Send the draft through the real pipeline: agent.chat → Run Manager → Agent Loop →
    * harness → adapter → provider gateway. The composer is locked while a turn is in flight
    * (one turn at a time), and a failure is reported as a failure — the transcript never
@@ -260,6 +313,23 @@ export function AgentWorkspacePage() {
                 </Button>
               }
             />
+          ) : unavailable !== null ? (
+            /*
+              The notice above the conversation: there is no API to talk to, so what
+              follows is the labelled preview rather than a transcript. The resolver's
+              own reason is what is rendered — this component never turns a failure into
+              a sentence of its own.
+            */
+            <ErrorState
+              severity="warning"
+              title={msg('agentWorkspacePage.notConnectedToTheApi')}
+              description={unavailable}
+              action={
+                <Button size="sm" variant="secondary" onClick={checkSession}>
+                  {msg('agentWorkspacePage.tryAgain')}
+                </Button>
+              }
+            />
           ) : null}
 
           {offline === true ? (
@@ -284,7 +354,13 @@ export function AgentWorkspacePage() {
                 <CardTitle className="text-body">{msg('agent.conversation')}</CardTitle>
                 <CardDescription>{msg('agent.eachMessageShowsItsEpistemicLabel')}</CardDescription>
               </div>
-              <Badge tone="outline">{conversationId}</Badge>
+              {previewing ? (
+                <Badge tone="warning" dot>
+                  {msg('agent.mockTranscript')}
+                </Badge>
+              ) : (
+                <Badge tone="outline">{conversationId}</Badge>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Execution, as the server reports it: the run's own state while a turn is in
@@ -299,13 +375,20 @@ export function AgentWorkspacePage() {
                 <span className="text-text-faint">Agent Loop → LLM Gateway → Response</span>
               </div>
 
-              {turns.length === 0 ? (
+              {/* Provenance for the sample above the sample itself: which of the two
+                  conversations this column is showing, in the words every other preview
+                  surface uses. */}
+              {previewing ? (
+                <p className="text-caption text-text-faint">{mockDataNotice()}</p>
+              ) : null}
+
+              {transcript.length === 0 ? (
                 <EmptyState
                   title="No turns yet"
                   description="Ask about a trading concept, market structure or risk management. Nothing on this page is prewritten: every answer below comes from the server's agent pipeline, tracked as a run."
                 />
               ) : (
-                turns.map((message, index) => {
+                transcript.map((message, index) => {
                   const isAgent = message.role === 'agent';
                   return (
                     <Reveal key={message.id} index={index}>
@@ -451,7 +534,11 @@ export function AgentWorkspacePage() {
                       blockedReason:
                         'The agent is running this turn. The composer returns when it answers.',
                     }
-                  : {})}
+                  : unavailable !== null
+                    ? // Nothing to send to: the field and the send control say why together,
+                      // which is the same rule a running turn follows above.
+                      { blockedReason: unavailable }
+                    : {})}
                 onSubmit={send}
               />
             </CardContent>
@@ -642,8 +729,9 @@ export function AgentWorkspacePage() {
               </AgentCardList>
 
               <p className="text-caption text-text-faint">
-                Alpha build: the transcript holds only turns you actually sent. Every answer above
-                is exactly what the server returned, and each one names the run it ran under.
+                {previewing
+                  ? 'No session, so nothing here is a conversation yet: the column holds the labelled sample. The live transcript begins with the first message you actually send, and every answer on it is exactly what the server returned.'
+                  : 'Alpha build: the transcript holds only turns you actually sent. Every answer above is exactly what the server returned, and each one names the run it ran under.'}
               </p>
             </div>
           </AgentCard>

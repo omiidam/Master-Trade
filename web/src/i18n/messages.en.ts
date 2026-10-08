@@ -230,6 +230,7 @@ export const EN_MESSAGES = {
     'Model output never becomes action directly',
   'agentWorkspacePage.modelReturnsAToolCallRequestArgumentsOnly':
     'Model returns a tool-call request (arguments only).',
+  'agentWorkspacePage.notConnectedToTheApi': 'Not connected to the local API',
   'agentWorkspacePage.orchestratorChecksTheOperationAgainstThePermissionTa':
     'Orchestrator checks the operation against the permission table.',
   'agentWorkspacePage.provider': 'Provider',
@@ -246,6 +247,7 @@ export const EN_MESSAGES = {
   'agentWorkspacePage.theToolRegistryIsDeclaredInTheBackend':
     'The tool registry is declared in the backend. Nothing on this screen can widen it.',
   'agentWorkspacePage.thisConversationHasNoTurnsYet': 'This conversation has no turns yet',
+  'agentWorkspacePage.tryAgain': 'Try again',
   'agentWorkspacePage.waitingForAStructuredAnswer': 'Waiting for a structured answer',
   'agentWorkspacePage.whatTheAgentCannotDoWhateverItSays':
     'What the agent cannot do, whatever it says',
